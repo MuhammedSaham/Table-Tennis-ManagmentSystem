@@ -1,0 +1,146 @@
+Phase 1: Project Setup & Database Configuration
+
+TypeScript project initialization
+
+Express.js setup with middleware (cors, helmet, morgan)
+
+PostgreSQL database configuration with Prisma ORM
+
+Database schema design (15+ models including User, Tournament, Match, Registration)
+
+Environment variables configuration
+
+Project folder structure creation
+
+
+
+
+Phase 2: Authentication & User Management
+
+User registration with role selection (Admin, Referee, Player)
+
+Secure password hashing with bcrypt
+
+JWT token generation for authentication
+
+Login functionality
+
+Role-specific profile creation (Player Profile, Referee Profile, Admi Profile)
+
+
+
+
+Phase 3: Protected Routes & Role-Based Access Control
+
+Authentication middleware (verify JWT tokens)
+
+Role-based authorization middleware (isAdmin, isReferee, isPlayer, restrictTo)
+
+User profile management (get and update profile)
+
+Admin-only user management endpoints (get all users, update roles, delete users)
+
+Protected route implementation
+
+
+
+
+Phase 4: Tournament & Registration Management
+
+Tournament CRUD operations (create, read, update, delete)
+
+Category management for tournaments
+
+Player registration system for tournaments
+
+Admin approval/rejection workflow for registrations
+
+Team creation and management
+
+Duplicate registration prevention
+
+Notification system for registration status
+
+
+
+
+Phase 5: Match Scheduling & Management
+
+Match creation with player/team assignment
+
+Referee assignment to matches
+
+View match schedules (tournament view, player view, referee view)
+
+Match status updates (SCHEDULED → ONGOING → COMPLETED → CANCELLED)
+
+Match details retrieval with participant information
+
+
+
+Phase 6: Match Results & Scoring
+
+Game score recording (individual game scores like 11-7, 11-9)
+
+Automatic winner determination based on game wins
+
+Match results viewing for players and referees
+
+Player match history with statistics
+
+Player statistics calculation (wins, losses, win rate, games won/lost)
+
+Notifications for match completion
+
+
+
+
+Phase 7: Tournament Results & Leaderboards
+
+Tournament standings by category with player rankings
+
+Category winners determination
+
+Release tournament results (Admin only)
+
+Tournament statistics (total matches, completion rate, participants)
+
+Player rankings/leaderboards across categories
+
+Automatic player notifications when results are released
+
+
+
+Phase 8: Advanced Features
+
+Automatic bracket generation with random seeding
+
+BYE handling for uneven player counts
+
+Bracket visualization (matches grouped by rounds)
+
+Admin dashboard with key metrics (users, tournaments, matches, registrations)
+
+Player dashboard with personal statistics and upcoming matches
+
+Referee dashboard with assigned matches
+
+Advanced search functionality (tournaments, players, matches)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
