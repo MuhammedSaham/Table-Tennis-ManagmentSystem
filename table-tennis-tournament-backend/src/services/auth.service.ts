@@ -65,6 +65,7 @@ export class AuthService {
                     role: finalRole,
                     adminRequestStatus,
                     adminRequestedAt,
+                    isEmailVerified: true,
                 },
             });
 
@@ -118,14 +119,14 @@ export class AuthService {
                 console.error('Failed to notify admins:', error);
             }
         }
-        const verificationToken = crypto.randomBytes(32).toString('hex');
+        /*const verificationToken = crypto.randomBytes(32).toString('hex');
 
         await prisma.user.update({
         where: { id: user.id },
         data: { emailVerificationToken: verificationToken },
         });
 
-        sendVerificationEmail(userData.email, verificationToken, userData.firstName).catch(console.error);
+        sendVerificationEmail(userData.email, verificationToken, userData.firstName).catch(console.error);*/
 
         // Generate JWT token
         const token = this.generateToken(user.id);
@@ -168,12 +169,12 @@ export class AuthService {
         if (!isPasswordValid) {
             throw new AppError('Invalid email or password', 401);
         }
-        if (!user.isEmailVerified) {
+       /* if (!user.isEmailVerified) {
   throw new AppError(
     'Please verify your email address before logging in. Check your inbox for the verification link.',
     403
   );
-}
+}*/
 
         // Generate token
         const token = this.generateToken(user.id);
