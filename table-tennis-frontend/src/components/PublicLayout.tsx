@@ -1,7 +1,14 @@
 import React, { useState, useEffect } from "react";
 import { Outlet, Link, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { Bars3Icon, XMarkIcon } from "@heroicons/react/24/outline";
+import logoWithName from "../assets/LOGO.png";
+
+import {
+  Bars3Icon,
+  XMarkIcon,
+  MapPinIcon,
+  PhoneIcon,
+} from "@heroicons/react/24/outline";
 
 const PublicLayout: React.FC = () => {
   const { user } = useAuth();
@@ -35,14 +42,16 @@ const PublicLayout: React.FC = () => {
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
+         
             {/* Logo */}
             <Link to="/" className="flex items-center gap-2 group">
-              <div className="w-8 h-8 bg-gradient-to-r from-primary-600 to-secondary-500 rounded-lg flex items-center justify-center transform transition-transform group-hover:scale-110">
-                <span className="text-white text-xl font-bold">🏓</span>
-              </div>
-              <span className="font-bold text-xl font-heading bg-gradient-to-r from-primary-700 to-secondary-600 bg-clip-text text-transparent">
-                TTMS
-              </span>
+              <img
+                src={logoWithName}
+                alt="Sam's College Logo"
+                className="object-contain"
+                style={{ height: "40px", width: "auto" }}
+              />
+              <span className="text-2xl font-extrabold tracking-wider">SAM'S COLLEGE</span>
             </Link>
 
             {/* Desktop Navigation */}
@@ -151,61 +160,65 @@ const PublicLayout: React.FC = () => {
       <footer className="bg-dark-100 text-white mt-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+
+            {/* Logo + Description */}
             <div>
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-8 h-8 bg-gradient-to-r from-primary-500 to-secondary-500 rounded-lg flex items-center justify-center">
-                  <span className="text-white text-xl">🏓</span>
-                </div>
-                <span className="font-bold text-xl">TTMS</span>
+              <div className="flex items-center mb-4">
+                
+          
+                <img
+                  src={logoWithName}
+                  alt="Sam's College Logo"
+                  className="object-contain"
+                  style={{
+                    height: "auto",
+                    width: "100%",
+                    maxWidth: "220px",
+                  }}
+                />
               </div>
-              <p className="text-gray-400 text-sm">
-                Professional Table Tennis Tournament Management System
-              </p>
+                  
+              <div>
+                <p className="text-gray-400 text-sm">
+                  Professional Table Tennis Tournament Management System for clubs and organizations.
+                </p>
+              </div>
+              
             </div>
+
+            {/* Quick Links */}
             <div>
               <h4 className="font-semibold text-white mb-4">Quick Links</h4>
               <ul className="space-y-2 text-sm text-gray-400">
                 <li>
-                  <Link
-                    to="/tournaments"
-                    className="hover:text-white transition"
-                  >
+                  <Link to="/app/tournaments" className="hover:text-white transition">
                     Tournaments
                   </Link>
                 </li>
                 <li>
-                  <Link
-                    to="/leaderboard"
-                    className="hover:text-white transition"
-                  >
+                  <Link to="/app/leaderboard" className="hover:text-white transition">
                     Leaderboard
                   </Link>
                 </li>
                 <li>
-                  <Link
-                    to="/global-leaderboard"
-                    className="hover:text-white transition"
-                  >
-                    Global Rankings
-                  </Link>
-                </li>
-                <li>
-                  <Link to="/players" className="hover:text-white transition">
-                    Players
+                  <Link to="/app/dashboard" className="hover:text-white transition">
+                    Dashboard
                   </Link>
                 </li>
               </ul>
             </div>
+
+            {/* Support */}
             <div>
               <h4 className="font-semibold text-white mb-4">Support</h4>
               <ul className="space-y-2 text-sm text-gray-400">
                 <li>
-                  <a href="#" className="hover:text-white transition">
+                  <a href="tel:+94755711174" className="hover:text-white transition">
                     Help Center
                   </a>
                 </li>
                 <li>
-                  <a href="#" className="hover:text-white transition">
+                  <a href="tel:+94755711174" className="hover:text-white transition">
                     Contact Us
                   </a>
                 </li>
@@ -216,33 +229,86 @@ const PublicLayout: React.FC = () => {
                 </li>
               </ul>
             </div>
+
+
+            {/* Contact + Social */}
             <div>
-              <h4 className="font-semibold text-white mb-4">Follow Us</h4>
-              <div className="flex gap-3">
-                <a
-                  href="#"
-                  className="w-10 h-10 bg-dark-200 rounded-full flex items-center justify-center hover:bg-primary-600 transition"
-                >
-                  🐦
-                </a>
-                <a
-                  href="#"
-                  className="w-10 h-10 bg-dark-200 rounded-full flex items-center justify-center hover:bg-primary-600 transition"
-                >
-                  📘
-                </a>
-                <a
-                  href="#"
-                  className="w-10 h-10 bg-dark-200 rounded-full flex items-center justify-center hover:bg-primary-600 transition"
-                >
-                  📷
-                </a>
-              </div>
+              <h4 className="font-semibold text-white mb-4">Get In Touch</h4>
+              <ul className="space-y-3 text-sm text-gray-400">
+
+                {/* Phone */}
+                <li className="flex items-center gap-2">
+                  <PhoneIcon className="w-5 h-5 flex-shrink-0" />
+                  <a href="tel:+94755711174" className="hover:text-white transition">
+                    +94 75 571 1174
+                  </a>
+                </li>
+
+                {/* Facebook */}
+                <li className="flex items-center gap-2">
+                  <span>📘</span>
+                  <a
+                    href="https://www.facebook.com/profile.php?id=61557498952975"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:text-white transition"
+                  >
+                    Facebook
+                  </a>
+                </li>
+
+                {/* Instagram */}
+                <li className="flex items-center gap-2">
+                  <span>📸</span>
+                  <a
+                    href="https://www.instagram.com/samscollege_official?igsh=NHR2cmk0a29nNDB3"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:text-white transition"
+                  >
+                    Instagram
+                  </a>
+                </li>
+
+                {/* WhatsApp */}
+                <li className="flex items-center gap-2">
+                  <span>💬</span>
+                  <a
+                    href="https://wa.me/94755711174"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:text-white transition"
+                  >
+                    WhatsApp
+                  </a>
+                </li>
+
+                {/* Email */}
+                <li className="flex items-center gap-2">
+                  <span>✉️</span>
+                  <a
+                    href="mailto:samscollegeofficial@gmail.com"
+                    className="hover:text-white transition"
+                  >
+                    samscollegeofficial@gmail.com
+                  </a>
+                </li>
+
+                {/* Address */}
+                <li className="flex items-start gap-2">
+                  <MapPinIcon className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                  <span>Broody front lane, Jaffna, Sri Lanka, 40000</span>
+                </li>
+
+              </ul>
             </div>
+
           </div>
+
+          {/* Bottom */}
+          
           <div className="border-t border-dark-200 mt-8 pt-8 text-center text-sm text-gray-500">
-            © 2024 Table Tennis Tournament Management System. All rights
-            reserved.
+            © 2024 Table Tennis Tournament Management System. All rights reserved.
           </div>
         </div>
       </footer>
