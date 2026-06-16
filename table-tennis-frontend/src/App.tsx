@@ -26,7 +26,7 @@ import AdminRequests from "./pages/AdminRequests";
 import PublicProfile from "./pages/PublicProfile";
 import GlobalLeaderboard from "./pages/GlobalLeaderboard";
 import Players from "./pages/Players";
-import VerifyEmail from "./pages/VerifyEmail";
+//import VerifyEmail from "./pages/VerifyEmail";
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({
   children,
@@ -60,7 +60,7 @@ function AppRoutes() {
         <Route path="global-leaderboard" element={<GlobalLeaderboard />} />
         <Route path="profile/:userId" element={<PublicProfile />} />
         <Route path="players" element={<Players />} />
-        <Route path="verify-email" element={<VerifyEmail />} />
+        {/*<Route path="verify-email" element={<VerifyEmail />} />*/}
       </Route>
 
       {/* Auth routes */}

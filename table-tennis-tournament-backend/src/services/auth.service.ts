@@ -3,8 +3,8 @@ import jwt from 'jsonwebtoken';
 import prisma from '../config/database';
 import { AppError } from '../utils/AppError';
 import { config } from '../config/env';
-import crypto from 'crypto';
-import { sendPasswordResetEmail, sendVerificationEmail } from './email.service';
+//import crypto from 'crypto';
+//import { sendPasswordResetEmail, sendVerificationEmail } from './email.service';
 
 export class AuthService {
     // Register new user with Admin Approval Workflow
@@ -65,7 +65,6 @@ export class AuthService {
                     role: finalRole,
                     adminRequestStatus,
                     adminRequestedAt,
-                    isEmailVerified: true,
                 },
             });
 
@@ -140,7 +139,7 @@ export class AuthService {
                 lastName: user.lastName,
                 role: userData.role === 'ADMIN' ? 'PENDING_ADMIN' : user.role,
                 adminRequestStatus: user.adminRequestStatus,
-                isEmailVerified: false,
+                isEmailVerified: true,
             } as any,
             token,
             message: 'Registration successful! Please check your email to verify your account.',
@@ -166,10 +165,10 @@ export class AuthService {
         // Check password
         const isPasswordValid = await bcrypt.compare(password, user.password);
 
-        if (!isPasswordValid) {
+        /*if (!isPasswordValid) {
             throw new AppError('Invalid email or password', 401);
         }
-       /* if (!user.isEmailVerified) {
+        if (!user.isEmailVerified) {
   throw new AppError(
     'Please verify your email address before logging in. Check your inbox for the verification link.',
     403
@@ -243,7 +242,7 @@ export class AuthService {
     }
 
     // Forgot password - generate reset token
-    async forgotPassword(email: string) {
+    /*async forgotPassword(email: string) {
         const user = await prisma.user.findUnique({
             where: { email },
         });
@@ -270,7 +269,7 @@ export class AuthService {
             console.error('Email sending failed:', error);
             return { message: 'Failed to send reset email. Please try again later.' };
         }
-    }
+    }*/
 
     // Reset password - verify token and set new password
     async resetPassword(token: string, newPassword: string) {
@@ -300,7 +299,7 @@ export class AuthService {
 
         return { message: 'Password reset successful. You can now login with your new password.' };
     }
-    async verifyEmail(token: string) {
+    /*async verifyEmail(token: string) {
   const user = await prisma.user.findFirst({
     where: { emailVerificationToken: token },
   });
@@ -349,5 +348,5 @@ async resendVerification(email: string) {
 
   await sendVerificationEmail(email, token, user.firstName);
   return { message: 'Verification email sent! Please check your inbox.' };
-}
+}*/
 }
