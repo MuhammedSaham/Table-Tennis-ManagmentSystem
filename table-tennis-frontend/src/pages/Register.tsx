@@ -234,311 +234,299 @@ const Register: React.FC = () => {
     passwordValid.number;
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-primary-500 to-primary-700 p-4">
-      <div className="w-full max-w-md p-8 bg-white rounded-2xl shadow-xl max-h-[90vh] overflow-y-auto">
-        <div className="text-center mb-8">
-          <div className="text-6xl mb-4">🏓</div>
-          <h1 className="text-3xl font-bold text-gray-900">Create Account</h1>
-          <p className="text-gray-600 mt-2">Join the tournament platform</p>
+    <div className="flex min-h-screen w-screen items-center justify-center overflow-hidden bg-[#061D23] p-0">
+      <div className="flex min-h-screen w-full overflow-hidden border border-[#12679E]/40 bg-[#061D23] shadow-[0_20px_80px_rgba(0,0,0,0.35)]">
+        <div className="relative flex min-h-[220px] items-start justify-center overflow-hidden bg-[linear-gradient(135deg,#2A5F72_0%,#123B4A_45%,#061D23_100%)] p-8 pt-10 text-white sm:p-10 sm:pt-12 lg:min-h-full lg:w-[42%] lg:justify-start lg:p-12 lg:pt-14">
+          <div className="absolute inset-0">
+            <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(125, 179, 241, 0.53)_0%,rgba(6,29,35,0.1)_70%)]" />
+            <div className="absolute inset-0 bg-[rgba(225, 224, 255, 0.42)] [clip-path:polygon(68%_0,80%_0,53%_100%,41%_100%)]" />
+            <div className="absolute inset-0 bg-[rgba(58, 121, 240, 0.16)] [clip-path:polygon(78%_0,90%_0,63%_100%,51%_100%)]" />
+          </div>
+
+          <div className="relative z-10 max-w-sm">
+            <div className="mb-4 inline-flex rounded-full border border-[#061D23] bg-[#061D23] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.35em] text-[#D8FBFF]">
+              Sam's College
+            </div>
+            <h1 className="text-3xl font-black uppercase tracking-[0.25em] text-white">
+              Create Account
+            </h1>
+            <p className="mt-3 text-sm uppercase tracking-[0.25em] text-[#D8FBFF]">
+              Join the tournament platform
+            </p>
+            <div className="mt-6 h-1 w-24 rounded-full bg-[linear-gradient(90deg,#CFF9FF,#12679E)]" />
+          </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                First Name *
-              </label>
-              <input
-                type="text"
-                name="firstName"
-                value={formData.firstName}
-                onChange={handleChange}
-                className={`input-field ${errors.firstName ? "border-red-500" : ""}`}
-                placeholder="John"
-              />
-              {errors.firstName && (
-                <p className="text-xs text-red-500 mt-1">{errors.firstName}</p>
-              )}
-              <p className="text-xs text-gray-500 mt-1">
-                {formData.firstName
-                  ? `${formData.firstName.length}/2+ characters`
-                  : "Minimum 2 characters required"}
-              </p>
-            </div>
+        <div className="w-full bg-[linear-gradient(160deg,#123B4A_0%,#061D23_100%)] p-6 sm:p-8 lg:w-[58%]">
+          <div className="mb-6 h-1 w-full rounded-full bg-[#CFF9FF]" />
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Last Name *
-              </label>
-              <input
-                type="text"
-                name="lastName"
-                value={formData.lastName}
-                onChange={handleChange}
-                className={`input-field ${errors.lastName ? "border-red-500" : ""}`}
-                placeholder="Doe"
-              />
-              {errors.lastName && (
-                <p className="text-xs text-red-500 mt-1">{errors.lastName}</p>
-              )}
-              <p className="text-xs text-gray-500 mt-1">
-                {formData.firstName
-                  ? `${formData.firstName.length}/2+ characters`
-                  : "Minimum 2 characters required"}
-              </p>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Email Address *
-            </label>
-            <input
-              type="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              className={`input-field ${errors.email ? "border-red-500" : ""}`}
-              placeholder="you@example.com"
-            />
-            {errors.email && (
-              <p className="text-xs text-red-500 mt-1">{errors.email}</p>
-            )}
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Password *
-            </label>
-            <div className="relative">
-              <input
-                type={showPassword ? "text" : "password"}
-                name="password"
-                value={formData.password}
-                onChange={handleChange}
-                className={`input-field ${errors.password ? "border-red-500" : ""}`}
-                placeholder="Create a strong password"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"
-              >
-                {showPassword ? "👁️" : "👁️‍🗨️"}
-              </button>
-            </div>
-
-            {/* Password requirements */}
-            <div className="mt-2 space-y-1 text-xs">
-              <p
-                className={
-                  passwordValid.length ? "text-green-600" : "text-gray-500"
-                }
-              >
-                {passwordValid.length ? "✓" : "○"} At least 8 characters
-              </p>
-              <p
-                className={
-                  passwordValid.uppercase ? "text-green-600" : "text-gray-500"
-                }
-              >
-                {passwordValid.uppercase ? "✓" : "○"} At least one uppercase
-                letter (A-Z)
-              </p>
-              <p
-                className={
-                  passwordValid.lowercase ? "text-green-600" : "text-gray-500"
-                }
-              >
-                {passwordValid.lowercase ? "✓" : "○"} At least one lowercase
-                letter (a-z)
-              </p>
-              <p
-                className={
-                  passwordValid.number ? "text-green-600" : "text-gray-500"
-                }
-              >
-                {passwordValid.number ? "✓" : "○"} At least one number (0-9)
-              </p>
-            </div>
-            {errors.password && (
-              <p className="text-xs text-red-500 mt-1">{errors.password}</p>
-            )}
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Phone Number *
-            </label>
-            <input
-              type="tel"
-              name="phone"
-              value={formData.phone}
-              onChange={handleChange}
-              className={`input-field ${errors.phone ? "border-red-500" : ""}`}
-              placeholder="071-1234567 or 011-1234567"
-            />
-            {errors.phone && (
-              <p className="text-xs text-red-500 mt-1">{errors.phone}</p>
-            )}
-            <p className="text-xs text-gray-500 mt-1">
-              Format: Mobile: 071-1234567 | Landline: 011-1234567
-            </p>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              I want to join as *
-            </label>
-            <select
-              name="role"
-              value={formData.role}
-              onChange={handleChange}
-              className="input-field"
-            >
-              <option value="PLAYER">🏓 Player - Compete in tournaments</option>
-              <option value="REFEREE">👨‍⚖️ Referee - Officiate matches</option>
-              <option value="ADMIN">👑 Admin - Manage tournaments</option>
-            </select>
-            <p className="text-xs text-gray-500 mt-1">
-              {formData.role === "PLAYER" &&
-                "Join tournaments, track your progress, and compete with others!"}
-              {formData.role === "REFEREE" &&
-                "Officiate matches, record scores, and manage games."}
-              {formData.role === "ADMIN" &&
-                "Create tournaments, manage players, and oversee everything."}
-            </p>
-          </div>
-
-          {formData.role === "PLAYER" && (
-            <>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid gap-4 sm:grid-cols-2">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Date of Birth *
+                <label className="mb-2 block text-sm font-semibold uppercase tracking-[0.2em] text-[#CFF9FF]">
+                  First Name *
                 </label>
                 <input
-                  type="date"
-                  name="dateOfBirth"
-                  value={formData.playerProfile.dateOfBirth || ""}
+                  type="text"
+                  name="firstName"
+                  value={formData.firstName}
                   onChange={handleChange}
-                  required
-                  className="input-field"
-                  max={new Date().toISOString().split("T")[0]} // Can't select future date
+                  className={`w-full rounded-md border bg-[#061D23] px-4 py-3 text-[15px] text-white placeholder:text-[#D8FBFF] focus:outline-none ${errors.firstName ? "border-[#4AEEFF]" : "border-[#12679E] focus:border-[#4AEEFF]"}`}
+                  placeholder="John"
                 />
-                <p className="text-xs text-gray-500 mt-1">
-                  This helps us determine your age category for tournaments
+                {errors.firstName && (
+                  <p className="mt-1 text-xs text-[#4AEEFF]">{errors.firstName}</p>
+                )}
+                <p className="mt-1 text-xs text-[#D8FBFF]">
+                  {formData.firstName
+                    ? `${formData.firstName.length}/2+ characters`
+                    : "Minimum 2 characters required"}
                 </p>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Your Skill Level
-                </label>
-                <select
-                  name="skillLevel"
-                  value={formData.playerProfile.skillLevel}
-                  onChange={handleChange}
-                  className="input-field"
-                >
-                  <option value="Beginner">
-                    🏅 Beginner - Just starting out
-                  </option>
-                  <option value="Intermediate">
-                    🎯 Intermediate - Have some experience
-                  </option>
-                  <option value="Advanced">
-                    🏆 Advanced - Competing at high level
-                  </option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Club or Academy (Optional)
+                <label className="mb-2 block text-sm font-semibold uppercase tracking-[0.2em] text-[#CFF9FF]">
+                  Last Name *
                 </label>
                 <input
                   type="text"
-                  name="clubAffiliation"
-                  value={formData.playerProfile.clubAffiliation}
+                  name="lastName"
+                  value={formData.lastName}
                   onChange={handleChange}
-                  className="input-field"
-                  placeholder="e.g., City Table Tennis Club"
+                  className={`w-full rounded-md border bg-[#061D23] px-4 py-3 text-[15px] text-white placeholder:text-[#D8FBFF] focus:outline-none ${errors.lastName ? "border-[#4AEEFF]" : "border-[#12679E] focus:border-[#4AEEFF]"}`}
+                  placeholder="Doe"
                 />
+                {errors.lastName && (
+                  <p className="mt-1 text-xs text-[#4AEEFF]">{errors.lastName}</p>
+                )}
+                <p className="mt-1 text-xs text-[#D8FBFF]">
+                  {formData.lastName
+                    ? `${formData.lastName.length}/2+ characters`
+                    : "Minimum 2 characters required"}
+                </p>
               </div>
-            </>
-          )}
-
-          {/* Profile Picture Upload */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Profile Photo *
-            </label>
-            <div className="flex items-center gap-4">
-              {/* Image Preview */}
-              {imagePreview && (
-                <div className="relative">
-                  <img
-                    src={imagePreview}
-                    alt="Profile preview"
-                    className="w-20 h-20 rounded-full object-cover border-2 border-primary-500"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setProfileImage(null);
-                      setImagePreview(null);
-                    }}
-                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-red-600"
-                  >
-                    ×
-                  </button>
-                </div>
-              )}
-
-              {/* Upload Button */}
-              <label className="cursor-pointer bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg transition-colors">
-                {imagePreview ? "Change Photo" : "Choose Photo"}
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageChange}
-                  className="hidden"
-                  required={!imagePreview}
-                />
-              </label>
             </div>
-            {errors.profileImage && (
-              <p className="text-xs text-red-500 mt-1">{errors.profileImage}</p>
+
+            <div>
+              <label className="mb-2 block text-sm font-semibold uppercase tracking-[0.2em] text-[#CFF9FF]">
+                Email Address *
+              </label>
+              <input
+                type="email"
+                name="email"
+                value={formData.email}
+                onChange={handleChange}
+                className={`w-full rounded-md border bg-[#061D23] px-4 py-3 text-[15px] text-white placeholder:text-[#D8FBFF] focus:outline-none ${errors.email ? "border-[#4AEEFF]" : "border-[#12679E] focus:border-[#4AEEFF]"}`}
+                placeholder="you@example.com"
+              />
+              {errors.email && (
+                <p className="mt-1 text-xs text-[#4AEEFF]">{errors.email}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="mb-2 block text-sm font-semibold uppercase tracking-[0.2em] text-[#CFF9FF]">
+                Password *
+              </label>
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  name="password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  className={`w-full rounded-md border bg-[#061D23] px-4 py-3 pr-12 text-[15px] text-white placeholder:text-[#D8FBFF] focus:outline-none ${errors.password ? "border-[#4AEEFF]" : "border-[#12679E] focus:border-[#4AEEFF]"}`}
+                  placeholder="Create a strong password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#CFF9FF]"
+                >
+                  {showPassword ? "👁️" : "👁️‍🗨️"}
+                </button>
+              </div>
+
+              <div className="mt-2 space-y-1 text-xs text-[#4AEEFF]">
+                <p className="text-[#FFFFFF]">
+                  {passwordValid.length ? "✓" : "○"} At least 8 characters
+                </p>
+                <p className="text-[#FFFFFF]">
+                  {passwordValid.uppercase ? "✓" : "○"} At least one uppercase letter (A-Z)
+                </p>
+                <p className="text-[#FFFFFF]">
+                  {passwordValid.lowercase ? "✓" : "○"} At least one lowercase letter (a-z)
+                </p>
+                <p className="text-[#FFFFFF]">
+                  {passwordValid.number ? "✓" : "○"} At least one number (0-9)
+                </p>
+              </div>
+              {errors.password && (
+                <p className="mt-1 text-xs text-[#4AEEFF]">{errors.password}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="mb-2 block text-sm font-semibold uppercase tracking-[0.2em] text-[#CFF9FF]">
+                Phone Number *
+              </label>
+              <input
+                type="tel"
+                name="phone"
+                value={formData.phone}
+                onChange={handleChange}
+                className={`w-full rounded-md border bg-[#061D23] px-4 py-3 text-[15px] text-white placeholder:text-[#FFFFFF] focus:outline-none ${errors.phone ? "border-[#4AEEFF]" : "border-[#12679E] focus:border-[#4AEEFF]"}`}
+                placeholder="071-1234567 or 011-1234567"
+              />
+              {errors.phone && (
+                <p className="mt-1 text-xs text-[#4AEEFF]">{errors.phone}</p>
+              )}
+              <p className="mt-1 text-xs text-[#D8FBFF]">
+                Format: Mobile: 071-1234567 | Landline: 011-1234567
+              </p>
+            </div>
+
+            <div>
+              <label className="mb-2 block text-sm font-semibold uppercase tracking-[0.2em] text-[#CFF9FF]">
+                I want to join as *
+              </label>
+              <select
+                name="role"
+                value={formData.role}
+                onChange={handleChange}
+                className="w-full rounded-md border border-[#12679E] bg-[#061D23] px-4 py-3 text-[15px] text-white focus:border-[#4AEEFF] focus:outline-none"
+              >
+                <option value="PLAYER">🏓 Player - Compete in tournaments</option>
+                <option value="REFEREE">👨‍⚖️ Referee - Officiate matches</option>
+                <option value="ADMIN">👑 Admin - Manage tournaments</option>
+              </select>
+              <p className="mt-1 text-xs text-[#D8FBFF]">
+                {formData.role === "PLAYER" &&
+                  "Join tournaments, track your progress, and compete with others!"}
+                {formData.role === "REFEREE" &&
+                  "Officiate matches, record scores, and manage games."}
+                {formData.role === "ADMIN" &&
+                  "Create tournaments, manage players, and oversee everything."}
+              </p>
+            </div>
+
+            {formData.role === "PLAYER" && (
+              <>
+                <div>
+                  <label className="mb-2 block text-sm font-semibold uppercase tracking-[0.2em] text-[#CFF9FF]">
+                    Date of Birth *
+                  </label>
+                  <input
+                    type="date"
+                    name="dateOfBirth"
+                    value={formData.playerProfile.dateOfBirth || ""}
+                    onChange={handleChange}
+                    required
+                    className="w-full rounded-md border border-[#12679E] bg-[#061D23] px-4 py-3 text-[15px] text-white focus:border-[#4AEEFF] focus:outline-none"
+                    max={new Date().toISOString().split("T")[0]}
+                  />
+                  <p className="mt-1 text-xs text-[#D8FBFF]">
+                    This helps us determine your age category for tournaments
+                  </p>
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-sm font-semibold uppercase tracking-[0.2em] text-[#CFF9FF]">
+                    Your Skill Level
+                  </label>
+                  <select
+                    name="skillLevel"
+                    value={formData.playerProfile.skillLevel}
+                    onChange={handleChange}
+                    className="w-full rounded-md border border-[#12679E] bg-[#061D23] px-4 py-3 text-[15px] text-white focus:border-[#4AEEFF] focus:outline-none"
+                  >
+                    <option value="Beginner">🏅 Beginner - Just starting out</option>
+                    <option value="Intermediate">🎯 Intermediate - Have some experience</option>
+                    <option value="Advanced">🏆 Advanced - Competing at high level</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-sm font-semibold uppercase tracking-[0.2em] text-[#CFF9FF]">
+                    Club or Academy (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    name="clubAffiliation"
+                    value={formData.playerProfile.clubAffiliation}
+                    onChange={handleChange}
+                    className="w-full rounded-md border border-[#12679E] bg-[#061D23] px-4 py-3 text-[15px] text-white placeholder:text-[#D8FBFF] focus:border-[#4AEEFF] focus:outline-none"
+                    placeholder="e.g., City Table Tennis Club"
+                  />
+                </div>
+              </>
             )}
 
-            <p className="text-xs text-gray-500 mt-1">
-              JPG, PNG or GIF. Max 5MB.
+            <div>
+              <label className="mb-2 block text-sm font-semibold uppercase tracking-[0.2em] text-[#CFF9FF]">
+                Profile Photo *
+              </label>
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+                {imagePreview && (
+                  <div className="relative">
+                    <img
+                      src={imagePreview}
+                      alt="Profile preview"
+                      className="h-20 w-20 rounded-full border-2 border-[#4AEEFF] object-cover"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setProfileImage(null);
+                        setImagePreview(null);
+                      }}
+                      className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full bg-[#4AEEFF] text-xs font-bold text-[#061D23] hover:bg-[#FFFFFF]"
+                    >
+                      ×
+                    </button>
+                  </div>
+                )}
+
+                <label className="cursor-pointer rounded-lg border border-[#12679E] bg-[#12679E] px-4 py-2 text-sm font-semibold text-[#FFFFFF] transition hover:bg-[#4AEEFF] hover:text-[#061D23]">
+                  {imagePreview ? "Change Photo" : "Choose Photo"}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageChange}
+                    className="hidden"
+                    required={!imagePreview}
+                  />
+                </label>
+              </div>
+              {errors.profileImage && (
+                <p className="mt-1 text-xs text-[#4AEEFF]">{errors.profileImage}</p>
+              )}
+
+              <p className="mt-1 text-xs text-[#D8FBFF]">
+                JPG, PNG or GIF. Max 5MB.
+              </p>
+            </div>
+
+            <button
+              type="submit"
+              disabled={isLoading || (!!formData.password && !isPasswordValid)}
+              className="w-full rounded-md bg-[#FFFFFF] px-4 py-3 text-sm font-black uppercase tracking-[0.25em] text-[#061D23] transition hover:bg-[#4AEEFF] disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {isLoading ? "Creating your account..." : "Create Free Account"}
+            </button>
+          </form>
+
+          <p className="mt-6 text-center text-sm text-[#D8FBFF]">
+            Already have an account?{" "}
+            <Link to="/login" className="font-semibold text-[#4AEEFF] hover:text-[#CFF9FF]">
+              Sign in here
+            </Link>
+          </p>
+
+          <div className="mt-6 border-t border-[#12679E]/40 pt-6">
+            <p className="text-center text-xs text-[#D8FBFF]">
+              By signing up, you agree to our Terms of Service and Privacy Policy.
             </p>
           </div>
-
-          <button
-            type="submit"
-            disabled={isLoading || (!!formData.password && !isPasswordValid)}
-            className="btn-primary w-full disabled:opacity-50"
-          >
-            {isLoading ? "Creating your account..." : "Create Free Account"}
-          </button>
-        </form>
-
-        <p className="text-center text-sm text-gray-600 mt-6">
-          Already have an account?{" "}
-          <Link
-            to="/login"
-            className="text-primary-600 hover:text-primary-700 font-medium"
-          >
-            Sign in here
-          </Link>
-        </p>
-
-        <div className="mt-6 pt-6 border-t">
-          <p className="text-xs text-center text-gray-500">
-            By signing up, you agree to our Terms of Service and Privacy Policy.
-          </p>
         </div>
       </div>
     </div>
