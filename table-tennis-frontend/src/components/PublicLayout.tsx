@@ -7,15 +7,9 @@ const PublicLayout: React.FC = () => {
   const { user } = useAuth();
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
 
-  useEffect(() => {
-    const handleScroll = () => {
-      setScrolled(window.scrollY > 20);
-    };
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
+  const isTournamentRoute = location.pathname.startsWith("/tournaments");
+  const wrapperBgClass = isTournamentRoute ? "bg-gradient-to-br from-primary-900 via-primary-800 to-primary-900" : "bg-transparent";
 
   const navigation = [
     { name: "Home", href: "/" },
@@ -26,15 +20,11 @@ const PublicLayout: React.FC = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className={`min-h-screen flex flex-col ${wrapperBgClass}`}>
       {/* Navbar */}
-      <nav
-        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-          scrolled ? "bg-white/95 backdrop-blur-md shadow-lg" : "bg-transparent"
-        }`}
-      >
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-[#061D23] shadow-lg transition-all duration-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
+          <div className="flex justify-between items-center h-20">
             {/* Logo */}
             <Link to="/" className="flex items-center gap-2 group">
               <div className="w-8 h-8 bg-gradient-to-r from-primary-600 to-secondary-500 rounded-lg flex items-center justify-center transform transition-transform group-hover:scale-110">
@@ -46,15 +36,15 @@ const PublicLayout: React.FC = () => {
             </Link>
 
             {/* Desktop Navigation */}
-            <div className="hidden md:flex items-center gap-1">
+            <div className="hidden md:flex items-center gap-2">
               {navigation.map((item) => (
                 <Link
                   key={item.name}
                   to={item.href}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                  className={`px-4 py-2 rounded-full text-sm font-medium transition duration-200 ${
                     location.pathname === item.href
-                      ? "bg-primary-50 text-primary-700"
-                      : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+                      ? "bg-[#0099cc] text-black"
+                      : "bg-[#4AEEFF] text-black hover:bg-[#80ffff]"
                   }`}
                 >
                   {item.name}
@@ -65,18 +55,18 @@ const PublicLayout: React.FC = () => {
             {/* Right section */}
             <div className="flex items-center gap-3">
               {user ? (
-                <Link to="/app/dashboard" className="btn-primary text-sm py-2">
+                <Link to="/app/dashboard" className="inline-flex items-center justify-center rounded-full bg-primary-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-primary-700">
                   Dashboard
                 </Link>
               ) : (
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-3">
                   <Link
                     to="/login"
-                    className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-primary-600 transition"
+                    className="inline-flex items-center justify-center rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-primary-500 hover:text-primary-700"
                   >
                     Sign In
                   </Link>
-                  <Link to="/register" className="btn-primary text-sm py-2">
+                  <Link to="/register" className="inline-flex items-center justify-center rounded-full bg-[#4AEEFF] px-6 py-3 text-base font-semibold text-black shadow-sm transition hover:bg-[#80ffff]">
                     Get Started
                   </Link>
                 </div>
@@ -85,7 +75,7 @@ const PublicLayout: React.FC = () => {
               {/* Mobile menu button */}
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="md:hidden p-2 rounded-lg text-gray-600 hover:bg-gray-100"
+                className="md:hidden p-2 rounded-full text-slate-600 hover:bg-slate-100 transition"
               >
                 {mobileMenuOpen ? (
                   <XMarkIcon className="w-6 h-6" />
@@ -99,7 +89,7 @@ const PublicLayout: React.FC = () => {
 
         {/* Mobile menu */}
         {mobileMenuOpen && (
-          <div className="md:hidden bg-white border-t shadow-lg animate-slide-down">
+          <div className="md:hidden bg-[#061D23] border-t border-[#0f2b33] shadow-lg animate-slide-down">
             <div className="px-4 py-3 space-y-1">
               {navigation.map((item) => (
                 <Link
@@ -108,8 +98,8 @@ const PublicLayout: React.FC = () => {
                   onClick={() => setMobileMenuOpen(false)}
                   className={`block px-3 py-2 rounded-lg text-sm font-medium ${
                     location.pathname === item.href
-                      ? "bg-primary-50 text-primary-700"
-                      : "text-gray-600 hover:bg-gray-100"
+                      ? "bg-[#0099cc] text-black"
+                      : "bg-[#4AEEFF] text-black hover:bg-[#80ffff]"
                   }`}
                 >
                   {item.name}
@@ -121,14 +111,14 @@ const PublicLayout: React.FC = () => {
                     <Link
                       to="/login"
                       onClick={() => setMobileMenuOpen(false)}
-                      className="block px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg"
+                      className="block rounded-full border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 text-center transition hover:border-primary-500 hover:text-primary-700"
                     >
                       Sign In
                     </Link>
                     <Link
                       to="/register"
                       onClick={() => setMobileMenuOpen(false)}
-                      className="block px-3 py-2 text-sm font-medium bg-white text-primary-700 rounded-lg text-center shadow-sm"
+                      className="block rounded-full bg-[#4AEEFF] px-3 py-2 text-sm font-medium text-black text-center shadow-sm transition hover:bg-[#80ffff]"
                     >
                       Get Started
                     </Link>
@@ -141,15 +131,15 @@ const PublicLayout: React.FC = () => {
       </nav>
 
       {/* Main content */}
-      <main>
+      <main className={`flex-1 ${isTournamentRoute ? "bg-gradient-to-br from-primary-900 via-primary-800 to-primary-900" : "bg-transparent"}`}>
         <div className="pt-16">
           <Outlet />
         </div>
       </main>
 
       {/* Footer */}
-      <footer className="bg-dark-100 text-white mt-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <footer className="bg-[#061D23] text-white">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             <div>
               <div className="flex items-center gap-2 mb-4">

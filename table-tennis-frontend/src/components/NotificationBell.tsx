@@ -101,7 +101,7 @@ const NotificationBell: React.FC = () => {
     <div className="relative">
       <button
         onClick={() => setShowDropdown(!showDropdown)}
-        className="relative p-2 text-gray-600 hover:text-gray-900 rounded-full hover:bg-gray-100 transition-colors"
+        className="relative p-2 text-gray-300 hover:text-white rounded-full hover:bg-[#0f2b33] transition-colors"
       >
         <BellIcon className="w-6 h-6" />
         {unreadCount > 0 && (
