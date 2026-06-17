@@ -41,85 +41,84 @@ const Dashboard: React.FC = () => {
   };
 
   return (
-    <div>
-      <h1 className="text-3xl font-bold text-gray-900 mb-8">
-        Welcome back, {user?.firstName}! 👋
-      </h1>
-
-      {/* New Tournaments Alert Section */}
-      {newTournaments.length > 0 && (
-        <div className="mb-8 bg-gradient-to-r from-primary-50 to-primary-100 border border-primary-200 rounded-lg p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <TrophyIcon className="w-6 h-6 text-primary-600" />
-            <h2 className="text-lg font-semibold text-primary-800">
-              New Tournaments Available!
-            </h2>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {newTournaments.map((tournament) => (
-              <Link
-                key={tournament.id}
-                to={`/tournaments/${tournament.id}`}
-                className="bg-white rounded-lg p-3 hover:shadow-md transition-shadow"
-              >
-                <h3 className="font-semibold text-gray-900">
-                  {tournament.name}
-                </h3>
-                <p className="text-sm text-gray-600 mt-1">
-                  📍 {tournament.venue}
-                </p>
-                <p className="text-xs text-gray-500 mt-1">
-                  Register by:{" "}
-                  {new Date(
-                    tournament.registrationDeadline,
-                  ).toLocaleDateString()}
-                </p>
-                <span className="inline-block mt-2 text-xs bg-green-100 text-green-700 px-2 py-1 rounded">
-                  Register Now →
-                </span>
-              </Link>
-            ))}
-          </div>
+    <div className="min-h-screen w-full overflow-x-hidden bg-[linear-gradient(180deg,#061D23_0%,#123B4A_100%)] p-4 sm:p-6 lg:p-8">
+      <div className="mx-auto flex min-h-[calc(100vh-2rem)] w-full max-w-7xl flex-col space-y-6">
+        <div className="rounded-[24px] border border-[#12679E] bg-[linear-gradient(135deg,#123B4A_0%,#061D23_100%)] p-6 shadow-[0_16px_60px_rgba(0,0,0,0.25)]">
+          <div className="mb-4 h-1 w-24 rounded-full bg-[#CFF9FF]" />
+          <h1 className="mb-2 text-3xl font-black uppercase tracking-[0.2em] text-white">
+            Welcome back, {user?.firstName}! 👋
+          </h1>
+          <p className="text-sm uppercase tracking-[0.25em] text-[#D8FBFF]">
+            Your tournament hub
+          </p>
         </div>
-      )}
 
-      {/* Your existing dashboard content */}
-      <div className="card">
-        <p className="text-gray-600">
-          You are logged in as{" "}
-          <strong className="text-primary-600">{user?.role}</strong>
-        </p>
-        <p className="text-gray-600 mt-2">Email: {user?.email}</p>
-      </div>
-
-      <div className="mt-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <Link
-          to="/tournaments"
-          className="card hover:shadow-lg transition-shadow"
-        >
-          <TrophyIcon className="w-8 h-8 text-primary-600 mb-2" />
-          <h3 className="font-semibold text-gray-900 mb-2">Tournaments</h3>
-          <p className="text-gray-600">View and manage tournaments</p>
-        </Link>
-
-        {isPlayer && (
-          <Link
-            to="app/my-matches"
-            className="card hover:shadow-lg transition-shadow"
-          >
-            <CalendarIcon className="w-8 h-8 text-primary-600 mb-2" />
-            <h3 className="font-semibold text-gray-900 mb-2">My Matches</h3>
-            <p className="text-gray-600">Check your upcoming matches</p>
-          </Link>
+        {newTournaments.length > 0 && (
+          <div className="rounded-[24px] border border-[#4AEEFF] bg-[linear-gradient(135deg,#12679E_0%,#123B4A_100%)] p-6 shadow-[0_14px_50px_rgba(0,0,0,0.2)]">
+            <div className="mb-4 flex items-center gap-2">
+              <TrophyIcon className="h-6 w-6 text-[#4AEEFF]" />
+              <h2 className="text-lg font-semibold text-white">
+                New Tournaments Available!
+              </h2>
+            </div>
+            <div className="grid gap-4 md:grid-cols-3">
+              {newTournaments.map((tournament) => (
+                <Link
+                  key={tournament.id}
+                  to={`/tournaments/${tournament.id}`}
+                  className="rounded-[18px] border border-[#12679E] bg-[linear-gradient(145deg,#123B4A_0%,#061D23_100%)] p-4 transition hover:border-[#4AEEFF] hover:shadow-[0_10px_30px_rgba(74,238,255,0.12)]"
+                >
+                  <h3 className="font-semibold text-white">{tournament.name}</h3>
+                  <p className="mt-2 text-sm text-[#D8FBFF]">📍 {tournament.venue}</p>
+                  <p className="mt-2 text-xs text-[#D8FBFF]">
+                    Register by: {new Date(tournament.registrationDeadline).toLocaleDateString()}
+                  </p>
+                  <span className="mt-3 inline-block rounded-full bg-[#FFFFFF] px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-[#061D23]">
+                    Register Now →
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </div>
         )}
-        <Link
-          to="/leaderboard"
-          className="card hover:shadow-lg transition-shadow"
-        >
-          <ChartBarIcon className="w-8 h-8 text-primary-600 mb-2" />
-          <h3 className="font-semibold text-gray-900 mb-2">Leaderboard</h3>
-          <p className="text-gray-600">See tournament rankings</p>
-        </Link>
+
+        <div className="rounded-[24px] border border-[#12679E] bg-[linear-gradient(145deg,#123B4A_0%,#061D23_100%)] p-6 shadow-[0_14px_50px_rgba(0,0,0,0.2)]">
+          <p className="text-[#D8FBFF]">
+            You are logged in as <strong className="text-[#4AEEFF]">{user?.role}</strong>
+          </p>
+          <p className="mt-2 text-[#D8FBFF]">Email: {user?.email}</p>
+        </div>
+
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <Link
+            to="/tournaments"
+            className="group rounded-[20px] border border-[#12679E] bg-[linear-gradient(160deg,#12679E_0%,#061D23_100%)] p-6 transition hover:border-[#4AEEFF] hover:shadow-[0_12px_35px_rgba(74,238,255,0.12)]"
+          >
+            <TrophyIcon className="mb-3 h-8 w-8 text-[#4AEEFF]" />
+            <h3 className="mb-2 font-semibold text-white">Tournaments</h3>
+            <p className="text-[#D8FBFF]">View and manage tournaments</p>
+          </Link>
+
+          {isPlayer && (
+            <Link
+              to="/app/my-matches"
+              className="group rounded-[20px] border border-[#12679E] bg-[linear-gradient(160deg,#12679E_0%,#123B4A_100%)] p-6 transition hover:border-[#4AEEFF] hover:shadow-[0_12px_35px_rgba(74,238,255,0.12)]"
+            >
+              <CalendarIcon className="mb-3 h-8 w-8 text-[#4AEEFF]" />
+              <h3 className="mb-2 font-semibold text-white">My Matches</h3>
+              <p className="text-[#D8FBFF]">Check your upcoming matches</p>
+            </Link>
+          )}
+
+          <Link
+            to="/leaderboard"
+            className="group rounded-[20px] border border-[#12679E] bg-[linear-gradient(160deg,#12679E_0%,#061D23_100%)] p-6 transition hover:border-[#4AEEFF] hover:shadow-[0_12px_35px_rgba(74,238,255,0.12)]"
+          >
+            <ChartBarIcon className="mb-3 h-8 w-8 text-[#4AEEFF]" />
+            <h3 className="mb-2 font-semibold text-white">Leaderboard</h3>
+            <p className="text-[#D8FBFF]">See tournament rankings</p>
+          </Link>
+        </div>
       </div>
     </div>
   );

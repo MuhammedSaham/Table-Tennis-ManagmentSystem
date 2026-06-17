@@ -4,9 +4,16 @@
 
 @layer base {
   * {
-    @apply scroll-smooth;
+    @apply scroll-smooth box-border;
   }
   
+  html,
+  body {
+    margin: 0;
+    padding: 0;
+    min-height: 100%;
+  }
+
   body {
     @apply bg-gray-50 font-sans text-gray-900 antialiased;
   }
@@ -57,7 +64,17 @@
   
   /* Gradient text */
   .gradient-text {
-    @apply bg-gradient-to-r from-primary-600 to-secondary-500 bg-clip-text text-transparent;
+    @apply bg-gradient-to-r from-white to-[#4AEEFF] bg-clip-text text-transparent;
+  }
+
+  /* Blinking animation for footer tagline */
+  @keyframes blink {
+    0%, 49% { opacity: 1; }
+    50%, 100% { opacity: 0.15; }
+  }
+
+  .blink {
+    animation: blink 1.2s linear infinite;
   }
   
   /* Table styles */

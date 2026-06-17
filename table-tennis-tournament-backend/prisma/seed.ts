@@ -57,7 +57,6 @@ async function main() {
   console.log('Admin:    admin@tabletennis.com   / admin123');
   console.log('Referee:  referee@tabletennis.com / referee123');
   console.log('─'.repeat(45));
-  console.log('Players register themselves through the app.');
 }
 
 main()
