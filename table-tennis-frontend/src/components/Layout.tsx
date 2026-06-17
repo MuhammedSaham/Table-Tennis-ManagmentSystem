@@ -19,15 +19,6 @@ const Layout: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      setScrolled(window.scrollY > 20);
-    };
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
 
   const handleLogout = () => {
     logout();
@@ -73,13 +64,9 @@ const Layout: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Modern Navbar */}
-      <nav
-        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-          scrolled ? "bg-white/95 backdrop-blur-md shadow-lg" : "bg-transparent"
-        }`}
-      >
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-[#061D23] shadow-lg transition-all duration-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
+          <div className="flex justify-between items-center h-20">
             {/* Logo */}
             <Link to="app/dashboard" className="flex items-center gap-2 group">
               <div className="w-8 h-8 bg-gradient-to-r from-primary-600 to-secondary-500 rounded-lg flex items-center justify-center transform transition-transform group-hover:scale-110">
@@ -99,8 +86,8 @@ const Layout: React.FC = () => {
                     to={item.href}
                     className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                       location.pathname === item.href
-                        ? "bg-primary-50 text-primary-700"
-                        : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+                        ? "bg-[#1fd5ff] text-black"
+                        : "bg-[#4AEEFF] text-black hover:bg-[#80ffff]"
                     }`}
                   >
                     <item.icon className="w-4 h-4" />
@@ -152,7 +139,7 @@ const Layout: React.FC = () => {
 
         {/* Mobile menu */}
         {mobileMenuOpen && user && (
-          <div className="md:hidden bg-white border-t shadow-lg animate-slide-down">
+          <div className="md:hidden bg-[#061D23] border-t border-[#0f2b33] shadow-lg animate-slide-down">
             <div className="px-4 py-3 space-y-1">
               {navigation.map((item) => (
                 <Link
@@ -161,8 +148,8 @@ const Layout: React.FC = () => {
                   onClick={() => setMobileMenuOpen(false)}
                   className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                     location.pathname === item.href
-                      ? "bg-primary-50 text-primary-700"
-                      : "text-gray-600 hover:bg-gray-100"
+                      ? "bg-[#1fd5ff] text-black"
+                      : "bg-[#4AEEFF] text-black hover:bg-[#80ffff]"
                   }`}
                 >
                   <item.icon className="w-5 h-5" />
@@ -198,7 +185,7 @@ const Layout: React.FC = () => {
       </main>
 
       {/* Footer */}
-      <footer className="bg-dark-100 text-white mt-20">
+      <footer className="bg-[#061D23] text-white mt-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             <div>
