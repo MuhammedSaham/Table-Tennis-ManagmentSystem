@@ -43,7 +43,7 @@ const PublicLayout: React.FC = () => {
                   to={item.href}
                   className={`px-4 py-2 rounded-full text-sm font-medium transition duration-200 ${
                     location.pathname === item.href
-                      ? "bg-[#1fd5ff] text-black"
+                      ? "bg-[#0099cc] text-black"
                       : "bg-[#4AEEFF] text-black hover:bg-[#80ffff]"
                   }`}
                 >
@@ -98,7 +98,7 @@ const PublicLayout: React.FC = () => {
                   onClick={() => setMobileMenuOpen(false)}
                   className={`block px-3 py-2 rounded-lg text-sm font-medium ${
                     location.pathname === item.href
-                      ? "bg-[#1fd5ff] text-black"
+                      ? "bg-[#0099cc] text-black"
                       : "bg-[#4AEEFF] text-black hover:bg-[#80ffff]"
                   }`}
                 >

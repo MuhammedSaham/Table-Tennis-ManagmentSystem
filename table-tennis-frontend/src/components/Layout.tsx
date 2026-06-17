@@ -86,7 +86,7 @@ const Layout: React.FC = () => {
                     to={item.href}
                     className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                       location.pathname === item.href
-                        ? "bg-[#1fd5ff] text-black"
+                        ? "bg-[#0099cc] text-black"
                         : "bg-[#4AEEFF] text-black hover:bg-[#80ffff]"
                     }`}
                   >
@@ -148,7 +148,7 @@ const Layout: React.FC = () => {
                   onClick={() => setMobileMenuOpen(false)}
                   className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                     location.pathname === item.href
-                      ? "bg-[#1fd5ff] text-black"
+                      ? "bg-[#0099cc] text-black"
                       : "bg-[#4AEEFF] text-black hover:bg-[#80ffff]"
                   }`}
                 >
