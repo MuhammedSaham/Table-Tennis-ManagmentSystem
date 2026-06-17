@@ -104,14 +104,14 @@ const Layout: React.FC = () => {
                   <NotificationBell />
                   <div className="hidden md:flex items-center gap-3">
                     <div className="text-right">
-                      <p className="text-sm font-medium text-gray-900">
+                      <p className="text-sm font-medium text-white">
                         {user.firstName}
                       </p>
-                      <p className="text-xs text-gray-500">{user.role}</p>
+                      <p className="text-xs text-gray-300">{user.role}</p>
                     </div>
                     <button
                       onClick={handleLogout}
-                      className="p-2 text-gray-500 hover:text-red-600 rounded-lg transition-colors"
+                      className="p-2 text-gray-300 hover:text-red-400 rounded-lg transition-colors"
                       title="Logout"
                     >
                       <ArrowRightOnRectangleIcon className="w-5 h-5" />
@@ -124,7 +124,7 @@ const Layout: React.FC = () => {
               {user && (
                 <button
                   onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                  className="md:hidden p-2 rounded-lg text-gray-600 hover:bg-gray-100"
+                  className="md:hidden p-2 rounded-lg text-gray-300 hover:text-white"
                 >
                   {mobileMenuOpen ? (
                     <XMarkIcon className="w-6 h-6" />
