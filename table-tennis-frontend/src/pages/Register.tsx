@@ -5,6 +5,8 @@ import { handleApiError, showSuccess } from "../utils/errorHandler";
 import api from "../services/api";
 import toast from "react-hot-toast";
 
+/* Palette: #061D23 | #4AEEFF | #FFFFFF | #12679E */
+
 interface FormErrors {
   email?: string;
   password?: string;
@@ -36,7 +38,6 @@ const Register: React.FC = () => {
   const [profileImage, setProfileImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
 
-  // Password validation state
   const [passwordValid, setPasswordValid] = useState({
     length: false,
     uppercase: false,
@@ -53,63 +54,25 @@ const Register: React.FC = () => {
     });
   };
 
-  // Add this function before the validateForm function
   const validateSriLankanPhone = (phone: string): boolean => {
-    // Sri Lanka phone number patterns:
-    // Landline: 011-1234567, 081-1234567
-    // Mobile: 071-1234567, 072-1234567, 074-1234567, 075-1234567, 076-1234567, 077-1234567, 078-1234567
     const phoneRegex = /^(0[1-9]{2})-?[0-9]{7}$|^(07[0-9])-?[0-9]{7}$/;
     return phoneRegex.test(phone);
   };
 
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {};
-
-    // First Name validation - at least 2 characters
-    if (!formData.firstName.trim()) {
-      newErrors.firstName = "First name is required";
-    } else if (formData.firstName.trim().length < 2) {
-      newErrors.firstName = "First name must be at least 2 characters";
-    }
-
-    // Last Name validation - at least 2 characters
-    if (!formData.lastName.trim()) {
-      newErrors.lastName = "Last name is required";
-    } else if (formData.lastName.trim().length < 2) {
-      newErrors.lastName = "Last name must be at least 2 characters";
-    }
-
-    // Email validation
-    if (!formData.email.trim()) {
-      newErrors.email = "Email address is required";
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email =
-        "Please enter a valid email address (e.g., name@example.com)";
-    }
-    // Phone validation
-    if (!formData.phone.trim()) {
-      newErrors.phone = "Phone number is required";
-    } else if (!validateSriLankanPhone(formData.phone)) {
-      newErrors.phone =
-        "Please enter a valid Sri Lanka phone number (e.g., 071-1234567 or 011-1234567)";
-    }
-
-    // Password validation
-    if (!formData.password) {
-      newErrors.password = "Password is required";
-    } else if (
-      !passwordValid.length ||
-      !passwordValid.uppercase ||
-      !passwordValid.lowercase ||
-      !passwordValid.number
-    ) {
+    if (!formData.firstName.trim()) newErrors.firstName = "First name is required";
+    else if (formData.firstName.trim().length < 2) newErrors.firstName = "First name must be at least 2 characters";
+    if (!formData.lastName.trim()) newErrors.lastName = "Last name is required";
+    else if (formData.lastName.trim().length < 2) newErrors.lastName = "Last name must be at least 2 characters";
+    if (!formData.email.trim()) newErrors.email = "Email address is required";
+    else if (!/\S+@\S+\.\S+/.test(formData.email)) newErrors.email = "Please enter a valid email address (e.g., name@example.com)";
+    if (!formData.phone.trim()) newErrors.phone = "Phone number is required";
+    else if (!validateSriLankanPhone(formData.phone)) newErrors.phone = "Please enter a valid Sri Lanka phone number (e.g., 071-1234567 or 011-1234567)";
+    if (!formData.password) newErrors.password = "Password is required";
+    else if (!passwordValid.length || !passwordValid.uppercase || !passwordValid.lowercase || !passwordValid.number)
       newErrors.password = "Please meet all password requirements below";
-    }
-
-    if (!profileImage) {
-      newErrors.profileImage = "Profile picture is required";
-    }
-
+    if (!profileImage) newErrors.profileImage = "Profile picture is required";
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -117,18 +80,8 @@ const Register: React.FC = () => {
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      // Validate file type
-      if (!file.type.startsWith("image/")) {
-        toast.error("Please select an image file");
-        return;
-      }
-
-      // Validate file size (max 5MB)
-      if (file.size > 5 * 1024 * 1024) {
-        toast.error("Image must be less than 5MB");
-        return;
-      }
-
+      if (!file.type.startsWith("image/")) { toast.error("Please select an image file"); return; }
+      if (file.size > 5 * 1024 * 1024) { toast.error("Image must be less than 5MB"); return; }
       setProfileImage(file);
       setImagePreview(URL.createObjectURL(file));
     }
@@ -136,14 +89,8 @@ const Register: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!validateForm()) {
-      toast.error("Please fix the errors above");
-      return;
-    }
-
+    if (!validateForm()) { toast.error("Please fix the errors above"); return; }
     setIsLoading(true);
-
     try {
       const registerData: any = {
         email: formData.email,
@@ -153,37 +100,23 @@ const Register: React.FC = () => {
         role: formData.role,
         phone: formData.phone,
       };
-
       if (formData.role === "PLAYER") {
         registerData.playerProfile = {
-          dateOfBirth: formData.playerProfile.dateOfBirth
-            ? new Date(formData.playerProfile.dateOfBirth)
-            : undefined,
+          dateOfBirth: formData.playerProfile.dateOfBirth ? new Date(formData.playerProfile.dateOfBirth) : undefined,
           skillLevel: formData.playerProfile.skillLevel,
           clubAffiliation: formData.playerProfile.clubAffiliation,
         };
       } else if (formData.role === "REFEREE") {
-        registerData.refereeProfile = {
-          certification: "National Level",
-          experienceYears: 2,
-        };
+        registerData.refereeProfile = { certification: "National Level", experienceYears: 2 };
       } else if (formData.role === "ADMIN") {
-        registerData.adminProfile = {
-          department: "Tournament Management",
-        };
+        registerData.adminProfile = { department: "Tournament Management" };
       }
-
       await register(registerData);
-
       if (profileImage) {
         const formDataUpload = new FormData();
         formDataUpload.append("profileImage", profileImage);
-
-        await api.post("/users/upload-profile-image", formDataUpload, {
-          headers: { "Content-Type": "multipart/form-data" },
-        });
+        await api.post("/users/upload-profile-image", formDataUpload, { headers: { "Content-Type": "multipart/form-data" } });
       }
-
       showSuccess("Welcome! Your account has been created successfully.");
       navigate("/app/dashboard");
     } catch (error) {
@@ -193,268 +126,204 @@ const Register: React.FC = () => {
     }
   };
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
-  ) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-
-    if (name === "password") {
-      validatePassword(value);
-    }
-
-    if (
-      name === "skillLevel" ||
-      name === "clubAffiliation" ||
-      name === "dateOfBirth"
-    ) {
-      setFormData((prev) => ({
-        ...prev,
-        playerProfile: {
-          ...prev.playerProfile,
-          [name]: value,
-        },
-      }));
+    if (name === "password") validatePassword(value);
+    if (name === "skillLevel" || name === "clubAffiliation" || name === "dateOfBirth") {
+      setFormData(prev => ({ ...prev, playerProfile: { ...prev.playerProfile, [name]: value } }));
     } else {
-      setFormData((prev) => ({
-        ...prev,
-        [name]: value,
-      }));
+      setFormData(prev => ({ ...prev, [name]: value }));
     }
-
-    // Clear error for this field
-    if (errors[name as keyof FormErrors]) {
-      setErrors((prev) => ({ ...prev, [name]: undefined }));
-    }
+    if (errors[name as keyof FormErrors]) setErrors(prev => ({ ...prev, [name]: undefined }));
   };
 
-  const isPasswordValid =
-    passwordValid.length &&
-    passwordValid.uppercase &&
-    passwordValid.lowercase &&
-    passwordValid.number;
+  const isPasswordValid = passwordValid.length && passwordValid.uppercase && passwordValid.lowercase && passwordValid.number;
 
   return (
     <div className="flex min-h-screen w-screen items-center justify-center overflow-hidden bg-[#061D23] p-0">
-      <div className="flex min-h-screen w-full overflow-hidden border border-[#12679E]/40 bg-[#061D23] shadow-[0_20px_80px_rgba(0,0,0,0.35)]">
-        <div className="relative flex min-h-[220px] items-start justify-center overflow-hidden bg-[linear-gradient(135deg,#2A5F72_0%,#123B4A_45%,#061D23_100%)] p-8 pt-10 text-white sm:p-10 sm:pt-12 lg:min-h-full lg:w-[42%] lg:justify-start lg:p-12 lg:pt-14">
-          <div className="absolute inset-0">
-            <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(125, 179, 241, 0.53)_0%,rgba(6,29,35,0.1)_70%)]" />
-            <div className="absolute inset-0 bg-[rgba(225, 224, 255, 0.42)] [clip-path:polygon(68%_0,80%_0,53%_100%,41%_100%)]" />
-            <div className="absolute inset-0 bg-[rgba(58, 121, 240, 0.16)] [clip-path:polygon(78%_0,90%_0,63%_100%,51%_100%)]" />
-          </div>
+      <div className="flex min-h-screen w-full overflow-hidden border border-[#12679E] bg-[#061D23] shadow-[0_20px_80px_rgba(0,0,0,0.35)]">
 
-          <div className="relative z-10 max-w-sm">
-            <div className="mb-4 inline-flex rounded-full border border-[#061D23] bg-[#061D23] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.35em] text-[#D8FBFF]">
-              Sam's College
-            </div>
-            <h1 className="text-3xl font-black uppercase tracking-[0.25em] text-white">
-              Create Account
-            </h1>
-            <p className="mt-3 text-sm uppercase tracking-[0.25em] text-[#D8FBFF]">
-              Join the tournament platform
-            </p>
-            <div className="mt-6 h-1 w-24 rounded-full bg-[linear-gradient(90deg,#CFF9FF,#12679E)]" />
-          </div>
-        </div>
+        {/* LEFT panel */}
+        {/* LEFT panel */}
+<div className="relative flex min-h-[220px] items-start justify-center overflow-hidden bg-[#061D23] p-8 pt-10 text-white sm:p-10 sm:pt-12 lg:min-h-full lg:w-[50%] lg:justify-start lg:p-12 lg:pt-14">
 
-        <div className="w-full bg-[linear-gradient(160deg,#123B4A_0%,#061D23_100%)] p-6 sm:p-8 lg:w-[58%]">
-          <div className="mb-6 h-1 w-full rounded-full bg-[#CFF9FF]" />
+  {/* Background shapes */}
+  <div className="absolute inset-0">
+    <div className="absolute inset-0 bg-[#12679E] [clip-path:polygon(0_0,72%_0,45%_100%,0_100%)] opacity-60" />
+    <div className="absolute inset-0 bg-[#4AEEFF] [clip-path:polygon(68%_0,80%_0,53%_100%,41%_100%)] opacity-80" />
+    <div className="absolute inset-0 bg-[#12679E] [clip-path:polygon(78%_0,90%_0,63%_100%,51%_100%)] opacity-40" />
+  </div>
+
+  {/* Table Tennis Player */}
+  <img
+    src="/man1.png"
+    alt="Table Tennis Player"
+    style={{ width: 600, maxWidth: "90%",left: 0, bottom: 20, position: "absolute" }}
+    className="absolute left-0 bottom-0 h-[85%] object-contain opacity-20 pointer-events-none z-0"
+  />
+
+  <div className="relative z-10 max-w-sm">
+    <img
+      src="/LOGO.png"
+      alt="Sam's College"
+      style={{
+        width: 300,
+        maxWidth: "30%",
+        display: "block",
+        paddingBottom: 20,
+        marginBottom: 20,
+      }}
+    />
+
+    <h1 className="text-3xl font-black uppercase tracking-[0.25em] text-[#FFFFFF]">
+      Create Account
+    </h1>
+
+    <p className="mt-3 text-sm uppercase tracking-[0.25em] text-[#FFFFFF]">
+      Join the tournament platform
+    </p>
+
+    <div className="mt-6 h-1 w-24 rounded-full bg-[#4AEEFF]" />
+    <div className="mt-2 ml-8 h-1 w-14 rounded-full bg-[#FFFFFF]" />
+  </div>
+</div>
+
+        {/* RIGHT panel */}
+        <div className="w-full bg-[#03111a] p-6 sm:p-8 lg:w-[50%] lg:p-30">
+          <div className="mb-6 h-1 w-full rounded-full bg-[12679E]" />
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
-                <label className="mb-2 block text-sm font-semibold uppercase tracking-[0.2em] text-[#CFF9FF]">
+                <label className="mb-2 block text-sm font-semibold uppercase tracking-[0.2em] text-[#4AEEFF]">
                   First Name *
                 </label>
                 <input
-                  type="text"
-                  name="firstName"
-                  value={formData.firstName}
-                  onChange={handleChange}
-                  className={`w-full rounded-md border bg-[#061D23] px-4 py-3 text-[15px] text-white placeholder:text-[#D8FBFF] focus:outline-none ${errors.firstName ? "border-[#4AEEFF]" : "border-[#12679E] focus:border-[#4AEEFF]"}`}
+                  type="text" name="firstName" value={formData.firstName} onChange={handleChange}
+                  className={`w-full rounded-md border bg-[#061D23] px-4 py-3 text-[15px] text-[#FFFFFF] placeholder:text-[#FFFFFF] focus:outline-none ${errors.firstName ? "border-[#4AEEFF]" : "border-[#12679E] focus:border-[#4AEEFF]"}`}
                   placeholder="John"
                 />
-                {errors.firstName && (
-                  <p className="mt-1 text-xs text-[#4AEEFF]">{errors.firstName}</p>
-                )}
-                <p className="mt-1 text-xs text-[#D8FBFF]">
-                  {formData.firstName
-                    ? `${formData.firstName.length}/2+ characters`
-                    : "Minimum 2 characters required"}
+                {errors.firstName && <p className="mt-1 text-xs text-[#4AEEFF]">{errors.firstName}</p>}
+                <p className="mt-1 text-xs text-[#FFFFFF]">
+                  {formData.firstName ? `${formData.firstName.length}/2+ characters` : "Minimum 2 characters required"}
                 </p>
               </div>
-
               <div>
-                <label className="mb-2 block text-sm font-semibold uppercase tracking-[0.2em] text-[#CFF9FF]">
+                <label className="mb-2 block text-sm font-semibold uppercase tracking-[0.2em] text-[#4AEEFF]">
                   Last Name *
                 </label>
                 <input
-                  type="text"
-                  name="lastName"
-                  value={formData.lastName}
-                  onChange={handleChange}
-                  className={`w-full rounded-md border bg-[#061D23] px-4 py-3 text-[15px] text-white placeholder:text-[#D8FBFF] focus:outline-none ${errors.lastName ? "border-[#4AEEFF]" : "border-[#12679E] focus:border-[#4AEEFF]"}`}
+                  type="text" name="lastName" value={formData.lastName} onChange={handleChange}
+                  className={`w-full rounded-md border bg-[#061D23] px-4 py-3 text-[15px] text-[#FFFFFF] placeholder:text-[#FFFFFF] focus:outline-none ${errors.lastName ? "border-[#4AEEFF]" : "border-[#12679E] focus:border-[#4AEEFF]"}`}
                   placeholder="Doe"
                 />
-                {errors.lastName && (
-                  <p className="mt-1 text-xs text-[#4AEEFF]">{errors.lastName}</p>
-                )}
-                <p className="mt-1 text-xs text-[#D8FBFF]">
-                  {formData.lastName
-                    ? `${formData.lastName.length}/2+ characters`
-                    : "Minimum 2 characters required"}
+                {errors.lastName && <p className="mt-1 text-xs text-[#4AEEFF]">{errors.lastName}</p>}
+                <p className="mt-1 text-xs text-[#FFFFFF]">
+                  {formData.lastName ? `${formData.lastName.length}/2+ characters` : "Minimum 2 characters required"}
                 </p>
               </div>
             </div>
 
             <div>
-              <label className="mb-2 block text-sm font-semibold uppercase tracking-[0.2em] text-[#CFF9FF]">
+              <label className="mb-2 block text-sm font-semibold uppercase tracking-[0.2em] text-[#4AEEFF]">
                 Email Address *
               </label>
               <input
-                type="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                className={`w-full rounded-md border bg-[#061D23] px-4 py-3 text-[15px] text-white placeholder:text-[#D8FBFF] focus:outline-none ${errors.email ? "border-[#4AEEFF]" : "border-[#12679E] focus:border-[#4AEEFF]"}`}
+                type="email" name="email" value={formData.email} onChange={handleChange}
+                className={`w-full rounded-md border bg-[#061D23] px-4 py-3 text-[15px] text-[#FFFFFF] placeholder:text-[#FFFFFF] focus:outline-none ${errors.email ? "border-[#4AEEFF]" : "border-[#12679E] focus:border-[#4AEEFF]"}`}
                 placeholder="you@example.com"
               />
-              {errors.email && (
-                <p className="mt-1 text-xs text-[#4AEEFF]">{errors.email}</p>
-              )}
+              {errors.email && <p className="mt-1 text-xs text-[#4AEEFF]">{errors.email}</p>}
             </div>
 
             <div>
-              <label className="mb-2 block text-sm font-semibold uppercase tracking-[0.2em] text-[#CFF9FF]">
+              <label className="mb-2 block text-sm font-semibold uppercase tracking-[0.2em] text-[#4AEEFF]">
                 Password *
               </label>
               <div className="relative">
                 <input
-                  type={showPassword ? "text" : "password"}
-                  name="password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  className={`w-full rounded-md border bg-[#061D23] px-4 py-3 pr-12 text-[15px] text-white placeholder:text-[#D8FBFF] focus:outline-none ${errors.password ? "border-[#4AEEFF]" : "border-[#12679E] focus:border-[#4AEEFF]"}`}
+                  type={showPassword ? "text" : "password"} name="password" value={formData.password} onChange={handleChange}
+                  className={`w-full rounded-md border bg-[#061D23] px-4 py-3 pr-12 text-[15px] text-[#FFFFFF] placeholder:text-[#FFFFFF] focus:outline-none ${errors.password ? "border-[#4AEEFF]" : "border-[#12679E] focus:border-[#4AEEFF]"}`}
                   placeholder="Create a strong password"
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#CFF9FF]"
-                >
+                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#4AEEFF]">
                   {showPassword ? "👁️" : "👁️‍🗨️"}
                 </button>
               </div>
-
-              <div className="mt-2 space-y-1 text-xs text-[#4AEEFF]">
-                <p className="text-[#FFFFFF]">
-                  {passwordValid.length ? "✓" : "○"} At least 8 characters
-                </p>
-                <p className="text-[#FFFFFF]">
-                  {passwordValid.uppercase ? "✓" : "○"} At least one uppercase letter (A-Z)
-                </p>
-                <p className="text-[#FFFFFF]">
-                  {passwordValid.lowercase ? "✓" : "○"} At least one lowercase letter (a-z)
-                </p>
-                <p className="text-[#FFFFFF]">
-                  {passwordValid.number ? "✓" : "○"} At least one number (0-9)
-                </p>
+              <div className="mt-2 space-y-1 text-xs">
+                <p className="text-[#FFFFFF]">{passwordValid.length ? "✓" : "○"} At least 8 characters</p>
+                <p className="text-[#FFFFFF]">{passwordValid.uppercase ? "✓" : "○"} At least one uppercase letter (A-Z)</p>
+                <p className="text-[#FFFFFF]">{passwordValid.lowercase ? "✓" : "○"} At least one lowercase letter (a-z)</p>
+                <p className="text-[#FFFFFF]">{passwordValid.number ? "✓" : "○"} At least one number (0-9)</p>
               </div>
-              {errors.password && (
-                <p className="mt-1 text-xs text-[#4AEEFF]">{errors.password}</p>
-              )}
+              {errors.password && <p className="mt-1 text-xs text-[#4AEEFF]">{errors.password}</p>}
             </div>
 
             <div>
-              <label className="mb-2 block text-sm font-semibold uppercase tracking-[0.2em] text-[#CFF9FF]">
+              <label className="mb-2 block text-sm font-semibold uppercase tracking-[0.2em] text-[#4AEEFF]">
                 Phone Number *
               </label>
               <input
-                type="tel"
-                name="phone"
-                value={formData.phone}
-                onChange={handleChange}
-                className={`w-full rounded-md border bg-[#061D23] px-4 py-3 text-[15px] text-white placeholder:text-[#FFFFFF] focus:outline-none ${errors.phone ? "border-[#4AEEFF]" : "border-[#12679E] focus:border-[#4AEEFF]"}`}
+                type="tel" name="phone" value={formData.phone} onChange={handleChange}
+                className={`w-full rounded-md border bg-[#061D23] px-4 py-3 text-[15px] text-[#FFFFFF] placeholder:text-[#FFFFFF] focus:outline-none ${errors.phone ? "border-[#4AEEFF]" : "border-[#12679E] focus:border-[#4AEEFF]"}`}
                 placeholder="071-1234567 or 011-1234567"
               />
-              {errors.phone && (
-                <p className="mt-1 text-xs text-[#4AEEFF]">{errors.phone}</p>
-              )}
-              <p className="mt-1 text-xs text-[#D8FBFF]">
-                Format: Mobile: 071-1234567 | Landline: 011-1234567
-              </p>
+              {errors.phone && <p className="mt-1 text-xs text-[#4AEEFF]">{errors.phone}</p>}
+              <p className="mt-1 text-xs text-[#FFFFFF]">Format: Mobile: 071-1234567 | Landline: 011-1234567</p>
             </div>
 
             <div>
-              <label className="mb-2 block text-sm font-semibold uppercase tracking-[0.2em] text-[#CFF9FF]">
+              <label className="mb-2 block text-sm font-semibold uppercase tracking-[0.2em] text-[#4AEEFF]">
                 I want to join as *
               </label>
               <select
-                name="role"
-                value={formData.role}
-                onChange={handleChange}
-                className="w-full rounded-md border border-[#12679E] bg-[#061D23] px-4 py-3 text-[15px] text-white focus:border-[#4AEEFF] focus:outline-none"
+                name="role" value={formData.role} onChange={handleChange}
+                className="w-full rounded-md border border-[#12679E] bg-[#061D23] px-4 py-3 text-[15px] text-[#FFFFFF] focus:border-[#4AEEFF] focus:outline-none"
               >
                 <option value="PLAYER">🏓 Player - Compete in tournaments</option>
                 <option value="REFEREE">👨‍⚖️ Referee - Officiate matches</option>
                 <option value="ADMIN">👑 Admin - Manage tournaments</option>
               </select>
-              <p className="mt-1 text-xs text-[#D8FBFF]">
-                {formData.role === "PLAYER" &&
-                  "Join tournaments, track your progress, and compete with others!"}
-                {formData.role === "REFEREE" &&
-                  "Officiate matches, record scores, and manage games."}
-                {formData.role === "ADMIN" &&
-                  "Create tournaments, manage players, and oversee everything."}
+              <p className="mt-1 text-xs text-[#FFFFFF]">
+                {formData.role === "PLAYER" && "Join tournaments, track your progress, and compete with others!"}
+                {formData.role === "REFEREE" && "Officiate matches, record scores, and manage games."}
+                {formData.role === "ADMIN" && "Create tournaments, manage players, and oversee everything."}
               </p>
             </div>
 
             {formData.role === "PLAYER" && (
               <>
                 <div>
-                  <label className="mb-2 block text-sm font-semibold uppercase tracking-[0.2em] text-[#CFF9FF]">
+                  <label className="mb-2 block text-sm font-semibold uppercase tracking-[0.2em] text-[#4AEEFF]">
                     Date of Birth *
                   </label>
                   <input
-                    type="date"
-                    name="dateOfBirth"
-                    value={formData.playerProfile.dateOfBirth || ""}
-                    onChange={handleChange}
-                    required
-                    className="w-full rounded-md border border-[#12679E] bg-[#061D23] px-4 py-3 text-[15px] text-white focus:border-[#4AEEFF] focus:outline-none"
+                    type="date" name="dateOfBirth" value={formData.playerProfile.dateOfBirth || ""} onChange={handleChange} required
+                    className="w-full rounded-md border border-[#12679E] bg-[#061D23] px-4 py-3 text-[15px] text-[#FFFFFF] focus:border-[#4AEEFF] focus:outline-none"
                     max={new Date().toISOString().split("T")[0]}
                   />
-                  <p className="mt-1 text-xs text-[#D8FBFF]">
-                    This helps us determine your age category for tournaments
-                  </p>
+                  <p className="mt-1 text-xs text-[#FFFFFF]">This helps us determine your age category for tournaments</p>
                 </div>
-
                 <div>
-                  <label className="mb-2 block text-sm font-semibold uppercase tracking-[0.2em] text-[#CFF9FF]">
+                  <label className="mb-2 block text-sm font-semibold uppercase tracking-[0.2em] text-[#4AEEFF]">
                     Your Skill Level
                   </label>
                   <select
-                    name="skillLevel"
-                    value={formData.playerProfile.skillLevel}
-                    onChange={handleChange}
-                    className="w-full rounded-md border border-[#12679E] bg-[#061D23] px-4 py-3 text-[15px] text-white focus:border-[#4AEEFF] focus:outline-none"
+                    name="skillLevel" value={formData.playerProfile.skillLevel} onChange={handleChange}
+                    className="w-full rounded-md border border-[#12679E] bg-[#061D23] px-4 py-3 text-[15px] text-[#FFFFFF] focus:border-[#4AEEFF] focus:outline-none"
                   >
                     <option value="Beginner">🏅 Beginner - Just starting out</option>
                     <option value="Intermediate">🎯 Intermediate - Have some experience</option>
                     <option value="Advanced">🏆 Advanced - Competing at high level</option>
                   </select>
                 </div>
-
                 <div>
-                  <label className="mb-2 block text-sm font-semibold uppercase tracking-[0.2em] text-[#CFF9FF]">
+                  <label className="mb-2 block text-sm font-semibold uppercase tracking-[0.2em] text-[#4AEEFF]">
                     Club or Academy (Optional)
                   </label>
                   <input
-                    type="text"
-                    name="clubAffiliation"
-                    value={formData.playerProfile.clubAffiliation}
-                    onChange={handleChange}
-                    className="w-full rounded-md border border-[#12679E] bg-[#061D23] px-4 py-3 text-[15px] text-white placeholder:text-[#D8FBFF] focus:border-[#4AEEFF] focus:outline-none"
+                    type="text" name="clubAffiliation" value={formData.playerProfile.clubAffiliation} onChange={handleChange}
+                    className="w-full rounded-md border border-[#12679E] bg-[#061D23] px-4 py-3 text-[15px] text-[#FFFFFF] placeholder:text-[#FFFFFF] focus:border-[#4AEEFF] focus:outline-none"
                     placeholder="e.g., City Table Tennis Club"
                   />
                 </div>
@@ -462,48 +331,27 @@ const Register: React.FC = () => {
             )}
 
             <div>
-              <label className="mb-2 block text-sm font-semibold uppercase tracking-[0.2em] text-[#CFF9FF]">
+              <label className="mb-2 block text-sm font-semibold uppercase tracking-[0.2em] text-[#4AEEFF]">
                 Profile Photo *
               </label>
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
                 {imagePreview && (
                   <div className="relative">
-                    <img
-                      src={imagePreview}
-                      alt="Profile preview"
-                      className="h-20 w-20 rounded-full border-2 border-[#4AEEFF] object-cover"
-                    />
+                    <img src={imagePreview} alt="Profile preview" className="h-20 w-20 rounded-full border-2 border-[#4AEEFF] object-cover" />
                     <button
                       type="button"
-                      onClick={() => {
-                        setProfileImage(null);
-                        setImagePreview(null);
-                      }}
+                      onClick={() => { setProfileImage(null); setImagePreview(null); }}
                       className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full bg-[#4AEEFF] text-xs font-bold text-[#061D23] hover:bg-[#FFFFFF]"
-                    >
-                      ×
-                    </button>
+                    >×</button>
                   </div>
                 )}
-
-                <label className="cursor-pointer rounded-lg border border-[#12679E] bg-[#12679E] px-4 py-2 text-sm font-semibold text-[#FFFFFF] transition hover:bg-[#4AEEFF] hover:text-[#061D23]">
+                <label className="cursor-pointer rounded-lg border border-[#4AEEFF] bg-[#12679E] px-4 py-2 text-sm font-semibold text-[#FFFFFF] transition hover:bg-[#4AEEFF] hover:text-[#061D23]">
                   {imagePreview ? "Change Photo" : "Choose Photo"}
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageChange}
-                    className="hidden"
-                    required={!imagePreview}
-                  />
+                  <input type="file" accept="image/*" onChange={handleImageChange} className="hidden" required={!imagePreview} />
                 </label>
               </div>
-              {errors.profileImage && (
-                <p className="mt-1 text-xs text-[#4AEEFF]">{errors.profileImage}</p>
-              )}
-
-              <p className="mt-1 text-xs text-[#D8FBFF]">
-                JPG, PNG or GIF. Max 5MB.
-              </p>
+              {errors.profileImage && <p className="mt-1 text-xs text-[#4AEEFF]">{errors.profileImage}</p>}
+              <p className="mt-1 text-xs text-[#FFFFFF]">JPG, PNG or GIF. Max 5MB.</p>
             </div>
 
             <button
@@ -515,15 +363,13 @@ const Register: React.FC = () => {
             </button>
           </form>
 
-          <p className="mt-6 text-center text-sm text-[#D8FBFF]">
+          <p className="mt-6 text-center text-sm text-[#FFFFFF]">
             Already have an account?{" "}
-            <Link to="/login" className="font-semibold text-[#4AEEFF] hover:text-[#CFF9FF]">
-              Sign in here
-            </Link>
+            <Link to="/login" className="font-semibold text-[#4AEEFF] hover:text-[#FFFFFF]">Sign in here</Link>
           </p>
 
-          <div className="mt-6 border-t border-[#12679E]/40 pt-6">
-            <p className="text-center text-xs text-[#D8FBFF]">
+          <div className="mt-6 border-t border-[#4AEEFF] pt-6">
+            <p className="text-center text-xs text-[#FFFFFF]">
               By signing up, you agree to our Terms of Service and Privacy Policy.
             </p>
           </div>

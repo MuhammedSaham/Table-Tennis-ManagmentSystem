@@ -8,7 +8,6 @@ import api from "../services/api";
 
 const styles: Record<string, React.CSSProperties> = {
 
-  /* ── Full-screen background with TT table image ── */
   root: {
     minHeight: "100vh",
     height: "100vh",
@@ -20,55 +19,65 @@ const styles: Record<string, React.CSSProperties> = {
     justifyContent: "flex-end",
   },
 
-  /* Table tennis table background */
+  /* ── Local TT table background ── */
   bgImage: {
-    position: "absolute",
-    inset: 0,
-    backgroundImage: "url('https://images.unsplash.com/photo-1609710228159-0fa9bd7c0827?w=1920&q=80')",
-    backgroundSize: "cover",
-    backgroundPosition: "center",
-    zIndex: 0,
-  },
+  position: "absolute",
+  inset: 0,
+  backgroundImage: "url('/tablenew.png')",
+  backgroundSize: "cover",
+  backgroundPosition: "center center",
+  backgroundRepeat: "no-repeat",
+  zIndex: 0,
+},
 
-  /* Dark tinted overlay to keep palette feel */
+  /* Subtle dark overlay — keep it light so table stays visible */
   bgOverlay: {
     position: "absolute",
-    inset: 0,
+    inset: 10,
     background: "#061D23",
-    opacity: 0.62,
+    opacity: 0.2,
     zIndex: 1,
   },
 
-  /* Diagonal colour accents over the bg (WTT style) */
-  geo1: {
-    position: "absolute",
-    inset: 0,
-    background: "#12679E",
-    clipPath: "polygon(0 0, 32% 0, 18% 100%, 0 100%)",
-    opacity: 0.28,
-    zIndex: 2,
-  },
-  geo2: {
-    position: "absolute",
-    inset: 0,
-    background: "#4AEEFF",
-    clipPath: "polygon(30% 0, 36% 0, 22% 100%, 16% 100%)",
-    opacity: 0.22,
-    zIndex: 2,
-  },
+  /* Thin diagonal palette accents on the left edge */
+ geo1: {
+  position: "absolute",
+  top: 0,
+  left: "-50px",
+  width: "200px",
+  height: "100%",
+  background: "#12679E",
+  opacity: 0.6,
+  zIndex: 2,
+  transform: "skewX(-30deg)",
+  transformOrigin: "left",
+},
 
-  /* Logo on the left side over background */
+geo2: {
+  position: "absolute",
+  top: 0,
+  left: "120px",
+  width: "200px",
+  height: "100%",
+  background: "#4AEEFF",
+  opacity: 0.5,
+  zIndex: 2,
+  transform: "skewX(-30deg)",
+  transformOrigin: "left",
+},
+
+  /* ── Logo on the left half ── */
   leftBrand: {
     position: "absolute" as const,
-    top: "50%",
-    left: "6%",
+    top: "40%",
+    left: "1%",
     transform: "translateY(-50%)",
     zIndex: 5,
     display: "flex",
     flexDirection: "column" as const,
     alignItems: "flex-start",
   },
-  leftAccentLine: {
+  /*leftAccentLine: {
     width: 140,
     height: 4,
     background: "#4AEEFF",
@@ -84,29 +93,31 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: 2,
   },
   leftSub: {
-    fontSize: 14,
-    letterSpacing: 3,
-    color: "#FFFFFF",
+    fontSize: 18,
+    letterSpacing: 2,
+    color: "#1b0143",
     textTransform: "uppercase" as const,
     fontWeight: 700,
-  },
+    textShadow: "0 0px 0px rgba(0,0,0,0.6)",
+  },*/
 
-  /* ── Transparent sign-in card (right side, WTT style) ── */
+  /* ── Transparent sign-in card ── */
   card: {
-  position: "relative",
-  zIndex: 10,
-  width: 440,
-  minHeight: "100vh",
-  display: "flex",
-  flexDirection: "column" as const,
-  justifyContent: "center",
-  padding: "52px 48px",
-  boxSizing: "border-box" as const,
-  background: "rgba(255, 255, 255, 0.04)", // was 0.08
-  backdropFilter: "blur(14px)",            // was 24px
-  WebkitBackdropFilter: "blur(14px)",
-  borderLeft: "1px solid rgba(255,255,255,0.12)",
-},
+    position: "relative",
+    zIndex: 20,
+    width: 520,
+    minHeight: "100vh",
+    display: "flex",
+    flexDirection: "column" as const,
+    justifyContent: "center",
+    padding: "52px 44px",
+    boxSizing: "border-box" as const,
+    /* Very light frosted glass — background clearly visible */
+    background: "rgba(6, 29, 35, 0.30)",
+    backdropFilter: "blur(8px)",
+    WebkitBackdropFilter: "blur(10px)",
+    borderLeft: "1px solid rgba(255,255,255,0.15)",
+  },
 
   /* White top accent bar */
   accentBar: {
@@ -114,23 +125,19 @@ const styles: Record<string, React.CSSProperties> = {
     top: 0,
     left: 0,
     right: 0,
-    height: 4,
+    height: 0,
     background: "#FFFFFF",
     zIndex: 1,
   },
 
-  /* Logo at top of card */
-  logoRow: {
-    marginBottom: 24,
-  },
-
   heading: {
     color: "#FFFFFF",
-    fontSize: 28,
+    fontSize: 25,
     fontWeight: 900,
     letterSpacing: 2,
     textTransform: "uppercase" as const,
-    margin: "0 0 28px",
+    margin: "0 0 24px",
+    textShadow: "0 1px 8px rgba(0,0,0,0.5)",
   },
 
   label: {
@@ -144,19 +151,20 @@ const styles: Record<string, React.CSSProperties> = {
   },
   inputWrap: {
     position: "relative" as const,
-    marginBottom: 18,
+    marginBottom: 16,
   },
+  /* Inputs: semi-transparent so background bleeds through */
   input: {
     width: "100%",
-    background: "rgba(255, 255, 255, 0.1)",
-    border: "1px solid rgba(255, 255, 255, 0.3)",
+    background: "rgba(6, 29, 35, 0.45)",
+    border: "1px solid rgba(255,255,255,0.25)",
     borderRadius: 3,
     padding: "13px 16px",
     color: "#FFFFFF",
     fontSize: 15,
     outline: "none",
     boxSizing: "border-box" as const,
-    transition: "border-color 0.2s",
+    transition: "border-color 0.2s, background 0.2s",
   },
   eyeBtn: {
     position: "absolute" as const,
@@ -189,22 +197,22 @@ const styles: Record<string, React.CSSProperties> = {
   },
 
   tos: {
-    fontSize: 11,
-    color: "rgba(255,255,255,0.75)",
-    margin: "12px 0 18px",
+    fontSize: 14,
+    color: "rgba(255,255,255,0.80)",
+    margin: "12px 0 16px",
     letterSpacing: 0.3,
     lineHeight: 1.6,
   },
 
   divider: {
-    borderColor: "rgba(74,238,255,0.2)",
+    borderColor: "rgba(255,255,255,0.15)",
     margin: "4px 0 12px",
   },
 
   forgotRow: {
     textAlign: "center" as const,
-    fontSize: 13,
-    color: "rgba(255,255,255,0.8)",
+    fontSize: 14,
+    color: "rgba(255,255,255,0.85)",
     marginBottom: 10,
     letterSpacing: 0.5,
   },
@@ -212,13 +220,13 @@ const styles: Record<string, React.CSSProperties> = {
   btnOutline: {
     width: "100%",
     padding: "12px",
-    background: "rgba(6,29,35,0.4)",
+    background: "rgba(6,29,35,0.30)",
     color: "#FFFFFF",
     fontWeight: 700,
     letterSpacing: 2,
     fontSize: 12,
     textTransform: "uppercase" as const,
-    border: "1px solid rgba(74,238,255,0.4)",
+    border: "1px solid rgba(255,255,255,0.30)",
     borderRadius: 3,
     cursor: "pointer",
     marginTop: 10,
@@ -231,9 +239,9 @@ const styles: Record<string, React.CSSProperties> = {
 
   registerRow: {
     textAlign: "center" as const,
-    fontSize: 12,
-    color: "rgba(255,255,255,0.7)",
-    marginTop: 16,
+    fontSize: 14,
+    color: "rgba(255,255,255,0.75)",
+    marginTop: 14,
     letterSpacing: 0.5,
   },
   registerLink: {
@@ -243,7 +251,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
 
   banner: {
-    background: "rgba(6,29,35,0.7)",
+    background: "rgba(6,29,35,0.55)",
     border: "1px solid #4AEEFF",
     borderRadius: 3,
     padding: "10px 14px",
@@ -265,9 +273,11 @@ const styles: Record<string, React.CSSProperties> = {
 
 const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
   e.currentTarget.style.borderColor = "#4AEEFF";
+  e.currentTarget.style.background = "rgba(6,29,35,0.55)";
 };
 const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
-  e.currentTarget.style.borderColor = "rgba(74,238,255,0.35)";
+  e.currentTarget.style.borderColor = "rgba(255,255,255,0.25)";
+  e.currentTarget.style.background = "rgba(6,29,35,0.45)";
 };
 
 const EyeIcon = ({ open }: { open: boolean }) =>
@@ -341,31 +351,31 @@ const Login: React.FC = () => {
   return (
     <div style={styles.root}>
 
-      {/* ── FULL-SCREEN TABLE TENNIS TABLE BACKGROUND ── */}
+      {/* ── BACKGROUND: local TT table image ── */}
       <div style={styles.bgImage} />
       <div style={styles.bgOverlay} />
       <div style={styles.geo1} />
       <div style={styles.geo2} />
 
-      {/* ── LEFT LOGO ── */}
+      {/* ── LEFT: Sam's College logo ── */}
       <div style={styles.leftBrand}>
         <img
           src="/Logo__with_Name.png"
           alt="Sam's College"
-          style={{ width: 380, maxWidth: "100%", display: "block" }}
+          style={{ width: 350, maxWidth: "90%", display: "block" }}
         />
         <div style={styles.leftAccentLine} />
         <div style={styles.leftAccentLineCross} />
-        <p style={styles.leftSub}>Table Tennis Management System</p>
+        {/* <p style={styles.leftSub}>Table Tennis Management System</p> */}
       </div>
 
-      {/* ── TRANSPARENT SIGN-IN CARD ── */}
+      {/* ── RIGHT: Transparent sign-in card ── */}
       <div style={styles.card}>
         <div style={styles.accentBar} />
 
         {!showForgotPassword ? (
           <form onSubmit={handleSubmit}>
-
+            <p style={{color:"#4AEEFF", fontSize: 30, fontWeight: 700, letterSpacing: 3, textTransform: "uppercase" as  const, margin:"0 0 8px"}}>Welcome Back</p>
             <h2 style={styles.heading}>Account Sign In</h2>
 
             <label style={styles.label}>Email Address</label>
