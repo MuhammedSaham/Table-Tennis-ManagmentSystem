@@ -62,7 +62,7 @@ const Tournaments: React.FC = () => {
   }
 
   return (
-    <div className="bg-gradient-to-br from-primary-900 via-primary-800 to-primary-900 py-8">
+    <div className="bg-gradient-to-r from-[#061D23] via-[#12679E] to-[#4AEEFF] py-8">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl text-white">
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-bold text-white">Tournaments</h1>

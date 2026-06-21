@@ -9,7 +9,7 @@ const PublicLayout: React.FC = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const isTournamentRoute = location.pathname.startsWith("/tournaments");
-  const wrapperBgClass = isTournamentRoute ? "bg-gradient-to-br from-primary-900 via-primary-800 to-primary-900" : "bg-transparent";
+  const wrapperBgClass = isTournamentRoute ? "bg-gradient-to-r from-[#061D23] via-[#12679E] to-[#4AEEFF]" : "bg-transparent";
 
   const navigation = [
     { name: "Home", href: "/" },
@@ -131,7 +131,7 @@ const PublicLayout: React.FC = () => {
       </nav>
 
       {/* Main content */}
-      <main className={`flex-1 ${isTournamentRoute ? "bg-gradient-to-br from-primary-900 via-primary-800 to-primary-900" : "bg-transparent"}`}>
+      <main className={`flex-1 ${isTournamentRoute ? "bg-gradient-to-r from-[#061D23] via-[#12679E] to-[#4AEEFF]" : "bg-transparent"}`}>
         <div className="pt-16">
           <Outlet />
         </div>
