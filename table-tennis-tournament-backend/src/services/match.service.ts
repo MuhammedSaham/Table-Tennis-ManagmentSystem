@@ -202,9 +202,10 @@ export class MatchService {
   }
 
   // Get all matches for a tournament
-  async getTournamentMatches(tournamentId: string, status?: string) {
+  async getTournamentMatches(tournamentId: string, status?: string, categoryId?: string) {
     const whereClause: any = { tournamentId };
     if (status) whereClause.status = status;
+    if (categoryId) whereClause.categoryId = categoryId;
 
     const matches = await prisma.match.findMany({
       where: whereClause,

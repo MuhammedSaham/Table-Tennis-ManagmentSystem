@@ -39,7 +39,7 @@ export class GroupService {
         where: {
           tournamentId,
           categoryId,
-          round: { in: ['Quarter-final', 'Semi-final', 'Final'] },
+          round: { in: ['Quarter-Finals', 'Semi-Finals', 'Final'] },
         },
       });
     }
@@ -353,7 +353,7 @@ async recordGroupScore(
       where: {
         tournamentId,
         categoryId,
-        round: { in: ['Quarter-final', 'Semi-final', 'Final', '3rd Place'] },
+        round: { in: ['Quarter-Finals', 'Semi-Finals', 'Final', '3rd Place Playoff'] },
       },
     });
 
@@ -393,7 +393,7 @@ async recordGroupScore(
           matchType: 'SINGLES',
           player1Id: winner1?.id  ?? null,
           player2Id: runnerUp2?.id ?? null, // cross-seeding
-          round: 'Semi-final',
+          round: 'Semi-Finals',
           matchNumber: matchNumber++,
           scheduledTime: new Date(),
           status: 'SCHEDULED',
@@ -408,7 +408,7 @@ async recordGroupScore(
           matchType: 'SINGLES',
           player1Id: winner2?.id  ?? null,
           player2Id: runnerUp1?.id ?? null, // cross-seeding
-          round: 'Semi-final',
+          round: 'Semi-Finals',
           matchNumber: matchNumber++,
           scheduledTime: new Date(),
           status: 'SCHEDULED',
@@ -438,7 +438,7 @@ async recordGroupScore(
             matchType: 'SINGLES',
             player1Id: p1?.id ?? null,
             player2Id: p2?.id ?? null,
-            round: 'Quarter-final',
+            round: 'Quarter-Finals',
             matchNumber: matchNumber++,
             scheduledTime: new Date(),
             status: 'SCHEDULED',
@@ -457,7 +457,7 @@ async recordGroupScore(
           matchType: 'SINGLES',
           player1Id: byePlayers[0]?.id ?? null,
           player2Id: null, // filled when QF1 completes
-          round: 'Semi-final',
+          round: 'Semi-Finals',
           matchNumber: matchNumber++,
           scheduledTime: new Date(),
           status: 'SCHEDULED',
@@ -472,7 +472,7 @@ async recordGroupScore(
           matchType: 'SINGLES',
           player1Id: byePlayers[1]?.id ?? null,
           player2Id: null, // filled when QF2 completes
-          round: 'Semi-final',
+          round: 'Semi-Finals',
           matchNumber: matchNumber++,
           scheduledTime: new Date(),
           status: 'SCHEDULED',
@@ -503,7 +503,7 @@ async recordGroupScore(
     where: {
       tournamentId,
       categoryId,
-      round: 'Semi-final',
+      round: 'Semi-Finals',
     },
     orderBy: { matchNumber: 'asc' },
   });
@@ -517,7 +517,7 @@ async recordGroupScore(
         matchType: 'SINGLES',
         player1Id: null, // Will be filled with loser of SF1
         player2Id: null, // Will be filled with loser of SF2
-        round: '3rd Place',
+        round: '3rd Place Playoff',
         matchNumber: matchNumber++,
         scheduledTime: new Date(),
         status: 'SCHEDULED',
