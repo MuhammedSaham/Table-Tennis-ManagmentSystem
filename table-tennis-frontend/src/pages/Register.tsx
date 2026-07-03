@@ -115,7 +115,9 @@ const Register: React.FC = () => {
       if (profileImage) {
         const formDataUpload = new FormData();
         formDataUpload.append("profileImage", profileImage);
-        await api.post("/users/upload-profile-image", formDataUpload, { headers: { "Content-Type": "multipart/form-data" } });
+        await api.post("/users/upload-profile-image", formDataUpload, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
       }
       showSuccess("Welcome! Your account has been created successfully.");
       navigate("/app/dashboard");
@@ -130,249 +132,335 @@ const Register: React.FC = () => {
     const { name, value } = e.target;
     if (name === "password") validatePassword(value);
     if (name === "skillLevel" || name === "clubAffiliation" || name === "dateOfBirth") {
-      setFormData(prev => ({ ...prev, playerProfile: { ...prev.playerProfile, [name]: value } }));
+      setFormData((prev) => ({ ...prev, playerProfile: { ...prev.playerProfile, [name]: value } }));
     } else {
-      setFormData(prev => ({ ...prev, [name]: value }));
+      setFormData((prev) => ({ ...prev, [name]: value }));
     }
-    if (errors[name as keyof FormErrors]) setErrors(prev => ({ ...prev, [name]: undefined }));
+    if (errors[name as keyof FormErrors]) setErrors((prev) => ({ ...prev, [name]: undefined }));
   };
 
-  const isPasswordValid = passwordValid.length && passwordValid.uppercase && passwordValid.lowercase && passwordValid.number;
+  const isPasswordValid =
+    passwordValid.length && passwordValid.uppercase && passwordValid.lowercase && passwordValid.number;
 
   return (
-    <div className="flex min-h-screen w-screen items-center justify-center overflow-hidden bg-[#061D23] p-0">
-      <div className="flex min-h-screen w-full overflow-hidden border border-[#12679E] bg-[#061D23] shadow-[0_20px_80px_rgba(0,0,0,0.35)]">
-
-        {/* LEFT panel */}
-        {/* LEFT panel */}
-<div className="relative flex min-h-[220px] items-start justify-center overflow-hidden bg-[#061D23] p-8 pt-10 text-white sm:p-10 sm:pt-12 lg:min-h-full lg:w-[50%] lg:justify-start lg:p-12 lg:pt-14">
-
-  {/* Background shapes */}
-  <div className="absolute inset-0">
-    <div className="absolute inset-0 bg-[#12679E] [clip-path:polygon(0_0,72%_0,45%_100%,0_100%)] opacity-60" />
-    <div className="absolute inset-0 bg-[#4AEEFF] [clip-path:polygon(68%_0,80%_0,53%_100%,41%_100%)] opacity-80" />
-    <div className="absolute inset-0 bg-[#12679E] [clip-path:polygon(78%_0,90%_0,63%_100%,51%_100%)] opacity-40" />
-  </div>
-
-  {/* Table Tennis Player */}
-  <img
-    src="/man1.png"
-    alt="Table Tennis Player"
-    style={{ width: 600, maxWidth: "90%",left: 0, bottom: 20, position: "absolute" }}
-    className="absolute left-0 bottom-0 h-[85%] object-contain opacity-20 pointer-events-none z-0"
-  />
-
-  <div className="relative z-10 max-w-sm">
-    <img
-      src="/LOGO.png"
-      alt="Sam's College"
+    /* ─── Full-screen background ─── */
+    <div
+      className="relative flex w-full items-start justify-center overflow-x-hidden overflow-y-auto"
       style={{
-        width: 300,
-        maxWidth: "30%",
-        display: "block",
-        paddingBottom: 20,
-        marginBottom: 20,
+        minHeight: "100vh",
       }}
-    />
+    >
+      {/* Fixed full-viewport background image — always covers the screen regardless of card height */}
+      <div
+        className="fixed inset-0 -z-10"
+        style={{
+          backgroundImage: "url('/register1.png')",
+          backgroundSize: "cover",
+          backgroundPosition: "center center",
+          backgroundRepeat: "no-repeat",
+        }}
+      />
 
-    <h1 className="text-3xl font-black uppercase tracking-[0.25em] text-[#FFFFFF]">
-      Create Account
-    </h1>
+      {/* Darkened overlay to reduce brightness */}
+      <div className="fixed inset-0 bg-black/35 -z-10" />
 
-    <p className="mt-3 text-sm uppercase tracking-[0.25em] text-[#FFFFFF]">
-      Join the tournament platform
-    </p>
+      {/* ─── Centered glass card (reduced brightness) ─── */}
+      <div
+        className="relative z-10 my-8 w-[58%] min-w-[340px] max-w-2xl rounded-2xl px-8 py-8 shadow-2xl"
+        style={{
+          background: "rgba(255, 255, 255, 0.07)",
+          backdropFilter: "blur(24px)",
+          WebkitBackdropFilter: "blur(24px)",
+          border: "1.5px solid rgba(255, 255, 255, 0.25)",
+          boxShadow: "0 0 14px rgba(74, 238, 255, 0.10), 0 8px 32px rgba(0,0,0,0.18), 0 25px 50px rgba(0,0,0,0.35)",
+        }}
+      >
+        {/* ── Logo + heading ── */}
+        <div className="mb-7 flex flex-col items-center text-center">
+          <img
+            src="/LOGO.png"
+            alt="Sam's College"
+            className="mb-3 h-16 w-auto object-contain"
+          />
+          <h1 className="text-3xl font-black uppercase tracking-[0.25em] text-[#061D23]">
+            Create Account
+          </h1>
+          <p className="mt-1.5 text-base font-black uppercase tracking-[0.18em] text-[#0d4a75]">
+            Join the tournament platform
+          </p>
+          {/* Decorative accent line — single clean underline, no Gemini-style double diagonal */}
+          <div className="mt-3 h-[2px] w-20 rounded-full bg-[#4AEEFF]" />
+        </div>
 
-    <div className="mt-6 h-1 w-24 rounded-full bg-[#4AEEFF]" />
-    <div className="mt-2 ml-8 h-1 w-14 rounded-full bg-[#FFFFFF]" />
-  </div>
-</div>
+        {/* ── Form ── */}
+        <form onSubmit={handleSubmit} className="space-y-5">
 
-        {/* RIGHT panel */}
-        <div className="w-full bg-[#03111a] p-6 sm:p-8 lg:w-[50%] lg:p-30">
-          <div className="mb-6 h-1 w-full rounded-full bg-[12679E]" />
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <label className="mb-2 block text-sm font-semibold uppercase tracking-[0.2em] text-[#4AEEFF]">
-                  First Name *
-                </label>
-                <input
-                  type="text" name="firstName" value={formData.firstName} onChange={handleChange}
-                  className={`w-full rounded-md border bg-[#061D23] px-4 py-3 text-[15px] text-[#FFFFFF] placeholder:text-[#FFFFFF] focus:outline-none ${errors.firstName ? "border-[#4AEEFF]" : "border-[#12679E] focus:border-[#4AEEFF]"}`}
-                  placeholder="John"
-                />
-                {errors.firstName && <p className="mt-1 text-xs text-[#4AEEFF]">{errors.firstName}</p>}
-                <p className="mt-1 text-xs text-[#FFFFFF]">
-                  {formData.firstName ? `${formData.firstName.length}/2+ characters` : "Minimum 2 characters required"}
-                </p>
-              </div>
-              <div>
-                <label className="mb-2 block text-sm font-semibold uppercase tracking-[0.2em] text-[#4AEEFF]">
-                  Last Name *
-                </label>
-                <input
-                  type="text" name="lastName" value={formData.lastName} onChange={handleChange}
-                  className={`w-full rounded-md border bg-[#061D23] px-4 py-3 text-[15px] text-[#FFFFFF] placeholder:text-[#FFFFFF] focus:outline-none ${errors.lastName ? "border-[#4AEEFF]" : "border-[#12679E] focus:border-[#4AEEFF]"}`}
-                  placeholder="Doe"
-                />
-                {errors.lastName && <p className="mt-1 text-xs text-[#4AEEFF]">{errors.lastName}</p>}
-                <p className="mt-1 text-xs text-[#FFFFFF]">
-                  {formData.lastName ? `${formData.lastName.length}/2+ characters` : "Minimum 2 characters required"}
-                </p>
-              </div>
-            </div>
-
+          {/* First + Last name */}
+          <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <label className="mb-2 block text-sm font-semibold uppercase tracking-[0.2em] text-[#4AEEFF]">
-                Email Address *
+              <label className="mb-1.5 block text-sm font-black uppercase tracking-[0.18em] text-[#0d4a75]">
+                First Name *
               </label>
               <input
-                type="email" name="email" value={formData.email} onChange={handleChange}
-                className={`w-full rounded-md border bg-[#061D23] px-4 py-3 text-[15px] text-[#FFFFFF] placeholder:text-[#FFFFFF] focus:outline-none ${errors.email ? "border-[#4AEEFF]" : "border-[#12679E] focus:border-[#4AEEFF]"}`}
-                placeholder="you@example.com"
+                type="text"
+                name="firstName"
+                value={formData.firstName}
+                onChange={handleChange}
+                placeholder="John"
+                className={`w-full rounded-lg border bg-white/40 px-4 py-3 text-base text-[#061D23] placeholder:text-[#061D23]/40 focus:outline-none focus:ring-1 focus:ring-[#4AEEFF] ${
+                  errors.firstName ? "border-red-400" : "border-white/60"
+                }`}
               />
-              {errors.email && <p className="mt-1 text-xs text-[#4AEEFF]">{errors.email}</p>}
+              {errors.firstName && (
+                <p className="mt-1 text-xs text-red-600">{errors.firstName}</p>
+              )}
             </div>
-
             <div>
-              <label className="mb-2 block text-sm font-semibold uppercase tracking-[0.2em] text-[#4AEEFF]">
-                Password *
-              </label>
-              <div className="relative">
-                <input
-                  type={showPassword ? "text" : "password"} name="password" value={formData.password} onChange={handleChange}
-                  className={`w-full rounded-md border bg-[#061D23] px-4 py-3 pr-12 text-[15px] text-[#FFFFFF] placeholder:text-[#FFFFFF] focus:outline-none ${errors.password ? "border-[#4AEEFF]" : "border-[#12679E] focus:border-[#4AEEFF]"}`}
-                  placeholder="Create a strong password"
-                />
-                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#4AEEFF]">
-                  {showPassword ? "👁️" : "👁️‍🗨️"}
-                </button>
-              </div>
-              <div className="mt-2 space-y-1 text-xs">
-                <p className="text-[#FFFFFF]">{passwordValid.length ? "✓" : "○"} At least 8 characters</p>
-                <p className="text-[#FFFFFF]">{passwordValid.uppercase ? "✓" : "○"} At least one uppercase letter (A-Z)</p>
-                <p className="text-[#FFFFFF]">{passwordValid.lowercase ? "✓" : "○"} At least one lowercase letter (a-z)</p>
-                <p className="text-[#FFFFFF]">{passwordValid.number ? "✓" : "○"} At least one number (0-9)</p>
-              </div>
-              {errors.password && <p className="mt-1 text-xs text-[#4AEEFF]">{errors.password}</p>}
-            </div>
-
-            <div>
-              <label className="mb-2 block text-sm font-semibold uppercase tracking-[0.2em] text-[#4AEEFF]">
-                Phone Number *
+              <label className="mb-1.5 block text-sm font-black uppercase tracking-[0.18em] text-[#0d4a75]">
+                Last Name *
               </label>
               <input
-                type="tel" name="phone" value={formData.phone} onChange={handleChange}
-                className={`w-full rounded-md border bg-[#061D23] px-4 py-3 text-[15px] text-[#FFFFFF] placeholder:text-[#FFFFFF] focus:outline-none ${errors.phone ? "border-[#4AEEFF]" : "border-[#12679E] focus:border-[#4AEEFF]"}`}
-                placeholder="071-1234567 or 011-1234567"
+                type="text"
+                name="lastName"
+                value={formData.lastName}
+                onChange={handleChange}
+                placeholder="Doe"
+                className={`w-full rounded-lg border bg-white/40 px-4 py-3 text-base text-[#061D23] placeholder:text-[#061D23]/40 focus:outline-none focus:ring-1 focus:ring-[#4AEEFF] ${
+                  errors.lastName ? "border-red-400" : "border-white/60"
+                }`}
               />
-              {errors.phone && <p className="mt-1 text-xs text-[#4AEEFF]">{errors.phone}</p>}
-              <p className="mt-1 text-xs text-[#FFFFFF]">Format: Mobile: 071-1234567 | Landline: 011-1234567</p>
+              {errors.lastName && (
+                <p className="mt-1 text-xs text-red-600">{errors.lastName}</p>
+              )}
             </div>
+          </div>
 
-            <div>
-              <label className="mb-2 block text-sm font-semibold uppercase tracking-[0.2em] text-[#4AEEFF]">
-                I want to join as *
-              </label>
-              <select
-                name="role" value={formData.role} onChange={handleChange}
-                className="w-full rounded-md border border-[#12679E] bg-[#061D23] px-4 py-3 text-[15px] text-[#FFFFFF] focus:border-[#4AEEFF] focus:outline-none"
+          {/* Email */}
+          <div>
+            <label className="mb-1.5 block text-sm font-black uppercase tracking-[0.18em] text-[#0d4a75]">
+              Email Address *
+            </label>
+            <input
+              type="email"
+              name="email"
+              value={formData.email}
+              onChange={handleChange}
+              placeholder="you@example.com"
+              className={`w-full rounded-lg border bg-white/40 px-4 py-3 text-base text-[#061D23] placeholder:text-[#061D23]/40 focus:outline-none focus:ring-1 focus:ring-[#4AEEFF] ${
+                errors.email ? "border-red-400" : "border-white/60"
+              }`}
+            />
+            {errors.email && (
+              <p className="mt-1 text-xs text-red-600">{errors.email}</p>
+            )}
+          </div>
+
+          {/* Password */}
+          <div>
+            <label className="mb-1.5 block text-sm font-black uppercase tracking-[0.18em] text-[#0d4a75]">
+              Password *
+            </label>
+            <div className="relative">
+              <input
+                type={showPassword ? "text" : "password"}
+                name="password"
+                value={formData.password}
+                onChange={handleChange}
+                placeholder="Create a strong password"
+                className={`w-full rounded-lg border bg-white/40 px-4 py-3 pr-12 text-base text-[#061D23] placeholder:text-[#061D23]/40 focus:outline-none focus:ring-1 focus:ring-[#4AEEFF] ${
+                  errors.password ? "border-red-400" : "border-white/60"
+                }`}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-lg text-[#061D23] hover:text-[#4AEEFF]"
               >
-                <option value="PLAYER">🏓 Player - Compete in tournaments</option>
-                <option value="REFEREE">👨‍⚖️ Referee - Officiate matches</option>
-                <option value="ADMIN">👑 Admin - Manage tournaments</option>
-              </select>
-              <p className="mt-1 text-xs text-[#FFFFFF]">
-                {formData.role === "PLAYER" && "Join tournaments, track your progress, and compete with others!"}
-                {formData.role === "REFEREE" && "Officiate matches, record scores, and manage games."}
-                {formData.role === "ADMIN" && "Create tournaments, manage players, and oversee everything."}
+                {showPassword ? "👁️" : "👁️‍🗨️"}
+              </button>
+            </div>
+            {/* Password strength indicators */}
+            <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1">
+              <p className={passwordValid.length ? "text-sm font-bold text-[#061D23]" : "text-sm font-semibold text-[#0d4a75]"}>
+                {passwordValid.length ? "✓" : "○"} At least 8 characters
+              </p>
+              <p className={passwordValid.uppercase ? "text-sm font-bold text-[#061D23]" : "text-sm font-semibold text-[#0d4a75]"}>
+                {passwordValid.uppercase ? "✓" : "○"} One uppercase letter
+              </p>
+              <p className={passwordValid.lowercase ? "text-sm font-bold text-[#061D23]" : "text-sm font-semibold text-[#0d4a75]"}>
+                {passwordValid.lowercase ? "✓" : "○"} One lowercase letter
+              </p>
+              <p className={passwordValid.number ? "text-sm font-bold text-[#061D23]" : "text-sm font-semibold text-[#0d4a75]"}>
+                {passwordValid.number ? "✓" : "○"} One number (0-9)
               </p>
             </div>
-
-            {formData.role === "PLAYER" && (
-              <>
-                <div>
-                  <label className="mb-2 block text-sm font-semibold uppercase tracking-[0.2em] text-[#4AEEFF]">
-                    Date of Birth *
-                  </label>
-                  <input
-                    type="date" name="dateOfBirth" value={formData.playerProfile.dateOfBirth || ""} onChange={handleChange} required
-                    className="w-full rounded-md border border-[#12679E] bg-[#061D23] px-4 py-3 text-[15px] text-[#FFFFFF] focus:border-[#4AEEFF] focus:outline-none"
-                    max={new Date().toISOString().split("T")[0]}
-                  />
-                  <p className="mt-1 text-xs text-[#FFFFFF]">This helps us determine your age category for tournaments</p>
-                </div>
-                <div>
-                  <label className="mb-2 block text-sm font-semibold uppercase tracking-[0.2em] text-[#4AEEFF]">
-                    Your Skill Level
-                  </label>
-                  <select
-                    name="skillLevel" value={formData.playerProfile.skillLevel} onChange={handleChange}
-                    className="w-full rounded-md border border-[#12679E] bg-[#061D23] px-4 py-3 text-[15px] text-[#FFFFFF] focus:border-[#4AEEFF] focus:outline-none"
-                  >
-                    <option value="Beginner">🏅 Beginner - Just starting out</option>
-                    <option value="Intermediate">🎯 Intermediate - Have some experience</option>
-                    <option value="Advanced">🏆 Advanced - Competing at high level</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="mb-2 block text-sm font-semibold uppercase tracking-[0.2em] text-[#4AEEFF]">
-                    Club or Academy (Optional)
-                  </label>
-                  <input
-                    type="text" name="clubAffiliation" value={formData.playerProfile.clubAffiliation} onChange={handleChange}
-                    className="w-full rounded-md border border-[#12679E] bg-[#061D23] px-4 py-3 text-[15px] text-[#FFFFFF] placeholder:text-[#FFFFFF] focus:border-[#4AEEFF] focus:outline-none"
-                    placeholder="e.g., City Table Tennis Club"
-                  />
-                </div>
-              </>
+            {errors.password && (
+              <p className="mt-1 text-xs text-red-600">{errors.password}</p>
             )}
+          </div>
 
-            <div>
-              <label className="mb-2 block text-sm font-semibold uppercase tracking-[0.2em] text-[#4AEEFF]">
-                Profile Photo *
-              </label>
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-                {imagePreview && (
-                  <div className="relative">
-                    <img src={imagePreview} alt="Profile preview" className="h-20 w-20 rounded-full border-2 border-[#4AEEFF] object-cover" />
-                    <button
-                      type="button"
-                      onClick={() => { setProfileImage(null); setImagePreview(null); }}
-                      className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full bg-[#4AEEFF] text-xs font-bold text-[#061D23] hover:bg-[#FFFFFF]"
-                    >×</button>
-                  </div>
-                )}
-                <label className="cursor-pointer rounded-lg border border-[#4AEEFF] bg-[#12679E] px-4 py-2 text-sm font-semibold text-[#FFFFFF] transition hover:bg-[#4AEEFF] hover:text-[#061D23]">
-                  {imagePreview ? "Change Photo" : "Choose Photo"}
-                  <input type="file" accept="image/*" onChange={handleImageChange} className="hidden" required={!imagePreview} />
-                </label>
-              </div>
-              {errors.profileImage && <p className="mt-1 text-xs text-[#4AEEFF]">{errors.profileImage}</p>}
-              <p className="mt-1 text-xs text-[#FFFFFF]">JPG, PNG or GIF. Max 5MB.</p>
-            </div>
-
-            <button
-              type="submit"
-              disabled={isLoading || (!!formData.password && !isPasswordValid)}
-              className="w-full rounded-md bg-[#FFFFFF] px-4 py-3 text-sm font-black uppercase tracking-[0.25em] text-[#061D23] transition hover:bg-[#4AEEFF] disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {isLoading ? "Creating your account..." : "Create Free Account"}
-            </button>
-          </form>
-
-          <p className="mt-6 text-center text-sm text-[#FFFFFF]">
-            Already have an account?{" "}
-            <Link to="/login" className="font-semibold text-[#4AEEFF] hover:text-[#FFFFFF]">Sign in here</Link>
-          </p>
-
-          <div className="mt-6 border-t border-[#4AEEFF] pt-6">
-            <p className="text-center text-xs text-[#FFFFFF]">
-              By signing up, you agree to our Terms of Service and Privacy Policy.
+          {/* Phone */}
+          <div>
+            <label className="mb-1.5 block text-sm font-black uppercase tracking-[0.18em] text-[#0d4a75]">
+              Phone Number *
+            </label>
+            <input
+              type="tel"
+              name="phone"
+              value={formData.phone}
+              onChange={handleChange}
+              placeholder="071-1234567 or 011-1234567"
+              className={`w-full rounded-lg border bg-white/40 px-4 py-3 text-base text-[#061D23] placeholder:text-[#061D23]/40 focus:outline-none focus:ring-1 focus:ring-[#4AEEFF] ${
+                errors.phone ? "border-red-400" : "border-white/60"
+              }`}
+            />
+            {errors.phone && (
+              <p className="mt-1 text-xs text-red-600">{errors.phone}</p>
+            )}
+            <p className="mt-1 text-sm font-semibold text-[#0d4a75]">
+              Mobile: 071-1234567 | Landline: 011-1234567
             </p>
           </div>
+
+          {/* Role */}
+          <div>
+            <label className="mb-1.5 block text-sm font-black uppercase tracking-[0.18em] text-[#0d4a75]">
+              I want to join as *
+            </label>
+            <select
+              name="role"
+              value={formData.role}
+              onChange={handleChange}
+              className="w-full rounded-lg border border-white/60 bg-white/40 px-4 py-3 text-base text-[#061D23] focus:border-[#4AEEFF] focus:outline-none focus:ring-1 focus:ring-[#4AEEFF]"
+            >
+              <option value="PLAYER">🏓 Player - Compete in tournaments</option>
+              <option value="REFEREE">👨‍⚖️ Referee - Officiate matches</option>
+              <option value="ADMIN">👑 Admin - Manage tournaments</option>
+            </select>
+            <p className="mt-1 text-sm font-semibold text-[#0d4a75]">
+              {formData.role === "PLAYER" && "Join tournaments, track your progress, and compete with others!"}
+              {formData.role === "REFEREE" && "Officiate matches, record scores, and manage games."}
+              {formData.role === "ADMIN" && "Create tournaments, manage players, and oversee everything."}
+            </p>
+          </div>
+
+          {/* Player-specific fields */}
+          {formData.role === "PLAYER" && (
+            <>
+              <div>
+                <label className="mb-1.5 block text-sm font-black uppercase tracking-[0.18em] text-[#0d4a75]">
+                  Date of Birth *
+                </label>
+                <input
+                  type="date"
+                  name="dateOfBirth"
+                  value={formData.playerProfile.dateOfBirth || ""}
+                  onChange={handleChange}
+                  required
+                  max={new Date().toISOString().split("T")[0]}
+                  className="w-full rounded-lg border border-white/60 bg-white/40 px-4 py-3 text-base text-[#061D23] focus:border-[#4AEEFF] focus:outline-none focus:ring-1 focus:ring-[#4AEEFF]"
+                />
+                <p className="mt-1 text-sm font-semibold text-[#0d4a75]">
+                  Helps us determine your age category for tournaments
+                </p>
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-sm font-black uppercase tracking-[0.18em] text-[#0d4a75]">
+                  Skill Level
+                </label>
+                <select
+                  name="skillLevel"
+                  value={formData.playerProfile.skillLevel}
+                  onChange={handleChange}
+                  className="w-full rounded-lg border border-white/60 bg-white/40 px-4 py-3 text-base text-[#061D23] focus:border-[#4AEEFF] focus:outline-none focus:ring-1 focus:ring-[#4AEEFF]"
+                >
+                  <option value="Beginner">🏅 Beginner - Just starting out</option>
+                  <option value="Intermediate">🎯 Intermediate - Have some experience</option>
+                  <option value="Advanced">🏆 Advanced - Competing at high level</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-sm font-black uppercase tracking-[0.18em] text-[#0d4a75]">
+                  Club or Academy{" "}
+                  <span className="normal-case tracking-normal text-[#061D23]/50">(Optional)</span>
+                </label>
+                <input
+                  type="text"
+                  name="clubAffiliation"
+                  value={formData.playerProfile.clubAffiliation}
+                  onChange={handleChange}
+                  placeholder="e.g., City Table Tennis Club"
+                  className="w-full rounded-lg border border-white/60 bg-white/40 px-4 py-3 text-base text-[#061D23] placeholder:text-[#061D23]/40 focus:border-[#4AEEFF] focus:outline-none focus:ring-1 focus:ring-[#4AEEFF]"
+                />
+              </div>
+            </>
+          )}
+
+          {/* Profile Photo */}
+          <div>
+            <label className="mb-1.5 block text-sm font-black uppercase tracking-[0.18em] text-[#0d4a75]">
+              Profile Photo *
+            </label>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              {imagePreview && (
+                <div className="relative flex-shrink-0">
+                  <img
+                    src={imagePreview}
+                    alt="Profile preview"
+                    className="rounded-full border-2 border-[#4AEEFF] object-cover"
+                    style={{ width: "64px", height: "64px", minWidth: "64px", maxWidth: "64px", display: "block" }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => { setProfileImage(null); setImagePreview(null); }}
+                    className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-[#4AEEFF] text-xs font-bold text-[#061D23] hover:bg-white"
+                  >
+                    ×
+                  </button>
+                </div>
+              )}
+              <label className="cursor-pointer rounded-lg border border-[#12679E]/50 bg-white/30 px-5 py-2.5 text-base font-semibold text-[#061D23] transition hover:bg-[#4AEEFF] hover:text-[#061D23]">
+                {imagePreview ? "Change Photo" : "Choose Photo"}
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageChange}
+                  className="hidden"
+                  required={!imagePreview}
+                />
+              </label>
+            </div>
+            {errors.profileImage && (
+              <p className="mt-1 text-xs text-red-600">{errors.profileImage}</p>
+            )}
+            <p className="mt-1 text-sm font-semibold text-[#0d4a75]">JPG, PNG or GIF. Max 5MB.</p>
+          </div>
+
+          {/* Submit */}
+          <button
+            type="submit"
+            disabled={isLoading || (!!formData.password && !isPasswordValid)}
+            className="w-full cursor-pointer rounded-lg border border-[#12679E]/50 bg-white/30 px-5 py-3.5 text-base font-black uppercase tracking-[0.25em] text-[#061D23] transition hover:bg-[#0a3f63] hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {isLoading ? "Creating your account..." : "Create Free Account"}
+          </button>
+        </form>
+
+        {/* Sign in link */}
+        <p className="mt-6 text-center text-base text-[#061D23]">
+          Already have an account?{" "}
+          <Link to="/login" className="font-semibold text-[#0d4a75] hover:text-[#061D23]">
+            Sign in here
+          </Link>
+        </p>
+
+        {/* Footer */}
+        <div className="mt-5 border-t border-[#061D23]/20 pt-4">
+          <p className="text-center text-sm font-semibold text-[#0d4a75]">
+            By signing up, you agree to our Terms of Service and Privacy Policy.
+          </p>
         </div>
       </div>
     </div>
