@@ -22,7 +22,7 @@ model User {
   resetPasswordToken  String?   @unique
   resetPasswordExpiry DateTime?
 
-  
+  isEmailVerified Boolean  @default(false) // <-- ADD THIS LINE
 
   isSuperAdmin        Boolean     @default(false)
 
