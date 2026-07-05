@@ -1,35 +1,27 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import api from "../services/api";
+import toast from "react-hot-toast";
+import { UserGroupIcon, MagnifyingGlassIcon, FunnelIcon } from "@heroicons/react/24/outline";
 
 interface Player {
   id: string;
   firstName: string;
   lastName: string;
-  ranking?: number;
+  email: string;
   profileImage?: string;
-  createdAt: string;
   playerProfile?: {
-    skillLevel: string | null;
-    clubAffiliation: string | null;
+    skillLevel: string;
+    clubAffiliation: string;
     dateOfBirth: string | null;
   };
+  _count?: { registrations: number };
 }
 
-const skillColors: Record<string, { bg: string; text: string }> = {
-  BEGINNER: { bg: "#e0f2fe", text: "#0369a1" },
-  INTERMEDIATE: { bg: "#fef3c7", text: "#92400e" },
-  ADVANCED: { bg: "#dcfce7", text: "#166534" },
-  PROFESSIONAL: { bg: "#ede9fe", text: "#4c1d95" },
-};
-
-const calculateAge = (dob: string) => {
-  const birth = new Date(dob);
-  const today = new Date();
-  let age = today.getFullYear() - birth.getFullYear();
-  const m = today.getMonth() - birth.getMonth();
-  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
-  return age;
+const skillColors: Record<string, string> = {
+  Beginner:     "bg-[#4AEEFF]/10 text-[#4AEEFF] border border-[#4AEEFF]/30",
+  Intermediate: "bg-[#12679E]/30 text-[#CFF9FF] border border-[#12679E]",
+  Advanced:     "bg-[#FFFFFF]/10 text-white border border-white/30",
 };
 
 const Players: React.FC = () => {
@@ -39,437 +31,179 @@ const Players: React.FC = () => {
   const [search, setSearch] = useState("");
   const [skillFilter, setSkillFilter] = useState("ALL");
 
-  useEffect(() => {
-    fetchPlayers();
-  }, []);
+  useEffect(() => { fetchPlayers(); }, []);
 
   useEffect(() => {
     let result = players;
     if (search.trim()) {
       const q = search.toLowerCase();
-      result = result.filter(
-        (p) =>
-          p.firstName.toLowerCase().includes(q) ||
-          p.lastName.toLowerCase().includes(q) ||
-          p.playerProfile?.clubAffiliation?.toLowerCase().includes(q),
+      result = result.filter((p) =>
+        `${p.firstName} ${p.lastName}`.toLowerCase().includes(q) ||
+        p.email.toLowerCase().includes(q) ||
+        (p.playerProfile?.clubAffiliation ?? "").toLowerCase().includes(q)
       );
     }
     if (skillFilter !== "ALL") {
-      result = result.filter(
-        (p) => p.playerProfile?.skillLevel?.toUpperCase() === skillFilter,
-      );
+      result = result.filter((p) => p.playerProfile?.skillLevel === skillFilter);
     }
     setFiltered(result);
   }, [search, skillFilter, players]);
 
   const fetchPlayers = async () => {
     try {
-      const res = await api.get("/users/public/players");
-      setPlayers(res.data.data);
-      setFiltered(res.data.data);
+      const response = await api.get("/users?role=PLAYER");
+      setPlayers(response.data.data);
+      setFiltered(response.data.data);
     } catch {
-      setPlayers([]);
+      toast.error("Failed to fetch players");
     } finally {
       setLoading(false);
     }
   };
 
-  const initials = (p: Player) =>
-    `${p.firstName[0]}${p.lastName[0]}`.toUpperCase();
+  if (loading) return (
+    <div className="flex min-h-screen items-center justify-center bg-[linear-gradient(180deg,#061D23_0%,#123B4A_100%)]">
+      <p className="text-[#4AEEFF] text-lg uppercase tracking-[0.2em]">Loading players...</p>
+    </div>
+  );
 
   return (
-    <div
-      style={{
-        maxWidth: 1100,
-        margin: "0 auto",
-        padding: "40px 16px 80px",
-        fontFamily: "'Segoe UI', system-ui, sans-serif",
-      }}
-    >
-      {/* ── Header ── */}
-      <div style={{ marginBottom: 36 }}>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 12,
-            marginBottom: 8,
-          }}
-        >
-          <div
-            style={{
-              width: 40,
-              height: 40,
-              background: "linear-gradient(135deg, #e11d48, #f97316)",
-              borderRadius: 10,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: 20,
-            }}
-          >
-            🏓
+    <div className="min-h-screen w-full overflow-x-hidden bg-[linear-gradient(180deg,#061D23_0%,#123B4A_100%)] p-4 sm:p-6 lg:p-8">
+      <div className="mx-auto flex min-h-[calc(100vh-2rem)] w-full max-w-7xl flex-col space-y-6">
+
+        {/* Header — matches Dashboard header card */}
+        <div className="rounded-[24px] border border-[#12679E] bg-[linear-gradient(135deg,#123B4A_0%,#061D23_100%)] p-6 shadow-[0_16px_60px_rgba(0,0,0,0.25)]">
+          <div className="mb-4 h-1 w-24 rounded-full bg-[#CFF9FF]" />
+          <div className="flex items-center gap-3">
+            <UserGroupIcon className="h-8 w-8 text-[#4AEEFF]" />
+            <div>
+              <h1 className="text-3xl font-black uppercase tracking-[0.2em] text-white">Players</h1>
+              <p className="text-sm uppercase tracking-[0.25em] text-[#D8FBFF]">{players.length} registered players</p>
+            </div>
           </div>
-          <h1
-            style={{
-              fontSize: "clamp(24px, 4vw, 36px)",
-              fontWeight: 900,
-              color: "#0f172a",
-              margin: 0,
-              letterSpacing: -1,
-            }}
-          >
-            Players
-          </h1>
-        </div>
-        <p style={{ color: "#64748b", fontSize: 15, margin: 0 }}>
-          Browse all registered players and view their profiles
-        </p>
-      </div>
-
-      {/* ── Filters ── */}
-      <div
-        style={{
-          display: "flex",
-          gap: 12,
-          marginBottom: 28,
-          flexWrap: "wrap",
-          alignItems: "center",
-        }}
-      >
-        {/* Search */}
-        <div style={{ position: "relative", flex: "1 1 260px" }}>
-          <span
-            style={{
-              position: "absolute",
-              left: 14,
-              top: "50%",
-              transform: "translateY(-50%)",
-              fontSize: 16,
-              color: "#94a3b8",
-            }}
-          >
-            🔍
-          </span>
-          <input
-            type="text"
-            placeholder="Search by name or club..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            style={{
-              width: "100%",
-              paddingLeft: 42,
-              paddingRight: 16,
-              paddingTop: 10,
-              paddingBottom: 10,
-              border: "1.5px solid #e2e8f0",
-              borderRadius: 12,
-              fontSize: 14,
-              outline: "none",
-              color: "#1e293b",
-              background: "#fff",
-              boxSizing: "border-box",
-            }}
-          />
         </div>
 
-        {/* Skill filter pills */}
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          {["ALL", "BEGINNER", "INTERMEDIATE", "ADVANCED", "PROFESSIONAL"].map(
-            (s) => (
-              <button
-                key={s}
-                onClick={() => setSkillFilter(s)}
-                style={{
-                  padding: "8px 16px",
-                  borderRadius: 20,
-                  border: "1.5px solid",
-                  borderColor: skillFilter === s ? "#e11d48" : "#e2e8f0",
-                  background: skillFilter === s ? "#e11d48" : "#fff",
-                  color: skillFilter === s ? "#fff" : "#64748b",
-                  fontSize: 12,
-                  fontWeight: 600,
-                  cursor: "pointer",
-                  textTransform: "capitalize",
-                  letterSpacing: 0.3,
-                  transition: "all 0.15s",
-                }}
+        {/* Search & Filter — matches Dashboard info card */}
+        <div className="rounded-[24px] border border-[#12679E] bg-[linear-gradient(145deg,#123B4A_0%,#061D23_100%)] p-6 shadow-[0_14px_50px_rgba(0,0,0,0.2)]">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
+            {/* Search */}
+            <div className="flex-1">
+              <label className="mb-2 block text-xs font-bold uppercase tracking-[0.2em] text-[#4AEEFF]">
+                Search Players
+              </label>
+              <div className="relative">
+                <MagnifyingGlassIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#4AEEFF]" />
+                <input
+                  type="text"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Name, email or club..."
+                  className="w-full rounded-xl border border-[#12679E] bg-[#061D23] py-3 pl-10 pr-4 text-[15px] text-white placeholder:text-[#D8FBFF]/40 focus:border-[#4AEEFF] focus:outline-none"
+                />
+              </div>
+            </div>
+
+            {/* Skill filter */}
+            <div>
+              <label className="mb-2 block text-xs font-bold uppercase tracking-[0.2em] text-[#4AEEFF]">
+                <FunnelIcon className="mr-1 inline h-3 w-3" />
+                Skill Level
+              </label>
+              <select
+                value={skillFilter}
+                onChange={(e) => setSkillFilter(e.target.value)}
+                className="rounded-xl border border-[#12679E] bg-[#061D23] px-4 py-3 text-[15px] text-white focus:border-[#4AEEFF] focus:outline-none"
               >
-                {s === "ALL"
-                  ? "All Levels"
-                  : s.charAt(0) + s.slice(1).toLowerCase()}
-              </button>
-            ),
+                <option value="ALL">All Levels</option>
+                <option value="Beginner">Beginner</option>
+                <option value="Intermediate">Intermediate</option>
+                <option value="Advanced">Advanced</option>
+              </select>
+            </div>
+          </div>
+
+          {(search || skillFilter !== "ALL") && (
+            <p className="mt-3 text-xs text-[#D8FBFF]">
+              Showing {filtered.length} of {players.length} players
+            </p>
           )}
         </div>
 
-        {/* Count */}
-        <span style={{ color: "#94a3b8", fontSize: 13, marginLeft: "auto" }}>
-          {filtered.length} player{filtered.length !== 1 ? "s" : ""}
-        </span>
-      </div>
-
-      {/* ── Loading ── */}
-      {loading && (
-        <div style={{ textAlign: "center", padding: 80 }}>
-          <div
-            style={{
-              width: 40,
-              height: 40,
-              border: "3px solid #e2e8f0",
-              borderTopColor: "#e11d48",
-              borderRadius: "50%",
-              animation: "spin 0.8s linear infinite",
-              margin: "0 auto 16px",
-            }}
-          />
-          <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
-          <p style={{ color: "#94a3b8", fontSize: 14 }}>Loading players…</p>
-        </div>
-      )}
-
-      {/* ── Empty ── */}
-      {!loading && filtered.length === 0 && (
-        <div
-          style={{
-            textAlign: "center",
-            padding: 80,
-            background: "#f8fafc",
-            borderRadius: 20,
-            border: "1px dashed #cbd5e1",
-          }}
-        >
-          <div style={{ fontSize: 48, marginBottom: 12 }}>🏓</div>
-          <p style={{ color: "#64748b", fontSize: 16, fontWeight: 600 }}>
-            No players found
-          </p>
-          <p style={{ color: "#94a3b8", fontSize: 14 }}>
-            Try adjusting your search or filter
-          </p>
-        </div>
-      )}
-
-      {/* ── Grid ── */}
-      {!loading && filtered.length > 0 && (
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
-            gap: 16,
-          }}
-        >
-          {filtered.map((player) => {
-            const skill = player.playerProfile?.skillLevel?.toUpperCase();
-            const skillStyle =
-              skill && skillColors[skill]
-                ? skillColors[skill]
-                : { bg: "#f1f5f9", text: "#475569" };
-            const age = player.playerProfile?.dateOfBirth
-              ? calculateAge(player.playerProfile.dateOfBirth)
-              : null;
-
-            return (
+        {/* Players grid — each card matches Dashboard quick-nav cards */}
+        {filtered.length === 0 ? (
+          <div className="rounded-[24px] border border-[#12679E] bg-[linear-gradient(145deg,#123B4A_0%,#061D23_100%)] p-12 text-center shadow-[0_14px_50px_rgba(0,0,0,0.2)]">
+            <UserGroupIcon className="mx-auto mb-4 h-12 w-12 text-[#12679E]" />
+            <p className="text-lg text-[#D8FBFF]">No players found.</p>
+            {search && (
+              <button
+                onClick={() => { setSearch(""); setSkillFilter("ALL"); }}
+                className="mt-4 rounded-full bg-[#FFFFFF] px-5 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-[#061D23] transition hover:bg-[#4AEEFF]"
+              >
+                Clear Filters
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {filtered.map((player) => (
               <Link
                 key={player.id}
-                to={`/profile/${player.id}`}
-                style={{ textDecoration: "none" }}
+                to={`/app/profile/${player.id}`}
+                className="group rounded-[20px] border border-[#12679E] bg-[linear-gradient(160deg,#12679E_0%,#061D23_100%)] p-6 transition hover:border-[#4AEEFF] hover:shadow-[0_12px_35px_rgba(74,238,255,0.12)]"
               >
-                <div
-                  style={{
-                    background: "#fff",
-                    border: "1.5px solid #e2e8f0",
-                    borderRadius: 18,
-                    padding: 24,
-                    transition: "all 0.2s",
-                    cursor: "pointer",
-                    position: "relative",
-                    overflow: "hidden",
-                  }}
-                  onMouseEnter={(e) => {
-                    (e.currentTarget as HTMLDivElement).style.borderColor =
-                      "#e11d48";
-                    (e.currentTarget as HTMLDivElement).style.transform =
-                      "translateY(-2px)";
-                    (e.currentTarget as HTMLDivElement).style.boxShadow =
-                      "0 8px 24px rgba(225,29,72,0.1)";
-                  }}
-                  onMouseLeave={(e) => {
-                    (e.currentTarget as HTMLDivElement).style.borderColor =
-                      "#e2e8f0";
-                    (e.currentTarget as HTMLDivElement).style.transform =
-                      "translateY(0)";
-                    (e.currentTarget as HTMLDivElement).style.boxShadow =
-                      "none";
-                  }}
-                >
-                  {/* top accent */}
-                  <div
-                    style={{
-                      position: "absolute",
-                      top: 0,
-                      left: 0,
-                      right: 0,
-                      height: 3,
-                      background: "linear-gradient(90deg, #e11d48, #f97316)",
-                      borderRadius: "18px 18px 0 0",
-                    }}
-                  />
-
-                  {/* Avatar + Name */}
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 14,
-                      marginBottom: 16,
-                    }}
-                  >
-                    {player.profileImage ? (
-                      <img
-                        src={player.profileImage}
-                        alt={player.firstName}
-                        style={{
-                          width: 56,
-                          height: 56,
-                          borderRadius: "50%",
-                          objectFit: "cover",
-                          border: "2px solid #f1f5f9",
-                          flexShrink: 0,
-                        }}
-                      />
-                    ) : (
-                      <div
-                        style={{
-                          width: 56,
-                          height: 56,
-                          borderRadius: "50%",
-                          background:
-                            "linear-gradient(135deg, #0f172a, #1e293b)",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          color: "#fff",
-                          fontWeight: 800,
-                          fontSize: 18,
-                          flexShrink: 0,
-                          letterSpacing: -0.5,
-                        }}
-                      >
-                        {initials(player)}
-                      </div>
-                    )}
-                    <div style={{ minWidth: 0 }}>
-                      <p
-                        style={{
-                          fontWeight: 800,
-                          color: "#0f172a",
-                          fontSize: 16,
-                          margin: 0,
-                          whiteSpace: "nowrap",
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                        }}
-                      >
-                        {player.firstName} {player.lastName}
-                      </p>
-                      {player.ranking !== undefined && (
-                        <p
-                          style={{
-                            color: "#e11d48",
-                            fontSize: 12,
-                            fontWeight: 700,
-                            margin: "4px 0 0",
-                          }}
-                        >
-                          Rank #{player.ranking}
-                        </p>
-                      )}
-                      {age !== null && (
-                        <p
-                          style={{
-                            color: "#94a3b8",
-                            fontSize: 12,
-                            margin: "2px 0 0",
-                          }}
-                        >
-                          {age} years old
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Club */}
-                  {player.playerProfile?.clubAffiliation && (
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 6,
-                        marginBottom: 12,
-                      }}
-                    >
-                      <span style={{ fontSize: 13 }}>🏓</span>
-                      <span
-                        style={{
-                          color: "#475569",
-                          fontSize: 13,
-                          whiteSpace: "nowrap",
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                        }}
-                      >
-                        {player.playerProfile.clubAffiliation}
+                {/* Avatar + name */}
+                <div className="mb-4 flex items-center gap-3">
+                  {player.profileImage ? (
+                    <img
+                      src={player.profileImage}
+                      alt={`${player.firstName} ${player.lastName}`}
+                      className="h-12 w-12 rounded-full border-2 border-[#4AEEFF] object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border-2 border-[#4AEEFF] bg-[#12679E]">
+                      <span className="text-base font-black text-white">
+                        {player.firstName[0]}{player.lastName[0]}
                       </span>
                     </div>
                   )}
-
-                  {/* Skill badge */}
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                    }}
-                  >
-                    {skill ? (
-                      <span
-                        style={{
-                          background: skillStyle.bg,
-                          color: skillStyle.text,
-                          fontSize: 11,
-                          fontWeight: 700,
-                          padding: "4px 12px",
-                          borderRadius: 20,
-                          textTransform: "uppercase",
-                          letterSpacing: 0.8,
-                        }}
-                      >
-                        {player.playerProfile?.skillLevel}
-                      </span>
-                    ) : (
-                      <span style={{ color: "#cbd5e1", fontSize: 12 }}>
-                        No level set
-                      </span>
-                    )}
-                    <span
-                      style={{
-                        color: "#e11d48",
-                        fontSize: 12,
-                        fontWeight: 600,
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 4,
-                      }}
-                    >
-                      View →
-                    </span>
+                  <div className="min-w-0">
+                    <h3 className="truncate font-semibold text-white transition group-hover:text-[#CFF9FF]">
+                      {player.firstName} {player.lastName}
+                    </h3>
+                    <p className="truncate text-xs text-[#D8FBFF]">{player.email}</p>
                   </div>
                 </div>
+
+                {/* Skill badge */}
+                {player.playerProfile?.skillLevel && (
+                  <div className="mb-3">
+                    <span className={`rounded-full px-3 py-0.5 text-xs font-bold uppercase tracking-[0.1em] ${skillColors[player.playerProfile.skillLevel] ?? skillColors.Beginner}`}>
+                      {player.playerProfile.skillLevel}
+                    </span>
+                  </div>
+                )}
+
+                {/* Club */}
+                {player.playerProfile?.clubAffiliation && (
+                  <p className="truncate text-sm text-[#D8FBFF]">
+                    🏓 {player.playerProfile.clubAffiliation}
+                  </p>
+                )}
+
+                {/* Tournaments count */}
+                {player._count && (
+                  <div className="mt-4 border-t border-[#12679E] pt-3">
+                    <p className="text-xs text-[#D8FBFF]">
+                      {player._count.registrations} tournament{player._count.registrations !== 1 ? "s" : ""} joined
+                    </p>
+                  </div>
+                )}
               </Link>
-            );
-          })}
-        </div>
-      )}
+            ))}
+          </div>
+        )}
+
+      </div>
     </div>
   );
 };
