@@ -75,23 +75,24 @@ const GlobalLeaderboard: React.FC = () => {
   };
 
   return (
-    <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl py-8">
+    <div className="min-h-screen bg-gradient-to-r from-[#061D23] via-[#12679E] via-50% to-[#4AEEFF] py-12">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
       <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Global Leaderboard</h1>
+        <h1 className="text-3xl font-bold text-white">Global Leaderboard</h1>
       </div>
 
       {/* Category Selector */}
-      <div className="card mb-6">
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+      <div className="bg-white/10 backdrop-blur-md rounded-2xl p-6 mb-6 border-2 border-[#4AEEFF]/50">
+        <label className="block text-sm font-medium text-white mb-2">
           Select Category
         </label>
         {loadingCategories ? (
-          <p>Loading categories...</p>
+          <p className="text-[#4AEEFF]">Loading categories...</p>
         ) : (
           <select
             value={selectedCategory}
             onChange={(e) => setSelectedCategory(e.target.value)}
-            className="input-field max-w-md"
+            className="input-field max-w-md bg-white/90 text-gray-900 border border-[#4AEEFF]/30 rounded-lg px-4 py-2 focus:ring-2 focus:ring-[#4AEEFF]"
           >
             <option value="">-- Select a category --</option>
             {categories.map((category) => (
@@ -101,61 +102,61 @@ const GlobalLeaderboard: React.FC = () => {
             ))}
           </select>
         )}
-        <p className="text-xs text-gray-500 mt-2">
+        <p className="text-xs text-[#4AEEFF]/70 mt-2">
           Shows player rankings across ALL tournaments for this category
         </p>
       </div>
 
       {/* Standings Table */}
       {selectedCategory && (
-        <div className="card">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">
+        <div className="bg-white/10 backdrop-blur-md rounded-2xl p-6 border-2 border-[#4AEEFF]/50">
+          <h2 className="text-xl font-semibold text-white mb-4">
             {selectedCategory} - Overall Rankings
           </h2>
 
           {loading ? (
-            <div className="text-center py-8">Loading rankings...</div>
+            <div className="text-center py-8 text-[#4AEEFF]">Loading rankings...</div>
           ) : standings.length === 0 ? (
             <div className="text-center py-8">
-              <p className="text-gray-500">
+              <p className="text-[#4AEEFF] text-lg font-semibold">
                 No completed matches found for this category.
               </p>
-              <p className="text-sm text-gray-400">
+              <p className="text-sm text-[#4AEEFF]/70 mt-2">
                 Play and complete matches to see rankings.
               </p>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-gray-50">
+                <thead className="bg-white/10 border-b border-[#4AEEFF]/30">
                   <tr>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">
+                    <th className="px-4 py-3 text-left text-sm font-medium text-[#4AEEFF]">
                       Rank
                     </th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">
+                    <th className="px-4 py-3 text-left text-sm font-medium text-[#4AEEFF]">
                       Player
                     </th>
-                    <th className="px-4 py-3 text-center text-sm font-medium text-gray-700">
+                    <th className="px-4 py-3 text-center text-sm font-medium text-[#4AEEFF]">
                       Matches
                     </th>
-                    <th className="px-4 py-3 text-center text-sm font-medium text-gray-700">
+                    <th className="px-4 py-3 text-center text-sm font-medium text-[#4AEEFF]">
                       Wins
                     </th>
-                    <th className="px-4 py-3 text-center text-sm font-medium text-gray-700">
+                    <th className="px-4 py-3 text-center text-sm font-medium text-[#4AEEFF]">
                       Losses
                     </th>
-                    <th className="px-4 py-3 text-center text-sm font-medium text-gray-700">
+                    <th className="px-4 py-3 text-center text-sm font-medium text-[#4AEEFF]">
                       Points
                     </th>
-                    <th className="px-4 py-3 text-center text-sm font-medium text-gray-700">
+                    <th className="px-4 py-3 text-center text-sm font-medium text-[#4AEEFF]">
                       Games
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-200">
+                <tbody className="divide-y divide-[#4AEEFF]/20">
                   {standings.map((player, index) => (
-                    <tr key={player.playerId} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 text-sm font-medium">
+                    <tr key={player.playerId} className="hover:bg-white/5">
+                      <td className="px-4 py-3 text-sm font-medium text-[#4AEEFF]">
                         {index === 0
                           ? "🥇"
                           : index === 1
@@ -164,25 +165,27 @@ const GlobalLeaderboard: React.FC = () => {
                               ? "🥉"
                               : `${index + 1}`}
                       </td>
-                      <Link
-                        to={`/profile/${player.playerId}`}
-                        className="text-blue-600 hover:text-blue-800 hover:underline font-medium"
-                      >
-                        {player.playerName}
-                      </Link>
-                      <td className="px-4 py-3 text-sm text-center">
+                      <td className="px-4 py-3 text-sm">
+                        <Link
+                          to={`/profile/${player.playerId}`}
+                          className="text-[#4AEEFF] hover:text-white hover:underline font-medium"
+                        >
+                          {player.playerName}
+                        </Link>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-center text-white/70">
                         {player.matchesPlayed}
                       </td>
-                      <td className="px-4 py-3 text-sm text-center text-green-600">
+                      <td className="px-4 py-3 text-sm text-center text-[#4AEEFF] font-medium">
                         {player.wins}
                       </td>
-                      <td className="px-4 py-3 text-sm text-center text-red-600">
+                      <td className="px-4 py-3 text-sm text-center text-red-400 font-medium">
                         {player.losses}
                       </td>
-                      <td className="px-4 py-3 text-sm text-center font-bold">
+                      <td className="px-4 py-3 text-sm text-center font-bold text-[#4AEEFF]">
                         {player.points}
                       </td>
-                      <td className="px-4 py-3 text-sm text-center">
+                      <td className="px-4 py-3 text-sm text-center text-white/70">
                         {player.gamesWon} - {player.gamesLost}
                       </td>
                     </tr>
@@ -193,6 +196,7 @@ const GlobalLeaderboard: React.FC = () => {
           )}
         </div>
       )}
+      </div>
     </div>
   );
 };

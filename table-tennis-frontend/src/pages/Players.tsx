@@ -91,7 +91,7 @@ const Players: React.FC = () => {
     `${p.firstName[0]}${p.lastName[0]}`.toUpperCase();
 
   return (
-    <div className="min-h-screen bg-gradient-to-r from-[#061D23] via-[#12679E] to-[#4AEEFF] py-12">
+    <div className="min-h-screen bg-gradient-to-r from-[#061D23] via-[#12679E] via-50% to-[#4AEEFF] py-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-12">
@@ -128,7 +128,7 @@ const Players: React.FC = () => {
                   className={`px-4 py-2 rounded-full font-semibold text-sm transition-all focus:outline-none focus:ring-2 focus:ring-[#4AEEFF] ${
                     skillFilter === s
                       ? "bg-gradient-to-r from-[#4AEEFF] to-[#12679E] text-[#061D23] shadow-sm"
-                      : "bg-gradient-to-r from-[#4AEEFF]/40 to-[#12679E]/30 text-white border border-white/20 hover:bg-gradient-to-r hover:from-[#061D23] hover:to-[#0b2b33] hover:text-white"
+                      : "bg-gradient-to-r from-[#061D23]/80 to-[#0a3a47]/80 text-white border border-[#4AEEFF]/30 hover:bg-gradient-to-r hover:from-[#061D23] hover:to-[#0a3a47] hover:text-white hover:border-[#4AEEFF]/60"
                   }`}
                 >
                   {s === "ALL" ? "All Levels" : s.charAt(0) + s.slice(1).toLowerCase()}
@@ -168,7 +168,7 @@ const Players: React.FC = () => {
 
               return (
                 <Link key={player.id} to={`/profile/${player.id}`} className="group">
-                  <div className="relative h-full bg-gradient-to-br from-white/95 to-white/85 backdrop-blur-sm rounded-2xl p-8 border border-white/30 hover:border-[#4AEEFF]/60 transition-all duration-300 hover:shadow-2xl hover:scale-105 overflow-hidden">
+                  <div className="relative h-full bg-white/10 backdrop-blur-md rounded-2xl p-8 border-2 border-[#4AEEFF]/50 hover:border-[#4AEEFF] transition-all duration-300 hover:shadow-2xl hover:shadow-[#4AEEFF]/20 hover:scale-105 overflow-hidden">
                     {/* Accent line */}
                     <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#4AEEFF] via-[#12679E] to-transparent"></div>
 
@@ -196,7 +196,7 @@ const Players: React.FC = () => {
 
                     {/* Player Info */}
                     <div className="text-center mb-6">
-                      <h3 className="text-2xl font-bold text-[#061D23] mb-1">
+                      <h3 className="text-2xl font-bold text-white mb-1">
                         {player.firstName} {player.lastName}
                       </h3>
                       {player.ranking !== undefined && (
@@ -205,14 +205,14 @@ const Players: React.FC = () => {
                         </div>
                       )}
                       {age !== null && (
-                        <p className="text-gray-600 text-sm">{age} years old</p>
+                        <p className="text-gray-300 text-sm">{age} years old</p>
                       )}
                     </div>
 
                     {/* Club */}
                     {player.playerProfile?.clubAffiliation && (
-                      <div className="text-center mb-4 pb-4 border-b border-gray-200">
-                        <p className="text-gray-700 font-medium text-sm">
+                      <div className="text-center mb-4 pb-4 border-b border-gray-500">
+                        <p className="text-gray-200 font-medium text-sm">
                           <span className="mr-2">🏛️</span>
                           {player.playerProfile.clubAffiliation}
                         </p>
