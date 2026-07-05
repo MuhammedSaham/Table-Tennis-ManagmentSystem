@@ -59,10 +59,6 @@ const PublicLayout: React.FC = () => {
             {/* Right section */}
             <div className="flex items-center gap-3">
               {user ? (
-                <Link
-                  to="/app/dashboard"
-                  className="bg-white text-[#12679E] border border-[#12679E] font-bold px-4 py-2 rounded-xl text-sm hover:bg-[#f4faff] transition-all duration-200"
-                >
                 <Link to="/app/dashboard" className="inline-flex items-center justify-center rounded-full bg-primary-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-primary-700">
                   Dashboard
                 </Link>
