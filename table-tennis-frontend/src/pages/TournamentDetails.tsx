@@ -79,6 +79,7 @@ const TournamentDetails: React.FC = () => {
   const [tournament, setTournament] = useState<Tournament | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [activeCategoryId, setActiveCategoryId] = useState<string>("");
   const [registering, setRegistering] = useState(false);
   const [generating, setGenerating] = useState<string | null>(null);
   const [tournamentType, setTournamentType] = useState("KNOCKOUT");
@@ -167,12 +168,24 @@ const TournamentDetails: React.FC = () => {
       const tournamentData = response.data.data;
 
       if (user?.role === "ADMIN") {
-        const regResponse = await api.get(`/registrations/tournaments/${id}`);
+        const regResponse = await api.get(
+          `/registrations/tournaments/${id}${id}${selectedCategories ? `?categoryId=${selectedCategories}` : ""}`,
+        );
         tournamentData.registrations = regResponse.data.data;
       }
 
       setTournament(tournamentData);
       setTournamentType(tournamentData?.tournamentType || "KNOCKOUT");
+
+      const categories = tournamentData.categories || [];
+      if (categories.length > 0) {
+        setActiveCategoryId((prev) => {
+          const exists = categories.some((c: any) => c.id === prev);
+          return prev && exists ? prev : categories[0].id;
+        });
+      } else {
+        setActiveCategoryId("");
+      }
 
       // Set player age if logged in as player
       if (user?.role === "PLAYER") {
@@ -966,7 +979,7 @@ const TournamentDetails: React.FC = () => {
       </div>
 
       {/* Category Selector for Group Stage */}
-      {tournamentType === "GROUP_KNOCKOUT" &&
+      {/*{tournamentType === "GROUP_KNOCKOUT" &&
         tournament.categories.length > 0 && (
           <div className="card mb-6">
             <h2 className="text-xl font-semibold text-gray-900 mb-4">
@@ -990,7 +1003,31 @@ const TournamentDetails: React.FC = () => {
               Select a category to manage groups and knockout stage
             </p>
           </div>
-        )}
+        )}*/}
+      {/* Category Selector */}
+      {tournament.categories.length > 0 && (
+        <div className="card mb-6">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">
+            {tournamentType === "GROUP_KNOCKOUT"
+              ? "Select Category for Group Stage & Knockout"
+              : "Select Category to View Bracket"}
+          </h2>
+          <select
+            value={activeCategoryId}
+            onChange={(e) => setActiveCategoryId(e.target.value)}
+            className="input-field max-w-md"
+          >
+            <option value="">Select a category</option>
+            {tournament.categories.map((category) => (
+              <option key={category.id} value={category.id}>
+                {category.name} ({category.type}) -{" "}
+                {category.currentParticipants}/{category.maxParticipants}{" "}
+                players
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
 
       {/* Group Stage UI */}
       {tournamentType === "GROUP_KNOCKOUT" && selectedCategories.length > 0 && (
@@ -1059,6 +1096,31 @@ const TournamentDetails: React.FC = () => {
           />
         </div>
       )}
+
+      {/* Knockout Bracket */}
+      {activeCategoryId && (
+        <div
+          className="card mb-6"
+          style={{ overflowX: "auto", overflowY: "visible", minHeight: 200 }}
+        >
+          {isAdmin && tournamentType === "KNOCKOUT" && (
+            <div className="flex justify-end mb-4">
+              <button
+                onClick={() => setShowResetConfirm(true)}
+                className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition"
+              >
+                Reset Bracket
+              </button>
+            </div>
+          )}
+          <KnockoutBracket
+            tournamentId={id}
+            categoryId={activeCategoryId}
+            onScoreRecorded={fetchTournamentDetails}
+          />
+        </div>
+      )}
+
       {/* Winners Section */}
       {showWinners && winners && (
         <div className="card mb-6 bg-gradient-to-r from-yellow-50 to-amber-50">

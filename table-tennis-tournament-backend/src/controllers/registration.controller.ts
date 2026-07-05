@@ -20,8 +20,8 @@ export const getMyRegistrations = catchAsync(async (req: Request, res: Response)
 // Get tournament registrations (Admin/Referee)
 export const getTournamentRegistrations = catchAsync(async (req: Request, res: Response) => {
   const { tournamentId } = req.params;
-  const { status } = req.query;
-  const registrations = await tournamentService.getTournamentRegistrations(tournamentId, status as string);
+  const { status, categoryId } = req.query;
+  const registrations = await tournamentService.getTournamentRegistrations(tournamentId, status as string, categoryId as string,);
   sendResponse(res, 200, 'Registrations retrieved successfully', registrations);
 });
 

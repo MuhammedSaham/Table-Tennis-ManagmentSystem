@@ -16,8 +16,8 @@ export const createMatch = catchAsync(async (req: Request, res: Response) => {
 // Get tournament matches
 export const getTournamentMatches = catchAsync(async (req: Request, res: Response) => {
   const { tournamentId } = req.params;
-  const { status } = req.query;
-  const matches = await matchService.getTournamentMatches(tournamentId, status as string);
+  const { status, categoryId } = req.query;
+  const matches = await matchService.getTournamentMatches(tournamentId, status as string, categoryId as string);
   sendResponse(res, 200, 'Matches retrieved successfully', matches);
 });
 

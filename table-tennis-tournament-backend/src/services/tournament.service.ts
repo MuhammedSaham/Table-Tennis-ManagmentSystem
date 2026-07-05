@@ -441,6 +441,13 @@ if (data.status === 'ONGOING') {
       },
     });
 
+    if (data.categoryId) {
+  await prisma.category.update({
+    where: { id: data.categoryId },
+    data: { currentParticipants: { increment: 1 } },
+  });
+}
+
     // Create notification for admin
     const admins = await prisma.user.findMany({
       where: { role: 'ADMIN' },
@@ -491,10 +498,13 @@ if (data.status === 'ONGOING') {
   }
 
   // Get tournament registrations (Admin/Referee)
-  async getTournamentRegistrations(tournamentId: string, status?: string) {
+  async getTournamentRegistrations(tournamentId: string, status?: string, categoryId?: string) {
     const whereClause: any = { tournamentId };
     if (status) {
       whereClause.status = status;
+    }
+    if (categoryId){
+      whereClause.categoryId = categoryId;
     }
 
     const registrations = await prisma.tournamentRegistration.findMany({

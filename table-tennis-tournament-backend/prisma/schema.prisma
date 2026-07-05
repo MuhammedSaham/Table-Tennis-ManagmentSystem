@@ -22,9 +22,7 @@ model User {
   resetPasswordToken  String?   @unique
   resetPasswordExpiry DateTime?
 
-  isEmailVerified Boolean  @default(false) // <-- ADD THIS LINE
-
-  isSuperAdmin        Boolean     @default(false)
+  isSuperAdmin Boolean @default(false)
 
   // Relations based on role
   playerProfile  PlayerProfile?
@@ -59,17 +57,16 @@ enum UserRole {
 
 // Player specific details
 model PlayerProfile {
-  id              String    @id @default(cuid())
-  userId          String    @unique
-  user            User      @relation(fields: [userId], references: [id])
-  dateOfBirth     DateTime?
-  skillLevel      String?
-  clubAffiliation String?
-  ranking         Int?
-  rankingNote     String?
+  id               String    @id @default(cuid())
+  userId           String    @unique
+  user             User      @relation(fields: [userId], references: [id])
+  dateOfBirth      DateTime?
+  skillLevel       String?
+  clubAffiliation  String?
+  ranking          Int?
+  rankingNote      String?
   rankingUpdatedAt DateTime?
   rankingUpdatedBy String?
-  
 
   // Relations
   teamMemberships         TeamMember[]
@@ -235,6 +232,12 @@ model Match {
 
   matchType MatchType
 
+  nextMatchId     String?
+  nextMatch       Match?  @relation("BracketFlow", fields: [nextMatchId], references: [id])
+  previousMatches Match[] @relation("BracketFlow")
+  sourceMatch1Id  String?
+  sourceMatch2Id  String?
+
   // For singles/doubles
   player1Id String?
   player1   User?   @relation("player1", fields: [player1Id], references: [id])
@@ -382,23 +385,22 @@ model GroupMatch {
   player2Id String
   player2   User   @relation("groupMatch_player2", fields: [player2Id], references: [id])
 
-  
   player1Score Int?
   player2Score Int?
   winnerId     String?
   status       MatchStatus @default(SCHEDULED)
 
-  game1player1  Int?
-  game1player2  Int?
-  game2player1  Int?
-  game2player2  Int?
-  game3player1  Int?
-  game3player2  Int?
-  game4player1  Int?
-  game4player2  Int?
-  game5player1  Int?
-  game5player2  Int?
-  bestOf        Int   @default(5)
+  game1player1 Int?
+  game1player2 Int?
+  game2player1 Int?
+  game2player2 Int?
+  game3player1 Int?
+  game3player2 Int?
+  game4player1 Int?
+  game4player2 Int?
+  game5player1 Int?
+  game5player2 Int?
+  bestOf       Int  @default(5)
 
   round         Int       @default(1)
   scheduledTime DateTime
