@@ -6,8 +6,16 @@ const Hero: React.FC = () => {
   const { user } = useAuth();
 
   return (
-    <div className="relative bg-gradient-to-br from-primary-900 via-primary-800 to-primary-900 overflow-hidden">
-      {/* Background pattern */}
+    <div className="relative bg-[#12679E] overflow-hidden">
+      {/* Login-style background layers (image, overlay, diagonal accents) */}
+      <div style={{ position: "absolute", inset: 0, zIndex: 0 }}>
+        <div style={{ position: "absolute", inset: 0, backgroundImage: "url('https://images.unsplash.com/photo-1609710228159-0fa9bd7c0827?w=1920&q=80')", backgroundSize: 'cover', backgroundPosition: 'center', zIndex: 0 }} />
+        <div style={{ position: "absolute", inset: 0, background: '#061D23', opacity: 0.62, zIndex: 1 }} />
+        <div style={{ position: 'absolute', inset: 0, background: '#12679E', clipPath: 'polygon(0 0, 12% 0, 6% 100%, 0 100%)', opacity: 0.28, zIndex: 2 }} />
+        <div style={{ position: 'absolute', inset: 0, background: '#4AEEFF', clipPath: 'polygon(10% 0, 16% 0, 10% 100%, 4% 100%)', opacity: 0.22, zIndex: 2 }} />
+      </div>
+
+      {/* Background pattern (soft circles) */}
       <div className="absolute inset-0 opacity-10">
         <div className="absolute top-0 left-0 w-72 h-72 bg-white rounded-full filter blur-3xl"></div>
         <div className="absolute bottom-0 right-0 w-96 h-96 bg-secondary-500 rounded-full filter blur-3xl"></div>
@@ -30,8 +38,8 @@ const Hero: React.FC = () => {
             </span>
           </div>
 
-          <h1 className="text-5xl md:text-7xl font-bold text-white mb-6 font-display">
-            Table Tennis
+          <h1 className="text-5xl md:text-7xl font-bold mb-6 font-display">
+            <span className="gradient-text">Table Tennis</span>
             <span className="gradient-text block mt-2">Tournament System</span>
           </h1>
 
@@ -57,7 +65,10 @@ const Hero: React.FC = () => {
                 </Link>
               </>
             ) : (
-              <Link to="/tournaments" className="btn-primary">
+              <Link
+                to="/tournaments"
+                className="bg-white text-[#12679E] border border-[#12679E] font-bold px-6 py-3 rounded-xl transition-all duration-300 transform hover:bg-[#f4faff] hover:scale-105 shadow-lg"
+              >
                 Browse Tournaments
               </Link>
             )}
@@ -102,12 +113,12 @@ const Hero: React.FC = () => {
         <svg
           viewBox="0 0 1200 120"
           preserveAspectRatio="none"
-          className="relative h-12 w-full text-white"
+          className="relative h-16 w-full"
         >
+          <rect x="0" y="24" width="1200" height="96" fill="#000" />
           <path
             d="M0,0V46.29c47.79,22.2,103.59,32.17,158,28,70.36-5.37,136.33-33.31,206.8-37.5C438.64,32.43,512.34,53.67,583,72.05c69.27,18,138.3,24.88,209.4,13.08,36.15-6,69.85-17.84,104.45-29.34C989.49,25,1113-14.29,1200,52.47V0Z"
-            fill="currentColor"
-            className="fill-white"
+            fill="#fff"
           ></path>
         </svg>
       </div>

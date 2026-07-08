@@ -949,7 +949,7 @@ const KnockoutBracket: React.FC<KnockoutBracketProps> = ({
     try {
       setLoading(true);
       const res = await api.get(
-        `/matches/tournaments/${tournamentId}?t=${Date.now()}`,
+        `/matches/tournaments/${tournamentId}?categoryId=${categoryId}&t=${Date.now()}`,
       );
       const all: KnockoutMatch[] = res.data.data;
       for (const m of all) {
@@ -966,9 +966,14 @@ const KnockoutBracket: React.FC<KnockoutBracketProps> = ({
       }
       setMatches(
         all.filter((m) =>
-          ["Quarter-final", "Semi-final", "Final", "3rd Place"].includes(
-            m.round,
-          ),
+          [
+            "Round of 32",
+            "Round of 16",
+            "Quarter-Finals",
+            "Semi-Finals",
+            "Final",
+            "3rd Place Playoff",
+          ].includes(m.round),
         ),
       );
     } catch (e) {
@@ -1023,39 +1028,64 @@ const KnockoutBracket: React.FC<KnockoutBracketProps> = ({
         await api.get(`/matches/tournaments/${tournamentId}?t=${Date.now()}`)
       ).data.data;
 
-      if (match.round === "Quarter-final") {
+      if (match.round === "Quarter-Finals") {
         const sfs = fresh
-          .filter((m) => m.round === "Semi-final")
+          .filter((m) => m.round === "Semi-Finals")
           .sort((a, b) => a.matchNumber - b.matchNumber);
-        const qfs = fresh
-          .filter((m) => m.round === "Quarter-final")
+        /*const qfs = fresh
+          .filter((m) => m.round === "Quarter-Finals")
           .sort((a, b) => a.matchNumber - b.matchNumber);
         const idx = qfs.findIndex((m) => m.id === matchId);
-        const sf = sfs[Math.floor(idx / 2)];
-        if (sf && sf.status !== "COMPLETED")
-          await api.patch(`/matches/${sf.id}`, {
-            [idx % 2 === 0 ? "player1Id" : "player2Id"]: winnerId,
-          });
+        const sf = sfs[Math.floor(idx / 2)];*/
+        const targetSf = sfs.find(
+          (s) => s.status !== "COMPLETED" && (!s.player1Id || !s.player2Id),
+        );
+        if (targetSf) {
+          if (!targetSf.player1Id) {
+            await api.patch(`/matches/${targetSf.id}`, {
+              player1Id: winnerId,
+            });
+          } else if (!targetSf.player2Id) {
+            await api.patch(`/matches/${targetSf.id}`, {
+              player2Id: winnerId,
+            });
+          }
+        }
       }
-      if (match.round === "Semi-final") {
+      if (match.round === "Semi-Finals") {
         const fin = fresh.find((m) => m.round === "Final");
-        const tp = fresh.find((m) => m.round === "3rd Place");
-        const sfs = fresh
-          .filter((m) => m.round === "Semi-final")
+        const tp = fresh.find((m) => m.round === "3rd Place Playoff");
+        /*const sfs = fresh
+          .filter((m) => m.round === "Semi-Finals")
           .sort((a, b) => a.matchNumber - b.matchNumber);
-        const idx = sfs.findIndex((m) => m.id === matchId);
+        const idx = sfs.findIndex((m) => m.id === matchId);*/
         const loser =
           match.player1?.id === winnerId
             ? match.player2?.id
             : match.player1?.id;
-        if (fin && fin.status !== "COMPLETED")
-          await api.patch(`/matches/${fin.id}`, {
-            [idx === 0 ? "player1Id" : "player2Id"]: winnerId,
-          });
-        if (tp && tp.status !== "COMPLETED" && loser)
-          await api.patch(`/matches/${tp.id}`, {
-            [idx === 0 ? "player1Id" : "player2Id"]: loser,
-          });
+        if (fin && fin.status !== "COMPLETED") {
+          if (!fin.player1Id) {
+            await api.patch(`/matches/${fin.id}`, {
+              player1Id: winnerId,
+            });
+          } else if (!fin.player2Id) {
+            await api.patch(`/matches/${fin.id}`, {
+              player2Id: winnerId,
+            });
+          }
+        }
+
+        if (tp && tp.status !== "COMPLETED" && loser) {
+          if (!tp.player1Id) {
+            await api.patch(`/matches/${tp.id}`, {
+              player1Id: loser,
+            });
+          } else if (!tp.player2Id) {
+            await api.patch(`/matches/${tp.id}`, {
+              player2Id: loser,
+            });
+          }
+        }
       }
 
       toast.success("Score saved!");
@@ -1123,21 +1153,33 @@ const KnockoutBracket: React.FC<KnockoutBracketProps> = ({
       </div>
     );
 
-  const qf = round("Quarter-final");
-  const sf = round("Semi-final");
+  const r32 = round("Round of 32");
+  const r16 = round("Round of 16");
+  const qf = round("Quarter-Finals");
+  const targetSf = round("Semi-Finals");
   const fn = round("Final")[0] ?? null;
-  const tp = round("3rd Place")[0] ?? null;
+  const tp = round("3rd Place Playoff")[0] ?? null;
 
   const cols: ColDef[] = [];
+  if (r32.length)
+    cols.push({
+      label: "Round of 32",
+      entries: r32.map((m, i) => ({ match: m, tag: `R32 ${i + 1}` })),
+    });
+  if (r16.length)
+    cols.push({
+      label: "Round of 16",
+      entries: r16.map((m, i) => ({ match: m, tag: `R16 ${i + 1}` })),
+    });
   if (qf.length)
     cols.push({
       label: "Quarter Finals",
       entries: qf.map((m, i) => ({ match: m, tag: `QF ${i + 1}` })),
     });
-  if (sf.length)
+  if (targetSf.length)
     cols.push({
       label: "Semi Finals",
-      entries: sf.map((m, i) => ({ match: m, tag: `SF ${i + 1}` })),
+      entries: targetSf.map((m, i) => ({ match: m, tag: `SF ${i + 1}` })),
     });
   if (fn)
     cols.push({

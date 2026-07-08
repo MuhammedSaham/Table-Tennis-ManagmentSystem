@@ -4,9 +4,16 @@
 
 @layer base {
   * {
-    @apply scroll-smooth;
+    @apply scroll-smooth box-border;
   }
   
+  html,
+  body {
+    margin: 0;
+    padding: 0;
+    min-height: 100%;
+  }
+
   body {
     @apply bg-gray-50 font-sans text-gray-900 antialiased;
   }
@@ -57,7 +64,17 @@
   
   /* Gradient text */
   .gradient-text {
-    @apply bg-gradient-to-r from-primary-600 to-secondary-500 bg-clip-text text-transparent;
+    @apply bg-gradient-to-r from-white to-[#4AEEFF] bg-clip-text text-transparent;
+  }
+
+  /* Slow blinking animation for footer branding */
+  @keyframes slowBlink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.35; }
+  }
+
+  .slow-blink {
+    animation: slowBlink 2.8s ease-in-out infinite;
   }
   
   /* Table styles */

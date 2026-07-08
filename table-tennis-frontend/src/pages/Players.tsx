@@ -39,6 +39,31 @@ const Players: React.FC = () => {
   const [search, setSearch] = useState("");
   const [skillFilter, setSkillFilter] = useState("ALL");
 
+  // Original fetchPlayers function
+  // const fetchPlayers = async () => {
+  //   try {
+  //     const res = await api.get("/users/public/players");
+  //     setPlayers(res.data.data);
+  //     setFiltered(res.data.data);
+  //   } catch {
+  //     setPlayers([]);
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
+
+  const fetchPlayers = async () => {
+    try {
+      const res = await api.get("/users/public/players");
+      setPlayers(res.data.data);
+      setFiltered(res.data.data);
+    } catch {
+      setPlayers([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchPlayers();
   }, []);
@@ -62,414 +87,159 @@ const Players: React.FC = () => {
     setFiltered(result);
   }, [search, skillFilter, players]);
 
-  const fetchPlayers = async () => {
-    try {
-      const res = await api.get("/users/public/players");
-      setPlayers(res.data.data);
-      setFiltered(res.data.data);
-    } catch {
-      setPlayers([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const initials = (p: Player) =>
     `${p.firstName[0]}${p.lastName[0]}`.toUpperCase();
 
   return (
-    <div
-      style={{
-        maxWidth: 1100,
-        margin: "0 auto",
-        padding: "40px 16px 80px",
-        fontFamily: "'Segoe UI', system-ui, sans-serif",
-      }}
-    >
-      {/* ── Header ── */}
-      <div style={{ marginBottom: 36 }}>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 12,
-            marginBottom: 8,
-          }}
-        >
-          <div
-            style={{
-              width: 40,
-              height: 40,
-              background: "linear-gradient(135deg, #e11d48, #f97316)",
-              borderRadius: 10,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: 20,
-            }}
-          >
-            🏓
+    <div className="min-h-screen bg-gradient-to-r from-[#061D23] via-[#12679E] via-50% to-[#4AEEFF] py-12">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Header */}
+        <div className="mb-12">
+          <div className="flex items-center gap-4 mb-4">
+            <div className="w-12 h-12 bg-gradient-to-r from-[#4AEEFF] to-[#FFFFFF] rounded-full flex items-center justify-center">
+              <span className="text-2xl">🏓</span>
+            </div>
+            <h1 className="text-4xl md:text-5xl font-bold text-white">Players</h1>
           </div>
-          <h1
-            style={{
-              fontSize: "clamp(24px, 4vw, 36px)",
-              fontWeight: 900,
-              color: "#0f172a",
-              margin: 0,
-              letterSpacing: -1,
-            }}
-          >
-            Players
-          </h1>
-        </div>
-        <p style={{ color: "#64748b", fontSize: 15, margin: 0 }}>
-          Browse all registered players and view their profiles
-        </p>
-      </div>
-
-      {/* ── Filters ── */}
-      <div
-        style={{
-          display: "flex",
-          gap: 12,
-          marginBottom: 28,
-          flexWrap: "wrap",
-          alignItems: "center",
-        }}
-      >
-        {/* Search */}
-        <div style={{ position: "relative", flex: "1 1 260px" }}>
-          <span
-            style={{
-              position: "absolute",
-              left: 14,
-              top: "50%",
-              transform: "translateY(-50%)",
-              fontSize: 16,
-              color: "#94a3b8",
-            }}
-          >
-            🔍
-          </span>
-          <input
-            type="text"
-            placeholder="Search by name or club..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            style={{
-              width: "100%",
-              paddingLeft: 42,
-              paddingRight: 16,
-              paddingTop: 10,
-              paddingBottom: 10,
-              border: "1.5px solid #e2e8f0",
-              borderRadius: 12,
-              fontSize: 14,
-              outline: "none",
-              color: "#1e293b",
-              background: "#fff",
-              boxSizing: "border-box",
-            }}
-          />
+          <p className="text-[#4AEEFF] text-lg">Browse all registered players and view their profiles</p>
         </div>
 
-        {/* Skill filter pills */}
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          {["ALL", "BEGINNER", "INTERMEDIATE", "ADVANCED", "PROFESSIONAL"].map(
-            (s) => (
-              <button
-                key={s}
-                onClick={() => setSkillFilter(s)}
-                style={{
-                  padding: "8px 16px",
-                  borderRadius: 20,
-                  border: "1.5px solid",
-                  borderColor: skillFilter === s ? "#e11d48" : "#e2e8f0",
-                  background: skillFilter === s ? "#e11d48" : "#fff",
-                  color: skillFilter === s ? "#fff" : "#64748b",
-                  fontSize: 12,
-                  fontWeight: 600,
-                  cursor: "pointer",
-                  textTransform: "capitalize",
-                  letterSpacing: 0.3,
-                  transition: "all 0.15s",
-                }}
-              >
-                {s === "ALL"
-                  ? "All Levels"
-                  : s.charAt(0) + s.slice(1).toLowerCase()}
-              </button>
-            ),
-          )}
-        </div>
+        {/* Filters */}
+        <div className="bg-white/10 backdrop-blur-md rounded-2xl p-6 mb-8 border border-white/20">
+          <div className="flex flex-col md:flex-row gap-4 items-center">
+            {/* Search */}
+            <div className="relative flex-1 w-full">
+              <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-xl">🔍</span>
+              <input
+                type="text"
+                placeholder="Search by name or club..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full pl-12 pr-4 py-3 rounded-lg bg-white/90 text-gray-900 placeholder-gray-500 outline-none focus:ring-2 focus:ring-[#4AEEFF]"
+              />
+            </div>
 
-        {/* Count */}
-        <span style={{ color: "#94a3b8", fontSize: 13, marginLeft: "auto" }}>
-          {filtered.length} player{filtered.length !== 1 ? "s" : ""}
-        </span>
-      </div>
-
-      {/* ── Loading ── */}
-      {loading && (
-        <div style={{ textAlign: "center", padding: 80 }}>
-          <div
-            style={{
-              width: 40,
-              height: 40,
-              border: "3px solid #e2e8f0",
-              borderTopColor: "#e11d48",
-              borderRadius: "50%",
-              animation: "spin 0.8s linear infinite",
-              margin: "0 auto 16px",
-            }}
-          />
-          <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
-          <p style={{ color: "#94a3b8", fontSize: 14 }}>Loading players…</p>
-        </div>
-      )}
-
-      {/* ── Empty ── */}
-      {!loading && filtered.length === 0 && (
-        <div
-          style={{
-            textAlign: "center",
-            padding: 80,
-            background: "#f8fafc",
-            borderRadius: 20,
-            border: "1px dashed #cbd5e1",
-          }}
-        >
-          <div style={{ fontSize: 48, marginBottom: 12 }}>🏓</div>
-          <p style={{ color: "#64748b", fontSize: 16, fontWeight: 600 }}>
-            No players found
-          </p>
-          <p style={{ color: "#94a3b8", fontSize: 14 }}>
-            Try adjusting your search or filter
-          </p>
-        </div>
-      )}
-
-      {/* ── Grid ── */}
-      {!loading && filtered.length > 0 && (
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
-            gap: 16,
-          }}
-        >
-          {filtered.map((player) => {
-            const skill = player.playerProfile?.skillLevel?.toUpperCase();
-            const skillStyle =
-              skill && skillColors[skill]
-                ? skillColors[skill]
-                : { bg: "#f1f5f9", text: "#475569" };
-            const age = player.playerProfile?.dateOfBirth
-              ? calculateAge(player.playerProfile.dateOfBirth)
-              : null;
-
-            return (
-              <Link
-                key={player.id}
-                to={`/profile/${player.id}`}
-                style={{ textDecoration: "none" }}
-              >
-                <div
-                  style={{
-                    background: "#fff",
-                    border: "1.5px solid #e2e8f0",
-                    borderRadius: 18,
-                    padding: 24,
-                    transition: "all 0.2s",
-                    cursor: "pointer",
-                    position: "relative",
-                    overflow: "hidden",
-                  }}
-                  onMouseEnter={(e) => {
-                    (e.currentTarget as HTMLDivElement).style.borderColor =
-                      "#e11d48";
-                    (e.currentTarget as HTMLDivElement).style.transform =
-                      "translateY(-2px)";
-                    (e.currentTarget as HTMLDivElement).style.boxShadow =
-                      "0 8px 24px rgba(225,29,72,0.1)";
-                  }}
-                  onMouseLeave={(e) => {
-                    (e.currentTarget as HTMLDivElement).style.borderColor =
-                      "#e2e8f0";
-                    (e.currentTarget as HTMLDivElement).style.transform =
-                      "translateY(0)";
-                    (e.currentTarget as HTMLDivElement).style.boxShadow =
-                      "none";
-                  }}
+            {/* Skill filter pills */}
+            <div className="flex flex-wrap gap-2 justify-center md:justify-end">
+              {["ALL", "BEGINNER", "INTERMEDIATE", "ADVANCED", "PROFESSIONAL"].map((s) => (
+                <button
+                  key={s}
+                  onClick={() => setSkillFilter(s)}
+                  className={`px-4 py-2 rounded-full font-semibold text-sm transition-all focus:outline-none focus:ring-2 focus:ring-[#4AEEFF] ${
+                    skillFilter === s
+                      ? "bg-gradient-to-r from-[#4AEEFF] to-[#12679E] text-[#061D23] shadow-sm"
+                      : "bg-gradient-to-r from-[#061D23]/80 to-[#0a3a47]/80 text-white border border-[#4AEEFF]/30 hover:bg-gradient-to-r hover:from-[#061D23] hover:to-[#0a3a47] hover:text-white hover:border-[#4AEEFF]/60"
+                  }`}
                 >
-                  {/* top accent */}
-                  <div
-                    style={{
-                      position: "absolute",
-                      top: 0,
-                      left: 0,
-                      right: 0,
-                      height: 3,
-                      background: "linear-gradient(90deg, #e11d48, #f97316)",
-                      borderRadius: "18px 18px 0 0",
-                    }}
-                  />
+                  {s === "ALL" ? "All Levels" : s.charAt(0) + s.slice(1).toLowerCase()}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="text-white/80 text-sm mt-4">{filtered.length} player{filtered.length !== 1 ? "s" : ""} found</div>
+        </div>
 
-                  {/* Avatar + Name */}
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 14,
-                      marginBottom: 16,
-                    }}
-                  >
-                    {player.profileImage ? (
-                      <img
-                        src={player.profileImage}
-                        alt={player.firstName}
-                        style={{
-                          width: 56,
-                          height: 56,
-                          borderRadius: "50%",
-                          objectFit: "cover",
-                          border: "2px solid #f1f5f9",
-                          flexShrink: 0,
-                        }}
-                      />
-                    ) : (
-                      <div
-                        style={{
-                          width: 56,
-                          height: 56,
-                          borderRadius: "50%",
-                          background:
-                            "linear-gradient(135deg, #0f172a, #1e293b)",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          color: "#fff",
-                          fontWeight: 800,
-                          fontSize: 18,
-                          flexShrink: 0,
-                          letterSpacing: -0.5,
-                        }}
-                      >
-                        {initials(player)}
-                      </div>
-                    )}
-                    <div style={{ minWidth: 0 }}>
-                      <p
-                        style={{
-                          fontWeight: 800,
-                          color: "#0f172a",
-                          fontSize: 16,
-                          margin: 0,
-                          whiteSpace: "nowrap",
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                        }}
-                      >
+        {/* Loading */}
+        {loading && (
+          <div className="text-center py-20">
+            <div className="inline-block">
+              <div className="w-12 h-12 border-4 border-white/30 border-t-[#4AEEFF] rounded-full animate-spin"></div>
+            </div>
+            <p className="text-white/80 mt-4 text-lg">Loading players…</p>
+          </div>
+        )}
+
+        {/* Empty */}
+        {!loading && filtered.length === 0 && (
+          <div className="text-center py-20">
+            <div className="text-6xl mb-4">🏓</div>
+            <p className="text-white text-xl font-semibold mb-2">No players found</p>
+            <p className="text-white/70">Try adjusting your search or filter</p>
+          </div>
+        )}
+
+        {/* Player Grid */}
+        {!loading && filtered.length > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filtered.map((player) => {
+              const skill = player.playerProfile?.skillLevel?.toUpperCase();
+              const skillStyle = skill && skillColors[skill] ? skillColors[skill] : { bg: "#f1f5f9", text: "#475569" };
+              const age = player.playerProfile?.dateOfBirth ? calculateAge(player.playerProfile.dateOfBirth) : null;
+
+              return (
+                <Link key={player.id} to={`/profile/${player.id}`} className="group">
+                  <div className="relative h-full bg-white/10 backdrop-blur-md rounded-2xl p-8 border-2 border-[#4AEEFF]/50 hover:border-[#4AEEFF] transition-all duration-300 hover:shadow-2xl hover:shadow-[#4AEEFF]/20 hover:scale-105 overflow-hidden">
+                    {/* Accent line */}
+                    <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#4AEEFF] via-[#12679E] to-transparent"></div>
+
+                    {/* Background decoration */}
+                    <div className="absolute -top-8 -right-8 w-24 h-24 bg-[#4AEEFF]/10 rounded-full blur-2xl"></div>
+
+                    {/* Avatar */}
+                    <div className="relative mb-6 flex justify-center">
+                      {player.profileImage ? (
+                        <div className="relative">
+                          <div className="absolute inset-0 bg-gradient-to-r from-[#4AEEFF] to-[#12679E] rounded-full p-1">
+                            <img
+                              src={player.profileImage}
+                              alt={player.firstName}
+                              className="w-20 h-20 rounded-full object-cover bg-white"
+                            />
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="relative w-20 h-20 rounded-full bg-gradient-to-br from-[#061D23] to-[#12679E] flex items-center justify-center border-2 border-[#4AEEFF]">
+                          <span className="text-2xl font-bold text-white">{initials(player)}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Player Info */}
+                    <div className="text-center mb-6">
+                      <h3 className="text-2xl font-bold text-white mb-1">
                         {player.firstName} {player.lastName}
-                      </p>
+                      </h3>
                       {player.ranking !== undefined && (
-                        <p
-                          style={{
-                            color: "#e11d48",
-                            fontSize: 12,
-                            fontWeight: 700,
-                            margin: "4px 0 0",
-                          }}
-                        >
+                        <div className="inline-block bg-gradient-to-r from-[#4AEEFF] to-[#12679E] text-[#061D23] px-3 py-1 rounded-full text-xs font-bold mb-2">
                           Rank #{player.ranking}
-                        </p>
+                        </div>
                       )}
                       {age !== null && (
-                        <p
-                          style={{
-                            color: "#94a3b8",
-                            fontSize: 12,
-                            margin: "2px 0 0",
-                          }}
-                        >
-                          {age} years old
-                        </p>
+                        <p className="text-gray-300 text-sm">{age} years old</p>
                       )}
                     </div>
-                  </div>
 
-                  {/* Club */}
-                  {player.playerProfile?.clubAffiliation && (
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 6,
-                        marginBottom: 12,
-                      }}
-                    >
-                      <span style={{ fontSize: 13 }}>🏓</span>
-                      <span
-                        style={{
-                          color: "#475569",
-                          fontSize: 13,
-                          whiteSpace: "nowrap",
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                        }}
-                      >
-                        {player.playerProfile.clubAffiliation}
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Skill badge */}
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                    }}
-                  >
-                    {skill ? (
-                      <span
-                        style={{
-                          background: skillStyle.bg,
-                          color: skillStyle.text,
-                          fontSize: 11,
-                          fontWeight: 700,
-                          padding: "4px 12px",
-                          borderRadius: 20,
-                          textTransform: "uppercase",
-                          letterSpacing: 0.8,
-                        }}
-                      >
-                        {player.playerProfile?.skillLevel}
-                      </span>
-                    ) : (
-                      <span style={{ color: "#cbd5e1", fontSize: 12 }}>
-                        No level set
-                      </span>
+                    {/* Club */}
+                    {player.playerProfile?.clubAffiliation && (
+                      <div className="text-center mb-4 pb-4 border-b border-gray-500">
+                        <p className="text-gray-200 font-medium text-sm">
+                          <span className="mr-2">🏛️</span>
+                          {player.playerProfile.clubAffiliation}
+                        </p>
+                      </div>
                     )}
-                    <span
-                      style={{
-                        color: "#e11d48",
-                        fontSize: 12,
-                        fontWeight: 600,
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 4,
-                      }}
-                    >
-                      View →
-                    </span>
+
+                    {/* Skill Badge */}
+                    <div className="flex justify-between items-center">
+                      {skill ? (
+                        <span
+                          style={{ background: skillStyle.bg, color: skillStyle.text }}
+                          className="px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider"
+                        >
+                          {player.playerProfile?.skillLevel}
+                        </span>
+                      ) : (
+                        <span className="text-gray-400 text-xs font-medium">No level set</span>
+                      )}
+                      <span className="text-[#4AEEFF] font-bold group-hover:translate-x-1 transition-transform">→</span>
+                    </div>
                   </div>
-                </div>
-              </Link>
-            );
-          })}
-        </div>
-      )}
+                </Link>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 };
