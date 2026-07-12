@@ -76,7 +76,7 @@ const Layout: React.FC = () => {
                 alt="Sam's College"
                 className="w-10 h-10 object-contain rounded-lg"
               />
-              <span className="font-bold text-xl text-gray-900">
+              <span className="font-bold text-xl text-white slow-blink">
                 SAM'S COLLEGE
               </span>
             </Link>
