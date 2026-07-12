@@ -248,7 +248,7 @@ const Profile: React.FC = () => {
       {/* ─── BG.PNG FIXED FULL-BLEED BACKGROUND ─── */}
       <div
         className="fixed inset-0 bg-cover bg-center bg-no-repeat"
-        style={{ backgroundImage: "url('/bg.png')" }}
+        style={{ backgroundImage: "url('/bg1.png')" }}
       />
       {/* Light overlay for text legibility over the paper-texture artwork */}
       <div className="fixed inset-0 bg-[#061D23]/25" />
