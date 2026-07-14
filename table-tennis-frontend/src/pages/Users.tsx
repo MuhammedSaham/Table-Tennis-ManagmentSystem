@@ -286,7 +286,7 @@ const Users: React.FC = () => {
                 <th className="px-6 py-4 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/5 text-sm">
+            <tbody className="divide-y divide-white/5 text-base">
               {users.map((userItem) => (
                 <tr key={userItem.id} className="group hover:bg-[#12679E]/10 transition-colors duration-200">
                   <td className="px-6 py-4">
@@ -295,20 +295,20 @@ const Users: React.FC = () => {
                         {userItem.firstName[0].toUpperCase()}{userItem.lastName[0].toUpperCase()}
                       </div>
                       <div>
-                        <p className="font-bold text-white group-hover:text-[#4AEEFF] transition-colors">
+                        <p className="font-bold text-white group-hover:text-[#4AEEFF] transition-colors text-base">
                           {userItem.firstName} {userItem.lastName}
                         </p>
                         {userItem.phone && (
-                          <p className="text-xs text-white/50 font-mono mt-0.5">{userItem.phone}</p>
+                          <p className="text-sm text-white/50 font-mono mt-0.5">{userItem.phone}</p>
                         )}
                       </div>
                     </div>
                   </td>
-                  <td className="px-6 py-4 text-white/80 font-mono text-xs break-all">
+                  <td className="px-6 py-4 text-white/80 font-mono text-sm break-all">
                     {userItem.email}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-block px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-md ${getRoleBadgeStyles(userItem.role)}`}>
+                    <span className={`inline-block px-2.5 py-0.5 text-xs font-black uppercase tracking-wider rounded-md ${getRoleBadgeStyles(userItem.role)}`}>
                       {userItem.role}
                     </span>
                   </td>
@@ -317,22 +317,22 @@ const Users: React.FC = () => {
                       <div className="flex items-center gap-2">
                         {userItem.ranking ? (
                           <>
-                            <span className="font-black text-[#4AEEFF] text-base">
+                            <span className="font-black text-[#4AEEFF] text-lg">
                               #{userItem.ranking}
                             </span>
                             {userItem.rankingNote && (
-                              <span className="text-xs text-white/60 bg-white/5 px-1.5 py-0.5 rounded border border-white/10">
+                              <span className="text-sm text-white/60 bg-white/5 px-1.5 py-0.5 rounded border border-white/10">
                                 {userItem.rankingNote}
                               </span>
                             )}
                           </>
                         ) : (
-                          <span className="text-xs italic text-white/40">Unranked</span>
+                          <span className="text-sm italic text-white/40">Unranked</span>
                         )}
                       </div>
                     )}
                   </td>
-                  <td className="px-6 py-4 text-xs text-white/70 font-mono">
+                  <td className="px-6 py-4 text-sm text-white/70 font-mono">
                     {new Date(userItem.createdAt).toLocaleDateString(undefined, {
                       year: 'numeric', month: 'short', day: 'numeric'
                     })}
