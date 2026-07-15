@@ -6,11 +6,11 @@ import Hero from "./Hero";
 import Logo from "../assets/LOGO.png";
 import FooterImage from "../assets/footerimg.png";
 import {
-  HomeIcon,
-  TrophyIcon,
-  UserGroupIcon,
-  ChartBarIcon,
-  UserCircleIcon,
+  //HomeIcon,
+  //TrophyIcon,
+  //UserGroupIcon,
+  //ChartBarIcon,
+  //UserCircleIcon,
   ArrowRightOnRectangleIcon,
   Bars3Icon,
   XMarkIcon,
@@ -29,30 +29,30 @@ const Layout: React.FC = () => {
 
   // Update navigation hrefs
   const navigation = [
-    { name: "Dashboard", href: "/app/dashboard", icon: HomeIcon },
-    { name: "Tournaments", href: "/app/tournaments", icon: TrophyIcon }, // Keep public
+    { name: "Dashboard", href: "/app/dashboard", /*icon: HomeIcon*/ },
+    { name: "Tournaments", href: "/app/tournaments", /*icon: TrophyIcon*/ }, // Keep public
     /*{
       name: "My Registrations",
       href: "/app/my-registrations",
       icon: CalendarIcon,
     },
     { name: "My Matches", href: "/app/my-matches", icon: UserGroupIcon },*/
-    { name: "Leaderboard", href: "/app/leaderboard", icon: ChartBarIcon }, // Keep public
+    { name: "Leaderboard", href: "/app/leaderboard", /*icon: ChartBarIcon*/ }, // Keep public
     {
       name: "Global Rankings",
       href: "/app/global-leaderboard",
-      icon: ChartBarIcon,
+      //icon: ChartBarIcon,
     }, // Keep public
-    { name: "Profile", href: "/app/profile", icon: UserCircleIcon },
+    { name: "Profile", href: "/app/profile", /*icon: UserCircleIcon*/ },
   ];
 
   if (user?.role === "ADMIN") {
     navigation.push({
       name: "Admin Requests",
       href: "/app/admin-requests",
-      icon: UserGroupIcon,
+      //icon: UserGroupIcon,
     });
-    navigation.push({ name: "Users", href: "/app/users", icon: UserGroupIcon });
+    navigation.push({ name: "Users", href: "/app/users", /*icon: UserGroupIcon*/ });
   }
   // Pages that should NOT show the navbar
   const isAuthPage = ["/login", "/register", "/reset-password"].includes(
@@ -76,29 +76,27 @@ const Layout: React.FC = () => {
                 alt="Sam's College"
                 className="w-10 h-10 object-contain rounded-lg"
               />
-              <span className="font-bold text-xl text-gray-900">
+              <span className="font-semibold text-lg text-white tracking-wide">
                 SAM'S COLLEGE
               </span>
+              <p className="text-[11px] text-slate-400 uppercase tracking-[0.24em] mt-1">
+                  TABLE TENNIS HUB
+              </p>
             </Link>
 
             {/* Desktop Navigation */}
             {user && (
-              <div className="hidden md:flex items-center gap-1">
+              <div className="hidden md:flex items-center gap-2">
                 {navigation.map((item) => (
                   <Link
                     key={item.name}
                     to={item.href}
-                    className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                      item.name === "Dashboard"
-                        ? (location.pathname === item.href
-                            ? "bg-white text-[#12679E] border border-[#12679E] font-bold"
-                            : "bg-white text-[#12679E] border border-[#12679E] hover:bg-[#f4faff] font-bold")
-                        : (location.pathname === item.href
-                            ? "bg-primary-50 text-primary-700"
-                            : "text-gray-600 hover:bg-gray-100 hover:text-gray-900")
+                    className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
+                      location.pathname === item.href
+                        ? "bg-white/10 text-white"
+                        : "text-slate-300 hover:bg-white/10 hover:text-white"
                     }`}
                   >
-                    <item.icon className="w-4 h-4" />
                     {item.name}
                   </Link>
                 ))}
@@ -115,14 +113,15 @@ const Layout: React.FC = () => {
                       <p className="text-sm font-medium text-white">
                         {user.firstName}
                       </p>
-                      <p className="text-xs text-gray-300">{user.role}</p>
+                      <p className="text-xs text-slate-400">{user.role}</p>
                     </div>
                     <button
                       onClick={handleLogout}
-                      className="p-2 text-gray-300 hover:text-red-400 rounded-lg transition-colors"
+                      className="flex items-center gap-2 px-4 py-2 rounded-full border border-white/10 text-white hover:bg-white/10 transition"
                       title="Logout"
                     >
                       <ArrowRightOnRectangleIcon className="w-5 h-5" />
+                      Logout
                     </button>
                   </div>
                 </>
@@ -132,7 +131,7 @@ const Layout: React.FC = () => {
               {user && (
                 <button
                   onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                  className="md:hidden p-2 rounded-lg text-gray-300 hover:text-white"
+                  className="md:hidden p-2 rounded-full text-white bg-white/5 hover:bg-white/10 transition"
                 >
                   {mobileMenuOpen ? (
                     <XMarkIcon className="w-6 h-6" />
@@ -147,7 +146,7 @@ const Layout: React.FC = () => {
 
         {/* Mobile menu */}
         {mobileMenuOpen && user && (
-          <div className="md:hidden bg-[#061D23] border-t border-[#0f2b33] shadow-lg animate-slide-down">
+          <div className="md:hidden bg-slate-950/95 border-t border-white/10 shadow-lg animate-slide-down">
             <div className="px-4 py-3 space-y-1">
               {navigation.map((item) => (
                 <Link
@@ -156,11 +155,11 @@ const Layout: React.FC = () => {
                   onClick={() => setMobileMenuOpen(false)}
                   className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                     location.pathname === item.href
-                      ? "bg-[#0099cc] text-black"
-                      : "bg-[#4AEEFF] text-black hover:bg-[#80ffff]"
+                      ? "bg-white/10 text-white"
+                      : "text-slate-300 hover:bg-white/10 hover:text-white"
                   }`}
                 >
-                  <item.icon className="w-5 h-5" />
+                  {/*<item.icon className="w-5 h-5" />*/}
                   {item.name}
                 </Link>
               ))}

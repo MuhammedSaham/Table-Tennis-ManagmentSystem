@@ -62,7 +62,17 @@ const Tournaments: React.FC = () => {
   }
 
   return (
-    <div className="bg-gradient-to-r from-[#061D23] via-[#12679E] to-[#4AEEFF] py-8">
+    <div
+    className="min-h-screen py-8"
+    style={{
+      backgroundImage:
+        "linear-gradient(135deg, rgba(7,19,31,0.85) 0%, rgba(11,61,89,0.75) 40%, rgba(13,94,130,0.7) 100%), url('/bg1.jpeg')",
+      backgroundSize: "cover",
+      backgroundPosition: "center",
+      backgroundAttachment: "fixed",
+    }}
+  >
+    
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl text-white">
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-bold text-white">Tournaments</h1>

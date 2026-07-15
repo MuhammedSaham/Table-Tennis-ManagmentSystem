@@ -34,9 +34,14 @@ const PublicLayout: React.FC = () => {
                 alt="Sam's College"
                 className="w-10 h-10 object-contain rounded-lg"
               />
-              <span className="font-bold text-xl text-gray-900">
-                SAM'S COLLEGE
-              </span>
+              <div>
+                <span className="font-bold text-lg text-white tracking-wide">
+                  SAM'S COLLEGE
+                </span>
+                <p className="text-[11px] text-slate-400 uppercase tracking-[0.24em] mt-1">
+                    TABLE TENNIS HUB
+              </p>
+              </div>
             </Link>
 
             {/* Desktop Navigation */}
@@ -47,8 +52,8 @@ const PublicLayout: React.FC = () => {
                   to={item.href}
                   className={`px-4 py-2 rounded-full text-sm font-medium transition duration-200 ${
                     location.pathname === item.href
-                      ? "bg-[#0099cc] text-black"
-                      : "bg-[#4AEEFF] text-black hover:bg-[#80ffff]"
+                      ? "bg-white/10 text-white"
+                      : "text-slate-300 hover:bg-white/10 hover:text-white"
                   }`}
                 >
                   {item.name}
@@ -59,7 +64,7 @@ const PublicLayout: React.FC = () => {
             {/* Right section */}
             <div className="flex items-center gap-3">
               {user ? (
-                <Link to="/app/dashboard" className="inline-flex items-center justify-center rounded-full bg-primary-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-primary-700">
+                <Link to="/app/dashboard" className="inline-flex items-center justify-center rounded-full bg-white/10 px-5 py-2.5 text-sm font-semibold text-white border border-white/10 shadow-sm transition hover:bg-white/15">
                   Dashboard
                 </Link>
               ) : (
@@ -70,7 +75,7 @@ const PublicLayout: React.FC = () => {
                   >
                     Sign In
                   </Link>
-                  <Link to="/register" className="inline-flex items-center justify-center rounded-full bg-[#4AEEFF] px-6 py-3 text-base font-semibold text-black shadow-sm transition hover:bg-[#80ffff]">
+                  <Link to="/app/dashboard" className="inline-flex items-center justify-center rounded-full bg-white/10 px-5 py-2.5 text-sm font-semibold text-white border border-white/10 shadow-sm transition hover:bg-white/15">
                     Get Started
                   </Link>
                 </div>
@@ -79,7 +84,7 @@ const PublicLayout: React.FC = () => {
               {/* Mobile menu button */}
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="md:hidden p-2 rounded-full text-slate-600 hover:bg-slate-100 transition"
+                className="md:hidden p-2 rounded-full bg-white/5 text-white hover:bg-white/10 transition"
               >
                 {mobileMenuOpen ? (
                   <XMarkIcon className="w-6 h-6" />
@@ -93,7 +98,7 @@ const PublicLayout: React.FC = () => {
 
         {/* Mobile menu */}
         {mobileMenuOpen && (
-          <div className="md:hidden bg-[#061D23] border-t border-[#0f2b33] shadow-lg animate-slide-down">
+          <div className="md:hidden bg-slate-950/95 border-t border-white/10 shadow-lg animate-slide-down">
             <div className="px-4 py-3 space-y-1">
               {navigation.map((item) => (
                 <Link
@@ -102,8 +107,8 @@ const PublicLayout: React.FC = () => {
                   onClick={() => setMobileMenuOpen(false)}
                   className={`block px-3 py-2 rounded-lg text-sm font-medium ${
                     location.pathname === item.href
-                      ? "bg-[#0099cc] text-black"
-                      : "bg-[#4AEEFF] text-black hover:bg-[#80ffff]"
+                      ? "bg-white/10 text-white"
+                      : "text-slate-300 hover:bg-white/10 hover:text-white"
                   }`}
                 >
                   {item.name}
@@ -115,14 +120,14 @@ const PublicLayout: React.FC = () => {
                     <Link
                       to="/login"
                       onClick={() => setMobileMenuOpen(false)}
-                      className="block rounded-full border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 text-center transition hover:border-primary-500 hover:text-primary-700"
+                      className="block rounded-full border border-white/10 bg-white/10 px-3 py-2 text-sm font-medium text-white text-center transition hover:bg-white/15"
                     >
                       Sign In
                     </Link>
                     <Link
                       to="/register"
                       onClick={() => setMobileMenuOpen(false)}
-                      className="block rounded-full bg-[#4AEEFF] px-3 py-2 text-sm font-medium text-black text-center shadow-sm transition hover:bg-[#80ffff]"
+                      className="block rounded-full bg-[#4AEEFF] px-3 py-2 text-sm font-medium text-[#061D23] text-center shadow-sm transition hover:bg-[#80ffff]"
                     >
                       Get Started
                     </Link>
@@ -135,7 +140,7 @@ const PublicLayout: React.FC = () => {
       </nav>
 
       {/* Main content */}
-      <main className={`flex-1 ${isTournamentRoute ? "bg-gradient-to-r from-[#061D23] via-[#12679E] to-[#4AEEFF]" : "bg-transparent"}`}>
+      <main className={`flex-1 "bg-transparent"}`}>
         <div className="pt-16">
           <Outlet />
         </div>
