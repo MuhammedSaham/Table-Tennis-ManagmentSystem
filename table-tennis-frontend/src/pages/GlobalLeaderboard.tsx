@@ -86,12 +86,31 @@ const GlobalLeaderboard: React.FC = () => {
       }}
     >
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold text-white">Global Leaderboard</h1>
+      <div className="mb-8">
+        <div className="bg-gradient-to-r from-slate-900/60 via-slate-800/30 to-transparent rounded-3xl p-8 mb-6 backdrop-blur-lg border-2 border-[#0FB9CC]/20">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+            <div>
+              <h1 className="text-4xl font-extrabold text-white">Global Leaderboard</h1>
+              <p className="mt-2 text-sm text-white/80 max-w-xl">
+                Consolidated player rankings across all tournaments and categories.
+              </p>
+            </div>
+            <div className="flex gap-4 items-center">
+              <div className="hidden sm:flex bg-white/5 text-white/90 px-4 py-2 rounded-xl shadow-sm">
+                <div className="text-xs text-white/80">Categories</div>
+                <div className="ml-3 text-lg font-semibold text-[#4AEEFF]">{categories.length}</div>
+              </div>
+              <div className="hidden sm:flex bg-white/5 text-white/90 px-4 py-2 rounded-xl shadow-sm">
+                <div className="text-xs text-white/80">Selected</div>
+                <div className="ml-3 text-lg font-semibold text-[#4AEEFF]">{selectedCategory || '—'}</div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Category Selector */}
-      <div className="bg-white/10 backdrop-blur-md rounded-2xl p-6 mb-6 border-2 border-[#4AEEFF]/50">
+      <div className="bg-white/8 backdrop-blur-md rounded-2xl p-6 mb-6 border-2 border-[#4AEEFF]/40 shadow-md">
         <label className="block text-sm font-medium text-white mb-2">
           Select Category
         </label>
@@ -118,85 +137,42 @@ const GlobalLeaderboard: React.FC = () => {
 
       {/* Standings Table */}
       {selectedCategory && (
-        <div className="bg-white/10 backdrop-blur-md rounded-2xl p-6 border-2 border-[#4AEEFF]/50">
-          <h2 className="text-xl font-semibold text-white mb-4">
-            {selectedCategory} - Overall Rankings
-          </h2>
+        <div className="bg-white/8 backdrop-blur-md rounded-2xl p-6 border-2 border-[#4AEEFF]/40 hover:shadow-lg transition">
+          <h2 className="text-xl font-semibold text-white mb-4">{selectedCategory} - Overall Rankings</h2>
 
           {loading ? (
             <div className="text-center py-8 text-[#4AEEFF]">Loading rankings...</div>
           ) : standings.length === 0 ? (
             <div className="text-center py-8">
-              <p className="text-[#4AEEFF] text-lg font-semibold">
-                No completed matches found for this category.
-              </p>
-              <p className="text-sm text-[#4AEEFF]/70 mt-2">
-                Play and complete matches to see rankings.
-              </p>
+              <p className="text-[#4AEEFF] text-lg font-semibold">No completed matches found for this category.</p>
+              <p className="text-sm text-[#4AEEFF]/70 mt-2">Play and complete matches to see rankings.</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead className="bg-white/10 border-b border-[#4AEEFF]/30">
                   <tr>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-[#4AEEFF]">
-                      Rank
-                    </th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-[#4AEEFF]">
-                      Player
-                    </th>
-                    <th className="px-4 py-3 text-center text-sm font-medium text-[#4AEEFF]">
-                      Matches
-                    </th>
-                    <th className="px-4 py-3 text-center text-sm font-medium text-[#4AEEFF]">
-                      Wins
-                    </th>
-                    <th className="px-4 py-3 text-center text-sm font-medium text-[#4AEEFF]">
-                      Losses
-                    </th>
-                    <th className="px-4 py-3 text-center text-sm font-medium text-[#4AEEFF]">
-                      Points
-                    </th>
-                    <th className="px-4 py-3 text-center text-sm font-medium text-[#4AEEFF]">
-                      Games
-                    </th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-[#4AEEFF]">Rank</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-[#4AEEFF]">Player</th>
+                    <th className="px-4 py-3 text-center text-sm font-medium text-[#4AEEFF]">Matches</th>
+                    <th className="px-4 py-3 text-center text-sm font-medium text-[#4AEEFF]">Wins</th>
+                    <th className="px-4 py-3 text-center text-sm font-medium text-[#4AEEFF]">Losses</th>
+                    <th className="px-4 py-3 text-center text-sm font-medium text-[#4AEEFF]">Points</th>
+                    <th className="px-4 py-3 text-center text-sm font-medium text-[#4AEEFF]">Games</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#4AEEFF]/20">
                   {standings.map((player, index) => (
                     <tr key={player.playerId} className="hover:bg-white/5">
-                      <td className="px-4 py-3 text-sm font-medium text-[#4AEEFF]">
-                        {index === 0
-                          ? "🥇"
-                          : index === 1
-                            ? "🥈"
-                            : index === 2
-                              ? "🥉"
-                              : `${index + 1}`}
-                      </td>
+                      <td className="px-4 py-3 text-sm font-medium text-[#4AEEFF]">{index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : `${index + 1}`}</td>
                       <td className="px-4 py-3 text-sm">
-                        <Link
-                          to={`/profile/${player.playerId}`}
-                          className="text-[#4AEEFF] hover:text-white hover:underline font-medium"
-                        >
-                          {player.playerName}
-                        </Link>
+                        <Link to={`/profile/${player.playerId}`} className="text-[#4AEEFF] hover:text-white hover:underline font-medium">{player.playerName}</Link>
                       </td>
-                      <td className="px-4 py-3 text-sm text-center text-white/70">
-                        {player.matchesPlayed}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-center text-[#4AEEFF] font-medium">
-                        {player.wins}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-center text-red-400 font-medium">
-                        {player.losses}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-center font-bold text-[#4AEEFF]">
-                        {player.points}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-center text-white/70">
-                        {player.gamesWon} - {player.gamesLost}
-                      </td>
+                      <td className="px-4 py-3 text-sm text-center text-white/70">{player.matchesPlayed}</td>
+                      <td className="px-4 py-3 text-sm text-center text-[#4AEEFF] font-medium">{player.wins}</td>
+                      <td className="px-4 py-3 text-sm text-center text-red-400 font-medium">{player.losses}</td>
+                      <td className="px-4 py-3 text-sm text-center font-bold text-[#4AEEFF]">{player.points}</td>
+                      <td className="px-4 py-3 text-sm text-center text-white/70">{player.gamesWon} - {player.gamesLost}</td>
                     </tr>
                   ))}
                 </tbody>

@@ -35,15 +35,7 @@ const Leaderboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [loadingStandings, setLoadingStandings] = useState(false);
 
-  useEffect(() => {
-    fetchTournaments();
-  }, []);
-
-  useEffect(() => {
-    if (selectedTournament) {
-      fetchStandings();
-    }
-  }, [selectedTournament]);
+  
 
   const fetchTournaments = async () => {
     try {
@@ -52,26 +44,38 @@ const Leaderboard: React.FC = () => {
       if (response.data.data.length > 0) {
         setSelectedTournament(response.data.data[0].id);
       }
-    } catch (error) {
+    } catch {
       toast.error("Failed to fetch tournaments");
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchStandings = async () => {
-    setLoadingStandings(true);
-    try {
-      const response = await api.get(
-        `/results/tournaments/${selectedTournament}/standings`,
-      );
-      setStandings(response.data.data);
-    } catch (error) {
-      toast.error("Failed to fetch standings");
-    } finally {
-      setLoadingStandings(false);
+  
+
+  useEffect(() => {
+    (async () => {
+      await fetchTournaments();
+    })();
+  }, []);
+
+  useEffect(() => {
+    if (selectedTournament) {
+      (async () => {
+        setLoadingStandings(true);
+        try {
+          const response = await api.get(
+            `/results/tournaments/${selectedTournament}/standings`,
+          );
+          setStandings(response.data.data);
+        } catch {
+          toast.error("Failed to fetch standings");
+        } finally {
+          setLoadingStandings(false);
+        }
+      })();
     }
-  };
+  }, [selectedTournament]);
 
   const getMedalColor = (index: number) => {
     if (index === 0) return "🥇";
@@ -100,14 +104,31 @@ const Leaderboard: React.FC = () => {
       }}
     >
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold text-white">
-          Tournament Leaderboard
-        </h1>
+      <div className="mb-8">
+        <div className="bg-gradient-to-r from-slate-900/60 via-slate-800/30 to-transparent rounded-3xl p-8 mb-6 backdrop-blur-lg border-2 border-[#0FB9CC]/20">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+            <div>
+              <h1 className="text-4xl font-extrabold text-white">Tournament Leaderboard</h1>
+              <p className="mt-2 text-sm text-white/80 max-w-xl">
+                View rankings and player performance across tournaments. Switch tournaments to inspect category standings.
+              </p>
+            </div>
+            <div className="flex gap-4 items-center">
+              <div className="hidden sm:flex bg-white/5 text-white/90 px-4 py-2 rounded-xl shadow-sm">
+                <div className="text-xs text-white/80">Tournaments</div>
+                <div className="ml-3 text-lg font-semibold text-[#4AEEFF]">{tournaments.length}</div>
+              </div>
+              <div className="hidden sm:flex bg-white/5 text-white/90 px-4 py-2 rounded-xl shadow-sm">
+                <div className="text-xs text-white/80">Selected</div>
+                <div className="ml-3 text-lg font-semibold text-[#4AEEFF]">{tournaments.find(t => t.id === selectedTournament)?.name ?? '—'}</div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Tournament Selector */}
-      <div className="bg-white/10 backdrop-blur-md rounded-2xl p-6 mb-6 border-2 border-[#4AEEFF]/50">
+      <div className="bg-white/8 backdrop-blur-md rounded-2xl p-6 mb-6 border-2 border-[#4AEEFF]/40 shadow-md">
         <label className="block text-sm font-medium text-white mb-2">
           Select Tournament
         </label>
@@ -129,26 +150,20 @@ const Leaderboard: React.FC = () => {
           Loading standings...
         </div>
       ) : standings.length === 0 ? (
-        <div className="bg-white/10 backdrop-blur-md rounded-2xl text-center py-12 border-2 border-[#4AEEFF]/50">
-          <p className="text-[#4AEEFF] text-lg font-semibold">
-            No standings available for this tournament yet.
-          </p>
-          <p className="text-sm text-[#4AEEFF]/80 mt-2">
-            Complete matches to generate rankings.
-          </p>
+        <div className="bg-white/8 backdrop-blur-md rounded-2xl text-center py-12 border-2 border-[#4AEEFF]/40 shadow-md">
+          <p className="text-[#4AEEFF] text-lg font-semibold">No standings available for this tournament yet.</p>
+          <p className="text-sm text-[#4AEEFF]/80 mt-2">Complete matches to generate rankings.</p>
         </div>
       ) : (
         <div className="space-y-8">
           {standings.map((category) => (
-            <div key={category.categoryId} className="bg-white/10 backdrop-blur-md rounded-2xl p-6 border-2 border-[#4AEEFF]/50">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-semibold text-white">
-                  {category.categoryName}
-                </h2>
-                <div className="text-sm text-white/70">
-                  {category.totalPlayers} Players • {category.completedMatches}{" "}
-                  Matches
+            <div key={category.categoryId} className="bg-white/8 backdrop-blur-md rounded-2xl p-6 border-2 border-[#4AEEFF]/40 hover:shadow-lg transform hover:-translate-y-1 transition">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-2 h-10 rounded-full bg-gradient-to-b from-[#4AEEFF] to-[#0FB9CC] shadow-md"></div>
+                  <h2 className="text-xl font-semibold text-white">{category.categoryName}</h2>
                 </div>
+                <div className="text-sm text-white/70">{category.totalPlayers} Players • {category.completedMatches} Matches</div>
               </div>
 
               <div className="overflow-x-auto">
@@ -181,32 +196,17 @@ const Leaderboard: React.FC = () => {
                   <tbody className="divide-y divide-[#4AEEFF]/20">
                     {category.standings.map((player, index) => (
                       <tr key={player.playerId} className="hover:bg-white/5">
-                        <td className="px-4 py-3 text-sm font-medium text-white/90">
-                          {getMedalColor(index)}
-                        </td>
+                        <td className="px-4 py-3 text-sm font-medium text-white/90">{getMedalColor(index)}</td>
                         <td className="px-4 py-3 text-sm">
-                          <Link
-                            to={`/profile/${player.playerId}`}
-                            className="text-[#4AEEFF] hover:text-white hover:underline font-medium"
-                          >
+                          <Link to={`/profile/${player.playerId}`} className="text-[#4AEEFF] hover:text-white hover:underline font-medium">
                             {player.playerName}
                           </Link>
                         </td>
-                        <td className="px-4 py-3 text-sm text-white/70 text-center">
-                          {player.matchesPlayed}
-                        </td>
-                        <td className="px-4 py-3 text-sm text-[#4AEEFF] font-medium text-center">
-                          {player.wins}
-                        </td>
-                        <td className="px-4 py-3 text-sm text-red-400 font-medium text-center">
-                          {player.losses}
-                        </td>
-                        <td className="px-4 py-3 text-sm text-white/70 text-center">
-                          {player.gamesWon} / {player.gamesLost}
-                        </td>
-                        <td className="px-4 py-3 text-sm font-bold text-[#4AEEFF] text-center">
-                          {player.points}
-                        </td>
+                        <td className="px-4 py-3 text-sm text-white/70 text-center">{player.matchesPlayed}</td>
+                        <td className="px-4 py-3 text-sm text-[#4AEEFF] font-medium text-center">{player.wins}</td>
+                        <td className="px-4 py-3 text-sm text-red-400 font-medium text-center">{player.losses}</td>
+                        <td className="px-4 py-3 text-sm text-white/70 text-center">{player.gamesWon} / {player.gamesLost}</td>
+                        <td className="px-4 py-3 text-sm font-bold text-[#4AEEFF] text-center">{player.points}</td>
                       </tr>
                     ))}
                   </tbody>
