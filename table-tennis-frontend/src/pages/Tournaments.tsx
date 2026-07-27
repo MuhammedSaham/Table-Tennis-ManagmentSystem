@@ -54,6 +54,21 @@ const Tournaments: React.FC = () => {
     }
   };
 
+  const getCardBorder = (status: string) => {
+    switch (status) {
+      case "UPCOMING":
+        return "border-cyan-500/40 hover:border-cyan-400/70";
+      case "ONGOING":
+        return "border-emerald-500/40 hover:border-emerald-400/70";
+      case "COMPLETED":
+        return "border-slate-500/40 hover:border-slate-400/70";
+      case "CANCELLED":
+        return "border-rose-500/40 hover:border-rose-400/70";
+      default:
+        return "border-slate-500/40 hover:border-slate-400/70";
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64 text-cyan-400 font-medium">
@@ -87,7 +102,9 @@ const Tournaments: React.FC = () => {
           {tournaments.map((tournament) => (
             <Link key={tournament.id} to={`/tournaments/${tournament.id}`}>
               {/* Premium dark-theme card matching your layout */}
-              <div className="p-6 rounded-2xl border border-white/10 bg-white/[0.04] backdrop-blur-md hover:bg-white/[0.08] hover:border-cyan-500/40 transition-all duration-300 transform hover:-translate-y-1 shadow-xl cursor-pointer">
+              <div className={`p-6 rounded-2xl border bg-white/[0.04] backdrop-blur-md hover:bg-white/[0.08] ${getCardBorder(
+                tournament.status
+              )} transition-all duration-300 transform hover:-translate-y-1 shadow-xl cursor-pointer`}>
                 <div className="flex justify-between items-start mb-3 gap-2">
                   <h3 className="text-xl font-bold text-slate-100 transition-colors">
                     {tournament.name}

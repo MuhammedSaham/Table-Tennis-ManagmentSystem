@@ -105,13 +105,14 @@ const StatCard = ({
 }) => (
   <div
     style={{
-      background: "#fff",
-      border: "1px solid #e2e8f0",
-      borderRadius: 16,
-      padding: "20px 16px",
+      background: "rgba(15, 23, 42, 0.78)",
+      border: "1px solid rgba(255,255,255,0.08)",
+      borderRadius: 20,
+      padding: "22px 18px",
       textAlign: "center",
       position: "relative",
       overflow: "hidden",
+      boxShadow: "0 18px 45px rgba(0,0,0,0.18)",
     }}
   >
     <div
@@ -272,11 +273,14 @@ const PublicProfile: React.FC = () => {
       {/* ── Hero Card ── */}
       <div
         style={{
-          background: "#0f172a",
-          borderRadius: 20,
+          background: "rgba(15, 23, 42, 0.8)",
+          border: "1px solid rgba(255,255,255,0.08)",
+          backdropFilter: "blur(20px)",
+          borderRadius: 28,
           overflow: "hidden",
           marginBottom: 24,
           position: "relative",
+          boxShadow: "0 24px 80px rgba(0,0,0,0.28)",
         }}
       >
         {/* decorative ping pong ball pattern */}
@@ -562,10 +566,11 @@ const PublicProfile: React.FC = () => {
           {profile.playerProfile?.skillLevel && (
             <div
               style={{
-                background: "#fff",
-                border: "1px solid #e2e8f0",
-                borderRadius: 16,
+                background: "rgba(15, 23, 42, 0.78)",
+                border: "1px solid rgba(255,255,255,0.08)",
+                borderRadius: 20,
                 padding: 24,
+                boxShadow: "0 18px 42px rgba(0,0,0,0.16)",
               }}
             >
               <p
@@ -640,10 +645,11 @@ const PublicProfile: React.FC = () => {
           {profile.playerProfile?.clubAffiliation && (
             <div
               style={{
-                background: "#fff",
-                border: "1px solid #e2e8f0",
-                borderRadius: 16,
+                background: "rgba(15, 23, 42, 0.78)",
+                border: "1px solid rgba(255,255,255,0.08)",
+                borderRadius: 20,
                 padding: 24,
+                boxShadow: "0 18px 42px rgba(0,0,0,0.16)",
               }}
             >
               <p
@@ -696,10 +702,11 @@ const PublicProfile: React.FC = () => {
           {stats && (
             <div
               style={{
-                background: "#fff",
-                border: "1px solid #e2e8f0",
-                borderRadius: 16,
+                background: "rgba(15, 23, 42, 0.78)",
+                border: "1px solid rgba(255,255,255,0.08)",
+                borderRadius: 20,
                 padding: 24,
+                boxShadow: "0 18px 42px rgba(0,0,0,0.16)",
               }}
             >
               <p
@@ -787,10 +794,11 @@ const PublicProfile: React.FC = () => {
           {stats && (
             <div
               style={{
-                background: "#fff",
-                border: "1px solid #e2e8f0",
-                borderRadius: 16,
+                background: "rgba(15, 23, 42, 0.78)",
+                border: "1px solid rgba(255,255,255,0.08)",
+                borderRadius: 20,
                 padding: 24,
+                boxShadow: "0 18px 42px rgba(0,0,0,0.16)",
               }}
             >
               <p
@@ -867,11 +875,12 @@ const PublicProfile: React.FC = () => {
             <div
               style={{
                 gridColumn: "1 / -1",
-                background: "#f8fafc",
-                border: "1px dashed #cbd5e1",
+                background: "rgba(255,255,255,0.03)",
+                border: "1px dashed rgba(255,255,255,0.15)",
                 borderRadius: 16,
                 padding: 40,
                 textAlign: "center",
+                backdropFilter: "blur(10px)",
               }}
             >
               <div style={{ fontSize: 40, marginBottom: 12 }}>🏓</div>
@@ -894,14 +903,15 @@ const PublicProfile: React.FC = () => {
                   <div
                     key={match.id}
                     style={{
-                      background: "#fff",
-                      border: "1px solid #e2e8f0",
+                      background: "rgba(15,23,42,0.78)",
+                      border: "1px solid rgba(255,255,255,0.08)",
                       borderRadius: 14,
                       padding: "16px 20px",
                       display: "flex",
                       alignItems: "center",
                       gap: 16,
                       borderLeft: `4px solid ${isWin ? "#22c55e" : "#ef4444"}`,
+                      boxShadow: "0 14px 30px rgba(0,0,0,0.12)",
                     }}
                   >
                     <div
@@ -976,11 +986,12 @@ const PublicProfile: React.FC = () => {
           ) : (
             <div
               style={{
-                background: "#f8fafc",
-                border: "1px dashed #cbd5e1",
+                background: "rgba(255,255,255,0.03)",
+                border: "1px dashed rgba(255,255,255,0.15)",
                 borderRadius: 16,
                 padding: 60,
                 textAlign: "center",
+                backdropFilter: "blur(10px)",
               }}
             >
               <div style={{ fontSize: 48, marginBottom: 12 }}>🏓</div>

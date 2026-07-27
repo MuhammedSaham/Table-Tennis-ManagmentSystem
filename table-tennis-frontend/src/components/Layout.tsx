@@ -70,31 +70,28 @@ const Layout: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-20">
             {/* Logo */}
-            <Link to="app/dashboard" className="flex items-center gap-2 group">
+            <Link to="app/dashboard" className="flex items-center gap-3 group">
               <img
                 src={Logo}
                 alt="Sam's College"
-                className="w-10 h-10 object-contain rounded-lg"
+                className="w-12 h-12 object-contain rounded-2xl shadow-xl shadow-cyan-500/20"
               />
-              <span className="font-semibold text-lg text-white tracking-wide">
+              <span className="font-semibold text-lg md:text-xl text-white tracking-wide">
                 SAM'S COLLEGE
               </span>
-              <p className="text-[11px] text-slate-400 uppercase tracking-[0.24em] mt-1">
-                  TABLE TENNIS HUB
-              </p>
             </Link>
 
             {/* Desktop Navigation */}
             {user && (
-              <div className="hidden md:flex items-center gap-2">
+              <div className="hidden md:flex items-center gap-3">
                 {navigation.map((item) => (
                   <Link
                     key={item.name}
                     to={item.href}
-                    className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
+                    className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ease-out ${
                       location.pathname === item.href
-                        ? "bg-white/10 text-white"
-                        : "text-slate-300 hover:bg-white/10 hover:text-white"
+                        ? `bg-cyan-500/15 text-white shadow-[0_0_0_4px_rgba(34,211,238,0.12)] ${item.name === "Dashboard" ? "ring-1 ring-cyan-400/30" : ""}`
+                        : `text-slate-300 hover:bg-white/10 hover:text-white ${item.name === "Dashboard" ? "hover:ring-1 hover:ring-cyan-400/20 hover:bg-cyan-500/10" : ""}`
                     }`}
                   >
                     {item.name}
