@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import api from "../services/api";
 import toast from "react-hot-toast";
+import { UserIcon, EnvelopeIcon, TrophyIcon } from "@heroicons/react/24/outline";
 
 interface Category {
   name: string;
@@ -38,12 +39,6 @@ const CreateTournament: React.FC = () => {
     registrationDeadline: "",
     maxPlayers: "",
   });
-
-  // Redirect if not admin
-  if (user?.role !== "ADMIN") {
-    navigate("/dashboard");
-    return null;
-  }
 
   const handleChange = (
     e: React.ChangeEvent<
@@ -188,133 +183,156 @@ const CreateTournament: React.FC = () => {
     }
   };
 
-  return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="w-full max-w-4xl mx-auto px-4 lg:px-6">
-        <h1 className="text-3xl font-bold text-gray-900 mb-8">
-          Create New Tournament
-        </h1>
+  const inputStyles =
+    "w-full rounded-lg border border-white/10 bg-[#061D23]/60 p-2.5 text-sm text-white placeholder-white/20 focus:border-[#4AEEFF] focus:outline-none";
+  const labelStyles = "block text-[15px] font-black uppercase tracking-wider text-white/70 mb-1.5";
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Basic Tournament Info */}
-          <div className="card space-y-6">
-            <h2 className="text-xl font-semibold text-gray-900">
+  const wrapInBaseLayout = (children: React.ReactNode) => (
+    <div className="relative min-h-screen w-full overflow-hidden bg-[#061D23] text-white">
+      {/* ─── BG.PNG FIXED FULL-BLEED BACKGROUND ─── */}
+      <div
+        className="fixed inset-0 bg-cover bg-center bg-no-repeat"
+        style={{ backgroundImage: "url('/bg1.png')" }}
+      />
+      {/* Light overlay for text legibility over the paper-texture artwork */}
+      <div className="fixed inset-0 bg-[#061D23]/25" />
+      <div className="fixed inset-0 bg-gradient-to-b from-[#061D23]/20 via-transparent to-[#061D23]/35" />
+
+      <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-7xl flex-col space-y-6 p-4 sm:p-6 lg:p-8">
+        {children}
+      </div>
+    </div>
+  );
+
+  // Redirect if not admin
+  if (user?.role !== "ADMIN") {
+    navigate("/dashboard");
+    return null;
+  }
+
+  return wrapInBaseLayout(
+    <>
+      {/* PREMIUM HEADER CONTROLS MODULE */}
+      <header className="rounded-[16px] border border-white/20 bg-[#061D23]/15 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <div className="mb-3 h-[3px] w-16 bg-[#4AEEFF]" />
+          <h1 className="text-2xl font-black uppercase tracking-[0.2em] text-white sm:text-4xl">
+            Create New Tournament
+          </h1>
+          <p className="text-xs uppercase tracking-[0.3em] text-[#4AEEFF]/90 mt-1">
+            Configure event details, format, and player categories
+          </p>
+        </div>
+      </header>
+
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {/* CORE BASIC INFORMATION LAYER */}
+        <main className="rounded-[16px] border border-white/20 bg-[#061D23]/10 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl p-6">
+          <div className="mb-5 flex items-center gap-2">
+            <TrophyIcon className="w-5 h-5 text-[#4AEEFF]" />
+            <h2 className="text-lg font-black uppercase tracking-widest text-white">
               Basic Information
             </h2>
+          </div>
 
+          <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Tournament Name *
-              </label>
+              <label className={labelStyles}>Tournament Name *</label>
               <input
                 type="text"
                 name="name"
                 value={formData.name}
                 onChange={handleChange}
                 required
-                className="input-field"
+                className={inputStyles}
                 placeholder="e.g., City Open Championship 2024"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Description
-              </label>
+              <label className={labelStyles}>Description</label>
               <textarea
                 name="description"
                 value={formData.description}
                 onChange={handleChange}
                 rows={3}
-                className="input-field"
+                className={inputStyles}
                 placeholder="Describe the tournament..."
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Venue *
-              </label>
+              <label className={labelStyles}>Venue *</label>
               <input
                 type="text"
                 name="venue"
                 value={formData.venue}
                 onChange={handleChange}
                 required
-                className="input-field"
+                className={inputStyles}
                 placeholder="e.g., City Sports Complex"
               />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Start Date *
-                </label>
+                <label className={labelStyles}>Start Date *</label>
                 <input
                   type="datetime-local"
                   name="startDate"
                   value={formData.startDate}
                   onChange={handleChange}
                   required
-                  className="input-field"
+                  className={`${inputStyles} [color-scheme:dark]`}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  End Date *
-                </label>
+                <label className={labelStyles}>End Date *</label>
                 <input
                   type="datetime-local"
                   name="endDate"
                   value={formData.endDate}
                   onChange={handleChange}
                   required
-                  className="input-field"
+                  className={`${inputStyles} [color-scheme:dark]`}
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Registration Deadline *
-              </label>
+              <label className={labelStyles}>Registration Deadline *</label>
               <input
                 type="datetime-local"
                 name="registrationDeadline"
                 value={formData.registrationDeadline}
                 onChange={handleChange}
                 required
-                className="input-field"
+                className={`${inputStyles} [color-scheme:dark]`}
               />
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-white/50 mt-1.5">
                 Must be before the start date
               </p>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Max Players (Optional)
-              </label>
+              <label className={labelStyles}>Max Players (Optional)</label>
               <input
                 type="number"
                 name="maxPlayers"
                 value={formData.maxPlayers}
                 onChange={handleChange}
-                className="input-field"
+                className={inputStyles}
                 placeholder="e.g., 64"
                 min="2"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Tournament Format *
-              </label>
+              <label className={labelStyles}>Tournament Format *</label>
               <select
                 value={tournamentType}
                 onChange={(e) => setTournamentType(e.target.value)}
-                className="input-field"
+                className={inputStyles}
               >
                 <option value="KNOCKOUT">
                   🏆 Knockout (Direct Elimination)
@@ -323,43 +341,51 @@ const CreateTournament: React.FC = () => {
                   🏅 Group Stage + Knockout
                 </option>
               </select>
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-white/50 mt-1.5">
                 {tournamentType === "KNOCKOUT"
                   ? "Players are directly placed in elimination bracket"
                   : "Players first play in groups, then top players advance to knockout"}
               </p>
             </div>
           </div>
+        </main>
 
-          {/* Categories Section */}
-          <div className="card space-y-6">
-            <div className="flex justify-between items-center">
-              <h2 className="text-xl font-semibold text-gray-900">
+        {/* CORE CATEGORIES LAYER */}
+        <main className="rounded-[16px] border border-white/20 bg-[#061D23]/10 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl p-6">
+          <div className="flex justify-between items-center mb-2">
+            <div className="flex items-center gap-2">
+              <UserIcon className="w-5 h-5 text-[#4AEEFF]" />
+              <h2 className="text-lg font-black uppercase tracking-widest text-white">
                 Categories
               </h2>
-              <button
-                type="button"
-                onClick={addCategory}
-                className="bg-primary-600 text-white px-3 py-1 rounded-lg text-sm hover:bg-primary-700"
-              >
-                + Add Category
-              </button>
             </div>
-            <p className="text-sm text-gray-500">
-              Define age groups and match types for this tournament
-            </p>
+            <button
+              type="button"
+              onClick={addCategory}
+              className="flex items-center justify-center gap-2 rounded-lg bg-[#4AEEFF] px-4 py-2 text-xs font-black uppercase tracking-wider text-[#061D23] transition-all duration-200 hover:bg-white"
+            >
+              + Add Category
+            </button>
+          </div>
+          <p className="text-xs text-white/50 mb-5">
+            Define age groups and match types for this tournament
+          </p>
 
+          <div className="space-y-4">
             {categories.map((category, index) => (
-              <div key={index} className="border rounded-lg p-4 space-y-4">
+              <div
+                key={index}
+                className="rounded-lg border border-white/10 bg-[#061D23]/40 p-4 space-y-4"
+              >
                 <div className="flex justify-between items-center">
-                  <h3 className="font-medium text-gray-900">
+                  <h3 className="text-xs font-black uppercase tracking-wider text-white">
                     Category {index + 1}
                   </h3>
                   {categories.length > 1 && (
                     <button
                       type="button"
                       onClick={() => removeCategory(index)}
-                      className="text-red-600 hover:text-red-700 text-sm"
+                      className="text-red-400 hover:text-red-300 text-xs font-black uppercase tracking-wider"
                     >
                       Remove
                     </button>
@@ -368,9 +394,7 @@ const CreateTournament: React.FC = () => {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Category Name *
-                    </label>
+                    <label className={labelStyles}>Category Name *</label>
                     <input
                       type="text"
                       value={category.name}
@@ -378,15 +402,13 @@ const CreateTournament: React.FC = () => {
                         handleCategoryChange(index, "name", e.target.value)
                       }
                       required
-                      className="input-field"
+                      className={inputStyles}
                       placeholder="e.g., Men's Singles U-18"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Match Type *
-                    </label>
+                    <label className={labelStyles}>Match Type *</label>
                     <select
                       value={category.type}
                       onChange={(e) =>
@@ -396,7 +418,7 @@ const CreateTournament: React.FC = () => {
                           e.target.value as "SINGLES" | "DOUBLES" | "TEAM",
                         )
                       }
-                      className="input-field"
+                      className={inputStyles}
                     >
                       <option value="SINGLES">Singles</option>
                       <option value="DOUBLES">Doubles</option>
@@ -407,9 +429,7 @@ const CreateTournament: React.FC = () => {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Age Range (Optional)
-                    </label>
+                    <label className={labelStyles}>Age Range (Optional)</label>
                     <div className="flex gap-2">
                       <input
                         type="number"
@@ -424,11 +444,11 @@ const CreateTournament: React.FC = () => {
                               : undefined,
                           )
                         }
-                        className="input-field"
+                        className={inputStyles}
                         min="5"
                         max="100"
                       />
-                      <span className="flex items-center">-</span>
+                      <span className="flex items-center text-white/40">-</span>
                       <input
                         type="number"
                         placeholder="Max Age"
@@ -442,20 +462,18 @@ const CreateTournament: React.FC = () => {
                               : undefined,
                           )
                         }
-                        className="input-field"
+                        className={inputStyles}
                         min="5"
                         max="100"
                       />
                     </div>
-                    <p className="text-xs text-gray-500 mt-1">
+                    <p className="text-xs text-white/50 mt-1.5">
                       Example: 15-18 for Under-18 category
                     </p>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Gender (Optional)
-                    </label>
+                    <label className={labelStyles}>Gender (Optional)</label>
                     <select
                       value={category.gender || ""}
                       onChange={(e) =>
@@ -466,7 +484,7 @@ const CreateTournament: React.FC = () => {
                             undefined,
                         )
                       }
-                      className="input-field"
+                      className={inputStyles}
                     >
                       <option value="">Mixed / Open</option>
                       <option value="MALE">Men's Only</option>
@@ -476,9 +494,7 @@ const CreateTournament: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Max Participants *
-                  </label>
+                  <label className={labelStyles}>Max Participants *</label>
                   <input
                     type="number"
                     value={category.maxParticipants}
@@ -490,48 +506,70 @@ const CreateTournament: React.FC = () => {
                       )
                     }
                     required
-                    className="input-field"
+                    className={inputStyles}
                     min="2"
                     max="256"
                   />
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-xs text-white/50 mt-1.5">
                     Maximum number of players/teams in this category
                   </p>
                 </div>
 
                 {/* Preview of category settings */}
-                <div className="bg-gray-50 rounded-lg p-3 text-sm">
-                  <p className="text-gray-600">
-                    <span className="font-medium">Preview:</span>{" "}
+                <div className="bg-[#061D23]/60 rounded-lg border border-white/10 p-3 text-sm">
+                  <p className="text-white/70">
+                    <span className="font-black uppercase tracking-wider text-[#4AEEFF] text-xs">
+                      Preview:
+                    </span>{" "}
                     {category.name || "Unnamed"} • {category.type}
                     {category.gender &&
                       ` • ${category.gender === "MALE" ? "Men's" : "Women's"}`}
+                    {" • "}
                     {getAgeCategoryLabel(category.minAge, category.maxAge)}
                   </p>
                 </div>
               </div>
             ))}
           </div>
+        </main>
 
-          <div className="flex gap-4 pt-4">
-            <button
-              type="submit"
-              disabled={loading}
-              className="btn-primary disabled:opacity-50"
-            >
-              {loading ? "Creating..." : "Create Tournament"}
-            </button>
-            <button
-              type="button"
-              onClick={() => navigate("/tournaments")}
-              className="btn-secondary"
-            >
-              Cancel
-            </button>
+        <div className="flex gap-3 pb-2">
+          <button
+            type="submit"
+            disabled={loading}
+            className="flex-1 rounded-lg bg-[#4AEEFF] py-3 text-xs font-black uppercase tracking-widest text-[#061D23] transition-all hover:bg-white disabled:opacity-50 sm:flex-none sm:px-10"
+          >
+            {loading ? "Creating..." : "Create Tournament"}
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate("/tournaments")}
+            className="flex-1 rounded-lg border border-white/20 bg-transparent py-3 text-xs font-black uppercase tracking-widest text-[#4AEEFF] transition-all hover:bg-white/5 sm:flex-none sm:px-10"
+          >
+            Cancel
+          </button>
+        </div>
+      </form>
+
+      {/* SHADED BOTTOM FOOTER BRANDING MODULE */}
+      <footer className="mt-auto rounded-[16px] border border-white/10 bg-[#061D23]/25 p-5 shadow-[0_15px_40px_rgba(0,0,0,0.3)] backdrop-blur-md">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-2 text-sm text-white/80">
+            <UserIcon className="h-4 w-4 text-[#4AEEFF]" />
+            <span>Active Operator Identity:</span>
+            <span className="rounded bg-[#4AEEFF]/20 px-2 py-0.5 text-xs font-bold uppercase tracking-wider text-[#4AEEFF]">
+              {user?.role || "GUEST"}
+            </span>
           </div>
-        </form>
-      </div>
-    </div>
+          {user?.email && (
+            <div className="flex items-center gap-2 text-sm text-white/70">
+              <EnvelopeIcon className="h-4 w-4 text-[#4AEEFF]/80" />
+              <span className="font-mono text-xs">{user.email}</span>
+            </div>
+          )}
+        </div>
+      </footer>
+    </>
   );
 };
 
