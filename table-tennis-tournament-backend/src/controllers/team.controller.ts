@@ -24,3 +24,49 @@ export const getTournamentTeams = catchAsync(async (req: Request, res: Response)
   const teams = await teamService.getTournamentTeams(tournamentId);
   sendResponse(res, 200, 'Teams retrieved successfully', teams);
 });
+
+// ─── DOUBLES INVITE CONTROLLERS ──────────────────────────────────────────────
+
+// Search partners by name or email
+export const searchPartners = catchAsync(async (req: Request, res: Response) => {
+  const { q } = req.query as { q: string };
+  if (!q || q.trim().length < 2) {
+    return sendResponse(res, 400, 'Search query must be at least 2 characters', []);
+  }
+  const partners = await teamService.searchPartners(q.trim(), req.user!.id);
+  sendResponse(res, 200, 'Partners found', partners);
+});
+
+// Send a doubles partner invite
+export const sendInvite = catchAsync(async (req: Request, res: Response) => {
+  const { tournamentId, categoryId, inviteeId } = req.body;
+  const invite = await teamService.sendInvite(req.user!.id, tournamentId, categoryId, inviteeId);
+  sendResponse(res, 201, 'Invite sent successfully', invite);
+});
+
+// Accept an invite
+export const acceptInvite = catchAsync(async (req: Request, res: Response) => {
+  const { inviteId } = req.params;
+  const result = await teamService.respondToInvite(req.user!.id, inviteId, true);
+  sendResponse(res, 200, 'Invite accepted', result);
+});
+
+// Decline an invite
+export const declineInvite = catchAsync(async (req: Request, res: Response) => {
+  const { inviteId } = req.params;
+  const result = await teamService.respondToInvite(req.user!.id, inviteId, false);
+  sendResponse(res, 200, 'Invite declined', result);
+});
+
+// Cancel a pending invite (inviter)
+export const cancelInvite = catchAsync(async (req: Request, res: Response) => {
+  const { inviteId } = req.params;
+  const result = await teamService.cancelInvite(req.user!.id, inviteId);
+  sendResponse(res, 200, 'Invite cancelled', result);
+});
+
+// Get pending invites received by this user
+export const getMyInvites = catchAsync(async (req: Request, res: Response) => {
+  const invites = await teamService.getMyInvites(req.user!.id);
+  sendResponse(res, 200, 'Invites fetched', invites);
+});

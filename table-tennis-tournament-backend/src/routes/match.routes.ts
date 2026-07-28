@@ -37,10 +37,10 @@ const router = Router();
 //router.use(authenticate);
 
 // Player routes
-router.get('/my-matches', getMyMatches);
+router.get('/my-matches', authenticate, getMyMatches);
 
 // Referee routes
-router.get('/my-assigned-matches', isReferee, getRefereeMatches);
+router.get('/my-assigned-matches', authenticate, isAdminOrReferee, getRefereeMatches);
 
 // Tournament matches (Admin, Referee, Players can view)
 router.get('/tournaments/:tournamentId', getTournamentMatches);
@@ -49,18 +49,18 @@ router.get('/tournaments/:tournamentId', getTournamentMatches);
 router.get('/:matchId', getMatchById);
 
 // Admin only routes
-router.post('/', isAdmin, validate(createMatchSchema), createMatch);
-router.patch('/:matchId/status', restrictTo('ADMIN', 'REFEREE'), validate(updateMatchStatusSchema), updateMatchStatus);
-router.post('/:matchId/assign-referee', isAdmin, validate(assignRefereeSchema), assignReferee);
+router.post('/', authenticate, isAdmin, validate(createMatchSchema), createMatch);
+router.patch('/:matchId/status', authenticate, restrictTo('ADMIN', 'REFEREE'), validate(updateMatchStatusSchema), updateMatchStatus);
+router.post('/:matchId/assign-referee', authenticate, isAdmin, validate(assignRefereeSchema), assignReferee);
 router.post('/swap-players', authenticate, isAdminOrReferee, swapPlayers);
 // Add these to the existing routes
 
 // Match results and scoring
 router.get('/:matchId/results', getMatchResults);
-router.post('/:matchId/scores', restrictTo('ADMIN', 'REFEREE'), recordGameScores);
-router.get('/my-match-history', getMyMatchHistory);
+router.post('/:matchId/scores', authenticate, restrictTo('ADMIN', 'REFEREE'), recordGameScores);
+router.get('/my-match-history', authenticate, getMyMatchHistory);
 
-router.get('/my-performance', getPlayerPerformanceStats);
+router.get('/my-performance', authenticate, getPlayerPerformanceStats);
 
 router.get('/player-performance/:userId', getPlayerPerformanceStatsById);
 

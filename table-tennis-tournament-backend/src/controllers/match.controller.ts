@@ -115,16 +115,12 @@ export const updateMatch = catchAsync(async (req: Request, res: Response) => {
   if (winnerId !== undefined) updateData.winnerId = winnerId;
   if (status !== undefined) updateData.status = status;
   if (player1Id !== undefined) updateData.player1Id = player1Id;
-  if (player2Id !== undefined) updateData.player2Id = player2Id;  // ← ADD THIS
+  if (player2Id !== undefined) updateData.player2Id = player2Id;
   if (status === 'COMPLETED') updateData.endTime = new Date();
-
-
-
 
   const match = await prisma.match.update({
     where: { id: matchId },
     data: updateData,
-
     include: {
       player1: { select: { id: true, firstName: true, lastName: true } },
       player2: { select: { id: true, firstName: true, lastName: true } },
@@ -132,8 +128,81 @@ export const updateMatch = catchAsync(async (req: Request, res: Response) => {
       team2: true,
       referee: { include: { user: true }},
     },
-    
   });
+
+  if (status === 'COMPLETED' && winnerId) {
+    const nextRoundMap: Record<string, string> = {
+      'Round of 128': 'Round of 64',
+      'Round of 64': 'Round of 32',
+      'Round of 32': 'Round of 16',
+      'Round of 16': 'Quarter-Finals',
+      'Quarter-Finals': 'Semi-Finals',
+      'Quarter-final': 'Semi-final',
+      'Semi-Finals': 'Final',
+      'Semi-final': 'Final'
+    };
+
+    const nextRound = nextRoundMap[match.round];
+    if (nextRound) {
+      const currentRoundMatches = await prisma.match.findMany({
+        where: { tournamentId: match.tournamentId, categoryId: match.categoryId, round: match.round },
+        orderBy: { matchNumber: 'asc' }
+      });
+      const matchIndex = currentRoundMatches.findIndex(m => m.id === matchId);
+      
+      if (matchIndex !== -1) {
+        const nextRoundMatches = await prisma.match.findMany({
+          where: { tournamentId: match.tournamentId, categoryId: match.categoryId, round: nextRound },
+          orderBy: { matchNumber: 'asc' }
+        });
+
+        const nextMatchIndex = Math.floor(matchIndex / 2);
+        const nextMatch = nextRoundMatches[nextMatchIndex];
+
+        if (nextMatch) {
+          const isSlot1 = matchIndex % 2 === 0;
+          const isDoubles = match.matchType === 'DOUBLES';
+
+          // Advance winner into the correct slot of the next match
+          if (isDoubles) {
+            // winnerId is the winning team's ID
+            await prisma.match.update({
+              where: { id: nextMatch.id },
+              data: isSlot1 ? { team1Id: winnerId } : { team2Id: winnerId }
+            });
+          } else {
+            await prisma.match.update({
+              where: { id: nextMatch.id },
+              data: isSlot1 ? { player1Id: winnerId } : { player2Id: winnerId }
+            });
+          }
+          
+          // Fill 3rd Place Playoff with the loser
+          if (nextRound === 'Final') {
+            const thirdPlaceMatch = await prisma.match.findFirst({
+              where: { tournamentId: match.tournamentId, categoryId: match.categoryId, round: '3rd Place Playoff' }
+            });
+            if (thirdPlaceMatch) {
+              if (isDoubles) {
+                // loserId = the team that is NOT the winner
+                const loserTeamId = match.team1Id === winnerId ? match.team2Id : match.team1Id;
+                await prisma.match.update({
+                  where: { id: thirdPlaceMatch.id },
+                  data: isSlot1 ? { team1Id: loserTeamId } : { team2Id: loserTeamId }
+                });
+              } else {
+                const loserId = match.player1Id === winnerId ? match.player2Id : match.player1Id;
+                await prisma.match.update({
+                  where: { id: thirdPlaceMatch.id },
+                  data: isSlot1 ? { player1Id: loserId } : { player2Id: loserId }
+                });
+              }
+            }
+          }
+        }
+      }
+    }
+  }
 
   console.log("Updated match:", matchId, "| data:", updateData);
   

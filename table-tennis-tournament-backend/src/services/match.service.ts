@@ -14,6 +14,18 @@ interface NormalizedMatch {
   player2: { id: string; firstName: string; lastName: string } | null;
   tournament: { id: string; name: string; venue: string };
   category: { name: string; type: string };
+  isGroupMatch?: boolean;
+  bestOf?: number;
+  game1player1?: number | null;
+  game1player2?: number | null;
+  game2player1?: number | null;
+  game2player2?: number | null;
+  game3player1?: number | null;
+  game3player2?: number | null;
+  game4player1?: number | null;
+  game4player2?: number | null;
+  game5player1?: number | null;
+  game5player2?: number | null;
 }
 
 export class MatchService {
@@ -212,8 +224,28 @@ export class MatchService {
       include: {
         player1: { select: { id: true, firstName: true, lastName: true } },
         player2: { select: { id: true, firstName: true, lastName: true } },
-        team1: { select: { id: true, name: true } },
-        team2: { select: { id: true, name: true } },
+        team1: {
+          select: {
+            id: true,
+            name: true,
+            members: {
+              include: {
+                player: { select: { id: true, firstName: true, lastName: true } },
+              },
+            },
+          },
+        },
+        team2: {
+          select: {
+            id: true,
+            name: true,
+            members: {
+              include: {
+                player: { select: { id: true, firstName: true, lastName: true } },
+              },
+            },
+          },
+        },
         referee: { include: { user: { select: { firstName: true, lastName: true } } } },
         category: { select: { name: true, type: true } },
       },
@@ -222,6 +254,7 @@ export class MatchService {
 
     return matches;
   }
+
 
   // Get matches for a specific player (knockout + group stage combined)
   async getPlayerMatches(playerId: string): Promise<NormalizedMatch[]> {
@@ -324,10 +357,79 @@ export class MatchService {
         tournament: { select: { id: true, name: true, venue: true } },
         category: { select: { name: true, type: true } },
       },
-      orderBy: { scheduledTime: 'asc' },
     });
 
-    return matches;
+    const groupMatches = await prisma.groupMatch.findMany({
+      where: { refereeId: referee.id },
+      include: {
+        player1: { select: { id: true, firstName: true, lastName: true } },
+        player2: { select: { id: true, firstName: true, lastName: true } },
+        group: {
+          include: {
+            tournament: { select: { id: true, name: true, venue: true } },
+            category: { select: { name: true, type: true } },
+          },
+        },
+      },
+    });
+
+    const normalizedKnockout: NormalizedMatch[] = matches.map((match) => ({
+      id: match.id,
+      round: match.round,
+      matchNumber: match.matchNumber,
+      scheduledTime: match.scheduledTime,
+      status: match.status,
+      score: match.score ?? null,
+      winnerId: match.winnerId ?? null,
+      player1: match.player1
+        ? { id: match.player1.id, firstName: match.player1.firstName, lastName: match.player1.lastName }
+        : null,
+      player2: match.player2
+        ? { id: match.player2.id, firstName: match.player2.firstName, lastName: match.player2.lastName }
+        : null,
+      team1: match.team1,
+      team2: match.team2,
+      tournament: match.tournament ?? { id: '', name: '', venue: '' },
+      category: match.category ?? { name: '', type: '' },
+      isGroupMatch: false,
+    }));
+
+    const normalizedGroup: NormalizedMatch[] = groupMatches.map((match: any) => ({
+      id: match.id,
+      round: `Group Stage - ${match.group?.name ?? ''}`,
+      matchNumber: match.round ?? 1,
+      scheduledTime: match.scheduledTime,
+      status: match.status,
+      score: match.player1Score !== null && match.player2Score !== null
+        ? `${match.player1Score} - ${match.player2Score}`
+        : null,
+      winnerId: match.winnerId ?? null,
+      player1: match.player1
+        ? { id: match.player1.id, firstName: match.player1.firstName, lastName: match.player1.lastName }
+        : null,
+      player2: match.player2
+        ? { id: match.player2.id, firstName: match.player2.firstName, lastName: match.player2.lastName }
+        : null,
+      tournament: match.group?.tournament ?? { id: '', name: '', venue: '' },
+      category: match.group?.category ?? { name: '', type: '' },
+      isGroupMatch: true,
+      bestOf: match.bestOf,
+      game1player1: match.game1player1,
+      game1player2: match.game1player2,
+      game2player1: match.game2player1,
+      game2player2: match.game2player2,
+      game3player1: match.game3player1,
+      game3player2: match.game3player2,
+      game4player1: match.game4player1,
+      game4player2: match.game4player2,
+      game5player1: match.game5player1,
+      game5player2: match.game5player2,
+    }));
+
+    const allMatches: NormalizedMatch[] = [...normalizedKnockout, ...normalizedGroup];
+    allMatches.sort((a, b) => new Date(a.scheduledTime).getTime() - new Date(b.scheduledTime).getTime());
+
+    return allMatches;
   }
 
   // Get match by ID

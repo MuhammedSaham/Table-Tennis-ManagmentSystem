@@ -54,6 +54,14 @@ const Layout: React.FC = () => {
     });
     navigation.push({ name: "Users", href: "/app/users", icon: UserGroupIcon });
   }
+
+  if (user?.role === "ADMIN" || user?.role === "REFEREE") {
+    navigation.push({
+      name: "Referee Dashboard",
+      href: "/app/referee/matches",
+      icon: ChartBarIcon,
+    });
+  }
   // Pages that should NOT show the navbar
   const isAuthPage = ["/login", "/register", "/reset-password"].includes(
     location.pathname,

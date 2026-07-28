@@ -1,11 +1,18 @@
 import { Router } from 'express';
 import { authenticate } from '../middleware/auth.middleware';
+import { isPlayer } from '../middleware/role.middleware';
 //import { isAdmin } from '../middleware/role.middleware';
 import { validate } from '../middleware/validation.middleware';
 import {
   createTeam,
   getTeamById,
   getTournamentTeams,
+  searchPartners,
+  sendInvite,
+  acceptInvite,
+  declineInvite,
+  cancelInvite,
+  getMyInvites,
 } from '../controllers/team.controller';
 import { createTeamSchema } from '../validations/team.validation';
 
@@ -21,4 +28,12 @@ router.get('/tournaments/:tournamentId', getTournamentTeams);
 // Admin only
 router.post('/', validate(createTeamSchema), createTeam);
 
-export default router;
+// ─── DOUBLES INVITE ROUTES (Player only) ─────────────────────────────────────
+router.get('/invites/search', isPlayer, searchPartners);
+router.get('/invites/my-invites', isPlayer, getMyInvites);
+router.post('/invites/send', isPlayer, sendInvite);
+router.post('/invites/:inviteId/accept', isPlayer, acceptInvite);
+router.post('/invites/:inviteId/decline', isPlayer, declineInvite);
+router.delete('/invites/:inviteId/cancel', isPlayer, cancelInvite);
+
+export default router;
