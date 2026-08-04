@@ -307,7 +307,7 @@ const TournamentDetails: React.FC = () => {
 
     try {
       await api.post(
-        `/groups/tournaments/${id}/categories/${selectedCategories[0]}/groups`,
+        `/groups/tournaments/${id}/categories/${activeCategoryId}/groups`,
         { numberOfGroups: parseInt(numGroups) },
       );
       toast.success("Groups created successfully!");
@@ -323,7 +323,7 @@ const TournamentDetails: React.FC = () => {
   };*/
 
   const handleRecordScores = () => {
-    if (selectedCategories.length === 0) {
+    if (!activeCategoryId) {
       toast.error("Please select a category first");
       return;
     }
@@ -331,14 +331,14 @@ const TournamentDetails: React.FC = () => {
   };
 
   const handleGenerateGroupMatches = async () => {
-    if (selectedCategories.length === 0) {
+    if (!activeCategoryId) {
       toast.error("Please select a category first");
       return;
     }
 
     try {
       const response = await api.post(
-        `/groups/tournaments/${id}/categories/${selectedCategories[0]}/group-matches`,
+        `/groups/tournaments/${id}/categories/${activeCategoryId}/group-matches`,
       );
       console.log("Generate matches response:", response.data);
       toast.success("Group matches generated!");
@@ -354,7 +354,7 @@ const TournamentDetails: React.FC = () => {
   const handleResetKnockout = async () => {
     try {
       await api.delete(
-        `/matches/tournaments/${id}/categories/${selectedCategories[0]}/knockout`,
+        `/matches/tournaments/${id}/categories/${activeCategoryId}/knockout`,
       );
       toast.success("Knockout stage reset successfully");
       fetchTournamentDetails();
@@ -427,12 +427,20 @@ const TournamentDetails: React.FC = () => {
   };
 
   const fetchWinners = async () => {
+    if (!activeCategoryId) {
+      toast.error("Please select a category first.");
+      return;
+    }
     try {
-      const matchesResponse = await api.get(`/matches/tournaments/${id}`);
+      const matchesResponse = await api.get(`/matches/tournaments/${id}?categoryId=${activeCategoryId}`);
       const allMatches = matchesResponse.data.data;
-      const finalMatch = allMatches.find((m: any) => m.round === "Final");
-      const thirdPlaceMatch = allMatches.find(
-        (m: any) => m.round === "3rd Place",
+      const finalMatch = allMatches.find(
+        (m: any) =>
+          m.round && (m.round.trim().toLowerCase() === "final" ||
+          m.round.trim().toLowerCase() === "finals"),
+      );
+      const thirdPlaceMatch = allMatches.find((m: any) =>
+        m.round && m.round.includes("3rd Place"),
       );
       let champion = null,
         runnerUp = null,
@@ -451,6 +459,9 @@ const TournamentDetails: React.FC = () => {
       }
       setWinners({ first: champion, second: runnerUp, third: thirdPlace });
       setShowWinners(true);
+      setTimeout(() => {
+        document.getElementById("winners-section")?.scrollIntoView({ behavior: "smooth" });
+      }, 100);
     } catch (error) {
       console.error("Failed to fetch winners", error);
     }
@@ -978,32 +989,7 @@ const TournamentDetails: React.FC = () => {
         )}
       </div>
 
-      {/* Category Selector for Group Stage */}
-      {/*{tournamentType === "GROUP_KNOCKOUT" &&
-        tournament.categories.length > 0 && (
-          <div className="card mb-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">
-              Select Category for Group Stage
-            </h2>
-            <select
-              value={selectedCategories[0] || ""}
-              onChange={(e) => setSelectedCategories([e.target.value])}
-              className="input-field max-w-md"
-            >
-              <option value="">Select a category</option>
-              {tournament.categories.map((category) => (
-                <option key={category.id} value={category.id}>
-                  {category.name} ({category.type}) -{" "}
-                  {category.currentParticipants}/{category.maxParticipants}{" "}
-                  players
-                </option>
-              ))}
-            </select>
-            <p className="text-xs text-gray-500 mt-2">
-              Select a category to manage groups and knockout stage
-            </p>
-          </div>
-        )}*/}
+      {/* Old Category Selector Removed */}
       {/* Category Selector */}
       {tournament.categories.length > 0 && (
         <div className="card mb-6">
@@ -1030,18 +1016,17 @@ const TournamentDetails: React.FC = () => {
       )}
 
       {/* Group Stage UI */}
-      {tournamentType === "GROUP_KNOCKOUT" && selectedCategories.length > 0 && (
+      {tournamentType === "GROUP_KNOCKOUT" && activeCategoryId && (
         <div className="card mb-6">
           <h2 className="text-xl font-semibold text-gray-900 mb-4">
             Group Stage Management -{" "}
             {
-              tournament.categories.find((c) => c.id === selectedCategories[0])
+              tournament.categories.find((c) => c.id === activeCategoryId)
                 ?.name
             }
           </h2>
           <div className="flex flex-wrap gap-3 mb-6">
-            {isAdmin ||
-              (isReferee && (
+            {(isAdmin || isReferee) && (
                 <>
                   <button
                     onClick={() => setShowGroupsModal(true)}
@@ -1054,9 +1039,6 @@ const TournamentDetails: React.FC = () => {
                     className="btn-primary"
                   >
                     Generate Group Matches
-                  </button>
-                  <button onClick={handleRecordScores} className="btn-primary">
-                    Record Group Scores
                   </button>
                   <button
                     onClick={() => setShowKnockoutModal(true)}
@@ -1071,11 +1053,11 @@ const TournamentDetails: React.FC = () => {
                     Reset Knockout Stage
                   </button>
                 </>
-              ))}
+              )}
           </div>
           <GroupStandings
             tournamentId={id}
-            categoryId={selectedCategories[0]}
+            categoryId={activeCategoryId}
             isAdminOrReferee={isAdmin || isReferee}
             onScoreUpdate={fetchTournamentDetails}
             key={refreshGroups ? "refresh" : "initial"}
@@ -1083,19 +1065,7 @@ const TournamentDetails: React.FC = () => {
         </div>
       )}
 
-      {/* Knockout Bracket */}
-      {selectedCategories.length > 0 && (
-        <div
-          className="card mb-6"
-          style={{ overflowX: "auto", overflowY: "visible", minHeight: 200 }}
-        >
-          <KnockoutBracket
-            tournamentId={id}
-            categoryId={selectedCategories[0]}
-            onScoreRecorded={fetchTournamentDetails}
-          />
-        </div>
-      )}
+      {/* Duplicate Knockout Bracket Removed */}
 
       {/* Knockout Bracket */}
       {activeCategoryId && (
@@ -1123,7 +1093,7 @@ const TournamentDetails: React.FC = () => {
 
       {/* Winners Section */}
       {showWinners && winners && (
-        <div className="card mb-6 bg-gradient-to-r from-yellow-50 to-amber-50">
+        <div id="winners-section" className="card mb-6 bg-gradient-to-r from-yellow-50 to-amber-50">
           <h2 className="text-2xl font-bold text-gray-900 mb-4 text-center">
             🏆 Tournament Champions 🏆
           </h2>
@@ -1435,7 +1405,7 @@ const TournamentDetails: React.FC = () => {
       {showGroupsModal && (
         <CreateGroupsModal
           tournamentId={id}
-          categoryId={selectedCategories[0]}
+          categoryId={activeCategoryId}
           onClose={() => setShowGroupsModal(false)}
           onSuccess={fetchTournamentDetails}
         />
@@ -1443,7 +1413,7 @@ const TournamentDetails: React.FC = () => {
       {showKnockoutModal && (
         <CreateKnockoutModal
           tournamentId={id}
-          categoryId={selectedCategories[0]}
+          categoryId={activeCategoryId}
           onClose={() => setShowKnockoutModal(false)}
           onSuccess={fetchTournamentDetails}
         />
@@ -1451,7 +1421,7 @@ const TournamentDetails: React.FC = () => {
       {showScoreModal && (
         <RecordGroupScoreModal
           tournamentId={id}
-          categoryId={selectedCategories[0]}
+          categoryId={activeCategoryId}
           onClose={() => setShowScoreModal(false)}
           onSuccess={fetchTournamentDetails}
         />

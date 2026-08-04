@@ -34,22 +34,22 @@ const CreateKnockoutModal: React.FC<Props> = ({
   useEffect(() => {
     const fetch = async () => {
       try {
-        const [grpRes, regRes] = await Promise.all([
-          api.get(
-            `/groups/tournaments/${tournamentId}/categories/${categoryId}/standings`,
-          ),
-          api.get(
-            `/tournaments/${tournamentId}/registrations?status=APPROVED&categoryId=${categoryId}`,
-          ),
-        ]);
-        const groups = grpRes.data.data?.length ?? 0;
-        const players = regRes.data.data?.length ?? 0;
+        const grpRes = await api
+          .get(`/groups/tournaments/${tournamentId}/categories/${categoryId}/standings`)
+          .catch(() => ({ data: { data: [] } }));
+        const regRes = await api
+          .get(`/registrations/tournaments/${tournamentId}?status=APPROVED&categoryId=${categoryId}`)
+          .catch(() => ({ data: { data: [] } }));
+
+        const groups = grpRes.data?.data?.length ?? 0;
+        const players = regRes.data?.data?.length ?? 0;
         setGroupCount(groups);
         setPlayerCount(players);
         // Auto-select based on groups
         setSelected(groups <= 4 ? 2 : 1);
       } catch {
-        setGroupCount(null);
+        setGroupCount(0);
+        setPlayerCount(0);
       } finally {
         setFetching(false);
       }
@@ -96,24 +96,33 @@ const CreateKnockoutModal: React.FC<Props> = ({
         color: "#0369a1",
         description: "16 players · 4 rounds + 3rd Place",
       };
-    return null;
+    if (advancing <= 32)
+      return {
+        label: "Round of 32",
+        rounds: ["R32", "R16", "Quarter-final", "Semi-final", "Final"],
+        advancingPerGroup: selected,
+        icon: "⚔️",
+        color: "#ca8a04",
+        description: "32 players · 5 rounds + 3rd Place",
+      };
+    return {
+        label: "Round of 64",
+        rounds: ["R64", "R32", "R16", "Quarter-final", "Semi-final", "Final"],
+        advancingPerGroup: selected,
+        icon: "🔥",
+        color: "#dc2626",
+        description: `${advancing} players · 6 rounds + 3rd Place`,
+    };
   };
 
   const format = getFormat(totalAdvancing);
-
-  const advancingOptions = groupCount
-    ? [1, 2, 3, 4].filter((n) => {
-        const total = groupCount * n;
-        return total >= 2 && total <= 16;
-      })
-    : [1, 2];
 
   const handleCreate = async () => {
     setLoading(true);
     try {
       await api.post(
         `/groups/tournaments/${tournamentId}/categories/${categoryId}/knockout`,
-        { advancingPerGroup: selected },
+        { topFromEachGroup: selected },
       );
       toast.success("Knockout stage generated!");
       onSuccess();
@@ -259,84 +268,27 @@ const CreateKnockoutModal: React.FC<Props> = ({
 
           {/* Advancing per group selector */}
           <div style={{ marginBottom: 20 }}>
-            <div
-              style={{
-                fontSize: 13,
-                fontWeight: 700,
-                color: "#374151",
-                marginBottom: 10,
-              }}
-            >
+            <label style={{ display: "block", marginBottom: 8, fontWeight: 600, color: "#374151" }}>
               Players advancing per group:
-            </div>
-            <div style={{ display: "flex", gap: 8 }}>
-              {advancingOptions.map((n) => {
-                const total = (groupCount ?? 0) * n;
-                const fmt = getFormat(total);
-                const isSel = selected === n;
-                return (
-                  <div
-                    key={n}
-                    onClick={() => setSelected(n)}
-                    style={{
-                      flex: 1,
-                      border: `2px solid ${isSel ? "#0f172a" : "#e2e8f0"}`,
-                      borderRadius: 12,
-                      padding: "12px 8px",
-                      textAlign: "center",
-                      cursor: "pointer",
-                      background: isSel ? "#0f172a" : "#fff",
-                      transition: "all 0.15s",
-                    }}
-                    onMouseEnter={(e) => {
-                      if (!isSel)
-                        (e.currentTarget as HTMLElement).style.borderColor =
-                          "#94a3b8";
-                    }}
-                    onMouseLeave={(e) => {
-                      if (!isSel)
-                        (e.currentTarget as HTMLElement).style.borderColor =
-                          "#e2e8f0";
-                    }}
-                  >
-                    <div
-                      style={{
-                        fontSize: 22,
-                        fontWeight: 900,
-                        color: isSel ? "#fff" : "#0f172a",
-                        lineHeight: 1,
-                      }}
-                    >
-                      {n}
-                    </div>
-                    <div
-                      style={{
-                        fontSize: 10,
-                        color: isSel ? "#94a3b8" : "#64748b",
-                        marginTop: 2,
-                        fontWeight: 600,
-                      }}
-                    >
-                      {total} total
-                    </div>
-                    {fmt && (
-                      <div
-                        style={{
-                          fontSize: 9,
-                          color: isSel ? fmt.color : "#94a3b8",
-                          fontWeight: 700,
-                          marginTop: 4,
-                          textTransform: "uppercase",
-                          letterSpacing: 0.5,
-                        }}
-                      >
-                        {fmt.label}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
+            </label>
+            <input
+              type="number"
+              min="1"
+              value={selected || 1}
+              onChange={(e) => setSelected(parseInt(e.target.value) || 1)}
+              style={{
+                width: "100%",
+                padding: "12px 16px",
+                borderRadius: 12,
+                border: "2px solid #e2e8f0",
+                fontSize: 16,
+                fontWeight: 600,
+                outline: "none",
+                transition: "border-color 0.2s"
+              }}
+              onFocus={(e) => e.target.style.borderColor = "#0f172a"}
+              onBlur={(e) => e.target.style.borderColor = "#e2e8f0"}
+            />
           </div>
 
           {/* Format preview */}

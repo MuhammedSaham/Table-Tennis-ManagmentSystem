@@ -7,6 +7,7 @@ import {
   recordGroupScore,
   getGroupStandings,
   generateKnockoutStage,
+  assignRefereeToGroupMatch,
 } from '../controllers/group.controller';
 import { getGroupMatches } from '../controllers/group.controller';
 import { updateGroupMembers } from '../controllers/group.controller';
@@ -17,12 +18,13 @@ const router = Router();
 //router.use(authenticate);
 
 // Admin only routes
-router.post('/tournaments/:tournamentId/categories/:categoryId/groups', isAdmin, createGroups);
-router.post('/tournaments/:tournamentId/categories/:categoryId/group-matches', isAdmin, generateGroupMatches);
-router.post('/tournaments/:tournamentId/categories/:categoryId/knockout', isAdmin, generateKnockoutStage);
+router.post('/tournaments/:tournamentId/categories/:categoryId/groups', authenticate, isAdmin, createGroups);
+router.post('/tournaments/:tournamentId/categories/:categoryId/group-matches', authenticate, isAdmin, generateGroupMatches);
+router.post('/tournaments/:tournamentId/categories/:categoryId/knockout', authenticate, isAdmin, generateKnockoutStage);
 
 // Match recording
-router.patch('/group-matches/:matchId', isAdmin, recordGroupScore);
+router.patch('/group-matches/:matchId', authenticate, isAdminOrReferee, recordGroupScore);
+router.post('/group-matches/:matchId/assign-referee', authenticate, isAdmin, assignRefereeToGroupMatch);
 
 // View standings
 router.get('/tournaments/:tournamentId/categories/:categoryId/standings', getGroupStandings);

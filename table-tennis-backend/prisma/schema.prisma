@@ -48,6 +48,10 @@ model User {
   groupPlayers    GroupPlayer[]
   groupMatchesAs1 GroupMatch[]  @relation("groupMatch_player1")
   groupMatchesAs2 GroupMatch[]  @relation("groupMatch_player2")
+
+  // DOUBLES INVITE RELATIONS
+  doublesInvitesSent     DoublesInvite[] @relation("doubles_inviter")
+  doublesInvitesReceived DoublesInvite[] @relation("doubles_invitee")
 }
 
 enum UserRole {
@@ -84,7 +88,8 @@ model RefereeProfile {
   experienceYears Int?
 
   // Relations
-  matches Match[]
+  matches      Match[]
+  groupMatches GroupMatch[]
 }
 
 // Admin specific details
@@ -111,12 +116,13 @@ model Tournament {
   tournamentType       TournamentType   @default(KNOCKOUT)
 
   // Relations with cascade delete
-  categories    Category[]
-  registrations TournamentRegistration[]
-  matches       Match[]
-  teams         Team[]
-  results       TournamentResult?
-  groups        Group[]
+  categories     Category[]
+  registrations  TournamentRegistration[]
+  matches        Match[]
+  teams          Team[]
+  results        TournamentResult?
+  groups         Group[]
+  doublesInvites DoublesInvite[]
 }
 
 enum TournamentStatus {
@@ -145,9 +151,10 @@ model Category {
   currentParticipants Int          @default(0)
 
   // Relations
-  registrations TournamentRegistration[]
-  matches       Match[]
-  groups        Group[]
+  registrations  TournamentRegistration[]
+  matches        Match[]
+  groups         Group[]
+  doublesInvites DoublesInvite[]
 }
 
 enum CategoryType {
@@ -177,6 +184,7 @@ model Team {
   matchesAsTeam1         Match[]                  @relation("team1")
   matchesAsTeam2         Match[]                  @relation("team2")
   TournamentRegistration TournamentRegistration[]
+  doublesInvites         DoublesInvite[]
 }
 
 model TeamMember {
@@ -342,6 +350,36 @@ enum NotificationType {
   NEW_ADMIN_REQUEST
   TOURNAMENT_CREATED
   PROFILE_VIEW
+  DOUBLES_INVITE
+  DOUBLES_INVITE_ACCEPTED
+  DOUBLES_INVITE_DECLINED
+}
+
+// Doubles Partner Invitations
+model DoublesInvite {
+  id           String       @id @default(cuid())
+  tournamentId String
+  tournament   Tournament   @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  categoryId   String
+  category     Category     @relation(fields: [categoryId], references: [id])
+  inviterId    String
+  inviter      User         @relation("doubles_inviter", fields: [inviterId], references: [id])
+  inviteeId    String
+  invitee      User         @relation("doubles_invitee", fields: [inviteeId], references: [id])
+  status       InviteStatus @default(PENDING)
+  teamId       String?
+  team         Team?        @relation(fields: [teamId], references: [id])
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  @@unique([tournamentId, categoryId, inviterId])
+}
+
+enum InviteStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  CANCELLED
 }
 
 // Group Stage Models
@@ -390,6 +428,8 @@ model GroupMatch {
   player2Score Int?
   winnerId     String?
   status       MatchStatus @default(SCHEDULED)
+  refereeId    String?
+  referee      RefereeProfile? @relation(fields: [refereeId], references: [id])
 
   game1player1 Int?
   game1player2 Int?

@@ -1,5 +1,5 @@
 {
-  "name": "table-tennis-tournament-backend",
+  "name": "table-tennis-backend",
   "version": "1.0.0",
   "description": "Table Tennis Tournament Management System Backend",
   "main": "dist/server.js",

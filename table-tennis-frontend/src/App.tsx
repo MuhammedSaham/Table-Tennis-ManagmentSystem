@@ -26,6 +26,8 @@ import AdminRequests from "./pages/AdminRequests";
 import PublicProfile from "./pages/PublicProfile";
 import GlobalLeaderboard from "./pages/GlobalLeaderboard";
 import Players from "./pages/Players";
+import RefereeMatches from "./pages/RefereeMatches";
+import ErrorBoundary from "./components/ErrorBoundary";
 //import VerifyEmail from "./pages/VerifyEmail";
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({
@@ -85,6 +87,7 @@ function AppRoutes() {
         <Route path="create-tournament" element={<CreateTournament />} />
         <Route path="my-registrations" element={<MyRegistrations />} />
         <Route path="my-matches" element={<MyMatches />} />
+        <Route path="referee/matches" element={<RefereeMatches />} />
         <Route path="profile" element={<Profile />} />
         <Route path="users" element={<Users />} />
         <Route path="admin-requests" element={<AdminRequests />} />
@@ -120,7 +123,9 @@ function App() {
             },
           }}
         />
-        <AppRoutes />
+        <ErrorBoundary>
+          <AppRoutes />
+        </ErrorBoundary>
       </AuthProvider>
     </Router>
   );

@@ -447,6 +447,29 @@ async recordGroupScore(
         allMatches.push(qf);
       }
 
+      // Create BYE QF matches for group winners — these are instantly COMPLETED
+      // so the bracket canvas shows a proper QF column with BYE cards feeding SF
+      console.log(`🏓 Creating BYE Quarter-final slots for ${byePlayers.length} group winners`);
+
+      for (const byePlayer of byePlayers) {
+        const byeQf = await prisma.match.create({
+          data: {
+            tournamentId,
+            categoryId,
+            matchType: 'SINGLES',
+            player1Id: byePlayer.id,
+            player2Id: null,
+            round: 'Quarter-Finals',
+            matchNumber: matchNumber++,
+            scheduledTime: new Date(),
+            status: 'COMPLETED',
+            score: 'BYE',
+            winnerId: byePlayer.id,
+          },
+        });
+        allMatches.push(byeQf);
+      }
+
       // Create SF matches — bye players are pre-seeded, QF winner slots are null
       console.log(`🏓 Creating Semi-finals with ${byePlayers.length} seeded players`);
 
@@ -657,4 +680,26 @@ async updateGroupMembers(
 
   return await this.getGroupStandings(tournamentId, categoryId);
 }
+
+  async assignRefereeToGroupMatch(matchId: string, refereeUserId: string) {
+    const referee = await prisma.refereeProfile.findUnique({
+      where: { userId: refereeUserId },
+    });
+
+    if (!referee) {
+      throw new AppError('Referee not found', 404);
+    }
+
+    const updatedMatch = await prisma.groupMatch.update({
+      where: { id: matchId },
+      data: { refereeId: referee.id },
+      include: {
+        player1: { select: { id: true, firstName: true, lastName: true } },
+        player2: { select: { id: true, firstName: true, lastName: true } },
+        referee: { include: { user: true } },
+      },
+    });
+
+    return updatedMatch;
+  }
 }

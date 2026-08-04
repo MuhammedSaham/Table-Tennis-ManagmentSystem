@@ -6,6 +6,13 @@ import { sendResponse } from '../utils/sendResponse';
 
 const groupService = new GroupService();
 
+export const assignRefereeToGroupMatch = catchAsync(async (req: Request, res: Response) => {
+  const { matchId } = req.params;
+  const { refereeUserId } = req.body;
+  const match = await groupService.assignRefereeToGroupMatch(matchId, refereeUserId);
+  sendResponse(res, 200, 'Referee assigned successfully', match);
+});
+
 export const createGroups = catchAsync(async (req: Request, res: Response) => {
   const { tournamentId, categoryId } = req.params;
   const { numberOfGroups } = req.body;
