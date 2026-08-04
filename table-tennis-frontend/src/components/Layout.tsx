@@ -9,7 +9,7 @@ import {
   //HomeIcon,
   //TrophyIcon,
   //UserGroupIcon,
-  //ChartBarIcon,
+  ChartBarIcon,
   //UserCircleIcon,
   ArrowRightOnRectangleIcon,
   Bars3Icon,
