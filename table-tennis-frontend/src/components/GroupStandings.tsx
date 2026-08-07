@@ -673,10 +673,10 @@ export const UmpireSheet: React.FC<UmpireSheetProps> = ({
               onClick={() => onAssignReferee(match)}
               style={{
                 padding: "9px 20px",
-                border: "1.5px solid #e2e8f0",
-                borderRadius: 10,
-                background: "#f8fafc",
-                color: "#0f172a",
+                border: "1.5px solid rgba(34,211,238,0.25)",
+                borderRadius: 999,
+                background: "rgba(34,211,238,0.08)",
+                color: "#cffafe",
                 fontWeight: 600,
                 fontSize: 14,
                 cursor: "pointer",
@@ -693,8 +693,8 @@ export const UmpireSheet: React.FC<UmpireSheetProps> = ({
               style={{
                 padding: "9px 24px",
                 border: "none",
-                borderRadius: 10,
-                background: saving || !matchOver ? "#94a3b8" : "#0f172a",
+                borderRadius: 999,
+                background: saving || !matchOver ? "#334155" : "#06b6d4",
                 color: "#fff",
                 fontWeight: 700,
                 fontSize: 14,

@@ -159,20 +159,20 @@ const Tournaments: React.FC = () => {
         backgroundAttachment: "fixed",
       }}
     >
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl text-white">
-        <div className="overflow-hidden rounded-[32px] border border-white/10 bg-slate-950/80 p-8 shadow-2xl shadow-black/20 mb-8 relative">
+      <div className="relative mx-auto max-w-7xl space-y-8 px-4 text-white sm:px-6 lg:px-8">
+        <div className="overflow-hidden rounded-[32px] border border-white/10 bg-slate-950/80 p-8 shadow-2xl shadow-black/20 relative">
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(34,211,238,0.18),_transparent_22%),radial-gradient(circle_at_bottom_right,_rgba(255,255,255,0.08),_transparent_20%)]" />
           <div className="absolute left-0 top-0 h-2 w-28 rounded-br-3xl bg-cyan-400/60 blur-xl" />
-          <div className="relative grid gap-6 lg:grid-cols-[minmax(0,1fr)_auto] items-center">
-            <div className="relative z-10">
-              <div className="mb-4 inline-flex items-center gap-3 rounded-full bg-cyan-500/10 px-4 py-2 text-sm font-semibold text-cyan-100 shadow-sm shadow-cyan-500/10">
+          <div className="relative grid gap-6 lg:grid-cols-[minmax(0,1fr)_auto] items-end">
+            <div className="relative z-10 space-y-4">
+              <div className="inline-flex items-center gap-3 rounded-full border border-cyan-400/20 bg-cyan-500/10 px-4 py-2 text-sm font-semibold text-cyan-100 shadow-sm shadow-cyan-500/10">
                 <SparklesIcon className="h-5 w-5 text-cyan-300" />
-                Dashboard overview
+                Tournament dashboard
               </div>
-              <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-white">
+              <h1 className="text-4xl font-extrabold tracking-tight text-white sm:text-5xl">
                 Tournaments
               </h1>
-              <p className="max-w-2xl mt-3 text-base leading-7 text-slate-300">
+              <p className="max-w-2xl text-base leading-7 text-slate-400">
                 Create, manage and monitor university table tennis tournaments with a modern sports dashboard experience.
               </p>
             </div>
@@ -189,55 +189,65 @@ const Tournaments: React.FC = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5 mb-8">
-          <div className="rounded-[28px] border border-white/10 bg-slate-950/85 p-6 shadow-xl shadow-black/15 transition hover:-translate-y-1 hover:shadow-2xl hover:shadow-cyan-500/15">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+          <div className="rounded-[28px] border border-white/10 bg-slate-900/80 p-6 shadow-lg shadow-black/10 transition hover:-translate-y-1 hover:shadow-2xl hover:shadow-cyan-500/15">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Total tournaments</p>
                 <p className="mt-4 text-4xl font-extrabold text-white">{summaryStats.total}</p>
               </div>
-              <FlagIcon className="h-9 w-9 rounded-2xl bg-cyan-500/15 p-2 text-cyan-300" />
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-cyan-500/10 text-cyan-300">
+                <FlagIcon className="h-6 w-6" />
+              </div>
             </div>
           </div>
-          <div className="rounded-[28px] border border-white/10 bg-slate-950/85 p-6 shadow-xl shadow-black/15 transition hover:-translate-y-1 hover:shadow-2xl hover:shadow-cyan-500/15">
+          <div className="rounded-[28px] border border-white/10 bg-slate-900/80 p-6 shadow-lg shadow-black/10 transition hover:-translate-y-1 hover:shadow-2xl hover:shadow-cyan-500/15">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Upcoming</p>
                 <p className="mt-4 text-4xl font-extrabold text-white">{summaryStats.upcoming}</p>
               </div>
-              <CalendarDaysIcon className="h-9 w-9 rounded-2xl bg-cyan-500/15 p-2 text-cyan-300" />
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-cyan-500/10 text-cyan-300">
+                <CalendarDaysIcon className="h-6 w-6" />
+              </div>
             </div>
           </div>
-          <div className="rounded-[28px] border border-white/10 bg-slate-950/85 p-6 shadow-xl shadow-black/15 transition hover:-translate-y-1 hover:shadow-2xl hover:shadow-cyan-500/15">
+          <div className="rounded-[28px] border border-white/10 bg-slate-900/80 p-6 shadow-lg shadow-black/10 transition hover:-translate-y-1 hover:shadow-2xl hover:shadow-cyan-500/15">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Ongoing</p>
                 <p className="mt-4 text-4xl font-extrabold text-white">{summaryStats.ongoing}</p>
               </div>
-              <SparklesIcon className="h-9 w-9 rounded-2xl bg-emerald-500/15 p-2 text-emerald-300" />
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-300">
+                <SparklesIcon className="h-6 w-6" />
+              </div>
             </div>
           </div>
-          <div className="rounded-[28px] border border-white/10 bg-slate-950/85 p-6 shadow-xl shadow-black/15 transition hover:-translate-y-1 hover:shadow-2xl hover:shadow-cyan-500/15">
+          <div className="rounded-[28px] border border-white/10 bg-slate-900/80 p-6 shadow-lg shadow-black/10 transition hover:-translate-y-1 hover:shadow-2xl hover:shadow-cyan-500/15">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Completed</p>
                 <p className="mt-4 text-4xl font-extrabold text-white">{summaryStats.completed}</p>
               </div>
-              <UserGroupIcon className="h-9 w-9 rounded-2xl bg-slate-500/15 p-2 text-slate-200" />
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-500/10 text-slate-200">
+                <UserGroupIcon className="h-6 w-6" />
+              </div>
             </div>
           </div>
-          <div className="rounded-[28px] border border-white/10 bg-slate-950/85 p-6 shadow-xl shadow-black/15 transition hover:-translate-y-1 hover:shadow-2xl hover:shadow-cyan-500/15">
+          <div className="rounded-[28px] border border-white/10 bg-slate-900/80 p-6 shadow-lg shadow-black/10 transition hover:-translate-y-1 hover:shadow-2xl hover:shadow-cyan-500/15">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Registered players</p>
                 <p className="mt-4 text-4xl font-extrabold text-white">{summaryStats.registeredPlayers}</p>
               </div>
-              <UserGroupIcon className="h-9 w-9 rounded-2xl bg-cyan-500/15 p-2 text-cyan-300" />
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-cyan-500/10 text-cyan-300">
+                <UserGroupIcon className="h-6 w-6" />
+              </div>
             </div>
           </div>
         </div>
 
-        <div className="rounded-[32px] border border-white/10 bg-slate-950/80 p-6 mb-8 shadow-2xl shadow-black/20">
+        <div className="rounded-[32px] border border-white/10 bg-slate-950/80 p-6 shadow-2xl shadow-black/20">
           <div className="grid gap-5 xl:grid-cols-[1.5fr_1fr] items-center">
             <div>
               <p className="text-sm uppercase tracking-[0.3em] text-slate-400">Filter tournaments</p>
@@ -250,10 +260,10 @@ const Tournaments: React.FC = () => {
                   key={option}
                   type="button"
                   onClick={() => setStatusFilter(option)}
-                  className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+                  className={`rounded-full border px-4 py-2.5 text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-cyan-400/30 ${
                     statusFilter === option
-                      ? "bg-cyan-500 text-slate-950 shadow-lg shadow-cyan-500/20"
-                      : "bg-slate-900/80 text-slate-200 border border-white/10 hover:bg-slate-900/95"
+                      ? "border-cyan-400/30 bg-cyan-400/15 text-white shadow-[0_0_0_1px_rgba(34,211,238,0.25),0_0_24px_rgba(34,211,238,0.14)]"
+                      : "border-white/10 bg-slate-900/80 text-slate-200 hover:border-cyan-400/20 hover:bg-slate-900/95"
                   }`}
                 >
                   {option === "ALL" ? "All" : option.charAt(0) + option.slice(1).toLowerCase()}
@@ -266,7 +276,7 @@ const Tournaments: React.FC = () => {
             <select
               value={typeFilter}
               onChange={(e) => setTypeFilter(e.target.value)}
-              className="w-full rounded-2xl border border-white/10 bg-slate-900/90 px-4 py-3 text-white outline-none focus:border-cyan-400/50 focus:ring-2 focus:ring-cyan-400/20 transition"
+              className="w-full rounded-2xl border border-white/10 bg-slate-900/90 px-4 py-3 text-white outline-none transition focus:border-cyan-400/50 focus:ring-2 focus:ring-cyan-400/20"
             >
               <option value="ALL">All tournament types</option>
               {tournamentTypes.map((type) => (
@@ -278,7 +288,7 @@ const Tournaments: React.FC = () => {
             <select
               value={yearFilter}
               onChange={(e) => setYearFilter(e.target.value)}
-              className="w-full rounded-2xl border border-white/10 bg-slate-900/90 px-4 py-3 text-white outline-none focus:border-cyan-400/50 focus:ring-2 focus:ring-cyan-400/20 transition"
+              className="w-full rounded-2xl border border-white/10 bg-slate-900/90 px-4 py-3 text-white outline-none transition focus:border-cyan-400/50 focus:ring-2 focus:ring-cyan-400/20"
             >
               <option value="ALL">All years</option>
               {tournamentYears.map((year) => (
@@ -341,17 +351,11 @@ const Tournaments: React.FC = () => {
                     )}
                   </div>
 
-                  <div className="mt-5 flex flex-wrap items-center gap-3">
-                    <span className="inline-flex items-center gap-2 rounded-full bg-cyan-500/10 px-3 py-2 text-xs font-semibold uppercase tracking-[0.25em] text-cyan-200">
-                      <SparklesIcon className="h-4 w-4 text-cyan-300" /> More details
+                  <div className="mt-5 flex justify-end">
+                    <span className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-cyan-500 to-sky-500 px-5 py-3 text-sm font-semibold text-slate-950 shadow-lg shadow-cyan-500/20 transition group-hover:-translate-y-0.5 group-hover:shadow-2xl group-hover:shadow-cyan-400/30">
+                      View details
+                      <ArrowRightIcon className="h-4 w-4" />
                     </span>
-
-                    <div className="ml-auto flex gap-3">
-                      <span className="inline-flex items-center gap-2 rounded-full bg-white/5 px-4 py-2 text-sm font-semibold text-cyan-200 transition hover:bg-cyan-500/10 hover:text-white">
-                        View Details
-                        <ArrowRightIcon className="h-4 w-4" />
-                      </span>
-                    </div>
                   </div>
                 </div>
               </div>
@@ -360,12 +364,12 @@ const Tournaments: React.FC = () => {
         </div>
 
         {tournaments.length === 0 ? (
-          <div className="text-center py-20 rounded-[32px] border border-white/10 bg-white/5 backdrop-blur-xl mt-8">
+          <div className="mt-8 rounded-[32px] border border-white/10 bg-white/5 py-20 text-center backdrop-blur-xl">
             <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-cyan-500/10 text-cyan-200 shadow-lg shadow-cyan-500/10">
               <span className="text-4xl">🏓</span>
             </div>
             <h2 className="text-2xl font-bold text-white mb-2">No tournaments available.</h2>
-            <p className="max-w-xl mx-auto text-slate-400 mb-6">
+            <p className="mx-auto mb-6 max-w-xl text-slate-400">
               Create your first tournament to get started and build your next university table tennis event.
             </p>
             {user?.role === "ADMIN" && (
@@ -378,7 +382,7 @@ const Tournaments: React.FC = () => {
             )}
           </div>
         ) : filteredTournaments.length === 0 ? (
-          <div className="text-center py-20 rounded-[32px] border border-white/10 bg-white/5 backdrop-blur-xl mt-8">
+          <div className="mt-8 rounded-[32px] border border-white/10 bg-white/5 py-20 text-center backdrop-blur-xl">
             <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-cyan-500/10 text-cyan-200 shadow-lg shadow-cyan-500/10">
               <span className="text-4xl">🔍</span>
             </div>

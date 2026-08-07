@@ -708,13 +708,13 @@ const MatchCard: React.FC<{
     >
       <div
         style={{
-          border: `1.5px solid ${isBye ? "#d1d5db" : border}`,
-          borderRadius: 10,
+          border: `1.5px solid ${isBye ? "#334155" : border}`,
+          borderRadius: 14,
           overflow: "hidden",
-          background: isBye ? "#f9fafb" : "#fff",
+          background: isBye ? "#0f172a" : "#111827",
           boxShadow: isBye ? "none" : (done
-            ? "0 1px 6px rgba(34,197,94,0.18)"
-            : "0 1px 4px rgba(0,0,0,0.07)"),
+            ? "0 1px 10px rgba(34,211,238,0.12)"
+            : "0 1px 4px rgba(0,0,0,0.18)"),
           opacity: isBye ? 0.82 : 1,
           transition: "all 0.15s",
         }}
@@ -737,8 +737,8 @@ const MatchCard: React.FC<{
         {/* Match header bar */}
         <div
           style={{
-            background: isBye ? "#f3f4f6" : "#f8fafc",
-            borderBottom: "1px solid #e2e8f0",
+            background: isBye ? "#0b1220" : "#0f172a",
+            borderBottom: "1px solid #1e293b",
             padding: "5px 12px",
             display: "flex",
             justifyContent: "space-between",
@@ -749,7 +749,7 @@ const MatchCard: React.FC<{
             style={{
               fontSize: 11,
               fontWeight: 800,
-              color: isBye ? "#9ca3af" : (accent ? accent : "#475569"),
+                color: isBye ? "#94a3b8" : (accent ? accent : "#67e8f9"),
               letterSpacing: 0.5,
               textTransform: "uppercase",
             }}
@@ -761,8 +761,8 @@ const MatchCard: React.FC<{
               style={{
                 fontSize: 10,
                 fontWeight: 800,
-                color: "#6b7280",
-                background: "#e5e7eb",
+                color: "#bae6fd",
+                background: "rgba(34,211,238,0.12)",
                 padding: "2px 8px",
                 borderRadius: 10,
                 letterSpacing: 0.5,
@@ -800,11 +800,11 @@ const MatchCard: React.FC<{
                       onAssignReferee(match);
                     }}
                     style={{
-                      background: "#f1f5f9",
-                      border: "1px solid #e2e8f0",
+                      background: "rgba(34,211,238,0.08)",
+                      border: "1px solid rgba(34,211,238,0.22)",
                       cursor: "pointer",
                       fontSize: 11,
-                      color: "#475569",
+                      color: "#cffafe",
                       padding: "2px 8px",
                       borderRadius: 6,
                       fontWeight: 600,
@@ -821,11 +821,11 @@ const MatchCard: React.FC<{
                       onEdit(match);
                     }}
                     style={{
-                      background: "#f1f5f9",
-                      border: "1px solid #e2e8f0",
+                      background: "rgba(34,211,238,0.08)",
+                      border: "1px solid rgba(34,211,238,0.22)",
                       cursor: "pointer",
                       fontSize: 11,
-                      color: "#475569",
+                      color: "#cffafe",
                       padding: "2px 8px",
                       borderRadius: 6,
                       fontWeight: 600,
@@ -848,7 +848,7 @@ const MatchCard: React.FC<{
               display: "flex",
               alignItems: "center",
               gap: 10,
-              background: "#f3f4f6",
+              background: "#0b1220",
             }}
           >
             <div
@@ -856,13 +856,13 @@ const MatchCard: React.FC<{
                 width: 22,
                 height: 22,
                 borderRadius: 6,
-                background: "#d1d5db",
+                background: "#1e293b",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 fontSize: 10,
                 fontWeight: 800,
-                color: "#6b7280",
+                color: "#cbd5e1",
                 flexShrink: 0,
               }}
             >
@@ -872,7 +872,7 @@ const MatchCard: React.FC<{
               style={{
                 fontSize: 13,
                 fontWeight: 700,
-                color: "#374151",
+                color: "#e2e8f0",
                 flex: 1,
                 overflow: "hidden",
                 textOverflow: "ellipsis",
@@ -885,7 +885,7 @@ const MatchCard: React.FC<{
               style={{
                 fontSize: 11,
                 fontWeight: 700,
-                color: "#6b7280",
+                color: "#94a3b8",
                 whiteSpace: "nowrap",
               }}
             >
@@ -911,8 +911,8 @@ const MatchCard: React.FC<{
                 display: "flex",
                 alignItems: "center",
                 gap: 10,
-                borderBottom: idx === 0 ? "1px solid #f1f5f9" : "none",
-                background: won ? "#f0fdf4" : "#fff",
+                borderBottom: idx === 0 ? "1px solid #1e293b" : "none",
+                background: won ? "rgba(34,211,238,0.08)" : "#111827",
               }}
             >
               <div
@@ -920,13 +920,13 @@ const MatchCard: React.FC<{
                   width: 22,
                   height: 22,
                   borderRadius: 6,
-                  background: won ? "#22c55e" : isFilled ? "#e2e8f0" : "#f1f5f9",
+                  background: won ? "#06b6d4" : isFilled ? "#1e293b" : "#0f172a",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
                   fontSize: 10,
                   fontWeight: 800,
-                  color: won ? "#fff" : "#475569",
+                  color: won ? "#fff" : "#cbd5e1",
                   flexShrink: 0,
                 }}
               >
@@ -936,7 +936,7 @@ const MatchCard: React.FC<{
                 style={{
                   fontSize: 13,
                   fontWeight: won ? 800 : 500,
-                  color: won ? "#166534" : isFilled ? "#0f172a" : "#94a3b8",
+                  color: won ? "#67e8f9" : isFilled ? "#f8fafc" : "#64748b",
                   flex: 1,
                   overflow: "hidden",
                   textOverflow: "ellipsis",
@@ -952,13 +952,13 @@ const MatchCard: React.FC<{
                     padding: "0 6px",
                     height: 24,
                     borderRadius: 6,
-                    background: won ? "#22c55e" : "#f1f5f9",
+                    background: won ? "#06b6d4" : "#1e293b",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
                     fontSize: 13,
                     fontWeight: 800,
-                    color: won ? "#fff" : "#64748b",
+                    color: won ? "#fff" : "#cbd5e1",
                     flexShrink: 0,
                   }}
                 >
@@ -969,7 +969,7 @@ const MatchCard: React.FC<{
                 <span
                   style={{
                     fontSize: 9,
-                    color: "#3b82f6",
+                    color: "#67e8f9",
                     fontWeight: 600,
                     whiteSpace: "nowrap",
                   }}
@@ -1028,7 +1028,7 @@ const BracketCanvas: React.FC<{
             y1={lY}
             x2={mx}
             y2={lY}
-            stroke="#d1d5db"
+            stroke="rgba(34,211,238,0.5)"
             strokeWidth={1.5}
           />,
         );
@@ -1041,7 +1041,7 @@ const BracketCanvas: React.FC<{
             y1={cy(lc.entries.length, pair[0])}
             x2={mx}
             y2={cy(lc.entries.length, pair[1])}
-            stroke="#d1d5db"
+            stroke="rgba(34,211,238,0.5)"
             strokeWidth={1.5}
           />,
         );
@@ -1053,7 +1053,7 @@ const BracketCanvas: React.FC<{
           y1={rY}
           x2={rx}
           y2={rY}
-          stroke="#d1d5db"
+          stroke="rgba(34,211,238,0.5)"
           strokeWidth={1.5}
         />,
       );
@@ -1079,14 +1079,14 @@ const BracketCanvas: React.FC<{
         >
           <div
             style={{
-              padding: "6px 20px",
-              borderRadius: 6,
-              background: col.accent ? `${col.accent}15` : "#f1f5f9",
-              color: col.accent ?? "#374151",
+              padding: "8px 18px",
+              borderRadius: 999,
+              background: col.accent ? `${col.accent}18` : "rgba(15,23,42,0.9)",
+              color: col.accent ?? "#e2e8f0",
               fontSize: 13,
               fontWeight: 800,
               letterSpacing: 0.3,
-              border: `1px solid ${col.accent ? `${col.accent}40` : "#e5e7eb"}`,
+              border: `1px solid ${col.accent ? `${col.accent}40` : "#1e293b"}`,
             }}
           >
             {col.label}
@@ -1370,12 +1370,12 @@ const KnockoutBracket: React.FC<KnockoutBracketProps> = ({
   return (
     <div style={{ fontFamily: "'Segoe UI',system-ui,sans-serif" }}>
       {/* Header */}
-      <div style={{ textAlign: "center", marginBottom: 28 }}>
+      <div style={{ textAlign: "center", marginBottom: 28, padding: "16px 20px", border: "1px solid #1e293b", borderRadius: 24, background: "rgba(15,23,42,0.75)" }}>
         <div
           style={{
             fontSize: 11,
             fontWeight: 800,
-            color: "#e11d48",
+            color: "#67e8f9",
             letterSpacing: 2,
             textTransform: "uppercase",
             marginBottom: 4,
@@ -1388,13 +1388,13 @@ const KnockoutBracket: React.FC<KnockoutBracketProps> = ({
             margin: 0,
             fontSize: 28,
             fontWeight: 900,
-            color: "#0f172a",
+            color: "#fff",
             letterSpacing: -0.5,
           }}
         >
           Tournament Bracket
         </h2>
-        <p style={{ margin: "4px 0 0", fontSize: 13, color: "#64748b" }}>
+        <p style={{ margin: "4px 0 0", fontSize: 13, color: "#94a3b8" }}>
           All matches best of 5 games · Click any match to record score
         </p>
       </div>
@@ -1412,7 +1412,7 @@ const KnockoutBracket: React.FC<KnockoutBracketProps> = ({
           <span
             style={{
               fontSize: 12,
-              color: "#3b82f6",
+              color: "#67e8f9",
               fontWeight: 600,
               alignSelf: "center",
             }}
@@ -1424,11 +1424,11 @@ const KnockoutBracket: React.FC<KnockoutBracketProps> = ({
         <button
           onClick={load}
           style={{
-            padding: "7px 16px",
-            background: "#fff",
-            color: "#374151",
-            border: "1.5px solid #e2e8f0",
-            borderRadius: 8,
+            padding: "8px 16px",
+            background: "#0f172a",
+            color: "#e2e8f0",
+            border: "1.5px solid #1e293b",
+            borderRadius: 999,
             fontWeight: 600,
             fontSize: 13,
             cursor: "pointer",
@@ -1444,7 +1444,7 @@ const KnockoutBracket: React.FC<KnockoutBracketProps> = ({
           style={{
             display: "flex",
             justifyContent: "center",
-            padding: "8px 24px",
+            padding: "8px 24px 24px",
             minWidth: "fit-content",
           }}
         >
@@ -1463,14 +1463,14 @@ const KnockoutBracket: React.FC<KnockoutBracketProps> = ({
         style={{
           marginTop: 8,
           padding: "10px 16px",
-          background: "#f8fafc",
-          border: "1px solid #e2e8f0",
-          borderRadius: 10,
+          background: "rgba(15,23,42,0.75)",
+          border: "1px solid #1e293b",
+          borderRadius: 14,
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
           fontSize: 12,
-          color: "#64748b",
+          color: "#94a3b8",
         }}
       >
         <span>All matches are best of 5 games</span>

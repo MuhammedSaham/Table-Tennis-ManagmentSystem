@@ -69,11 +69,27 @@ interface Tournament {
   matches?: Match[];
 }
 
+interface PlayerName {
+  firstName: string;
+  lastName: string;
+}
+
+interface BracketMatch {
+  id: string;
+  round: string;
+  matchNumber: number;
+  scheduledTime: string;
+  status: string;
+  score?: string;
+  winnerId?: string | null;
+  player1Id?: string | null;
+  player2Id?: string | null;
+  player1?: PlayerName | null;
+  player2?: PlayerName | null;
+}
+
 const TournamentDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  if (!id) {
-    return <div className="text-center py-12">Invalid tournament ID</div>;
-  }
   const { user } = useAuth();
   const navigate = useNavigate();
   const [tournament, setTournament] = useState<Tournament | null>(null);
@@ -87,12 +103,12 @@ const TournamentDetails: React.FC = () => {
   const [showScoreModal, setShowScoreModal] = useState(false);
   const [refreshGroups, setRefreshGroups] = useState(false);
   //const [creatingGroups, setCreatingGroups] = useState(false);
-  const [_generatingMatches, setGeneratingMatches] = useState(false);
+  const [, setGeneratingMatches] = useState(false);
   const [playerAge, setPlayerAge] = useState<number | null>(null);
   const [winners, setWinners] = useState<{
-    first: any;
-    second: any;
-    third: any;
+    first: PlayerName | null;
+    second: PlayerName | null;
+    third: PlayerName | null;
   } | null>(null);
   const [showWinners, setShowWinners] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -119,16 +135,6 @@ const TournamentDetails: React.FC = () => {
   const [showGuestModal, setShowGuestModal] = useState(false);
   const [showKnockoutModal, setShowKnockoutModal] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
-
-  useEffect(() => {
-    fetchTournamentDetails();
-  }, [id]);
-
-  useEffect(() => {
-    if (tournament?.status === "COMPLETED") {
-      fetchWinners();
-    }
-  }, [tournament?.status]);
 
   const calculateAge = (dateOfBirth: string | Date): number => {
     const birthDate = new Date(dateOfBirth);
@@ -180,7 +186,7 @@ const TournamentDetails: React.FC = () => {
       const categories = tournamentData.categories || [];
       if (categories.length > 0) {
         setActiveCategoryId((prev) => {
-          const exists = categories.some((c: any) => c.id === prev);
+          const exists = categories.some((c: Category) => c.id === prev);
           return prev && exists ? prev : categories[0].id;
         });
       } else {
@@ -195,7 +201,7 @@ const TournamentDetails: React.FC = () => {
           setPlayerAge(calculateAge(dob));
         }
       }
-    } catch (error) {
+    } catch {
       toast.error("Failed to fetch tournament details");
       navigate("/tournaments");
     } finally {
@@ -258,11 +264,12 @@ const TournamentDetails: React.FC = () => {
             });
           }
           successCount++;
-        } catch (err: any) {
+        } catch (err) {
+          const error = err as { response?: { data?: { message?: string } } };
           console.error(`Failed to register for category ${categoryId}:`, err);
           failCount++;
           toast.error(
-            `Failed to register for ${category?.name}: ${err.response?.data?.message}`,
+            `Failed to register for ${category?.name}: ${error.response?.data?.message}`,
           );
         }
       }
@@ -284,7 +291,7 @@ const TournamentDetails: React.FC = () => {
       setPartnerDetails({ firstName: "", lastName: "", email: "", phone: "" });
       setShowPartnerForm(false);
       setSelectedDoublesCategory(null);
-    } catch (error: any) {
+    } catch (error) {
       console.error("Registration error:", error);
     } finally {
       setRegistering(false);
@@ -322,14 +329,6 @@ const TournamentDetails: React.FC = () => {
     }
   };*/
 
-  const handleRecordScores = () => {
-    if (!activeCategoryId) {
-      toast.error("Please select a category first");
-      return;
-    }
-    setShowScoreModal(true);
-  };
-
   const handleGenerateGroupMatches = async () => {
     if (!activeCategoryId) {
       toast.error("Please select a category first");
@@ -344,7 +343,7 @@ const TournamentDetails: React.FC = () => {
       toast.success("Group matches generated!");
       await fetchTournamentDetails();
       setRefreshGroups((prev) => !prev);
-    } catch (error) {
+    } catch {
       toast.error("Failed to generate group matches");
     } finally {
       setGeneratingMatches(false);
@@ -358,7 +357,7 @@ const TournamentDetails: React.FC = () => {
       );
       toast.success("Knockout stage reset successfully");
       fetchTournamentDetails();
-    } catch (error) {
+    } catch {
       toast.error("Failed to reset knockout stage");
     } finally {
       setShowResetConfirm(false);
@@ -371,7 +370,7 @@ const TournamentDetails: React.FC = () => {
         await api.delete(`/tournaments/${id}`);
         toast.success("Tournament deleted successfully");
         navigate("/tournaments");
-      } catch (error) {
+      } catch {
         toast.error("Failed to delete tournament");
       }
     }
@@ -389,7 +388,7 @@ const TournamentDetails: React.FC = () => {
       );
       toast.success("Bracket generated successfully!");
       fetchTournamentDetails();
-    } catch (error) {
+    } catch {
       toast.error("Failed to generate bracket");
     } finally {
       setGenerating(null);
@@ -433,13 +432,13 @@ const TournamentDetails: React.FC = () => {
     }
     try {
       const matchesResponse = await api.get(`/matches/tournaments/${id}?categoryId=${activeCategoryId}`);
-      const allMatches = matchesResponse.data.data;
+      const allMatches = matchesResponse.data.data as BracketMatch[];
       const finalMatch = allMatches.find(
-        (m: any) =>
+        (m: BracketMatch) =>
           m.round && (m.round.trim().toLowerCase() === "final" ||
-          m.round.trim().toLowerCase() === "finals"),
+            m.round.trim().toLowerCase() === "finals"),
       );
-      const thirdPlaceMatch = allMatches.find((m: any) =>
+      const thirdPlaceMatch = allMatches.find((m: BracketMatch) =>
         m.round && m.round.includes("3rd Place"),
       );
       let champion = null,
@@ -457,7 +456,11 @@ const TournamentDetails: React.FC = () => {
           ? thirdPlaceMatch.player1
           : thirdPlaceMatch.player2;
       }
-      setWinners({ first: champion, second: runnerUp, third: thirdPlace });
+      setWinners({
+        first: champion ?? null,
+        second: runnerUp ?? null,
+        third: thirdPlace ?? null,
+      });
       setShowWinners(true);
       setTimeout(() => {
         document.getElementById("winners-section")?.scrollIntoView({ behavior: "smooth" });
@@ -466,6 +469,28 @@ const TournamentDetails: React.FC = () => {
       console.error("Failed to fetch winners", error);
     }
   };
+
+  useEffect(() => {
+    if (!id) return;
+    void (async () => {
+      await fetchTournamentDetails();
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
+
+  useEffect(() => {
+    void (async () => {
+      if (tournament?.status === "COMPLETED") {
+        await fetchWinners();
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tournament?.status]);
+
+  if (!id) {
+    return <div className="text-center py-12">Invalid tournament ID</div>;
+  }
+
   // Add category to edit
   const addEditCategory = () => {
     setEditCategories([
@@ -493,7 +518,7 @@ const TournamentDetails: React.FC = () => {
   const updateEditCategory = (
     index: number,
     field: keyof Category,
-    value: any,
+    value: string | number | undefined,
   ) => {
     const newCategories = [...editCategories];
     newCategories[index] = { ...newCategories[index], [field]: value };
@@ -517,7 +542,7 @@ const TournamentDetails: React.FC = () => {
       });
       // Get existing categories from backend
       const existingCategories = await api.get(`/tournaments/${id}/categories`);
-      const existingIds = existingCategories.data.data.map((c: any) => c.id);
+      const existingIds = existingCategories.data.data.map((c: { id: string }) => c.id);
 
       // Create new categories and update existing ones
       for (const category of editCategories) {
@@ -555,7 +580,7 @@ const TournamentDetails: React.FC = () => {
       toast.success("Tournament updated successfully!");
       setShowEditModal(false);
       fetchTournamentDetails();
-    } catch (error) {
+    } catch {
       toast.error("Failed to update tournament");
     }
   };
@@ -597,436 +622,448 @@ const TournamentDetails: React.FC = () => {
   };
 
   return (
-    <div>
-      {/* Tournament Header */}
-      <div className="card mb-6">
-        <div className="flex justify-between items-start">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              {tournament.name}
-            </h1>
-            <p className="text-gray-600 mb-4">
-              {tournament.description || "No description available"}
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <span
-              className={`px-3 py-1 text-sm font-medium rounded-full ${getStatusColor(tournament.status)}`}
-            >
-              {tournament.status}
-            </span>
-            {isAdmin && (
-              <>
-                <button
-                  onClick={handleDelete}
-                  className="bg-red-600 hover:bg-red-700 text-white px-4 py-1 rounded-lg text-sm"
-                >
-                  Delete Tournament
-                </button>
-                <button
-                  onClick={() => {
-                    setEditFormData({
-                      name: tournament.name,
-                      description: tournament.description || "",
-                      venue: tournament.venue,
-                      startDate: tournament.startDate.slice(0, 16),
-                      endDate: tournament.endDate.slice(0, 16),
-                      registrationDeadline:
-                        tournament.registrationDeadline.slice(0, 16),
-                      maxPlayers: tournament.maxPlayers?.toString() || "",
-                    });
-                    setShowEditModal(true);
-                  }}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1 rounded-lg text-sm"
-                >
-                  Edit Tournament
-                </button>
-              </>
-            )}
-            <button
-              onClick={fetchWinners}
-              className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-1 rounded-lg text-sm"
-            >
-              Show Winners
-            </button>
-          </div>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-          <div>
-            <p className="text-sm text-gray-500">Venue</p>
-            <p className="font-medium">{tournament.venue}</p>
-          </div>
-          <div>
-            <p className="text-sm text-gray-500">Start Date</p>
-            <p className="font-medium">
-              {new Date(tournament.startDate).toLocaleDateString()}
-            </p>
-          </div>
-          <div>
-            <p className="text-sm text-gray-500">End Date</p>
-            <p className="font-medium">
-              {new Date(tournament.endDate).toLocaleDateString()}
-            </p>
-          </div>
-          <div>
-            <p className="text-sm text-gray-500">Registration Deadline</p>
-            <p className="font-medium">
-              {new Date(tournament.registrationDeadline).toLocaleDateString()}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Edit Tournament Modal */}
-      {showEditModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">
-              Edit Tournament
-            </h2>
-
+    <div
+      className="min-h-screen bg-slate-950/80 py-8"
+      style={{
+        backgroundImage: "url('/bg1.png')",
+        backgroundAttachment: "fixed",
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+      }}
+    >
+      <div className="mx-auto max-w-7xl space-y-8 px-4 sm:px-6 lg:px-8 text-white">
+        {/* Tournament Header */}
+        <div className="overflow-hidden rounded-[32px] border border-slate-800 bg-slate-900/70 p-8 shadow-2xl shadow-black/30 backdrop-blur-md">
+          <div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
             <div className="space-y-4">
-              {/* Basic Info */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Tournament Name
-                  </label>
-                  <input
-                    type="text"
-                    value={editFormData.name}
-                    onChange={(e) =>
-                      setEditFormData({ ...editFormData, name: e.target.value })
-                    }
-                    className="input-field"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Venue
-                  </label>
-                  <input
-                    type="text"
-                    value={editFormData.venue}
-                    onChange={(e) =>
-                      setEditFormData({
-                        ...editFormData,
-                        venue: e.target.value,
-                      })
-                    }
-                    className="input-field"
-                  />
-                </div>
+              <div className="inline-flex items-center gap-2 rounded-full border border-cyan-400/20 bg-cyan-500/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-cyan-200">
+                Tournament details
               </div>
-
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Description
-                </label>
-                <textarea
-                  value={editFormData.description}
-                  onChange={(e) =>
-                    setEditFormData({
-                      ...editFormData,
-                      description: e.target.value,
-                    })
-                  }
-                  rows={2}
-                  className="input-field"
-                />
+                <h1 className="text-4xl font-extrabold tracking-tight text-white sm:text-5xl">
+                  {tournament.name}
+                </h1>
+                <p className="mt-3 max-w-3xl text-base leading-7 text-slate-400">
+                  {tournament.description || "No description available"}
+                </p>
               </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Start Date
-                  </label>
-                  <input
-                    type="datetime-local"
-                    value={editFormData.startDate}
-                    onChange={(e) =>
-                      setEditFormData({
-                        ...editFormData,
-                        startDate: e.target.value,
-                      })
-                    }
-                    className="input-field"
-                  />
+              <div className="flex flex-wrap gap-3 text-sm text-slate-300">
+                <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-slate-950/60 px-4 py-2">
+                  <span>📍</span>
+                  <span>{tournament.venue}</span>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    End Date
-                  </label>
-                  <input
-                    type="datetime-local"
-                    value={editFormData.endDate}
-                    onChange={(e) =>
-                      setEditFormData({
-                        ...editFormData,
-                        endDate: e.target.value,
-                      })
-                    }
-                    className="input-field"
-                  />
+                <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-slate-950/60 px-4 py-2">
+                  <span>📅</span>
+                  <span>Start {new Date(tournament.startDate).toLocaleDateString()}</span>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Registration Deadline
-                  </label>
-                  <input
-                    type="datetime-local"
-                    value={editFormData.registrationDeadline}
-                    onChange={(e) =>
-                      setEditFormData({
-                        ...editFormData,
-                        registrationDeadline: e.target.value,
-                      })
-                    }
-                    className="input-field"
-                  />
+                <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-slate-950/60 px-4 py-2">
+                  <span>📅</span>
+                  <span>End {new Date(tournament.endDate).toLocaleDateString()}</span>
+                </div>
+                <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-slate-950/60 px-4 py-2">
+                  <span>⏳</span>
+                  <span>Deadline {new Date(tournament.registrationDeadline).toLocaleDateString()}</span>
                 </div>
               </div>
+            </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Max Players (Optional)
-                </label>
-                <input
-                  type="number"
-                  value={editFormData.maxPlayers}
-                  onChange={(e) =>
-                    setEditFormData({
-                      ...editFormData,
-                      maxPlayers: e.target.value,
-                    })
-                  }
-                  className="input-field"
-                  min="2"
-                />
-              </div>
-
-              {/* Categories Section */}
-              <div className="border-t pt-4 mt-4">
-                <div className="flex justify-between items-center mb-3">
-                  <h3 className="text-lg font-semibold text-gray-900">
-                    Categories
-                  </h3>
+            <div className="flex flex-wrap items-center justify-start gap-3 xl:justify-end">
+              <span
+                className={`rounded-full px-3 py-1.5 text-sm font-medium ${getStatusColor(tournament.status)}`}
+              >
+                {tournament.status}
+              </span>
+              {isAdmin && (
+                <>
                   <button
-                    type="button"
-                    onClick={addEditCategory}
-                    className="bg-primary-600 text-white px-3 py-1 rounded text-sm hover:bg-primary-700"
+                    onClick={handleDelete}
+                    className="rounded-full border border-red-500/30 bg-red-500/10 px-4 py-2 text-sm font-semibold text-red-200 transition hover:bg-red-500/20"
                   >
-                    + Add Category
+                    Delete
                   </button>
-                </div>
-
-                <div className="space-y-3 max-h-96 overflow-y-auto">
-                  {editCategories.map((category, index) => (
-                    <div
-                      key={category.id}
-                      className="border rounded-lg p-3 bg-gray-50"
-                    >
-                      <div className="flex justify-between items-start mb-2">
-                        <h4 className="font-medium">Category {index + 1}</h4>
-                        {editCategories.length > 1 && (
-                          <button
-                            type="button"
-                            onClick={() => removeEditCategory(index)}
-                            className="text-red-600 text-sm hover:text-red-700"
-                          >
-                            Remove
-                          </button>
-                        )}
-                      </div>
-                      <div className="grid grid-cols-2 gap-2">
-                        <input
-                          type="text"
-                          placeholder="Category Name"
-                          value={category.name}
-                          onChange={(e) =>
-                            updateEditCategory(index, "name", e.target.value)
-                          }
-                          className="input-field text-sm"
-                        />
-                        <select
-                          value={category.type}
-                          onChange={(e) =>
-                            updateEditCategory(index, "type", e.target.value)
-                          }
-                          className="input-field text-sm"
-                        >
-                          <option value="SINGLES">Singles</option>
-                          <option value="DOUBLES">Doubles</option>
-                          <option value="TEAM">Team</option>
-                        </select>
-                        <div className="flex gap-2 col-span-2">
-                          <input
-                            type="number"
-                            placeholder="Min Age"
-                            value={category.minAge || ""}
-                            onChange={(e) =>
-                              updateEditCategory(
-                                index,
-                                "minAge",
-                                e.target.value
-                                  ? parseInt(e.target.value)
-                                  : undefined,
-                              )
-                            }
-                            className="input-field text-sm w-1/2"
-                          />
-                          <input
-                            type="number"
-                            placeholder="Max Age"
-                            value={category.maxAge || ""}
-                            onChange={(e) =>
-                              updateEditCategory(
-                                index,
-                                "maxAge",
-                                e.target.value
-                                  ? parseInt(e.target.value)
-                                  : undefined,
-                              )
-                            }
-                            className="input-field text-sm w-1/2"
-                          />
-                        </div>
-                        <input
-                          type="number"
-                          placeholder="Max Participants"
-                          value={category.maxParticipants}
-                          onChange={(e) =>
-                            updateEditCategory(
-                              index,
-                              "maxParticipants",
-                              parseInt(e.target.value),
-                            )
-                          }
-                          className="input-field text-sm col-span-2"
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                {editCategories.length === 0 && (
-                  <p className="text-gray-500 text-center py-4">
-                    No categories. Click "Add Category" to create one.
-                  </p>
-                )}
-              </div>
-
-              <div className="flex gap-3 pt-4">
-                <button
-                  onClick={handleUpdateTournament}
-                  className="btn-primary flex-1"
-                >
-                  Save Changes
-                </button>
-                <button
-                  onClick={() => setShowEditModal(false)}
-                  className="btn-secondary flex-1"
-                >
-                  Cancel
-                </button>
-              </div>
+                  <button
+                    onClick={() => {
+                      setEditFormData({
+                        name: tournament.name,
+                        description: tournament.description || "",
+                        venue: tournament.venue,
+                        startDate: tournament.startDate.slice(0, 16),
+                        endDate: tournament.endDate.slice(0, 16),
+                        registrationDeadline:
+                          tournament.registrationDeadline.slice(0, 16),
+                        maxPlayers: tournament.maxPlayers?.toString() || "",
+                      });
+                      setShowEditModal(true);
+                    }}
+                    className="rounded-full border border-cyan-400/30 bg-cyan-500/10 px-4 py-2 text-sm font-semibold text-cyan-100 transition hover:bg-cyan-500/20"
+                  >
+                    Edit
+                  </button>
+                </>
+              )}
+              <button
+                onClick={fetchWinners}
+                className="rounded-full border border-sky-400/30 bg-sky-500/10 px-4 py-2 text-sm font-semibold text-sky-100 transition hover:bg-sky-500/20"
+              >
+                Show Winners
+              </button>
             </div>
           </div>
         </div>
-      )}
 
-      {/* Categories Section */}
-      <div className="card mb-6">
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">Categories</h2>
-        {tournament.categories.length === 0 ? (
-          <p className="text-gray-500">
-            No categories available for this tournament.
-          </p>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {tournament.categories.map((category) => (
-              <div key={category.id} className="border rounded-lg p-4">
-                <div className="flex justify-between items-start mb-2">
+        {/* Edit Tournament Modal */}
+        {showEditModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+              <h2 className="text-2xl font-bold text-gray-900 mb-4">
+                Edit Tournament
+              </h2>
+
+              <div className="space-y-4">
+                {/* Basic Info */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <h3 className="font-semibold text-gray-900">
-                      {category.name}
-                    </h3>
-                    <span className="text-xs text-gray-500">
-                      {category.type}
-                    </span>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Tournament Name
+                    </label>
+                    <input
+                      type="text"
+                      value={editFormData.name}
+                      onChange={(e) =>
+                        setEditFormData({ ...editFormData, name: e.target.value })
+                      }
+                      className="input-field"
+                    />
                   </div>
-                  {isAdmin && tournamentType === "KNOCKOUT" && (
-                    <button
-                      onClick={() => handleGenerateBracket(category.id)}
-                      disabled={generating === category.id}
-                      className="bg-primary-600 hover:bg-primary-700 text-white px-3 py-1 rounded text-sm disabled:opacity-50"
-                    >
-                      {generating === category.id
-                        ? "Generating..."
-                        : "🎲 Generate Bracket"}
-                    </button>
-                  )}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Venue
+                    </label>
+                    <input
+                      type="text"
+                      value={editFormData.venue}
+                      onChange={(e) =>
+                        setEditFormData({
+                          ...editFormData,
+                          venue: e.target.value,
+                        })
+                      }
+                      className="input-field"
+                    />
+                  </div>
                 </div>
-                <div className="text-sm text-gray-600">
-                  <p>
-                    Participants: {category.currentParticipants} /{" "}
-                    {category.maxParticipants}
-                  </p>
-                  <p>
-                    Spots left:{" "}
-                    {category.maxParticipants - category.currentParticipants}
-                  </p>
-                  {(category.minAge || category.maxAge) && (
-                    <p className="text-xs text-gray-500 mt-1">
-                      Age: {category.minAge ? `${category.minAge}+` : ""}
-                      {category.minAge && category.maxAge ? " - " : ""}
-                      {category.maxAge ? `Under ${category.maxAge}` : ""}
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Description
+                  </label>
+                  <textarea
+                    value={editFormData.description}
+                    onChange={(e) =>
+                      setEditFormData({
+                        ...editFormData,
+                        description: e.target.value,
+                      })
+                    }
+                    rows={2}
+                    className="input-field"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Start Date
+                    </label>
+                    <input
+                      type="datetime-local"
+                      value={editFormData.startDate}
+                      onChange={(e) =>
+                        setEditFormData({
+                          ...editFormData,
+                          startDate: e.target.value,
+                        })
+                      }
+                      className="input-field"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      End Date
+                    </label>
+                    <input
+                      type="datetime-local"
+                      value={editFormData.endDate}
+                      onChange={(e) =>
+                        setEditFormData({
+                          ...editFormData,
+                          endDate: e.target.value,
+                        })
+                      }
+                      className="input-field"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Registration Deadline
+                    </label>
+                    <input
+                      type="datetime-local"
+                      value={editFormData.registrationDeadline}
+                      onChange={(e) =>
+                        setEditFormData({
+                          ...editFormData,
+                          registrationDeadline: e.target.value,
+                        })
+                      }
+                      className="input-field"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Max Players (Optional)
+                  </label>
+                  <input
+                    type="number"
+                    value={editFormData.maxPlayers}
+                    onChange={(e) =>
+                      setEditFormData({
+                        ...editFormData,
+                        maxPlayers: e.target.value,
+                      })
+                    }
+                    className="input-field"
+                    min="2"
+                  />
+                </div>
+
+                {/* Categories Section */}
+                <div className="border-t pt-4 mt-4">
+                  <div className="flex justify-between items-center mb-3">
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      Categories
+                    </h3>
+                    <button
+                      type="button"
+                      onClick={addEditCategory}
+                      className="bg-primary-600 text-white px-3 py-1 rounded text-sm hover:bg-primary-700"
+                    >
+                      + Add Category
+                    </button>
+                  </div>
+
+                  <div className="space-y-3 max-h-96 overflow-y-auto">
+                    {editCategories.map((category, index) => (
+                      <div
+                        key={category.id}
+                        className="border rounded-lg p-3 bg-gray-50"
+                      >
+                        <div className="flex justify-between items-start mb-2">
+                          <h4 className="font-medium">Category {index + 1}</h4>
+                          {editCategories.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => removeEditCategory(index)}
+                              className="text-red-600 text-sm hover:text-red-700"
+                            >
+                              Remove
+                            </button>
+                          )}
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <input
+                            type="text"
+                            placeholder="Category Name"
+                            value={category.name}
+                            onChange={(e) =>
+                              updateEditCategory(index, "name", e.target.value)
+                            }
+                            className="input-field text-sm"
+                          />
+                          <select
+                            value={category.type}
+                            onChange={(e) =>
+                              updateEditCategory(index, "type", e.target.value)
+                            }
+                            className="input-field text-sm"
+                          >
+                            <option value="SINGLES">Singles</option>
+                            <option value="DOUBLES">Doubles</option>
+                            <option value="TEAM">Team</option>
+                          </select>
+                          <div className="flex gap-2 col-span-2">
+                            <input
+                              type="number"
+                              placeholder="Min Age"
+                              value={category.minAge || ""}
+                              onChange={(e) =>
+                                updateEditCategory(
+                                  index,
+                                  "minAge",
+                                  e.target.value
+                                    ? parseInt(e.target.value)
+                                    : undefined,
+                                )
+                              }
+                              className="input-field text-sm w-1/2"
+                            />
+                            <input
+                              type="number"
+                              placeholder="Max Age"
+                              value={category.maxAge || ""}
+                              onChange={(e) =>
+                                updateEditCategory(
+                                  index,
+                                  "maxAge",
+                                  e.target.value
+                                    ? parseInt(e.target.value)
+                                    : undefined,
+                                )
+                              }
+                              className="input-field text-sm w-1/2"
+                            />
+                          </div>
+                          <input
+                            type="number"
+                            placeholder="Max Participants"
+                            value={category.maxParticipants}
+                            onChange={(e) =>
+                              updateEditCategory(
+                                index,
+                                "maxParticipants",
+                                parseInt(e.target.value),
+                              )
+                            }
+                            className="input-field text-sm col-span-2"
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  {editCategories.length === 0 && (
+                    <p className="text-gray-500 text-center py-4">
+                      No categories. Click "Add Category" to create one.
                     </p>
                   )}
                 </div>
+
+                <div className="flex gap-3 pt-4">
+                  <button
+                    onClick={handleUpdateTournament}
+                    className="btn-primary flex-1"
+                  >
+                    Save Changes
+                  </button>
+                  <button
+                    onClick={() => setShowEditModal(false)}
+                    className="btn-secondary flex-1"
+                  >
+                    Cancel
+                  </button>
+                </div>
               </div>
-            ))}
+            </div>
           </div>
         )}
-      </div>
 
-      {/* Old Category Selector Removed */}
-      {/* Category Selector */}
-      {tournament.categories.length > 0 && (
-        <div className="card mb-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">
-            {tournamentType === "GROUP_KNOCKOUT"
-              ? "Select Category for Group Stage & Knockout"
-              : "Select Category to View Bracket"}
-          </h2>
-          <select
-            value={activeCategoryId}
-            onChange={(e) => setActiveCategoryId(e.target.value)}
-            className="input-field max-w-md"
-          >
-            <option value="">Select a category</option>
-            {tournament.categories.map((category) => (
-              <option key={category.id} value={category.id}>
-                {category.name} ({category.type}) -{" "}
-                {category.currentParticipants}/{category.maxParticipants}{" "}
-                players
-              </option>
-            ))}
-          </select>
+        {/* Categories Section */}
+        <div className="rounded-[32px] border border-slate-800 bg-slate-900/70 p-6 shadow-2xl shadow-black/20 backdrop-blur-md">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <h2 className="text-xl font-semibold text-white">Categories</h2>
+            <span className="text-sm text-slate-400">{tournament.categories.length} total</span>
+          </div>
+          {tournament.categories.length === 0 ? (
+            <p className="text-slate-400">
+              No categories available for this tournament.
+            </p>
+          ) : (
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              {tournament.categories.map((category) => (
+                <div key={category.id} className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4 shadow-lg shadow-black/10 transition hover:border-cyan-400/30">
+                  <div className="mb-2 flex items-start justify-between gap-3">
+                    <div>
+                      <h3 className="font-semibold text-white">
+                        {category.name}
+                      </h3>
+                      <span className="text-xs text-slate-400">
+                        {category.type}
+                      </span>
+                    </div>
+                    {isAdmin && tournamentType === "KNOCKOUT" && (
+                      <button
+                        onClick={() => handleGenerateBracket(category.id)}
+                        disabled={generating === category.id}
+                        className="rounded-full border border-cyan-400/30 bg-cyan-500/10 px-3 py-1 text-sm font-semibold text-cyan-100 disabled:opacity-50"
+                      >
+                        {generating === category.id
+                          ? "Generating..."
+                          : "🎲 Generate Bracket"}
+                      </button>
+                    )}
+                  </div>
+                  <div className="text-sm text-slate-300">
+                    <p>
+                      Participants: {category.currentParticipants} /{" "}
+                      {category.maxParticipants}
+                    </p>
+                    <p>
+                      Spots left:{" "}
+                      {category.maxParticipants - category.currentParticipants}
+                    </p>
+                    {(category.minAge || category.maxAge) && (
+                      <p className="mt-1 text-xs text-slate-400">
+                        Age: {category.minAge ? `${category.minAge}+` : ""}
+                        {category.minAge && category.maxAge ? " - " : ""}
+                        {category.maxAge ? `Under ${category.maxAge}` : ""}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
-      )}
 
-      {/* Group Stage UI */}
-      {tournamentType === "GROUP_KNOCKOUT" && activeCategoryId && (
-        <div className="card mb-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">
-            Group Stage Management -{" "}
-            {
-              tournament.categories.find((c) => c.id === activeCategoryId)
-                ?.name
-            }
-          </h2>
-          <div className="flex flex-wrap gap-3 mb-6">
-            {(isAdmin || isReferee) && (
+        {/* Old Category Selector Removed */}
+        {/* Category Selector */}
+        {tournament.categories.length > 0 && (
+          <div className="rounded-[32px] border border-slate-800 bg-slate-900/70 p-6 shadow-2xl shadow-black/20 backdrop-blur-md">
+            <h2 className="mb-4 text-xl font-semibold text-white">
+              {tournamentType === "GROUP_KNOCKOUT"
+                ? "Select Category for Group Stage & Knockout"
+                : "Select Category to View Bracket"}
+            </h2>
+            <select
+              value={activeCategoryId}
+              onChange={(e) => setActiveCategoryId(e.target.value)}
+              className="max-w-md w-full rounded-2xl border border-slate-800 bg-slate-950/80 px-4 py-3 text-white outline-none transition focus:border-cyan-400/50 focus:ring-2 focus:ring-cyan-400/20"
+            >
+              <option value="" className="bg-slate-950 text-white">Select a category</option>
+              {tournament.categories.map((category) => (
+                <option key={category.id} value={category.id} className="bg-slate-950 text-white">
+                  {category.name} ({category.type}) -{" "}
+                  {category.currentParticipants}/{category.maxParticipants}{" "}
+                  players
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        {/* Group Stage UI */}
+        {tournamentType === "GROUP_KNOCKOUT" && activeCategoryId && (
+          <div className="card mb-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">
+              Group Stage Management -{" "}
+              {
+                tournament.categories.find((c) => c.id === activeCategoryId)
+                  ?.name
+              }
+            </h2>
+            <div className="flex flex-wrap gap-3 mb-6">
+              {(isAdmin || isReferee) && (
                 <>
                   <button
                     onClick={() => setShowGroupsModal(true)}
@@ -1054,543 +1091,543 @@ const TournamentDetails: React.FC = () => {
                   </button>
                 </>
               )}
+            </div>
+            <GroupStandings
+              tournamentId={id}
+              categoryId={activeCategoryId}
+              isAdminOrReferee={isAdmin || isReferee}
+              onScoreUpdate={fetchTournamentDetails}
+              key={refreshGroups ? "refresh" : "initial"}
+            />
           </div>
-          <GroupStandings
-            tournamentId={id}
-            categoryId={activeCategoryId}
-            isAdminOrReferee={isAdmin || isReferee}
-            onScoreUpdate={fetchTournamentDetails}
-            key={refreshGroups ? "refresh" : "initial"}
-          />
-        </div>
-      )}
+        )}
 
-      {/* Duplicate Knockout Bracket Removed */}
+        {/* Duplicate Knockout Bracket Removed */}
 
-      {/* Knockout Bracket */}
-      {activeCategoryId && (
-        <div
-          className="card mb-6"
-          style={{ overflowX: "auto", overflowY: "visible", minHeight: 200 }}
-        >
-          {isAdmin && tournamentType === "KNOCKOUT" && (
-            <div className="flex justify-end mb-4">
-              <button
-                onClick={() => setShowResetConfirm(true)}
-                className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition"
-              >
-                Reset Bracket
-              </button>
-            </div>
-          )}
-          <KnockoutBracket
-            tournamentId={id}
-            categoryId={activeCategoryId}
-            onScoreRecorded={fetchTournamentDetails}
-          />
-        </div>
-      )}
-
-      {/* Winners Section */}
-      {showWinners && winners && (
-        <div id="winners-section" className="card mb-6 bg-gradient-to-r from-yellow-50 to-amber-50">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4 text-center">
-            🏆 Tournament Champions 🏆
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
-            <div className="bg-yellow-100 rounded-lg p-4">
-              <div className="text-5xl mb-2">🥇</div>
-              <h3 className="font-bold text-xl text-gray-900">Champion</h3>
-              <p className="text-lg font-semibold text-yellow-700">
-                {winners.first?.firstName} {winners.first?.lastName}
-              </p>
-            </div>
-            <div className="bg-gray-100 rounded-lg p-4">
-              <div className="text-5xl mb-2">🥈</div>
-              <h3 className="font-bold text-xl text-gray-900">Runner-up</h3>
-              <p className="text-lg font-semibold text-gray-700">
-                {winners.second?.firstName} {winners.second?.lastName}
-              </p>
-            </div>
-            <div className="bg-amber-50 rounded-lg p-4">
-              <div className="text-5xl mb-2">🥉</div>
-              <h3 className="font-bold text-xl text-gray-900">
-                Second Runner-up
-              </h3>
-              <p className="text-lg font-semibold text-amber-700">
-                {winners.third?.firstName} {winners.third?.lastName || "TBD"}
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Registration Form with Age Filtering */}
-      {canRegister && tournament.categories.length > 0 && (
-        <div className="card mb-6">
-          <h3 className="font-semibold text-gray-900 mb-3">
-            Register for this Tournament
-          </h3>
-          {playerAge !== null && (
-            <div className="bg-blue-50 p-3 rounded mb-4">
-              Your age: <strong>{playerAge} years</strong>
-            </div>
-          )}
-
-          <p className="text-sm text-gray-600 mb-3">
-            Select categories to register:
-          </p>
-
-          <div className="space-y-2 mb-4">
-            {eligibleCategories.map((category) => {
-              const isSelected = selectedCategories.includes(category.id);
-              const isFull =
-                category.currentParticipants >= category.maxParticipants;
-              const isDoubles = isDoublesCategory(category.type);
-
-              return (
-                <div key={category.id}>
-                  <label
-                    className={`flex items-center justify-between p-3 border rounded-lg cursor-pointer ${isSelected ? "border-primary-500 bg-primary-50" : "border-green-200 bg-green-50"} ${isFull ? "opacity-50" : ""}`}
-                  >
-                    <div className="flex items-center gap-3 flex-1">
-                      <input
-                        type="checkbox"
-                        checked={isSelected}
-                        onChange={() => {
-                          if (!isFull) {
-                            if (isDoubles) {
-                              setSelectedDoublesCategory(category.id);
-                              setShowPartnerForm(true);
-                            }
-                            toggleCategory(category.id);
-                          }
-                        }}
-                        disabled={isFull}
-                        className="w-4 h-4 text-primary-600 rounded"
-                      />
-                      <div>
-                        <p className="font-medium">{category.name}</p>
-                        <p className="text-xs text-gray-500">
-                          {category.type} • {category.currentParticipants}/
-                          {category.maxParticipants} participants
-                          {isDoubles && (
-                            <span className="ml-2 text-blue-600">
-                              (Team registration - need partner)
-                            </span>
-                          )}
-                        </p>
-                      </div>
-                    </div>
-                    {isFull && (
-                      <span className="text-red-500 text-sm">Full</span>
-                    )}
-                  </label>
-
-                  {/* Partner Form for Doubles */}
-                  {isDoubles &&
-                    showPartnerForm &&
-                    selectedDoublesCategory === category.id && (
-                      <div className="mt-3 p-4 border border-blue-200 rounded-lg bg-blue-50">
-                        <h4 className="font-medium text-gray-900 mb-2">
-                          Partner Details
-                        </h4>
-                        <div className="grid grid-cols-2 gap-3">
-                          <input
-                            type="text"
-                            placeholder="Partner First Name"
-                            value={partnerDetails.firstName}
-                            onChange={(e) =>
-                              setPartnerDetails({
-                                ...partnerDetails,
-                                firstName: e.target.value,
-                              })
-                            }
-                            className="input-field text-sm"
-                          />
-                          <input
-                            type="text"
-                            placeholder="Partner Last Name"
-                            value={partnerDetails.lastName}
-                            onChange={(e) =>
-                              setPartnerDetails({
-                                ...partnerDetails,
-                                lastName: e.target.value,
-                              })
-                            }
-                            className="input-field text-sm"
-                          />
-                          <input
-                            type="email"
-                            placeholder="Partner Email"
-                            value={partnerDetails.email}
-                            onChange={(e) =>
-                              setPartnerDetails({
-                                ...partnerDetails,
-                                email: e.target.value,
-                              })
-                            }
-                            className="input-field text-sm col-span-2"
-                          />
-                          <input
-                            type="tel"
-                            placeholder="Partner Phone (Optional)"
-                            value={partnerDetails.phone}
-                            onChange={(e) =>
-                              setPartnerDetails({
-                                ...partnerDetails,
-                                phone: e.target.value,
-                              })
-                            }
-                            className="input-field text-sm col-span-2"
-                          />
-                        </div>
-                        <p className="text-xs text-gray-500 mt-2">
-                          The partner will be notified and added to your team
-                        </p>
-                      </div>
-                    )}
-                </div>
-              );
-            })}
-          </div>
-          {/* Show ineligible categories (disabled) */}
-          {ineligibleCategories.length > 0 && (
-            <div className="mt-4">
-              <p className="text-sm text-gray-500 mb-2">
-                Not eligible for these categories (age restriction):
-              </p>
-              {ineligibleCategories.map((category) => (
-                <div
-                  key={category.id}
-                  className="flex items-center p-3 border border-gray-200 rounded-lg bg-gray-50 opacity-60 mb-2"
-                >
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="checkbox"
-                      disabled
-                      className="w-4 h-4 text-gray-400 rounded"
-                    />
-                    <div>
-                      <p className="font-medium text-gray-500">
-                        {category.name}
-                      </p>
-                      <p className="text-xs text-gray-400">{category.type}</p>
-                    </div>
-                  </div>
-                  <span className="ml-auto text-xs text-red-400">
-                    {playerAge &&
-                      category.minAge &&
-                      playerAge < category.minAge &&
-                      `Need ${category.minAge}+`}
-                    {playerAge &&
-                      category.maxAge &&
-                      playerAge > category.maxAge &&
-                      `Under ${category.maxAge}`}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {selectedCategories.length > 0 && (
-            <div className="bg-blue-50 p-3 rounded mb-4">
-              Selected {selectedCategories.length} category(s)
-            </div>
-          )}
-
-          <button
-            onClick={handleRegister}
-            disabled={registering || selectedCategories.length === 0}
-            className="btn-primary w-full"
-          >
-            {registering
-              ? "Registering..."
-              : `Register for ${selectedCategories.length} Category(s)`}
-          </button>
-          <button
-            onClick={() => setShowGuestModal(true)}
-            className="btn-secondary"
-          >
-            Register as Guest
-          </button>
-        </div>
-      )}
-      {hasRegistration && (
-        <div className="card mb-6">
-          <p className="text-sm text-blue-800">Your registration status:</p>
-          {userRegistrations.map((reg) => (
-            <span
-              key={reg.id}
-              className={`ml-2 px-2 py-0.5 text-xs font-medium rounded-full ${getRegistrationStatusColor(reg.status)}`}
-            >
-              {reg.status}
-            </span>
-          ))}
-        </div>
-      )}
-
-      {/* Registrations Section */}
-      {(isAdmin || isReferee) && tournament.registrations?.length > 0 && (
-        <div className="bg-white rounded-lg shadow p-6 mt-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">
-            Registrations ({tournament.registrations.length})
-          </h2>
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Player
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Category
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Email
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Registered On
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {tournament.registrations.map((registration) => (
-                  <tr key={registration.id} className="hover:bg-gray-50">
-                    <Link
-                      to={`/profile/${registration.player.id}`}
-                      className="text-blue-600 hover:text-blue-800 hover:underline font-medium"
-                    >
-                      {registration.player.firstName}{" "}
-                      {registration.player.lastName}
-                    </Link>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
-                        {registration.category?.name || "N/A"}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {registration.player.email}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {new Date(registration.registeredAt).toLocaleDateString()}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span
-                        className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                          registration.status === "APPROVED"
-                            ? "bg-green-100 text-green-800"
-                            : registration.status === "PENDING"
-                              ? "bg-yellow-100 text-yellow-800"
-                              : "bg-red-100 text-red-800"
-                        }`}
-                      >
-                        {registration.status}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-      {/* Modals */}
-      {showGroupsModal && (
-        <CreateGroupsModal
-          tournamentId={id}
-          categoryId={activeCategoryId}
-          onClose={() => setShowGroupsModal(false)}
-          onSuccess={fetchTournamentDetails}
-        />
-      )}
-      {showKnockoutModal && (
-        <CreateKnockoutModal
-          tournamentId={id}
-          categoryId={activeCategoryId}
-          onClose={() => setShowKnockoutModal(false)}
-          onSuccess={fetchTournamentDetails}
-        />
-      )}
-      {showScoreModal && (
-        <RecordGroupScoreModal
-          tournamentId={id}
-          categoryId={activeCategoryId}
-          onClose={() => setShowScoreModal(false)}
-          onSuccess={fetchTournamentDetails}
-        />
-      )}
-      {/* Guest Registration Modal */}
-      {showGuestModal && (
-        <GuestRegistrationModal
-          tournamentId={id}
-          tournamentName={tournament.name}
-          selectedCategories={selectedCategories}
-          categories={tournament.categories}
-          onClose={() => setShowGuestModal(false)}
-          onSuccess={fetchTournamentDetails}
-        />
-      )}
-      {showResetConfirm && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0,0,0,0.5)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 50,
-            padding: 16,
-          }}
-        >
+        {/* Knockout Bracket */}
+        {activeCategoryId && (
           <div
-            style={{
-              background: "#fff",
-              borderRadius: 16,
-              maxWidth: 420,
-              width: "100%",
-              overflow: "hidden",
-              boxShadow: "0 20px 60px rgba(0,0,0,0.2)",
-              fontFamily: "'Segoe UI',system-ui,sans-serif",
-            }}
+            className="card mb-6"
+            style={{ overflowX: "auto", overflowY: "visible", minHeight: 200 }}
           >
-            {/* Header */}
-            <div
-              style={{
-                background: "#fef2f2",
-                padding: "20px 24px",
-                borderBottom: "1px solid #fecaca",
-              }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <div
-                  style={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: "50%",
-                    background: "#fee2e2",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontSize: 20,
-                  }}
+            {isAdmin && tournamentType === "KNOCKOUT" && (
+              <div className="flex justify-end mb-4">
+                <button
+                  onClick={() => setShowResetConfirm(true)}
+                  className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition"
                 >
-                  ⚠️
-                </div>
-                <div>
-                  <div
-                    style={{ fontWeight: 800, color: "#991b1b", fontSize: 16 }}
-                  >
-                    Reset Knockout Stage
-                  </div>
-                  <div style={{ fontSize: 12, color: "#b91c1c" }}>
-                    This action cannot be undone
-                  </div>
-                </div>
+                  Reset Bracket
+                </button>
+              </div>
+            )}
+            <KnockoutBracket
+              tournamentId={id}
+              categoryId={activeCategoryId}
+              onScoreRecorded={fetchTournamentDetails}
+            />
+          </div>
+        )}
+
+        {/* Winners Section */}
+        {showWinners && winners && (
+          <div id="winners-section" className="card mb-6 bg-gradient-to-r from-yellow-50 to-amber-50">
+            <h2 className="text-2xl font-bold text-gray-900 mb-4 text-center">
+              🏆 Tournament Champions 🏆
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
+              <div className="bg-yellow-100 rounded-lg p-4">
+                <div className="text-5xl mb-2">🥇</div>
+                <h3 className="font-bold text-xl text-gray-900">Champion</h3>
+                <p className="text-lg font-semibold text-yellow-700">
+                  {winners.first?.firstName} {winners.first?.lastName}
+                </p>
+              </div>
+              <div className="bg-gray-100 rounded-lg p-4">
+                <div className="text-5xl mb-2">🥈</div>
+                <h3 className="font-bold text-xl text-gray-900">Runner-up</h3>
+                <p className="text-lg font-semibold text-gray-700">
+                  {winners.second?.firstName} {winners.second?.lastName}
+                </p>
+              </div>
+              <div className="bg-amber-50 rounded-lg p-4">
+                <div className="text-5xl mb-2">🥉</div>
+                <h3 className="font-bold text-xl text-gray-900">
+                  Second Runner-up
+                </h3>
+                <p className="text-lg font-semibold text-amber-700">
+                  {winners.third?.firstName} {winners.third?.lastName || "TBD"}
+                </p>
               </div>
             </div>
+          </div>
+        )}
 
-            {/* Body */}
-            <div style={{ padding: "20px 24px" }}>
-              <p
-                style={{
-                  margin: "0 0 12px",
-                  color: "#374151",
-                  fontSize: 14,
-                  lineHeight: 1.6,
-                }}
+        {/* Registration Form with Age Filtering */}
+        {canRegister && tournament.categories.length > 0 && (
+          <div className="card mb-6">
+            <h3 className="font-semibold text-gray-900 mb-3">
+              Register for this Tournament
+            </h3>
+            {playerAge !== null && (
+              <div className="bg-blue-50 p-3 rounded mb-4">
+                Your age: <strong>{playerAge} years</strong>
+              </div>
+            )}
+
+            <p className="text-sm text-gray-600 mb-3">
+              Select categories to register:
+            </p>
+
+            <div className="space-y-2 mb-4">
+              {eligibleCategories.map((category) => {
+                const isSelected = selectedCategories.includes(category.id);
+                const isFull =
+                  category.currentParticipants >= category.maxParticipants;
+                const isDoubles = isDoublesCategory(category.type);
+
+                return (
+                  <div key={category.id}>
+                    <label
+                      className={`flex items-center justify-between p-3 border rounded-lg cursor-pointer ${isSelected ? "border-primary-500 bg-primary-50" : "border-green-200 bg-green-50"} ${isFull ? "opacity-50" : ""}`}
+                    >
+                      <div className="flex items-center gap-3 flex-1">
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => {
+                            if (!isFull) {
+                              if (isDoubles) {
+                                setSelectedDoublesCategory(category.id);
+                                setShowPartnerForm(true);
+                              }
+                              toggleCategory(category.id);
+                            }
+                          }}
+                          disabled={isFull}
+                          className="w-4 h-4 text-primary-600 rounded"
+                        />
+                        <div>
+                          <p className="font-medium">{category.name}</p>
+                          <p className="text-xs text-gray-500">
+                            {category.type} • {category.currentParticipants}/
+                            {category.maxParticipants} participants
+                            {isDoubles && (
+                              <span className="ml-2 text-blue-600">
+                                (Team registration - need partner)
+                              </span>
+                            )}
+                          </p>
+                        </div>
+                      </div>
+                      {isFull && (
+                        <span className="text-red-500 text-sm">Full</span>
+                      )}
+                    </label>
+
+                    {/* Partner Form for Doubles */}
+                    {isDoubles &&
+                      showPartnerForm &&
+                      selectedDoublesCategory === category.id && (
+                        <div className="mt-3 p-4 border border-blue-200 rounded-lg bg-blue-50">
+                          <h4 className="font-medium text-gray-900 mb-2">
+                            Partner Details
+                          </h4>
+                          <div className="grid grid-cols-2 gap-3">
+                            <input
+                              type="text"
+                              placeholder="Partner First Name"
+                              value={partnerDetails.firstName}
+                              onChange={(e) =>
+                                setPartnerDetails({
+                                  ...partnerDetails,
+                                  firstName: e.target.value,
+                                })
+                              }
+                              className="input-field text-sm"
+                            />
+                            <input
+                              type="text"
+                              placeholder="Partner Last Name"
+                              value={partnerDetails.lastName}
+                              onChange={(e) =>
+                                setPartnerDetails({
+                                  ...partnerDetails,
+                                  lastName: e.target.value,
+                                })
+                              }
+                              className="input-field text-sm"
+                            />
+                            <input
+                              type="email"
+                              placeholder="Partner Email"
+                              value={partnerDetails.email}
+                              onChange={(e) =>
+                                setPartnerDetails({
+                                  ...partnerDetails,
+                                  email: e.target.value,
+                                })
+                              }
+                              className="input-field text-sm col-span-2"
+                            />
+                            <input
+                              type="tel"
+                              placeholder="Partner Phone (Optional)"
+                              value={partnerDetails.phone}
+                              onChange={(e) =>
+                                setPartnerDetails({
+                                  ...partnerDetails,
+                                  phone: e.target.value,
+                                })
+                              }
+                              className="input-field text-sm col-span-2"
+                            />
+                          </div>
+                          <p className="text-xs text-gray-500 mt-2">
+                            The partner will be notified and added to your team
+                          </p>
+                        </div>
+                      )}
+                  </div>
+                );
+              })}
+            </div>
+            {/* Show ineligible categories (disabled) */}
+            {ineligibleCategories.length > 0 && (
+              <div className="mt-4">
+                <p className="text-sm text-gray-500 mb-2">
+                  Not eligible for these categories (age restriction):
+                </p>
+                {ineligibleCategories.map((category) => (
+                  <div
+                    key={category.id}
+                    className="flex items-center p-3 border border-gray-200 rounded-lg bg-gray-50 opacity-60 mb-2"
+                  >
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="checkbox"
+                        disabled
+                        className="w-4 h-4 text-gray-400 rounded"
+                      />
+                      <div>
+                        <p className="font-medium text-gray-500">
+                          {category.name}
+                        </p>
+                        <p className="text-xs text-gray-400">{category.type}</p>
+                      </div>
+                    </div>
+                    <span className="ml-auto text-xs text-red-400">
+                      {playerAge &&
+                        category.minAge &&
+                        playerAge < category.minAge &&
+                        `Need ${category.minAge}+`}
+                      {playerAge &&
+                        category.maxAge &&
+                        playerAge > category.maxAge &&
+                        `Under ${category.maxAge}`}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {selectedCategories.length > 0 && (
+              <div className="bg-blue-50 p-3 rounded mb-4">
+                Selected {selectedCategories.length} category(s)
+              </div>
+            )}
+
+            <button
+              onClick={handleRegister}
+              disabled={registering || selectedCategories.length === 0}
+              className="btn-primary w-full"
+            >
+              {registering
+                ? "Registering..."
+                : `Register for ${selectedCategories.length} Category(s)`}
+            </button>
+            <button
+              onClick={() => setShowGuestModal(true)}
+              className="btn-secondary"
+            >
+              Register as Guest
+            </button>
+          </div>
+        )}
+        {hasRegistration && (
+          <div className="card mb-6">
+            <p className="text-sm text-blue-800">Your registration status:</p>
+            {userRegistrations.map((reg) => (
+              <span
+                key={reg.id}
+                className={`ml-2 px-2 py-0.5 text-xs font-medium rounded-full ${getRegistrationStatusColor(reg.status)}`}
               >
-                This will permanently delete{" "}
-                <strong>all knockout matches and recorded scores</strong>. The
-                group stage results will remain intact.
-              </p>
+                {reg.status}
+              </span>
+            ))}
+          </div>
+        )}
+
+        {/* Registrations Section */}
+        {(isAdmin || isReferee) && tournament.registrations?.length > 0 && (
+          <div className="bg-white rounded-lg shadow p-6 mt-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">
+              Registrations ({tournament.registrations.length})
+            </h2>
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Player
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Category
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Email
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Registered On
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Status
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {tournament.registrations.map((registration) => (
+                    <tr key={registration.id} className="hover:bg-gray-50">
+                      <Link
+                        to={`/profile/${registration.player.id}`}
+                        className="text-blue-600 hover:text-blue-800 hover:underline font-medium"
+                      >
+                        {registration.player.firstName}{" "}
+                        {registration.player.lastName}
+                      </Link>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
+                          {registration.category?.name || "N/A"}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {registration.player.email}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {new Date(registration.registeredAt).toLocaleDateString()}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span
+                          className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${registration.status === "APPROVED"
+                              ? "bg-green-100 text-green-800"
+                              : registration.status === "PENDING"
+                                ? "bg-yellow-100 text-yellow-800"
+                                : "bg-red-100 text-red-800"
+                            }`}
+                        >
+                          {registration.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+        {/* Modals */}
+        {showGroupsModal && (
+          <CreateGroupsModal
+            tournamentId={id}
+            categoryId={activeCategoryId}
+            onClose={() => setShowGroupsModal(false)}
+            onSuccess={fetchTournamentDetails}
+          />
+        )}
+        {showKnockoutModal && (
+          <CreateKnockoutModal
+            tournamentId={id}
+            categoryId={activeCategoryId}
+            onClose={() => setShowKnockoutModal(false)}
+            onSuccess={fetchTournamentDetails}
+          />
+        )}
+        {showScoreModal && (
+          <RecordGroupScoreModal
+            tournamentId={id}
+            categoryId={activeCategoryId}
+            onClose={() => setShowScoreModal(false)}
+            onSuccess={fetchTournamentDetails}
+          />
+        )}
+        {/* Guest Registration Modal */}
+        {showGuestModal && (
+          <GuestRegistrationModal
+            tournamentId={id}
+            tournamentName={tournament.name}
+            selectedCategories={selectedCategories}
+            categories={tournament.categories}
+            onClose={() => setShowGuestModal(false)}
+            onSuccess={fetchTournamentDetails}
+          />
+        )}
+        {showResetConfirm && (
+          <div
+            style={{
+              position: "fixed",
+              inset: 0,
+              background: "rgba(0,0,0,0.5)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              zIndex: 50,
+              padding: 16,
+            }}
+          >
+            <div
+              style={{
+                background: "#fff",
+                borderRadius: 16,
+                maxWidth: 420,
+                width: "100%",
+                overflow: "hidden",
+                boxShadow: "0 20px 60px rgba(0,0,0,0.2)",
+                fontFamily: "'Segoe UI',system-ui,sans-serif",
+              }}
+            >
+              {/* Header */}
               <div
                 style={{
                   background: "#fef2f2",
-                  border: "1px solid #fecaca",
-                  borderRadius: 10,
-                  padding: "10px 14px",
-                  fontSize: 13,
-                  color: "#991b1b",
+                  padding: "20px 24px",
+                  borderBottom: "1px solid #fecaca",
                 }}
               >
-                You will need to regenerate the knockout bracket after
-                resetting.
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <div
+                    style={{
+                      width: 40,
+                      height: 40,
+                      borderRadius: "50%",
+                      background: "#fee2e2",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: 20,
+                    }}
+                  >
+                    ⚠️
+                  </div>
+                  <div>
+                    <div
+                      style={{ fontWeight: 800, color: "#991b1b", fontSize: 16 }}
+                    >
+                      Reset Knockout Stage
+                    </div>
+                    <div style={{ fontSize: 12, color: "#b91c1c" }}>
+                      This action cannot be undone
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Body */}
+              <div style={{ padding: "20px 24px" }}>
+                <p
+                  style={{
+                    margin: "0 0 12px",
+                    color: "#374151",
+                    fontSize: 14,
+                    lineHeight: 1.6,
+                  }}
+                >
+                  This will permanently delete{" "}
+                  <strong>all knockout matches and recorded scores</strong>. The
+                  group stage results will remain intact.
+                </p>
+                <div
+                  style={{
+                    background: "#fef2f2",
+                    border: "1px solid #fecaca",
+                    borderRadius: 10,
+                    padding: "10px 14px",
+                    fontSize: 13,
+                    color: "#991b1b",
+                  }}
+                >
+                  You will need to regenerate the knockout bracket after
+                  resetting.
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div
+                style={{
+                  padding: "14px 24px",
+                  borderTop: "1px solid #e2e8f0",
+                  display: "flex",
+                  gap: 10,
+                  background: "#f8fafc",
+                }}
+              >
+                <button
+                  onClick={() => setShowResetConfirm(false)}
+                  style={{
+                    flex: 1,
+                    padding: "10px 0",
+                    border: "1.5px solid #e2e8f0",
+                    borderRadius: 10,
+                    background: "#fff",
+                    color: "#475569",
+                    fontWeight: 600,
+                    fontSize: 14,
+                    cursor: "pointer",
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleResetKnockout}
+                  style={{
+                    flex: 1,
+                    padding: "10px 0",
+                    border: "none",
+                    borderRadius: 10,
+                    background: "#dc2626",
+                    color: "#fff",
+                    fontWeight: 700,
+                    fontSize: 14,
+                    cursor: "pointer",
+                  }}
+                >
+                  Yes, Reset
+                </button>
               </div>
             </div>
-
-            {/* Footer */}
-            <div
-              style={{
-                padding: "14px 24px",
-                borderTop: "1px solid #e2e8f0",
-                display: "flex",
-                gap: 10,
-                background: "#f8fafc",
-              }}
-            >
-              <button
-                onClick={() => setShowResetConfirm(false)}
-                style={{
-                  flex: 1,
-                  padding: "10px 0",
-                  border: "1.5px solid #e2e8f0",
-                  borderRadius: 10,
-                  background: "#fff",
-                  color: "#475569",
-                  fontWeight: 600,
-                  fontSize: 14,
-                  cursor: "pointer",
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleResetKnockout}
-                style={{
-                  flex: 1,
-                  padding: "10px 0",
-                  border: "none",
-                  borderRadius: 10,
-                  background: "#dc2626",
-                  color: "#fff",
-                  fontWeight: 700,
-                  fontSize: 14,
-                  cursor: "pointer",
-                }}
-              >
-                Yes, Reset
-              </button>
-            </div>
           </div>
-        </div>
-      )}
-      {isAdmin && tournament.status !== "COMPLETED" && (
-        <button
-          onClick={async () => {
-            try {
-              await api.patch(`/tournaments/${id}`, { status: "COMPLETED" });
-              toast.success("Tournament marked as completed!");
-              fetchTournamentDetails();
-              setTimeout(() => fetchWinners(), 500);
-            } catch {
-              toast.error("Failed to update status");
-            }
-          }}
-          className="bg-green-600 hover:bg-green-700 text-white px-4 py-1 rounded-lg text-sm"
-        >
-          Mark Complete
-        </button>
-      )}
-    </div>
-  );
+        )}
+        {isAdmin && tournament.status !== "COMPLETED" && (
+          <button
+            onClick={async () => {
+              try {
+                await api.patch(`/tournaments/${id}`, { status: "COMPLETED" });
+                toast.success("Tournament marked as completed!");
+                fetchTournamentDetails();
+                setTimeout(() => fetchWinners(), 500);
+              } catch {
+                toast.error("Failed to update status");
+              }
+            }}
+            className="bg-green-600 hover:bg-green-700 text-white px-4 py-1 rounded-lg text-sm"
+          >
+            Mark Complete
+          </button>
+        )}
+      </div>
+      </div>
+      );
 };
 
-export default TournamentDetails;
+      export default TournamentDetails;

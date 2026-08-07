@@ -1,5 +1,10 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import {
+  TrophyIcon,
+  UserGroupIcon,
+  SparklesIcon,
+} from "@heroicons/react/24/outline";
 import api from "../services/api";
 
 interface Player {
@@ -117,7 +122,7 @@ const Players: React.FC = () => {
         backgroundAttachment: "fixed",
       }}
     >
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="relative mx-auto max-w-7xl space-y-8 px-4 sm:px-6 lg:px-8">
         <div className="pointer-events-none absolute inset-0 overflow-hidden">
           <div className="absolute top-12 left-[-4rem] h-72 w-72 rounded-full bg-cyan-500/10 blur-3xl" />
           <div className="absolute bottom-0 right-[-6rem] h-96 w-96 rounded-full bg-slate-200/5 blur-3xl" />
@@ -125,24 +130,35 @@ const Players: React.FC = () => {
           <div className="absolute inset-x-0 top-96 h-px bg-cyan-500/10" />
         </div>
 
-        {/* Header */}
-        <div className="relative mb-10">
-          <div className="flex flex-wrap items-center gap-4 mb-3">
-            <div className="w-14 h-14 bg-gradient-to-br from-[#4AEEFF] to-[#22d3ee] rounded-full flex items-center justify-center shadow-xl shadow-cyan-500/20">
-              <img src="/LOGO.png" alt="Logo" className="h-11 w-auto" />
+        <div className="relative overflow-hidden rounded-[32px] border border-white/10 bg-slate-950/80 p-8 shadow-2xl shadow-black/20">
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(74,222,255,0.15),transparent_22%),radial-gradient(circle_at_bottom_right,rgba(255,255,255,0.06),transparent_20%)]" />
+          <div className="relative flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+            <div className="flex items-start gap-4">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-cyan-500/10 shadow-lg shadow-cyan-500/10">
+                <img src="/LOGO.png" alt="Logo" className="h-11 w-auto" />
+              </div>
+              <div className="min-w-0 space-y-3">
+                <p className="text-sm font-semibold uppercase tracking-[0.3em] text-cyan-200/70">
+                  Public directory
+                </p>
+                <h1 className="text-4xl font-extrabold tracking-tight text-white md:text-5xl">
+                  Players
+                </h1>
+                <p className="max-w-2xl text-base leading-7 text-slate-400 md:text-lg">
+                  Browse all registered players and view their profiles in a premium, sports-inspired dashboard.
+                </p>
+              </div>
             </div>
-            <div className="min-w-0">
-              <h1 className="text-5xl md:text-6xl font-extrabold text-white tracking-tight">Players</h1>
-              <p className="mt-2 max-w-2xl text-base md:text-lg text-cyan-100/85 leading-7">
-                Browse all registered players and view their profiles in a premium, sports-inspired dashboard.
-              </p>
+
+            <div className="inline-flex items-center gap-3 rounded-full border border-cyan-400/20 bg-cyan-500/10 px-4 py-2 text-sm font-semibold text-cyan-100">
+              <SparklesIcon className="h-5 w-5 text-cyan-300" />
+              Player overview
             </div>
           </div>
         </div>
 
-        {/* Filters */}
-        <div className="bg-slate-950/80 backdrop-blur-xl rounded-[32px] p-6 mb-8 border border-white/10 shadow-2xl shadow-black/20">
-          <div className="flex flex-col xl:flex-row gap-6 items-center justify-between">
+        <div className="space-y-8 rounded-[32px] border border-white/10 bg-slate-950/80 p-6 shadow-2xl shadow-black/20 backdrop-blur-xl">
+          <div className="flex flex-col gap-6 xl:flex-row xl:items-center xl:justify-between">
             <div className="flex-1 min-w-0">
               <div className="relative">
                 <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-xl">🔍</span>
@@ -151,20 +167,20 @@ const Players: React.FC = () => {
                   placeholder="Search by name or club..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="w-full pl-12 pr-4 py-3 rounded-2xl bg-slate-900/90 text-white placeholder-slate-400 outline-none border border-white/10 focus:ring-2 focus:ring-[#4AEEFF] focus:border-transparent transition-all duration-200"
+                  className="w-full rounded-2xl border border-white/10 bg-slate-900/90 py-3 pl-12 pr-4 text-white placeholder-slate-400 outline-none transition-all duration-200 focus:border-cyan-400/40 focus:ring-2 focus:ring-cyan-400/20"
                 />
               </div>
             </div>
 
-            <div className="flex flex-wrap gap-2 justify-center xl:justify-end">
+            <div className="flex flex-wrap justify-center gap-2 xl:justify-end">
               {["ALL", "BEGINNER", "INTERMEDIATE", "ADVANCED", "PROFESSIONAL"].map((s) => (
                 <button
                   key={s}
                   onClick={() => setSkillFilter(s)}
-                  className={`px-4 py-2 rounded-full font-semibold text-sm transition-all focus:outline-none focus:ring-2 focus:ring-[#4AEEFF] ${
+                  className={`rounded-full border px-4 py-2.5 text-sm font-semibold transition-all focus:outline-none focus:ring-2 focus:ring-cyan-400/30 ${
                     skillFilter === s
-                      ? "bg-gradient-to-r from-[#4AEEFF] to-[#12679E] text-slate-950 shadow-lg shadow-[#4AEEFF]/20"
-                      : "bg-slate-900/80 text-white border border-white/10 hover:bg-slate-900/95"
+                      ? "border-cyan-400/30 bg-cyan-400/15 text-white shadow-[0_0_0_1px_rgba(34,211,238,0.25),0_0_24px_rgba(34,211,238,0.14)]"
+                      : "border-white/10 bg-slate-900/80 text-slate-200 hover:border-cyan-400/20 hover:bg-slate-900/95"
                   }`}
                 >
                   {s === "ALL" ? "All Levels" : s.charAt(0) + s.slice(1).toLowerCase()}
@@ -173,20 +189,34 @@ const Players: React.FC = () => {
             </div>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5 mt-6">
-            <div className="rounded-3xl border border-white/10 bg-slate-900/80 p-4">
-              <p className="text-sm text-slate-400">Total players</p>
-              <p className="mt-2 text-3xl font-bold text-white">{players.length}</p>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+            <div className="rounded-[28px] border border-white/10 bg-slate-900/80 p-6 shadow-lg shadow-black/10">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Total players</p>
+                  <p className="mt-4 text-4xl font-extrabold text-white">{players.length}</p>
+                </div>
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-cyan-500/10 text-cyan-300">
+                  <UserGroupIcon className="h-6 w-6" />
+                </div>
+              </div>
             </div>
             {skillLevels.map((level) => (
-              <div key={level} className="rounded-3xl border border-white/10 bg-slate-900/80 p-4">
-                <p className="text-sm text-slate-400">{level.charAt(0) + level.slice(1).toLowerCase()}</p>
-                <p className="mt-2 text-3xl font-bold text-white">{skillCounts[level]}</p>
+              <div key={level} className="rounded-[28px] border border-white/10 bg-slate-900/80 p-6 shadow-lg shadow-black/10">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.3em] text-slate-400">{level.charAt(0) + level.slice(1).toLowerCase()}</p>
+                    <p className="mt-4 text-4xl font-extrabold text-white">{skillCounts[level]}</p>
+                  </div>
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-cyan-500/10 text-cyan-300">
+                    <TrophyIcon className="h-6 w-6" />
+                  </div>
+                </div>
               </div>
             ))}
           </div>
 
-          <div className="text-white/80 text-sm mt-5">{filtered.length} player{filtered.length !== 1 ? "s" : ""} found</div>
+          <div className="text-sm text-slate-400">{filtered.length} player{filtered.length !== 1 ? "s" : ""} found</div>
         </div>
 
         {/* Loading */}
@@ -201,10 +231,12 @@ const Players: React.FC = () => {
 
         {/* Empty */}
         {!loading && filtered.length === 0 && (
-          <div className="text-center py-20">
-            <div className="text-6xl mb-4">🏓</div>
-            <p className="text-white text-xl font-semibold mb-2">No players found</p>
-            <p className="text-white/70">Try adjusting your search or filter</p>
+          <div className="rounded-[32px] border border-white/10 bg-white/5 py-20 text-center backdrop-blur-xl">
+            <div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-full bg-cyan-500/10 text-4xl shadow-lg shadow-cyan-500/10">
+              🏓
+            </div>
+            <p className="mb-2 text-xl font-semibold text-white">No players found</p>
+            <p className="text-slate-400">Try adjusting your search or filter</p>
           </div>
         )}
 
