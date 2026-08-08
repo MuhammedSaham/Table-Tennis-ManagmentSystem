@@ -1,5 +1,6 @@
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
+import { Prisma } from '@prisma/client';
 import prisma from '../config/database';
 import { AppError } from '../utils/AppError';
 import { config } from '../config/env';
@@ -42,7 +43,7 @@ export class AuthService {
         const hashedPassword = await bcrypt.hash(userData.password, config.BCRYPT_SALT_ROUNDS);
 
         // Create user with role-specific profile in a transaction
-        const user = await prisma.$transaction(async (tx) => {
+        const user = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
             // Set admin request status if registering as ADMIN
             let adminRequestStatus = 'NONE';
             let adminRequestedAt = null;
@@ -96,7 +97,7 @@ export class AuthService {
         if (userData.role === 'ADMIN') {
             try {
                 // Get all existing admins
-                const existingAdmins = await prisma.user.findMany({
+                const existingAdmins: Array<{ id: string }> = await prisma.user.findMany({
                     where: { role: 'ADMIN' },
                     select: { id: true },
                 });
@@ -104,7 +105,7 @@ export class AuthService {
                 // Create notifications for all admins
                 if (existingAdmins.length > 0) {
                     await prisma.notification.createMany({
-                        data: existingAdmins.map(admin => ({
+                        data: existingAdmins.map((admin: { id: string }) => ({
                             userId: admin.id,
                             type: 'NEW_ADMIN_REQUEST' as any,
                             title: '👑 New Admin Request',

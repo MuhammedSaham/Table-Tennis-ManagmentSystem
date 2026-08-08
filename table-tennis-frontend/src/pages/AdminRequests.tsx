@@ -53,9 +53,13 @@ const AdminRequests: React.FC = () => {
       await api.patch(`/auth/admin-requests/${userId}/approve`);
       toast.success("Admin request approved successfully!");
       fetchRequests();
-    } catch (error) {
-      toast.error("Failed to approve request");
-    } finally {
+    } catch (error: any) {
+  console.error("Approve request error:", error.response?.status, error.response?.data);
+  toast.error(
+    error.response?.data?.message ||
+      `Failed to approve request (${error.response?.status || "network error"})`
+  );
+} finally {
       setProcessingId(null);
     }
   };

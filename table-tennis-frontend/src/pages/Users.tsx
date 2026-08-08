@@ -453,10 +453,10 @@ const Users: React.FC = () => {
         </div>
       </main>
 
-      {/* COMPACT PLAYER REGISTRATION DIALOG MODAL */}
+      {/* PLAYER REGISTRATION DIALOG MODAL */}
       {showAddPlayerModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-fadeIn">
-          <div className="w-full max-w-lg rounded-[16px] border border-white/20 bg-[#061D23]/55 p-6 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.8)] backdrop-blur-2xl max-h-[90vh] overflow-y-auto">
+          <div className="w-full max-w-2xl rounded-[16px] border border-white/20 bg-[#061D23]/55 p-8 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.8)] backdrop-blur-2xl max-h-[95vh] overflow-y-auto">
             <h2 className="text-xl font-black uppercase tracking-widest text-white mb-1">
               Register Profile
             </h2>
@@ -540,7 +540,7 @@ const Users: React.FC = () => {
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
                   <label className="block text-[10px] font-black uppercase tracking-wider text-white/70 mb-1.5">
-                    Phone Link
+                    Phone Number
                   </label>
                   <input
                     type="tel"
