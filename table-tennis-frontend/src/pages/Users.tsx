@@ -3,13 +3,12 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import api from "../services/api";
 import toast from "react-hot-toast";
-import { 
-  EyeIcon, 
-  PlusCircleIcon, 
-  UserIcon, 
-  EnvelopeIcon, 
-  TrashIcon, 
-  AcademicCapIcon 
+import {
+  EyeIcon,
+  PlusCircleIcon,
+  UserIcon,
+  EnvelopeIcon,
+  TrashIcon,
 } from "@heroicons/react/24/outline";
 
 interface User {
@@ -37,6 +36,7 @@ const Users: React.FC = () => {
     firstName: "",
     lastName: "",
     phone: "",
+    gender: "",
     skillLevel: "Intermediate",
     clubAffiliation: "",
     dateOfBirth: "",
@@ -131,6 +131,7 @@ const Users: React.FC = () => {
       firstName: "",
       lastName: "",
       phone: "",
+      gender: "",
       skillLevel: "Intermediate",
       clubAffiliation: "",
       dateOfBirth: "",
@@ -151,21 +152,30 @@ const Users: React.FC = () => {
         phone: newPlayer.phone,
         role: "PLAYER",
         playerProfile: {
+          gender: newPlayer.gender,
           skillLevel: newPlayer.skillLevel,
           clubAffiliation: newPlayer.clubAffiliation,
-          dateOfBirth: newPlayer.dateOfBirth ? new Date(newPlayer.dateOfBirth) : undefined,
+          dateOfBirth: newPlayer.dateOfBirth
+            ? new Date(newPlayer.dateOfBirth)
+            : undefined,
         },
       };
 
       await api.post("/auth/register", playerData);
-      toast.success(`Player ${newPlayer.firstName} ${newPlayer.lastName} added successfully!`);
-      
+      toast.success(
+        `Player ${newPlayer.firstName} ${newPlayer.lastName} added successfully!`,
+      );
+
       // Theme matching custom dark hot-toast injection layout
       toast.custom(
         (t) => (
           <div className="bg-[#061D23] border border-[#4AEEFF] rounded-[16px] shadow-[0_20px_50px_rgba(0,0,0,0.5)] p-5 max-w-sm mx-auto backdrop-blur-xl text-white">
-            <p className="font-black uppercase tracking-wider text-[#4AEEFF]">✅ Player Created!</p>
-            <p className="text-xs text-white/80 mt-2 break-all">Email: {newPlayer.email}</p>
+            <p className="font-black uppercase tracking-wider text-[#4AEEFF]">
+              ✅ Player Created!
+            </p>
+            <p className="text-xs text-white/80 mt-2 break-all">
+              Email: {newPlayer.email}
+            </p>
             <p className="text-xs text-white/80 mt-1">
               Password:{" "}
               <span className="font-mono font-bold bg-white/10 px-1.5 py-0.5 rounded text-[#4AEEFF]">
@@ -234,8 +244,10 @@ const Users: React.FC = () => {
   if (user?.role !== "ADMIN") {
     return wrapInBaseLayout(
       <div className="rounded-[16px] border border-red-500/30 bg-[#061D23]/40 p-12 text-center backdrop-blur-xl shadow-2xl">
-        <p className="font-black uppercase tracking-widest text-red-400">Access denied. Admin only.</p>
-      </div>
+        <p className="font-black uppercase tracking-widest text-red-400">
+          Access denied. Admin only.
+        </p>
+      </div>,
     );
   }
 
@@ -246,7 +258,7 @@ const Users: React.FC = () => {
         <div className="text-sm font-black uppercase tracking-[0.2em] text-[#4AEEFF]">
           Loading user records...
         </div>
-      </div>
+      </div>,
     );
   }
 
@@ -288,18 +300,24 @@ const Users: React.FC = () => {
             </thead>
             <tbody className="divide-y divide-white/5 text-base">
               {users.map((userItem) => (
-                <tr key={userItem.id} className="group hover:bg-[#12679E]/10 transition-colors duration-200">
+                <tr
+                  key={userItem.id}
+                  className="group hover:bg-[#12679E]/10 transition-colors duration-200"
+                >
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
                       <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-[#061D23]/60 font-bold text-white tracking-tighter">
-                        {userItem.firstName[0].toUpperCase()}{userItem.lastName[0].toUpperCase()}
+                        {userItem.firstName[0].toUpperCase()}
+                        {userItem.lastName[0].toUpperCase()}
                       </div>
                       <div>
                         <p className="font-bold text-white group-hover:text-[#4AEEFF] transition-colors text-base">
                           {userItem.firstName} {userItem.lastName}
                         </p>
                         {userItem.phone && (
-                          <p className="text-sm text-white/50 font-mono mt-0.5">{userItem.phone}</p>
+                          <p className="text-sm text-white/50 font-mono mt-0.5">
+                            {userItem.phone}
+                          </p>
                         )}
                       </div>
                     </div>
@@ -308,7 +326,9 @@ const Users: React.FC = () => {
                     {userItem.email}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-block px-2.5 py-0.5 text-xs font-black uppercase tracking-wider rounded-md ${getRoleBadgeStyles(userItem.role)}`}>
+                    <span
+                      className={`inline-block px-2.5 py-0.5 text-xs font-black uppercase tracking-wider rounded-md ${getRoleBadgeStyles(userItem.role)}`}
+                    >
                       {userItem.role}
                     </span>
                   </td>
@@ -327,15 +347,22 @@ const Users: React.FC = () => {
                             )}
                           </>
                         ) : (
-                          <span className="text-sm italic text-white/40">Unranked</span>
+                          <span className="text-sm italic text-white/40">
+                            Unranked
+                          </span>
                         )}
                       </div>
                     )}
                   </td>
                   <td className="px-6 py-4 text-sm text-white/70 font-mono">
-                    {new Date(userItem.createdAt).toLocaleDateString(undefined, {
-                      year: 'numeric', month: 'short', day: 'numeric'
-                    })}
+                    {new Date(userItem.createdAt).toLocaleDateString(
+                      undefined,
+                      {
+                        year: "numeric",
+                        month: "short",
+                        day: "numeric",
+                      },
+                    )}
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center justify-end gap-2">
@@ -391,35 +418,45 @@ const Users: React.FC = () => {
                           <button
                             onClick={() => {
                               setEditingRankId(userItem.id);
-                              setRankingInput(userItem.ranking?.toString() || "");
+                              setRankingInput(
+                                userItem.ranking?.toString() || "",
+                              );
                               setRankingNote(userItem.rankingNote || "");
                             }}
                             className="rounded-lg p-2 text-white/70 border border-white/10 bg-[#061D23]/40 hover:border-[#4AEEFF] hover:text-[#4AEEFF] transition-all text-xs"
-                            title={userItem.ranking ? "Edit Ranking" : "Set Ranking"}
+                            title={
+                              userItem.ranking ? "Edit Ranking" : "Set Ranking"
+                            }
                           >
                             🏆
                           </button>
                         ))}
 
                       {/* Interactive Role Selector Dropdown */}
-                      {userItem.id !== user?.id && !userItem.isSuperAdmin && (
+                      {userItem.id !== user?.id &&
+                        !userItem.isSuperAdmin &&
                         (() => {
-                          const currentIsSuperAdmin = (user as any)?.isSuperAdmin ?? false;
-                          const canChangeRole = currentIsSuperAdmin || userItem.role !== "ADMIN";
+                          const currentIsSuperAdmin =
+                            (user as any)?.isSuperAdmin ?? false;
+                          const canChangeRole =
+                            currentIsSuperAdmin || userItem.role !== "ADMIN";
 
                           return canChangeRole ? (
                             <select
                               value={userItem.role}
-                              onChange={(e) => handleRoleChange(userItem.id, e.target.value)}
+                              onChange={(e) =>
+                                handleRoleChange(userItem.id, e.target.value)
+                              }
                               className="text-xs border border-white/10 rounded-md bg-[#061D23] text-white py-1.5 px-2 focus:outline-none focus:border-[#4AEEFF] cursor-pointer"
                             >
                               <option value="PLAYER">Player</option>
                               <option value="REFEREE">Referee</option>
-                              {currentIsSuperAdmin && <option value="ADMIN">Admin</option>}
+                              {currentIsSuperAdmin && (
+                                <option value="ADMIN">Admin</option>
+                              )}
                             </select>
                           ) : null;
-                        })()
-                      )}
+                        })()}
 
                       {/* Badges Stack */}
                       {userItem.isSuperAdmin && (
@@ -473,7 +510,9 @@ const Users: React.FC = () => {
                   <input
                     type="text"
                     value={newPlayer.firstName}
-                    onChange={(e) => setNewPlayer({ ...newPlayer, firstName: e.target.value })}
+                    onChange={(e) =>
+                      setNewPlayer({ ...newPlayer, firstName: e.target.value })
+                    }
                     required
                     className="w-full rounded-lg border border-white/10 bg-[#061D23]/60 p-2.5 text-sm text-white focus:border-[#4AEEFF] focus:outline-none"
                   />
@@ -485,7 +524,9 @@ const Users: React.FC = () => {
                   <input
                     type="text"
                     value={newPlayer.lastName}
-                    onChange={(e) => setNewPlayer({ ...newPlayer, lastName: e.target.value })}
+                    onChange={(e) =>
+                      setNewPlayer({ ...newPlayer, lastName: e.target.value })
+                    }
                     required
                     className="w-full rounded-lg border border-white/10 bg-[#061D23]/60 p-2.5 text-sm text-white focus:border-[#4AEEFF] focus:outline-none"
                   />
@@ -499,7 +540,9 @@ const Users: React.FC = () => {
                 <input
                   type="email"
                   value={newPlayer.email}
-                  onChange={(e) => setNewPlayer({ ...newPlayer, email: e.target.value })}
+                  onChange={(e) =>
+                    setNewPlayer({ ...newPlayer, email: e.target.value })
+                  }
                   required
                   className="w-full rounded-lg border border-white/10 bg-[#061D23]/60 p-2.5 text-sm text-white focus:border-[#4AEEFF] focus:outline-none"
                 />
@@ -525,7 +568,9 @@ const Users: React.FC = () => {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setGeneratedPassword(generateRandomPassword())}
+                    onClick={() =>
+                      setGeneratedPassword(generateRandomPassword())
+                    }
                     className="rounded-lg bg-[#4AEEFF] px-3 text-[#061D23] hover:bg-white transition-all"
                     title="Regenerate string"
                   >
@@ -545,10 +590,31 @@ const Users: React.FC = () => {
                   <input
                     type="tel"
                     value={newPlayer.phone}
-                    onChange={(e) => setNewPlayer({ ...newPlayer, phone: e.target.value })}
+                    onChange={(e) =>
+                      setNewPlayer({ ...newPlayer, phone: e.target.value })
+                    }
                     className="w-full rounded-lg border border-white/10 bg-[#061D23]/60 p-2.5 text-sm text-white placeholder-white/20 focus:border-[#4AEEFF] focus:outline-none"
                     placeholder="e.g., 071-1234567"
                   />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-black uppercase tracking-wider text-white/70 mb-1.5">
+                    Gender *
+                  </label>
+
+                  <select
+                    value={newPlayer.gender}
+                    onChange={(e) =>
+                      setNewPlayer({ ...newPlayer, gender: e.target.value })
+                    }
+                    required
+                    className="w-full rounded-lg border border-white/10 bg-[#061D23] p-2.5 text-sm text-white focus:border-[#4AEEFF] focus:outline-none"
+                  >
+                    <option value="">Select Gender</option>
+                    <option value="MALE">Male</option>
+                    <option value="FEMALE">Female</option>
+                  </select>
                 </div>
 
                 <div>
@@ -558,7 +624,12 @@ const Users: React.FC = () => {
                   <input
                     type="date"
                     value={newPlayer.dateOfBirth}
-                    onChange={(e) => setNewPlayer({ ...newPlayer, dateOfBirth: e.target.value })}
+                    onChange={(e) =>
+                      setNewPlayer({
+                        ...newPlayer,
+                        dateOfBirth: e.target.value,
+                      })
+                    }
                     className="w-full rounded-lg border border-white/10 bg-[#061D23]/60 p-2.5 text-sm text-white focus:border-[#4AEEFF] focus:outline-none [color-scheme:dark]"
                   />
                 </div>
@@ -571,7 +642,9 @@ const Users: React.FC = () => {
                   </label>
                   <select
                     value={newPlayer.skillLevel}
-                    onChange={(e) => setNewPlayer({ ...newPlayer, skillLevel: e.target.value })}
+                    onChange={(e) =>
+                      setNewPlayer({ ...newPlayer, skillLevel: e.target.value })
+                    }
                     className="w-full rounded-lg border border-white/10 bg-[#061D23] p-2.5 text-sm text-white focus:border-[#4AEEFF] focus:outline-none"
                   >
                     <option value="Beginner">Beginner</option>
@@ -587,7 +660,12 @@ const Users: React.FC = () => {
                   <input
                     type="text"
                     value={newPlayer.clubAffiliation}
-                    onChange={(e) => setNewPlayer({ ...newPlayer, clubAffiliation: e.target.value })}
+                    onChange={(e) =>
+                      setNewPlayer({
+                        ...newPlayer,
+                        clubAffiliation: e.target.value,
+                      })
+                    }
                     className="w-full rounded-lg border border-white/10 bg-[#061D23]/60 p-2.5 text-sm text-white placeholder-white/20 focus:border-[#4AEEFF] focus:outline-none"
                     placeholder="e.g., City Table Tennis Club"
                   />
@@ -633,7 +711,7 @@ const Users: React.FC = () => {
           )}
         </div>
       </footer>
-    </>
+    </>,
   );
 };
 
