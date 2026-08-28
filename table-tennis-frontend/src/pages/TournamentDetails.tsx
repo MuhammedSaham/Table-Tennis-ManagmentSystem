@@ -1369,66 +1369,82 @@ const TournamentDetails: React.FC = () => {
 
         {/* Registrations Section */}
         {(isAdmin || isReferee) && tournament.registrations?.length > 0 && (
-          <div className="bg-white rounded-lg shadow p-6 mt-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">
-              Registrations ({tournament.registrations.length})
-            </h2>
+          <div className="mt-6 rounded-[24px] border border-white/10 bg-[#061D23]/60 p-6 shadow-2xl backdrop-blur-xl">
+            {/* Header */}
+            <div className="mb-6 flex items-center justify-between border-b border-white/10 pb-4">
+              <div>
+                <h2 className="text-xl font-bold text-white tracking-wide">
+                  Registrations
+                </h2>
+                <p className="text-xs text-slate-300 mt-0.5">
+                  Manage tournament participants and status
+                </p>
+              </div>
+              <span className="text-xs font-semibold text-teal-300/80">
+                {tournament.registrations.length} total
+              </span>
+            </div>
+
+            {/* Table Container */}
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Player
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Category
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Email
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Registered On
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Status
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Actions
-                    </th>
+              <table className="w-full text-left text-sm text-slate-200 min-w-full">
+                <thead>
+                  <tr className="border-b border-white/10 text-xs font-bold text-teal-300/80 uppercase tracking-wider">
+                    <th className="px-4 py-3">Player</th>
+                    <th className="px-4 py-3">Category</th>
+                    <th className="px-4 py-3">Email</th>
+                    <th className="px-4 py-3">Registered On</th>
+                    <th className="px-4 py-3">Status</th>
+                    <th className="px-4 py-3 text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
+                <tbody className="divide-y divide-white/5 font-medium">
                   {tournament.registrations.map((registration) => (
-                    <tr key={registration.id} className="hover:bg-gray-50">
-                      <Link
-                        to={`/profile/${registration.player.id}`}
-                        className="text-blue-600 hover:text-blue-800 hover:underline font-medium"
-                      >
-                        {registration.player.firstName}{" "}
-                        {registration.player.lastName}
-                      </Link>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
+                    <tr key={registration.id} className="transition-colors hover:bg-white/5">
+                      {/* Player Name */}
+                      <td className="px-4 py-4 whitespace-nowrap font-bold text-white">
+                        <Link
+                          to={`/profile/${registration.player.id}`}
+                          className="hover:text-[#4AEEFF] hover:underline transition-colors"
+                        >
+                          {registration.player.firstName} {registration.player.lastName}
+                        </Link>
+                      </td>
+
+                      {/* Category Pill */}
+                      <td className="px-4 py-4 whitespace-nowrap">
+                        <span className="inline-block rounded-xl border border-white/10 bg-[#041419]/80 px-3 py-1.5 text-xs text-slate-200 font-semibold shadow-inner">
                           {registration.category?.name || "N/A"}
                         </span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+
+                      {/* High Contrast Email */}
+                      <td className="px-4 py-4 whitespace-nowrap text-xs text-slate-300 font-mono">
                         {registration.player.email}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {new Date(registration.registeredAt).toLocaleDateString()}
+
+                      {/* Registered Date Fix */}
+                      <td className="px-4 py-4 whitespace-nowrap text-xs text-slate-300">
+                        {new Date(registration.registeredAt).toLocaleDateString("en-US")}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+
+                      {/* Status Badge */}
+                      <td className="px-4 py-4 whitespace-nowrap">
                         <span
-                          className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${registration.status === "APPROVED"
-                              ? "bg-green-100 text-green-800"
+                          className={`inline-block rounded-full px-3 py-1 text-[11px] font-extrabold uppercase tracking-wider ${
+                            registration.status === "APPROVED"
+                              ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
                               : registration.status === "PENDING"
-                                ? "bg-yellow-100 text-yellow-800"
-                                : "bg-red-100 text-red-800"
-                            }`}
+                              ? "bg-amber-500/20 text-amber-300 border border-amber-500/30"
+                              : "bg-rose-500/20 text-rose-300 border border-rose-500/30"
+                          }`}
                         >
                           {registration.status}
                         </span>
+                      </td>
+
+                      <td className="px-4 py-4 whitespace-nowrap text-right">
+                        {/* Place action buttons here if needed */}
                       </td>
                     </tr>
                   ))}

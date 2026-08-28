@@ -6,6 +6,7 @@ import {
   TrophyIcon,
   CalendarIcon,
   ChartBarIcon,
+  GlobeAltIcon,
   UserIcon,
   EnvelopeIcon,
 } from "@heroicons/react/24/outline";
@@ -67,7 +68,7 @@ const Dashboard: React.FC = () => {
         <h1 className="text-2xl font-black uppercase tracking-[0.2em] text-white sm:text-4xl">
           Welcome back, {user?.firstName}! 👋
         </h1>
-        <p className="text-xs uppercase tracking-[0.3em] text-[#4AEEFF]/90 mt-1">
+        <p className="mt-1 text-xs uppercase tracking-[0.3em] text-[#4AEEFF]/90">
           Your tournament hub
         </p>
       </header>
@@ -88,13 +89,13 @@ const Dashboard: React.FC = () => {
                 to={`/tournaments/${tournament.id}`}
                 className="group rounded-lg border border-white/10 bg-[#061D23]/40 p-4 transition-all hover:border-[#4AEEFF] hover:text-[#4AEEFF]"
               >
-                <h3 className="font-bold text-white group-hover:text-[#4AEEFF] transition-colors">
+                <h3 className="font-bold text-white transition-colors group-hover:text-[#4AEEFF]">
                   {tournament.name}
                 </h3>
-                <p className="mt-2 text-xs text-white/70 font-mono">
+                <p className="mt-2 font-mono text-xs text-white/70">
                   📍 {tournament.venue}
                 </p>
-                <p className="mt-2 text-xs text-white/50 font-mono">
+                <p className="mt-2 font-mono text-xs text-white/50">
                   Register by:{" "}
                   {new Date(tournament.registrationDeadline).toLocaleDateString(
                     undefined,
@@ -114,11 +115,11 @@ const Dashboard: React.FC = () => {
       <section className="rounded-[16px] border border-white/20 bg-[#061D23]/10 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl">
         <p className="text-sm text-white/80">
           You are logged in as{" "}
-          <span className="inline-block px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-md bg-[#4AEEFF]/20 text-[#4AEEFF] border border-[#4AEEFF]/40 align-middle">
+          <span className="inline-block rounded-md border border-[#4AEEFF]/40 bg-[#4AEEFF]/20 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider text-[#4AEEFF] align-middle">
             {user?.role}
           </span>
         </p>
-        <p className="mt-2 text-xs text-white/70 font-mono break-all">
+        <p className="mt-2 break-all font-mono text-xs text-white/70">
           Email: {user?.email}
         </p>
       </section>
@@ -130,7 +131,7 @@ const Dashboard: React.FC = () => {
           className="group rounded-[16px] border border-white/20 bg-[#061D23]/10 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl transition-all hover:border-[#4AEEFF]"
         >
           <TrophyIcon className="mb-3 h-8 w-8 text-[#4AEEFF]" />
-          <h3 className="mb-2 font-black uppercase tracking-wider text-white group-hover:text-[#4AEEFF] transition-colors">
+          <h3 className="mb-2 font-black uppercase tracking-wider text-white transition-colors group-hover:text-[#4AEEFF]">
             Tournaments
           </h3>
           <p className="text-xs text-white/70">View and manage tournaments</p>
@@ -142,7 +143,7 @@ const Dashboard: React.FC = () => {
             className="group rounded-[16px] border border-white/20 bg-[#061D23]/10 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl transition-all hover:border-[#4AEEFF]"
           >
             <CalendarIcon className="mb-3 h-8 w-8 text-[#4AEEFF]" />
-            <h3 className="mb-2 font-black uppercase tracking-wider text-white group-hover:text-[#4AEEFF] transition-colors">
+            <h3 className="mb-2 font-black uppercase tracking-wider text-white transition-colors group-hover:text-[#4AEEFF]">
               My Matches
             </h3>
             <p className="text-xs text-white/70">Check your upcoming matches</p>
@@ -154,8 +155,20 @@ const Dashboard: React.FC = () => {
           className="group rounded-[16px] border border-white/20 bg-[#061D23]/10 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl transition-all hover:border-[#4AEEFF]"
         >
           <ChartBarIcon className="mb-3 h-8 w-8 text-[#4AEEFF]" />
-          <h3 className="mb-2 font-black uppercase tracking-wider text-white group-hover:text-[#4AEEFF] transition-colors">
+          <h3 className="mb-2 font-black uppercase tracking-wider text-white transition-colors group-hover:text-[#4AEEFF]">
             Leaderboard
+          </h3>
+          <p className="text-xs text-white/70">See tournament rankings</p>
+        </Link>
+
+        {/* NEW GLOBAL RANKINGS CARD */}
+        <Link
+          to="/global-leaderboard"
+          className="group rounded-[16px] border border-white/20 bg-[#061D23]/10 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl transition-all hover:border-[#4AEEFF]"
+        >
+          <ChartBarIcon className="mb-3 h-8 w-8 text-[#4AEEFF]" />
+          <h3 className="mb-2 font-black uppercase tracking-wider text-white transition-colors group-hover:text-[#4AEEFF]">
+            Global Leaderboard
           </h3>
           <p className="text-xs text-white/70">See tournament rankings</p>
         </Link>
