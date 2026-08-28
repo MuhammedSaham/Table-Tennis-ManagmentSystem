@@ -10,6 +10,7 @@ export const updateProfileSchema = z.object({
             dateOfBirth: z.string().datetime().optional(),
             skillLevel: z.enum(['Beginner', 'Intermediate', 'Advanced']).optional(),
             clubAffiliation: z.string().optional(),
+            gender: z.enum(['MALE', 'FEMALE']).optional(),
         }).optional(),
     }),
 });

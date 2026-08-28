@@ -164,7 +164,8 @@ const Register: React.FC = () => {
     if (
       name === "skillLevel" ||
       name === "clubAffiliation" ||
-      name === "dateOfBirth"
+      name === "dateOfBirth" ||
+      name === "gender"
     ) {
       setFormData((prev) => ({
         ...prev,
@@ -492,6 +493,7 @@ const Register: React.FC = () => {
                   className="w-full rounded-lg border border-white/60 bg-white/40 px-4 py-3 text-base text-[#061D23] placeholder:text-[#061D23]/40 focus:border-[#4AEEFF] focus:outline-none focus:ring-1 focus:ring-[#4AEEFF]"
                 />
               </div>
+
             </>
           )}
 

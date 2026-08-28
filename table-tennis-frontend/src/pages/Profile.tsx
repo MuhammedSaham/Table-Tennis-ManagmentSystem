@@ -51,6 +51,7 @@ interface UserProfile {
     skillLevel: string;
     clubAffiliation: string;
     dateOfBirth: string | null;
+    gender: "MALE" | "FEMALE" | null;
   };
   refereeProfile?: {
     certification: string;
@@ -73,6 +74,7 @@ const Profile: React.FC = () => {
     playerProfile: {
       skillLevel: "Intermediate",
       clubAffiliation: "",
+      gender: "",
     },
   });
   const [profileImage, setProfileImage] = useState<File | null>(null);
@@ -117,6 +119,7 @@ const Profile: React.FC = () => {
         playerProfile: {
           skillLevel: profileData.playerProfile?.skillLevel || "Intermediate",
           clubAffiliation: profileData.playerProfile?.clubAffiliation || "",
+          gender: profileData.playerProfile?.gender || "",
         },
       });
     } catch (error) {
@@ -138,7 +141,13 @@ const Profile: React.FC = () => {
       };
 
       if (user?.role === "PLAYER") {
-        updateData.playerProfile = formData.playerProfile;
+        updateData.playerProfile = {
+          skillLevel: formData.playerProfile.skillLevel,
+          clubAffiliation: formData.playerProfile.clubAffiliation,
+          ...(formData.playerProfile.gender
+            ? { gender: formData.playerProfile.gender }
+            : {}),
+        };
       }
 
       await api.patch("/users/profile", updateData);
@@ -157,7 +166,11 @@ const Profile: React.FC = () => {
   ) => {
     const { name, value } = e.target;
 
-    if (name === "skillLevel" || name === "clubAffiliation") {
+    if (
+      name === "skillLevel" ||
+      name === "clubAffiliation" ||
+      name === "gender"
+    ) {
       setFormData((prev) => ({
         ...prev,
         playerProfile: {
@@ -356,10 +369,36 @@ const Profile: React.FC = () => {
                   Player Affiliation & Bio
                 </h2>
               </div>
-              <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4">
+              <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
                 <div className="rounded-[12px] border border-white/10 bg-[#061D23]/60 p-4">
                   <p className="text-xs text-[#4AEEFF] font-semibold uppercase tracking-wider">Skill Level</p>
                   <p className="mt-1 font-bold text-white">{profile.playerProfile.skillLevel}</p>
+                </div>
+                <div className="rounded-[12px] border border-white/10 bg-[#061D23]/60 p-4">
+                  <p className="text-xs text-[#4AEEFF] font-semibold uppercase tracking-wider">Age</p>
+                  <p className="mt-1 font-bold text-white">
+                    {profile.playerProfile.dateOfBirth
+                      ? `${getPlayerAgeCategory(new Date(profile.playerProfile.dateOfBirth)).age} years`
+                      : "Not provided"}
+                  </p>
+                </div>
+                <div className="rounded-[12px] border border-white/10 bg-[#061D23]/60 p-4">
+                  <p className="text-xs text-[#4AEEFF] font-semibold uppercase tracking-wider">Age Category</p>
+                  <p className="mt-1 font-bold text-white">
+                    {profile.playerProfile.dateOfBirth
+                      ? getPlayerAgeCategory(new Date(profile.playerProfile.dateOfBirth)).category
+                      : "N/A"}
+                  </p>
+                </div>
+                <div className="rounded-[12px] border border-white/10 bg-[#061D23]/60 p-4">
+                  <p className="text-xs text-[#4AEEFF] font-semibold uppercase tracking-wider">Gender</p>
+                  <p className="mt-1 font-bold text-white">
+                    {profile.playerProfile.gender === "MALE"
+                      ? "Male"
+                      : profile.playerProfile.gender === "FEMALE"
+                        ? "Female"
+                        : "Not provided"}
+                  </p>
                 </div>
                 <div className="rounded-[12px] border border-white/10 bg-[#061D23]/60 p-4">
                   <p className="text-xs text-[#4AEEFF] font-semibold uppercase tracking-wider">Club Affiliation</p>
@@ -371,14 +410,6 @@ const Profile: React.FC = () => {
                     {profile.playerProfile.dateOfBirth
                       ? new Date(profile.playerProfile.dateOfBirth).toLocaleDateString()
                       : "Not provided"}
-                  </p>
-                </div>
-                <div className="rounded-[12px] border border-white/10 bg-[#061D23]/60 p-4">
-                  <p className="text-xs text-[#4AEEFF] font-semibold uppercase tracking-wider">Age Category</p>
-                  <p className="mt-1 font-bold text-white">
-                    {profile.playerProfile.dateOfBirth
-                      ? getPlayerAgeCategory(new Date(profile.playerProfile.dateOfBirth)).category
-                      : "N/A"}
                   </p>
                 </div>
               </div>
@@ -643,6 +674,19 @@ const Profile: React.FC = () => {
                   <option value="Beginner" className="bg-[#061D23] text-white">Beginner</option>
                   <option value="Intermediate" className="bg-[#061D23] text-white">Intermediate</option>
                   <option value="Advanced" className="bg-[#061D23] text-white">Advanced</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-black uppercase tracking-widest text-[#4AEEFF] mb-2">Gender</label>
+                <select
+                  name="gender"
+                  value={formData.playerProfile.gender}
+                  onChange={handleChange}
+                  className="w-full rounded-lg border border-white/10 bg-[#061D23]/60 px-4 py-3 text-sm text-white focus:border-[#4AEEFF] focus:outline-none focus:ring-1 focus:ring-[#4AEEFF]"
+                >
+                  <option value="" className="bg-[#061D23] text-white">Select Gender</option>
+                  <option value="MALE" className="bg-[#061D23] text-white">Male</option>
+                  <option value="FEMALE" className="bg-[#061D23] text-white">Female</option>
                 </select>
               </div>
               <div>

@@ -490,21 +490,21 @@ const Users: React.FC = () => {
         </div>
       </main>
 
-      {/* PLAYER REGISTRATION DIALOG MODAL */}
+      {/* COMPACT PLAYER REGISTRATION DIALOG MODAL */}
       {showAddPlayerModal && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/70 backdrop-blur-sm p-4 pt-10 pb-10 animate-fadeIn">
-          <div className="w-full max-w-2xl rounded-[16px] border border-white/20 bg-[#061D23]/55 p-6 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.8)] backdrop-blur-2xl">
-            <h2 className="text-2xl font-black uppercase tracking-widest text-white mb-1">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-fadeIn">
+          <div className="w-full max-w-lg rounded-[16px] border border-white/20 bg-[#061D23]/55 p-6 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.8)] backdrop-blur-2xl max-h-[90vh] overflow-y-auto">
+            <h2 className="text-xl font-black uppercase tracking-widest text-white mb-1">
               Register Profile
             </h2>
-            <p className="text-sm text-[#4AEEFF] uppercase tracking-wider mb-5">
+            <p className="text-xs text-[#4AEEFF] uppercase tracking-wider mb-6">
               Create an operational table tennis player record
             </p>
 
             <form onSubmit={handleAddPlayer} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-black uppercase tracking-wider text-white/70 mb-1.5">
+                  <label className="block text-[10px] font-black uppercase tracking-wider text-white/70 mb-1.5">
                     First Name *
                   </label>
                   <input
@@ -514,11 +514,11 @@ const Users: React.FC = () => {
                       setNewPlayer({ ...newPlayer, firstName: e.target.value })
                     }
                     required
-                    className="w-full rounded-lg border border-white/10 bg-[#061D23]/60 p-3 text-base text-white focus:border-[#4AEEFF] focus:outline-none"
+                    className="w-full rounded-lg border border-white/10 bg-[#061D23]/60 p-2.5 text-sm text-white focus:border-[#4AEEFF] focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-black uppercase tracking-wider text-white/70 mb-1.5">
+                  <label className="block text-[10px] font-black uppercase tracking-wider text-white/70 mb-1.5">
                     Last Name *
                   </label>
                   <input
@@ -528,13 +528,13 @@ const Users: React.FC = () => {
                       setNewPlayer({ ...newPlayer, lastName: e.target.value })
                     }
                     required
-                    className="w-full rounded-lg border border-white/10 bg-[#061D23]/60 p-3 text-base text-white focus:border-[#4AEEFF] focus:outline-none"
+                    className="w-full rounded-lg border border-white/10 bg-[#061D23]/60 p-2.5 text-sm text-white focus:border-[#4AEEFF] focus:outline-none"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-black uppercase tracking-wider text-white/70 mb-1.5">
+                <label className="block text-[10px] font-black uppercase tracking-wider text-white/70 mb-1.5">
                   Email *
                 </label>
                 <input
@@ -544,25 +544,25 @@ const Users: React.FC = () => {
                     setNewPlayer({ ...newPlayer, email: e.target.value })
                   }
                   required
-                  className="w-full rounded-lg border border-white/10 bg-[#061D23]/60 p-3 text-base text-white focus:border-[#4AEEFF] focus:outline-none"
+                  className="w-full rounded-lg border border-white/10 bg-[#061D23]/60 p-2.5 text-sm text-white focus:border-[#4AEEFF] focus:outline-none"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-black uppercase tracking-wider text-white/70 mb-1.5">
+                <label className="block text-[10px] font-black uppercase tracking-wider text-white/70 mb-1.5">
                   Automated Security Access Token
                 </label>
-                <div className="flex gap-3">
+                <div className="flex gap-2">
                   <input
                     type="text"
                     value={generatedPassword}
                     readOnly
-                    className="flex-1 rounded-lg border border-white/10 bg-[#061D23] px-4 py-2.5 text-sm font-mono text-[#4AEEFF] tracking-wider"
+                    className="flex-1 rounded-lg border border-white/10 bg-[#061D23] px-3 py-2 text-xs font-mono text-[#4AEEFF] tracking-wider"
                   />
                   <button
                     type="button"
                     onClick={copyPassword}
-                    className="rounded-lg border border-white/20 bg-transparent px-4 text-sm font-bold uppercase tracking-wider text-white hover:bg-white/5 transition-all"
+                    className="rounded-lg border border-white/20 bg-transparent px-3 text-xs font-bold uppercase tracking-wider text-white hover:bg-white/5 transition-all"
                   >
                     Copy
                   </button>
@@ -571,21 +571,21 @@ const Users: React.FC = () => {
                     onClick={() =>
                       setGeneratedPassword(generateRandomPassword())
                     }
-                    className="rounded-lg bg-[#4AEEFF] px-4 text-lg text-[#061D23] hover:bg-white transition-all"
+                    className="rounded-lg bg-[#4AEEFF] px-3 text-[#061D23] hover:bg-white transition-all"
                     title="Regenerate string"
                   >
                     🔄
                   </button>
                 </div>
-                <p className="text-xs font-bold text-amber-400 mt-1.5 uppercase tracking-wide">
+                <p className="text-[10px] font-bold text-amber-400 mt-1.5 uppercase tracking-wide">
                   ⚠️ Save credential. Hidden past submission phase.
                 </p>
               </div>
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="block text-xs font-black uppercase tracking-wider text-white/70 mb-1.5">
-                    Phone Number
+                  <label className="block text-[10px] font-black uppercase tracking-wider text-white/70 mb-1.5">
+                    Phone Link
                   </label>
                   <input
                     type="tel"
@@ -593,13 +593,13 @@ const Users: React.FC = () => {
                     onChange={(e) =>
                       setNewPlayer({ ...newPlayer, phone: e.target.value })
                     }
-                    className="w-full rounded-lg border border-white/10 bg-[#061D23]/60 p-3 text-base text-white placeholder-white/20 focus:border-[#4AEEFF] focus:outline-none"
+                    className="w-full rounded-lg border border-white/10 bg-[#061D23]/60 p-2.5 text-sm text-white placeholder-white/20 focus:border-[#4AEEFF] focus:outline-none"
                     placeholder="e.g., 071-1234567"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-black uppercase tracking-wider text-white/70 mb-1.5">
+                  <label className="block text-[10px] font-black uppercase tracking-wider text-white/70 mb-1.5">
                     Gender *
                   </label>
 
@@ -609,7 +609,7 @@ const Users: React.FC = () => {
                       setNewPlayer({ ...newPlayer, gender: e.target.value })
                     }
                     required
-                    className="w-full rounded-lg border border-white/10 bg-[#061D23] p-3 text-base text-white focus:border-[#4AEEFF] focus:outline-none"
+                    className="w-full rounded-lg border border-white/10 bg-[#061D23] p-2.5 text-sm text-white focus:border-[#4AEEFF] focus:outline-none"
                   >
                     <option value="">Select Gender</option>
                     <option value="MALE">Male</option>
@@ -618,7 +618,7 @@ const Users: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-black uppercase tracking-wider text-white/70 mb-1.5">
+                  <label className="block text-[10px] font-black uppercase tracking-wider text-white/70 mb-1.5">
                     Date of Birth
                   </label>
                   <input
@@ -630,14 +630,14 @@ const Users: React.FC = () => {
                         dateOfBirth: e.target.value,
                       })
                     }
-                    className="w-full rounded-lg border border-white/10 bg-[#061D23]/60 p-3 text-base text-white focus:border-[#4AEEFF] focus:outline-none [color-scheme:dark]"
+                    className="w-full rounded-lg border border-white/10 bg-[#061D23]/60 p-2.5 text-sm text-white focus:border-[#4AEEFF] focus:outline-none [color-scheme:dark]"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="block text-xs font-black uppercase tracking-wider text-white/70 mb-1.5">
+                  <label className="block text-[10px] font-black uppercase tracking-wider text-white/70 mb-1.5">
                     Skill Classification
                   </label>
                   <select
@@ -645,7 +645,7 @@ const Users: React.FC = () => {
                     onChange={(e) =>
                       setNewPlayer({ ...newPlayer, skillLevel: e.target.value })
                     }
-                    className="w-full rounded-lg border border-white/10 bg-[#061D23] p-3 text-base text-white focus:border-[#4AEEFF] focus:outline-none"
+                    className="w-full rounded-lg border border-white/10 bg-[#061D23] p-2.5 text-sm text-white focus:border-[#4AEEFF] focus:outline-none"
                   >
                     <option value="Beginner">Beginner</option>
                     <option value="Intermediate">Intermediate</option>
@@ -654,7 +654,7 @@ const Users: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-black uppercase tracking-wider text-white/70 mb-1.5">
+                  <label className="block text-[10px] font-black uppercase tracking-wider text-white/70 mb-1.5">
                     Club / Academy Branch
                   </label>
                   <input
@@ -666,24 +666,24 @@ const Users: React.FC = () => {
                         clubAffiliation: e.target.value,
                       })
                     }
-                    className="w-full rounded-lg border border-white/10 bg-[#061D23]/60 p-3 text-base text-white placeholder-white/20 focus:border-[#4AEEFF] focus:outline-none"
+                    className="w-full rounded-lg border border-white/10 bg-[#061D23]/60 p-2.5 text-sm text-white placeholder-white/20 focus:border-[#4AEEFF] focus:outline-none"
                     placeholder="e.g., City Table Tennis Club"
                   />
                 </div>
               </div>
 
-              <div className="flex gap-4 pt-3">
+              <div className="flex gap-3 pt-4">
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="flex-1 rounded-lg bg-[#4AEEFF] py-3.5 text-sm font-black uppercase tracking-widest text-[#061D23] transition-all hover:bg-white disabled:opacity-50"
+                  className="flex-1 rounded-lg bg-[#4AEEFF] py-3 text-xs font-black uppercase tracking-widest text-[#061D23] transition-all hover:bg-white disabled:opacity-50"
                 >
                   {submitting ? "Processing..." : "Add Player"}
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowAddPlayerModal(false)}
-                  className="flex-1 rounded-lg border border-white/20 bg-transparent py-3.5 text-sm font-black uppercase tracking-widest text-[#4AEEFF] transition-all hover:bg-white/5"
+                  className="flex-1 rounded-lg border border-white/20 bg-transparent py-3 text-xs font-black uppercase tracking-widest text-[#4AEEFF] transition-all hover:bg-white/5"
                 >
                   Cancel
                 </button>

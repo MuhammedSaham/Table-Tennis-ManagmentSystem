@@ -306,6 +306,41 @@ export class MatchService {
   },
 });
 
+    // Show approved registrations before brackets or groups have been generated.
+    const registrations = await prisma.tournamentRegistration.findMany({
+      where: { playerId, status: { in: ['PENDING', 'APPROVED'] } },
+      include: {
+        tournament: { select: { id: true, name: true, venue: true, startDate: true } },
+        category: { select: { id: true, name: true, type: true } },
+        player: { select: { id: true, firstName: true, lastName: true } },
+      },
+    });
+
+    const generatedFixtureKeys = new Set([
+      ...knockoutMatches.map(match => `${match.tournamentId}:${match.categoryId ?? ''}`),
+      ...groupMatches.map((match: any) => `${match.group?.tournamentId ?? ''}:${match.group?.categoryId ?? ''}`),
+    ]);
+
+    const pendingRegistrations: NormalizedMatch[] = registrations
+      .filter(registration => !generatedFixtureKeys.has(`${registration.tournamentId}:${registration.categoryId ?? ''}`))
+      .map(registration => ({
+        id: `registration-${registration.id}`,
+        round: 'Awaiting Fixture',
+        matchNumber: 0,
+        scheduledTime: registration.tournament.startDate,
+        status: 'SCHEDULED',
+        score: null,
+        winnerId: null,
+        player1: registration.player,
+        player2: null,
+        tournament: {
+          id: registration.tournament.id,
+          name: registration.tournament.name,
+          venue: registration.tournament.venue,
+        },
+        category: registration.category ?? { name: 'Tournament Entry', type: '' },
+      }));
+
     // ── Normalize knockout matches ───────────────────────────────────────────────
     const normalizedKnockout: NormalizedMatch[] = knockoutMatches.map(match => ({
       id: match.id,
@@ -347,9 +382,13 @@ export class MatchService {
     : null,
   tournament: match.group?.tournament ?? { id: '', name: '', venue: '' },
   category: match.group?.category ?? { name: '', type: '' },
-}));
+  }));
     // ── Combine and sort descending by date ─────────────────────────────────────
-    const allMatches: NormalizedMatch[] = [...normalizedKnockout, ...normalizedGroup];
+    const allMatches: NormalizedMatch[] = [
+      ...normalizedKnockout,
+      ...normalizedGroup,
+      ...pendingRegistrations,
+    ];
     allMatches.sort(
       (a, b) =>
         new Date(b.scheduledTime).getTime() - new Date(a.scheduledTime).getTime(),

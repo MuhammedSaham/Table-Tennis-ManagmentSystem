@@ -33,6 +33,7 @@ export class UserService {
             dateOfBirth?: Date;
             skillLevel?: string;
             clubAffiliation?: string;
+            gender?: 'MALE' | 'FEMALE';
         };
     }) {
         // Update base user
