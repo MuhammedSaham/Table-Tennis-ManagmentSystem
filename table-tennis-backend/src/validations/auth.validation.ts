@@ -24,6 +24,7 @@ export const registerSchema = z.object({
             skillLevel: z.enum(['Beginner', 'Intermediate', 'Advanced']).optional(),
             clubAffiliation: z.string().optional(),
         }).optional(),
+        gender: z.enum(['Male', 'Female']).optional(),
 
         refereeProfile: z.object({
             certification: z.string().optional(),

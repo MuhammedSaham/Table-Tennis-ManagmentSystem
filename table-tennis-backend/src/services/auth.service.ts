@@ -1,6 +1,7 @@
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import prisma from '../config/database';
+import { Prisma } from '@prisma/client';
 import { AppError } from '../utils/AppError';
 import { config } from '../config/env';
 //import crypto from 'crypto';
@@ -20,6 +21,7 @@ export class AuthService {
             dateOfBirth?: Date;
             skillLevel?: string;
             clubAffiliation?: string;
+            gender?: 'MALE' | 'FEMALE';
         };
         refereeProfile?: {
             certification?: string;
@@ -42,7 +44,7 @@ export class AuthService {
         const hashedPassword = await bcrypt.hash(userData.password, config.BCRYPT_SALT_ROUNDS);
 
         // Create user with role-specific profile in a transaction
-        const user = await prisma.$transaction(async (tx) => {
+        const user = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
             // Set admin request status if registering as ADMIN
             let adminRequestStatus = 'NONE';
             let adminRequestedAt = null;
@@ -76,6 +78,7 @@ export class AuthService {
                         dateOfBirth: userData.playerProfile.dateOfBirth,
                         skillLevel: userData.playerProfile.skillLevel,
                         clubAffiliation: userData.playerProfile.clubAffiliation,
+                        gender: userData.playerProfile.gender,
                     },
                 });
             } else if (userData.role === 'REFEREE' && userData.refereeProfile) {
@@ -104,7 +107,7 @@ export class AuthService {
                 // Create notifications for all admins
                 if (existingAdmins.length > 0) {
                     await prisma.notification.createMany({
-                        data: existingAdmins.map(admin => ({
+                        data: existingAdmins.map((admin: { id: string }) => ({
                             userId: admin.id,
                             type: 'NEW_ADMIN_REQUEST' as any,
                             title: '👑 New Admin Request',
