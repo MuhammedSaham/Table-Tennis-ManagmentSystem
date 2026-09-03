@@ -1,5 +1,6 @@
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
+import { Prisma } from '@prisma/client';
 import prisma from '../config/database';
 import { Prisma } from '@prisma/client';
 import { AppError } from '../utils/AppError';
@@ -99,7 +100,7 @@ export class AuthService {
         if (userData.role === 'ADMIN') {
             try {
                 // Get all existing admins
-                const existingAdmins = await prisma.user.findMany({
+                const existingAdmins: Array<{ id: string }> = await prisma.user.findMany({
                     where: { role: 'ADMIN' },
                     select: { id: true },
                 });
