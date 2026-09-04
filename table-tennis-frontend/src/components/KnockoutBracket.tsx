@@ -699,52 +699,24 @@ const MatchCard: React.FC<{
   return (
     <div
       onClick={() => !isBye && onOpen(match)}
-      style={{
-        width: CW,
-        cursor: isBye ? "default" : "pointer",
-        fontFamily: "'Segoe UI',system-ui,sans-serif",
-      }}
+      className={`group ${isBye ? "cursor-default" : "cursor-pointer"}`}
+      style={{ width: CW }}
       title={isBye ? "BYE — Player advances automatically" : "Click to open umpire sheet"}
     >
       <div
+        className={`overflow-hidden rounded-2xl border transition ${
+          isBye
+            ? "border-slate-700 bg-slate-950/90 opacity-85"
+            : done
+              ? "bg-slate-900 shadow-lg shadow-cyan-500/10 group-hover:-translate-y-0.5 group-hover:shadow-cyan-500/20"
+              : "bg-slate-900 shadow-md shadow-black/30 group-hover:-translate-y-0.5 group-hover:shadow-lg group-hover:shadow-black/40"
+        }`}
         style={{
           border: `1.5px solid ${isBye ? "#334155" : border}`,
-          borderRadius: 14,
-          overflow: "hidden",
-          background: isBye ? "#0f172a" : "#111827",
-          boxShadow: isBye ? "none" : (done
-            ? "0 1px 10px rgba(34,211,238,0.12)"
-            : "0 1px 4px rgba(0,0,0,0.18)"),
-          opacity: isBye ? 0.82 : 1,
-          transition: "all 0.15s",
-        }}
-        onMouseEnter={(e) => {
-          if (!isBye) {
-            (e.currentTarget as HTMLElement).style.boxShadow =
-              "0 4px 18px rgba(0,0,0,0.13)";
-            (e.currentTarget as HTMLElement).style.transform = "translateY(-1px)";
-          }
-        }}
-        onMouseLeave={(e) => {
-          if (!isBye) {
-            (e.currentTarget as HTMLElement).style.boxShadow = done
-              ? "0 1px 6px rgba(34,197,94,0.18)"
-              : "0 1px 4px rgba(0,0,0,0.07)";
-            (e.currentTarget as HTMLElement).style.transform = "translateY(0)";
-          }
         }}
       >
         {/* Match header bar */}
-        <div
-          style={{
-            background: isBye ? "#0b1220" : "#0f172a",
-            borderBottom: "1px solid #1e293b",
-            padding: "5px 12px",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
+        <div className={`flex items-center justify-between border-b border-slate-700 px-3 py-1.5 ${isBye ? "bg-slate-950" : "bg-slate-950/80"}`}>
           <span
             style={{
               fontSize: 11,
@@ -781,14 +753,7 @@ const MatchCard: React.FC<{
               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                 {done && (
                   <span
-                    style={{
-                      fontSize: 10,
-                      color: "#16a34a",
-                      fontWeight: 700,
-                      background: "#dcfce7",
-                      padding: "1px 8px",
-                      borderRadius: 10,
-                    }}
+                    className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-bold text-emerald-300"
                   >
                     ✓ Done
                   </span>
@@ -799,16 +764,7 @@ const MatchCard: React.FC<{
                       e.stopPropagation();
                       onAssignReferee(match);
                     }}
-                    style={{
-                      background: "rgba(34,211,238,0.08)",
-                      border: "1px solid rgba(34,211,238,0.22)",
-                      cursor: "pointer",
-                      fontSize: 11,
-                      color: "#cffafe",
-                      padding: "2px 8px",
-                      borderRadius: 6,
-                      fontWeight: 600,
-                    }}
+                    className="rounded-md border border-cyan-400/30 bg-cyan-500/10 px-2 py-0.5 text-[11px] font-semibold text-cyan-100 transition hover:bg-cyan-500/20"
                     title="Assign a referee to this match"
                   >
                     👨‍⚖️ Assign Referee
@@ -820,16 +776,7 @@ const MatchCard: React.FC<{
                       e.stopPropagation();
                       onEdit(match);
                     }}
-                    style={{
-                      background: "rgba(34,211,238,0.08)",
-                      border: "1px solid rgba(34,211,238,0.22)",
-                      cursor: "pointer",
-                      fontSize: 11,
-                      color: "#cffafe",
-                      padding: "2px 8px",
-                      borderRadius: 6,
-                      fontWeight: 600,
-                    }}
+                    className="rounded-md border border-cyan-400/30 bg-cyan-500/10 px-2 py-0.5 text-[11px] font-semibold text-cyan-100 transition hover:bg-cyan-500/20"
                     title="Edit players in this match"
                   >
                     ✏️ Edit
@@ -1268,55 +1215,28 @@ const KnockoutBracket: React.FC<KnockoutBracketProps> = ({
 
   if (loading)
     return (
-      <div style={{ textAlign: "center", padding: 60 }}>
-        <div
-          style={{
-            width: 40,
-            height: 40,
-            border: "3px solid #e2e8f0",
-            borderTopColor: "#e11d48",
-            borderRadius: "50%",
-            animation: "spin 0.8s linear infinite",
-            margin: "0 auto 16px",
-          }}
-        />
-        <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
-        <p style={{ color: "#94a3b8" }}>Loading bracket…</p>
+      <div className="py-16 text-center">
+        <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-4 border-slate-600 border-t-cyan-400" />
+        <p className="text-slate-400">Loading bracket…</p>
       </div>
     );
 
   if (matches.length === 0)
     return (
-      <div
-        style={{
-          textAlign: "center",
-          padding: 60,
-          background: "#f8fafc",
-          borderRadius: 16,
-          border: "1px dashed #cbd5e1",
-        }}
-      >
-        <div style={{ fontSize: 48, marginBottom: 12 }}>🏆</div>
-        <p style={{ fontWeight: 700, color: "#1e293b", fontSize: 16 }}>
+      <div className="rounded-[28px] border border-dashed border-slate-600 bg-slate-900/80 p-14 text-center">
+        <div className="mb-3 text-5xl">🏆</div>
+        <p className="text-lg font-bold text-white">
           No knockout matches yet
         </p>
-        <p style={{ color: "#94a3b8", fontSize: 13 }}>
+        <p className="text-sm text-slate-400">
           Complete the group stage first.
         </p>
         <button
           onClick={load}
-          style={{
-            marginTop: 16,
-            padding: "8px 20px",
-            background: "#0f172a",
-            color: "#fff",
-            border: "none",
-            borderRadius: 10,
-            fontWeight: 600,
-            cursor: "pointer",
-          }}
+          className="mt-4 inline-flex items-center gap-2 rounded-full border border-slate-700 bg-slate-900 px-5 py-2.5 text-sm font-semibold text-cyan-400 shadow-md transition-all duration-200 hover:border-cyan-400 hover:bg-slate-800 hover:text-cyan-300 active:scale-95"
         >
-          🔄 Refresh
+          <span className="text-base">🔄</span>
+          <span>Refresh</span>
         </button>
       </div>
     );
@@ -1368,86 +1288,39 @@ const KnockoutBracket: React.FC<KnockoutBracketProps> = ({
     });
 
   return (
-    <div style={{ fontFamily: "'Segoe UI',system-ui,sans-serif" }}>
+    <div>
       {/* Header */}
-      <div style={{ textAlign: "center", marginBottom: 28, padding: "16px 20px", border: "1px solid #1e293b", borderRadius: 24, background: "rgba(15,23,42,0.75)" }}>
-        <div
-          style={{
-            fontSize: 11,
-            fontWeight: 800,
-            color: "#67e8f9",
-            letterSpacing: 2,
-            textTransform: "uppercase",
-            marginBottom: 4,
-          }}
-        >
+      <div className="mb-7 rounded-[28px] border border-slate-700 bg-slate-950/75 px-5 py-4 text-center">
+        <div className="mb-1 text-[11px] font-extrabold uppercase tracking-[0.24em] text-cyan-300">
           Knockout Draw
         </div>
-        <h2
-          style={{
-            margin: 0,
-            fontSize: 28,
-            fontWeight: 900,
-            color: "#fff",
-            letterSpacing: -0.5,
-          }}
-        >
+        <h2 className="m-0 text-3xl font-black tracking-tight text-white">
           Tournament Bracket
         </h2>
-        <p style={{ margin: "4px 0 0", fontSize: 13, color: "#94a3b8" }}>
+        <p className="mt-1 text-sm text-slate-400">
           All matches best of 5 games · Click any match to record score
         </p>
       </div>
 
-      {/* Toolbar */}
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "flex-end",
-          gap: 10,
-          marginBottom: 20,
-        }}
-      >
+      {/* Toolbar Section */}
+      <div className="mb-5 flex flex-wrap items-center justify-end gap-3">
         {isAdminOrReferee && (
-          <span
-            style={{
-              fontSize: 12,
-              color: "#67e8f9",
-              fontWeight: 600,
-              alignSelf: "center",
-            }}
-          >
-            💡 Click any match card to open umpire sheet · ✏️ Edit to change
-            players
-          </span>
+          <div className="rounded-full border border-cyan-500/30 bg-slate-900 px-4 py-2 text-xs font-semibold text-cyan-300 shadow-md">
+            💡 Click any match card to open umpire sheet · ✏️ Edit to change players
+          </div>
         )}
         <button
           onClick={load}
-          style={{
-            padding: "8px 16px",
-            background: "#0f172a",
-            color: "#e2e8f0",
-            border: "1.5px solid #1e293b",
-            borderRadius: 999,
-            fontWeight: 600,
-            fontSize: 13,
-            cursor: "pointer",
-          }}
+          className="flex items-center gap-2 rounded-full border border-slate-700 bg-slate-900 px-5 py-2 text-sm font-semibold text-cyan-400 shadow-md transition hover:border-cyan-400 hover:bg-slate-800 hover:text-cyan-300"
         >
-          🔄 Refresh
+          <span>🔄</span>
+          <span>Refresh</span>
         </button>
       </div>
 
       {/* Bracket */}
-      <div style={{ overflowX: "auto", paddingBottom: 16 }}>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "center",
-            padding: "8px 24px 24px",
-            minWidth: "fit-content",
-          }}
-        >
+      <div className="overflow-x-auto pb-4">
+        <div className="flex min-w-fit justify-center px-6 pb-6 pt-2">
           <BracketCanvas
             cols={cols}
             isAdminOrReferee={isAdminOrReferee}
@@ -1459,30 +1332,14 @@ const KnockoutBracket: React.FC<KnockoutBracketProps> = ({
       </div>
 
       {/* Footer */}
-      <div
-        style={{
-          marginTop: 8,
-          padding: "10px 16px",
-          background: "rgba(15,23,42,0.75)",
-          border: "1px solid #1e293b",
-          borderRadius: 14,
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          fontSize: 12,
-          color: "#94a3b8",
-        }}
-      >
+      <div className="mt-2 flex items-center justify-between rounded-2xl border border-slate-700 bg-slate-950/75 px-4 py-3 text-xs text-slate-400">
         <span>All matches are best of 5 games</span>
-        <div style={{ display: "flex", gap: 16 }}>
+        <div className="flex gap-4">
           {[
             ["#22c55e", "Winner / Completed"],
             ["#e2e8f0", "Pending"],
           ].map(([c, l]) => (
-            <span
-              key={l}
-              style={{ display: "flex", alignItems: "center", gap: 5 }}
-            >
+            <span key={l} className="flex items-center gap-1.5">
               <div
                 style={{
                   width: 16,

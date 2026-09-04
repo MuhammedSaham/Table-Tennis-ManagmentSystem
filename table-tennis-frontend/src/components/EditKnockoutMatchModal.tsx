@@ -131,129 +131,52 @@ const EditKnockoutMatchModal: React.FC<Props> = ({
 
   return (
     <div
-      style={{
-        position: "fixed",
-        inset: 0,
-        background: "rgba(0,0,0,0.5)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        zIndex: 50,
-        padding: 16,
-      }}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 p-4 backdrop-blur-sm"
     >
       <div
-        style={{
-          background: "#fff",
-          borderRadius: 20,
-          width: "100%",
-          maxWidth: 460,
-          boxShadow: "0 20px 60px rgba(0,0,0,0.2)",
-          overflow: "hidden",
-          fontFamily: "'Segoe UI',system-ui,sans-serif",
-        }}
+        className="w-full max-w-xl overflow-hidden rounded-[28px] border border-slate-700 bg-slate-900 shadow-2xl shadow-black/40"
       >
         {/* Header */}
-        <div style={{ background: "#0f172a", padding: "18px 24px" }}>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-            }}
-          >
+        <div className="border-b border-slate-700 bg-slate-950/80 px-6 py-5">
+          <div className="flex items-center justify-between">
             <div>
-              <div
-                style={{
-                  color: "#94a3b8",
-                  fontSize: 11,
-                  fontWeight: 700,
-                  letterSpacing: 1.5,
-                  textTransform: "uppercase",
-                }}
-              >
+              <div className="text-[11px] font-bold uppercase tracking-[0.24em] text-cyan-300/80">
                 {match.round}
               </div>
-              <h2
-                style={{
-                  margin: 0,
-                  color: "#fff",
-                  fontWeight: 900,
-                  fontSize: 17,
-                }}
-              >
+              <h2 className="m-0 text-lg font-extrabold text-white">
                 Edit Match Players
               </h2>
             </div>
             <button
               onClick={onClose}
-              style={{
-                background: "rgba(255,255,255,0.1)",
-                border: "none",
-                color: "#fff",
-                width: 32,
-                height: 32,
-                borderRadius: "50%",
-                cursor: "pointer",
-                fontSize: 18,
-              }}
+              className="flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/5 text-xl text-slate-200 transition hover:bg-white/10"
             >
               ×
             </button>
           </div>
         </div>
 
-        <div style={{ padding: 24 }}>
+        <div className="space-y-5 p-6">
           {/* Current match players */}
-          <div
-            style={{
-              background: "#f8fafc",
-              border: "1px solid #e2e8f0",
-              borderRadius: 12,
-              padding: "12px 16px",
-              marginBottom: 20,
-            }}
-          >
-            <div
-              style={{
-                fontSize: 11,
-                fontWeight: 700,
-                color: "#94a3b8",
-                textTransform: "uppercase",
-                letterSpacing: 1,
-                marginBottom: 8,
-              }}
-            >
+          <div className="rounded-2xl border border-slate-700 bg-slate-950/70 p-4">
+            <div className="mb-2 text-[11px] font-bold uppercase tracking-[0.2em] text-slate-400">
               Current Players
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <div
-                style={{
-                  flex: 1,
-                  fontWeight: 700,
-                  color: "#0f172a",
-                  fontSize: 14,
-                }}
-              >
+            <div className="flex items-center gap-3 text-sm">
+              <div className="flex-1 font-bold text-slate-100">
                 1. {playerName(match.player1)}
               </div>
-              <div style={{ color: "#94a3b8", fontWeight: 700 }}>vs</div>
-              <div
-                style={{
-                  flex: 1,
-                  fontWeight: 700,
-                  color: "#0f172a",
-                  fontSize: 14,
-                  textAlign: "right",
-                }}
-              >
+              <div className="font-bold uppercase tracking-wide text-slate-500">
+                VS
+              </div>
+              <div className="flex-1 text-right font-bold text-slate-100">
                 2. {playerName(match.player2)}
               </div>
             </div>
           </div>
 
           {/* Action tabs */}
-          <div style={{ display: "flex", gap: 6, marginBottom: 20 }}>
+          <div className="grid grid-cols-3 gap-2">
             {(
               [
                 {
@@ -272,33 +195,16 @@ const EditKnockoutMatchModal: React.FC<Props> = ({
               <div
                 key={key}
                 onClick={() => setAction(key)}
-                style={{
-                  flex: 1,
-                  padding: "10px 8px",
-                  borderRadius: 10,
-                  border: `2px solid ${action === key ? "#0f172a" : "#e2e8f0"}`,
-                  background: action === key ? "#0f172a" : "#fff",
-                  cursor: "pointer",
-                  textAlign: "center",
-                  transition: "all 0.15s",
-                }}
+                className={`cursor-pointer rounded-xl border p-2 text-center transition ${
+                  action === key
+                    ? "border-cyan-400/40 bg-cyan-500/15 shadow-lg shadow-cyan-500/10"
+                    : "border-slate-700 bg-slate-950/60 hover:border-cyan-400/25"
+                }`}
               >
-                <div
-                  style={{
-                    fontSize: 13,
-                    fontWeight: 700,
-                    color: action === key ? "#fff" : "#374151",
-                  }}
-                >
+                <div className={`text-[13px] font-bold ${action === key ? "text-cyan-100" : "text-slate-200"}`}>
                   {label}
                 </div>
-                <div
-                  style={{
-                    fontSize: 10,
-                    color: action === key ? "#94a3b8" : "#64748b",
-                    marginTop: 2,
-                  }}
-                >
+                <div className={`mt-0.5 text-[10px] ${action === key ? "text-cyan-200/70" : "text-slate-400"}`}>
                   {desc}
                 </div>
               </div>
@@ -307,31 +213,15 @@ const EditKnockoutMatchModal: React.FC<Props> = ({
 
           {/* Replace action */}
           {action === "replace" && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <div className="space-y-3">
               <div>
-                <label
-                  style={{
-                    fontSize: 12,
-                    fontWeight: 700,
-                    color: "#374151",
-                    display: "block",
-                    marginBottom: 6,
-                  }}
-                >
+                <label className="mb-1.5 block text-xs font-bold text-slate-300">
                   Player 1 Slot
                 </label>
                 <select
                   value={player1Id}
                   onChange={(e) => setPlayer1Id(e.target.value)}
-                  style={{
-                    width: "100%",
-                    padding: "10px 12px",
-                    border: "1.5px solid #e2e8f0",
-                    borderRadius: 10,
-                    fontSize: 14,
-                    outline: "none",
-                    color: "#0f172a",
-                  }}
+                  className="w-full rounded-xl border border-slate-700 bg-slate-950/80 px-3 py-2.5 text-sm text-slate-100 outline-none transition focus:border-cyan-400/40 focus:ring-2 focus:ring-cyan-400/20"
                 >
                   <option value="">— TBD / Empty —</option>
                   {registeredPlayers.map((p) => (
@@ -342,29 +232,13 @@ const EditKnockoutMatchModal: React.FC<Props> = ({
                 </select>
               </div>
               <div>
-                <label
-                  style={{
-                    fontSize: 12,
-                    fontWeight: 700,
-                    color: "#374151",
-                    display: "block",
-                    marginBottom: 6,
-                  }}
-                >
+                <label className="mb-1.5 block text-xs font-bold text-slate-300">
                   Player 2 Slot
                 </label>
                 <select
                   value={player2Id}
                   onChange={(e) => setPlayer2Id(e.target.value)}
-                  style={{
-                    width: "100%",
-                    padding: "10px 12px",
-                    border: "1.5px solid #e2e8f0",
-                    borderRadius: 10,
-                    fontSize: 14,
-                    outline: "none",
-                    color: "#0f172a",
-                  }}
+                  className="w-full rounded-xl border border-slate-700 bg-slate-950/80 px-3 py-2.5 text-sm text-slate-100 outline-none transition focus:border-cyan-400/40 focus:ring-2 focus:ring-cyan-400/20"
                 >
                   <option value="">— TBD / Empty —</option>
                   {registeredPlayers.map((p) => (
@@ -380,63 +254,31 @@ const EditKnockoutMatchModal: React.FC<Props> = ({
           {/* Walkover action */}
           {action === "walkover" && (
             <div>
-              <div
-                style={{
-                  fontSize: 13,
-                  color: "#475569",
-                  marginBottom: 12,
-                  lineHeight: 1.6,
-                }}
-              >
+              <div className="mb-3 text-sm leading-6 text-slate-300">
                 Select which player is giving a walkover. Their opponent will
                 automatically advance.
               </div>
-              <div style={{ display: "flex", gap: 10 }}>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                 {(["player1", "player2"] as const).map((slot) => (
                   <div
                     key={slot}
                     onClick={() => setWalkoverSlot(slot)}
-                    style={{
-                      flex: 1,
-                      padding: "14px 10px",
-                      border: `2px solid ${walkoverSlot === slot ? "#ef4444" : "#e2e8f0"}`,
-                      borderRadius: 12,
-                      cursor: "pointer",
-                      textAlign: "center",
-                      background: walkoverSlot === slot ? "#fef2f2" : "#fff",
-                      transition: "all 0.15s",
-                    }}
+                    className={`cursor-pointer rounded-xl border p-3 text-center transition ${
+                      walkoverSlot === slot
+                        ? "border-rose-400/40 bg-rose-500/10"
+                        : "border-slate-700 bg-slate-950/60 hover:border-rose-400/25"
+                    }`}
                   >
-                    <div
-                      style={{
-                        fontSize: 11,
-                        color: "#94a3b8",
-                        marginBottom: 4,
-                        fontWeight: 600,
-                      }}
-                    >
+                    <div className="mb-1 text-[11px] font-semibold text-slate-400">
                       {slot === "player1" ? "PLAYER 1" : "PLAYER 2"} WITHDRAWS
                     </div>
-                    <div
-                      style={{
-                        fontWeight: 700,
-                        color: walkoverSlot === slot ? "#dc2626" : "#0f172a",
-                        fontSize: 13,
-                      }}
-                    >
+                    <div className={`text-sm font-bold ${walkoverSlot === slot ? "text-rose-200" : "text-slate-100"}`}>
                       {slot === "player1"
                         ? playerName(match.player1)
                         : playerName(match.player2)}
                     </div>
                     {walkoverSlot === slot && (
-                      <div
-                        style={{
-                          fontSize: 11,
-                          color: "#16a34a",
-                          marginTop: 4,
-                          fontWeight: 600,
-                        }}
-                      >
+                      <div className="mt-1 text-[11px] font-semibold text-emerald-300">
                         →{" "}
                         {slot === "player1"
                           ? playerName(match.player2)
@@ -452,35 +294,19 @@ const EditKnockoutMatchModal: React.FC<Props> = ({
 
           {/* Swap action */}
           {action === "swap" && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              <div style={{ fontSize: 13, color: "#475569", lineHeight: 1.6 }}>
+            <div className="space-y-3">
+              <div className="text-sm leading-6 text-slate-300">
                 Swap a player from this match with a player from another{" "}
                 <strong>{match.round}</strong> match.
               </div>
               <div>
-                <label
-                  style={{
-                    fontSize: 12,
-                    fontWeight: 700,
-                    color: "#374151",
-                    display: "block",
-                    marginBottom: 6,
-                  }}
-                >
+                <label className="mb-1.5 block text-xs font-bold text-slate-300">
                   Select Match to Swap With
                 </label>
                 <select
                   value={swapMatchId}
                   onChange={(e) => setSwapMatchId(e.target.value)}
-                  style={{
-                    width: "100%",
-                    padding: "10px 12px",
-                    border: "1.5px solid #e2e8f0",
-                    borderRadius: 10,
-                    fontSize: 14,
-                    outline: "none",
-                    color: "#0f172a",
-                  }}
+                  className="w-full rounded-xl border border-slate-700 bg-slate-950/80 px-3 py-2.5 text-sm text-slate-100 outline-none transition focus:border-cyan-400/40 focus:ring-2 focus:ring-cyan-400/20"
                 >
                   <option value="">— Select a match —</option>
                   {sameRoundMatches.map((m) => (
@@ -498,33 +324,19 @@ const EditKnockoutMatchModal: React.FC<Props> = ({
               </div>
               {swapMatchId && (
                 <div>
-                  <label
-                    style={{
-                      fontSize: 12,
-                      fontWeight: 700,
-                      color: "#374151",
-                      display: "block",
-                      marginBottom: 6,
-                    }}
-                  >
+                  <label className="mb-1.5 block text-xs font-bold text-slate-300">
                     Swap their Player 1 (top) or Player 2 (bottom)?
                   </label>
-                  <div style={{ display: "flex", gap: 8 }}>
+                  <div className="flex gap-2">
                     {(["player1", "player2"] as const).map((slot) => (
                       <button
                         key={slot}
                         onClick={() => setSwapSlot(slot)}
-                        style={{
-                          flex: 1,
-                          padding: "9px 0",
-                          border: `2px solid ${swapSlot === slot ? "#0f172a" : "#e2e8f0"}`,
-                          borderRadius: 10,
-                          background: swapSlot === slot ? "#0f172a" : "#fff",
-                          color: swapSlot === slot ? "#fff" : "#374151",
-                          fontWeight: 700,
-                          fontSize: 13,
-                          cursor: "pointer",
-                        }}
+                        className={`flex-1 rounded-xl border px-3 py-2 text-sm font-bold transition ${
+                          swapSlot === slot
+                            ? "border-cyan-400/40 bg-cyan-500/15 text-cyan-100"
+                            : "border-slate-700 bg-slate-950/60 text-slate-200 hover:border-cyan-400/25"
+                        }`}
                       >
                         {slot === "player1"
                           ? "Their Player 1"
@@ -539,49 +351,23 @@ const EditKnockoutMatchModal: React.FC<Props> = ({
         </div>
 
         {/* Footer */}
-        <div
-          style={{
-            padding: "14px 24px",
-            borderTop: "1px solid #e2e8f0",
-            display: "flex",
-            gap: 10,
-            background: "#f8fafc",
-          }}
-        >
+        <div className="flex gap-3 border-t border-slate-700 bg-slate-950/80 px-6 py-4">
           <button
             onClick={onClose}
-            style={{
-              flex: 1,
-              padding: "10px 0",
-              border: "1.5px solid #e2e8f0",
-              borderRadius: 10,
-              background: "#fff",
-              color: "#475569",
-              fontWeight: 600,
-              fontSize: 14,
-              cursor: "pointer",
-            }}
+            className="flex-1 rounded-xl border border-slate-600 bg-slate-800/70 px-4 py-2.5 text-sm font-semibold text-slate-200 transition hover:bg-slate-800"
           >
             Cancel
           </button>
           <button
             onClick={handleSave}
             disabled={saving}
-            style={{
-              flex: 2,
-              padding: "10px 0",
-              border: "none",
-              borderRadius: 10,
-              background: saving
-                ? "#94a3b8"
+            className={`flex-[2] rounded-xl px-4 py-2.5 text-sm font-bold text-white transition ${
+              saving
+                ? "cursor-default bg-slate-500"
                 : action === "walkover"
-                  ? "#dc2626"
-                  : "#0f172a",
-              color: "#fff",
-              fontWeight: 700,
-              fontSize: 14,
-              cursor: saving ? "default" : "pointer",
-            }}
+                  ? "bg-rose-600 hover:bg-rose-500"
+                  : "bg-gradient-to-r from-cyan-500 to-sky-500 text-slate-950 hover:shadow-lg hover:shadow-cyan-500/25"
+            }`}
           >
             {saving
               ? "Saving…"

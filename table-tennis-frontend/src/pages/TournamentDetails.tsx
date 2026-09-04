@@ -703,270 +703,283 @@ const TournamentDetails: React.FC = () => {
               )}
               <button
                 onClick={fetchWinners}
-                className="rounded-full border border-sky-400/30 bg-sky-500/10 px-4 py-2 text-sm font-semibold text-sky-100 transition hover:bg-sky-500/20"
+                className="inline-flex items-center gap-2 rounded-full border border-cyan-400/30 bg-cyan-500/10 px-4 py-2 text-sm font-semibold text-cyan-100 transition hover:-translate-y-0.5 hover:bg-cyan-500/20 hover:shadow-lg hover:shadow-cyan-500/20"
               >
-                Show Winners
+                <span>🏆</span>
+                <span>Show Winners</span>
               </button>
             </div>
           </div>
         </div>
 
         {/* Edit Tournament Modal */}
-        {showEditModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">
-                Edit Tournament
-              </h2>
-
-              <div className="space-y-4">
-                {/* Basic Info */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {showEditModal && (
+            <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+              <div className="overflow-hidden rounded-[32px] border border-slate-800 bg-slate-900/90 p-6 sm:p-8 max-w-4xl w-full shadow-2xl shadow-black/80 backdrop-blur-md max-h-[90vh] overflow-y-auto text-white">
+                {/* Header */}
+                <div className="mb-6 pb-4 border-b border-slate-800 flex items-center justify-between">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Tournament Name
-                    </label>
-                    <input
-                      type="text"
-                      value={editFormData.name}
-                      onChange={(e) =>
-                        setEditFormData({ ...editFormData, name: e.target.value })
-                      }
-                      className="input-field"
-                    />
+                    <div className="inline-flex items-center gap-2 rounded-full border border-cyan-400/20 bg-cyan-500/10 px-3.5 py-1 text-xs font-semibold uppercase tracking-[0.25em] text-cyan-300 mb-2">
+                      Tournament Settings
+                    </div>
+                    <h2 className="text-2xl font-bold tracking-tight text-white">
+                      Edit Tournament
+                    </h2>
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Venue
-                    </label>
-                    <input
-                      type="text"
-                      value={editFormData.venue}
-                      onChange={(e) =>
-                        setEditFormData({
-                          ...editFormData,
-                          venue: e.target.value,
-                        })
-                      }
-                      className="input-field"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Description
-                  </label>
-                  <textarea
-                    value={editFormData.description}
-                    onChange={(e) =>
-                      setEditFormData({
-                        ...editFormData,
-                        description: e.target.value,
-                      })
-                    }
-                    rows={2}
-                    className="input-field"
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Start Date
-                    </label>
-                    <input
-                      type="datetime-local"
-                      value={editFormData.startDate}
-                      onChange={(e) =>
-                        setEditFormData({
-                          ...editFormData,
-                          startDate: e.target.value,
-                        })
-                      }
-                      className="input-field"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      End Date
-                    </label>
-                    <input
-                      type="datetime-local"
-                      value={editFormData.endDate}
-                      onChange={(e) =>
-                        setEditFormData({
-                          ...editFormData,
-                          endDate: e.target.value,
-                        })
-                      }
-                      className="input-field"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Registration Deadline
-                    </label>
-                    <input
-                      type="datetime-local"
-                      value={editFormData.registrationDeadline}
-                      onChange={(e) =>
-                        setEditFormData({
-                          ...editFormData,
-                          registrationDeadline: e.target.value,
-                        })
-                      }
-                      className="input-field"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Max Players (Optional)
-                  </label>
-                  <input
-                    type="number"
-                    value={editFormData.maxPlayers}
-                    onChange={(e) =>
-                      setEditFormData({
-                        ...editFormData,
-                        maxPlayers: e.target.value,
-                      })
-                    }
-                    className="input-field"
-                    min="2"
-                  />
-                </div>
-
-                {/* Categories Section */}
-                <div className="border-t pt-4 mt-4">
-                  <div className="flex justify-between items-center mb-3">
-                    <h3 className="text-lg font-semibold text-gray-900">
-                      Categories
-                    </h3>
-                    <button
-                      type="button"
-                      onClick={addEditCategory}
-                      className="bg-primary-600 text-white px-3 py-1 rounded text-sm hover:bg-primary-700"
-                    >
-                      + Add Category
-                    </button>
-                  </div>
-
-                  <div className="space-y-3 max-h-96 overflow-y-auto">
-                    {editCategories.map((category, index) => (
-                      <div
-                        key={category.id}
-                        className="border rounded-lg p-3 bg-gray-50"
-                      >
-                        <div className="flex justify-between items-start mb-2">
-                          <h4 className="font-medium">Category {index + 1}</h4>
-                          {editCategories.length > 1 && (
-                            <button
-                              type="button"
-                              onClick={() => removeEditCategory(index)}
-                              className="text-red-600 text-sm hover:text-red-700"
-                            >
-                              Remove
-                            </button>
-                          )}
-                        </div>
-                        <div className="grid grid-cols-2 gap-2">
-                          <input
-                            type="text"
-                            placeholder="Category Name"
-                            value={category.name}
-                            onChange={(e) =>
-                              updateEditCategory(index, "name", e.target.value)
-                            }
-                            className="input-field text-sm"
-                          />
-                          <select
-                            value={category.type}
-                            onChange={(e) =>
-                              updateEditCategory(index, "type", e.target.value)
-                            }
-                            className="input-field text-sm"
-                          >
-                            <option value="SINGLES">Singles</option>
-                            <option value="DOUBLES">Doubles</option>
-                            <option value="TEAM">Team</option>
-                          </select>
-                          <div className="flex gap-2 col-span-2">
-                            <input
-                              type="number"
-                              placeholder="Min Age"
-                              value={category.minAge || ""}
-                              onChange={(e) =>
-                                updateEditCategory(
-                                  index,
-                                  "minAge",
-                                  e.target.value
-                                    ? parseInt(e.target.value)
-                                    : undefined,
-                                )
-                              }
-                              className="input-field text-sm w-1/2"
-                            />
-                            <input
-                              type="number"
-                              placeholder="Max Age"
-                              value={category.maxAge || ""}
-                              onChange={(e) =>
-                                updateEditCategory(
-                                  index,
-                                  "maxAge",
-                                  e.target.value
-                                    ? parseInt(e.target.value)
-                                    : undefined,
-                                )
-                              }
-                              className="input-field text-sm w-1/2"
-                            />
-                          </div>
-                          <input
-                            type="number"
-                            placeholder="Max Participants"
-                            value={category.maxParticipants}
-                            onChange={(e) =>
-                              updateEditCategory(
-                                index,
-                                "maxParticipants",
-                                parseInt(e.target.value),
-                              )
-                            }
-                            className="input-field text-sm col-span-2"
-                          />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  {editCategories.length === 0 && (
-                    <p className="text-gray-500 text-center py-4">
-                      No categories. Click "Add Category" to create one.
-                    </p>
-                  )}
-                </div>
-
-                <div className="flex gap-3 pt-4">
-                  <button
-                    onClick={handleUpdateTournament}
-                    className="btn-primary flex-1"
-                  >
-                    Save Changes
-                  </button>
                   <button
                     onClick={() => setShowEditModal(false)}
-                    className="btn-secondary flex-1"
+                    className="rounded-full p-2 text-slate-400 hover:text-white hover:bg-slate-800/60 transition"
                   >
-                    Cancel
+                    ✕
                   </button>
+                </div>
+
+                <div className="space-y-5">
+                  {/* Basic Info */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-medium text-slate-300 mb-1.5 uppercase tracking-wider">
+                        Tournament Name
+                      </label>
+                      <input
+                        type="text"
+                        value={editFormData.name}
+                        onChange={(e) =>
+                          setEditFormData({ ...editFormData, name: e.target.value })
+                        }
+                        className="w-full rounded-xl border border-slate-700/80 bg-slate-800/50 px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:border-cyan-400 focus:outline-none focus:ring-1 focus:ring-cyan-400 transition"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-slate-300 mb-1.5 uppercase tracking-wider">
+                        Venue
+                      </label>
+                      <input
+                        type="text"
+                        value={editFormData.venue}
+                        onChange={(e) =>
+                          setEditFormData({
+                            ...editFormData,
+                            venue: e.target.value,
+                          })
+                        }
+                        className="w-full rounded-xl border border-slate-700/80 bg-slate-800/50 px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:border-cyan-400 focus:outline-none focus:ring-1 focus:ring-cyan-400 transition"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-slate-300 mb-1.5 uppercase tracking-wider">
+                      Description
+                    </label>
+                    <textarea
+                      value={editFormData.description}
+                      onChange={(e) =>
+                        setEditFormData({
+                          ...editFormData,
+                          description: e.target.value,
+                        })
+                      }
+                      rows={3}
+                      className="w-full rounded-xl border border-slate-700/80 bg-slate-800/50 px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:border-cyan-400 focus:outline-none focus:ring-1 focus:ring-cyan-400 transition"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-xs font-medium text-slate-300 mb-1.5 uppercase tracking-wider">
+                        Start Date
+                      </label>
+                      <input
+                        type="datetime-local"
+                        value={editFormData.startDate}
+                        onChange={(e) =>
+                          setEditFormData({
+                            ...editFormData,
+                            startDate: e.target.value,
+                          })
+                        }
+                        className="w-full rounded-xl border border-slate-700/80 bg-slate-800/50 px-3.5 py-2.5 text-sm text-white focus:border-cyan-400 focus:outline-none focus:ring-1 focus:ring-cyan-400 transition [color-scheme:dark]"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-slate-300 mb-1.5 uppercase tracking-wider">
+                        End Date
+                      </label>
+                      <input
+                        type="datetime-local"
+                        value={editFormData.endDate}
+                        onChange={(e) =>
+                          setEditFormData({
+                            ...editFormData,
+                            endDate: e.target.value,
+                          })
+                        }
+                        className="w-full rounded-xl border border-slate-700/80 bg-slate-800/50 px-3.5 py-2.5 text-sm text-white focus:border-cyan-400 focus:outline-none focus:ring-1 focus:ring-cyan-400 transition [color-scheme:dark]"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-slate-300 mb-1.5 uppercase tracking-wider">
+                        Registration Deadline
+                      </label>
+                      <input
+                        type="datetime-local"
+                        value={editFormData.registrationDeadline}
+                        onChange={(e) =>
+                          setEditFormData({
+                            ...editFormData,
+                            registrationDeadline: e.target.value,
+                          })
+                        }
+                        className="w-full rounded-xl border border-slate-700/80 bg-slate-800/50 px-3.5 py-2.5 text-sm text-white focus:border-cyan-400 focus:outline-none focus:ring-1 focus:ring-cyan-400 transition [color-scheme:dark]"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-slate-300 mb-1.5 uppercase tracking-wider">
+                      Max Players (Optional)
+                    </label>
+                    <input
+                      type="number"
+                      value={editFormData.maxPlayers}
+                      onChange={(e) =>
+                        setEditFormData({
+                          ...editFormData,
+                          maxPlayers: e.target.value,
+                        })
+                      }
+                      className="w-full rounded-xl border border-slate-700/80 bg-slate-800/50 px-4 py-2.5 text-sm text-white focus:border-cyan-400 focus:outline-none focus:ring-1 focus:ring-cyan-400 transition"
+                      min="2"
+                    />
+                  </div>
+
+                  {/* Categories Section */}
+                  <div className="border-t border-slate-800 pt-5 mt-6">
+                    <div className="flex justify-between items-center mb-4">
+                      <h3 className="text-lg font-semibold text-white">Categories</h3>
+                      <button
+                        type="button"
+                        onClick={addEditCategory}
+                        className="rounded-full border border-cyan-400/30 bg-cyan-500/10 px-4 py-1.5 text-xs font-semibold text-cyan-200 transition hover:bg-cyan-500/20 hover:border-cyan-400/50"
+                      >
+                        + Add Category
+                      </button>
+                    </div>
+
+                    <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
+                      {editCategories.map((category, index) => (
+                        <div
+                          key={category.id}
+                          className="border border-slate-800 rounded-2xl p-4 bg-slate-950/50 backdrop-blur-sm"
+                        >
+                          <div className="flex justify-between items-center mb-3">
+                            <h4 className="font-medium text-sm text-cyan-300">
+                              Category {index + 1}
+                            </h4>
+                            {editCategories.length > 1 && (
+                              <button
+                                type="button"
+                                onClick={() => removeEditCategory(index)}
+                                className="text-xs font-medium text-red-400 hover:text-red-300 transition"
+                              >
+                                Remove
+                              </button>
+                            )}
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <input
+                              type="text"
+                              placeholder="Category Name"
+                              value={category.name}
+                              onChange={(e) =>
+                                updateEditCategory(index, "name", e.target.value)
+                              }
+                              className="w-full rounded-xl border border-slate-800 bg-slate-900 px-3.5 py-2 text-sm text-white placeholder-slate-500 focus:border-cyan-400 focus:outline-none"
+                            />
+                            <select
+                              value={category.type}
+                              onChange={(e) =>
+                                updateEditCategory(index, "type", e.target.value)
+                              }
+                              className="w-full rounded-xl border border-slate-800 bg-slate-900 px-3.5 py-2 text-sm text-white focus:border-cyan-400 focus:outline-none"
+                            >
+                              <option value="SINGLES">Singles</option>
+                              <option value="DOUBLES">Doubles</option>
+                              <option value="TEAM">Team</option>
+                            </select>
+                            <div className="flex gap-2 sm:col-span-2">
+                              <input
+                                type="number"
+                                placeholder="Min Age"
+                                value={category.minAge || ""}
+                                onChange={(e) =>
+                                  updateEditCategory(
+                                    index,
+                                    "minAge",
+                                    e.target.value ? parseInt(e.target.value) : undefined
+                                  )
+                                }
+                                className="w-1/2 rounded-xl border border-slate-800 bg-slate-900 px-3.5 py-2 text-sm text-white placeholder-slate-500 focus:border-cyan-400 focus:outline-none"
+                              />
+                              <input
+                                type="number"
+                                placeholder="Max Age"
+                                value={category.maxAge || ""}
+                                onChange={(e) =>
+                                  updateEditCategory(
+                                    index,
+                                    "maxAge",
+                                    e.target.value ? parseInt(e.target.value) : undefined
+                                  )
+                                }
+                                className="w-1/2 rounded-xl border border-slate-800 bg-slate-900 px-3.5 py-2 text-sm text-white placeholder-slate-500 focus:border-cyan-400 focus:outline-none"
+                              />
+                            </div>
+                            <input
+                              type="number"
+                              placeholder="Max Participants"
+                              value={category.maxParticipants}
+                              onChange={(e) =>
+                                updateEditCategory(
+                                  index,
+                                  "maxParticipants",
+                                  parseInt(e.target.value)
+                                )
+                              }
+                              className="w-full rounded-xl border border-slate-800 bg-slate-900 px-3.5 py-2 text-sm text-white placeholder-slate-500 focus:border-cyan-400 focus:outline-none sm:col-span-2"
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {editCategories.length === 0 && (
+                      <p className="text-slate-500 text-center py-6 text-sm">
+                        No categories configured. Click "+ Add Category" to create one.
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Modal Controls */}
+                  <div className="flex gap-3 pt-4 border-t border-slate-800">
+                    <button
+                      onClick={handleUpdateTournament}
+                      className="flex-1 rounded-full bg-cyan-500 hover:bg-cyan-400 text-slate-950 py-2.5 text-sm font-bold shadow-lg shadow-cyan-500/20 transition"
+                    >
+                      Save Changes
+                    </button>
+                    <button
+                      onClick={() => setShowEditModal(false)}
+                      className="flex-1 rounded-full border border-slate-700 bg-slate-800/60 hover:bg-slate-800 text-slate-200 py-2.5 text-sm font-semibold transition"
+                    >
+                      Cancel
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
 
         {/* Categories Section */}
         <div className="rounded-[32px] border border-slate-800 bg-slate-900/70 p-6 shadow-2xl shadow-black/20 backdrop-blur-md">
@@ -1130,31 +1143,39 @@ const TournamentDetails: React.FC = () => {
 
         {/* Winners Section */}
         {showWinners && winners && (
-          <div id="winners-section" className="card mb-6 bg-gradient-to-r from-yellow-50 to-amber-50">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4 text-center">
-              🏆 Tournament Champions 🏆
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
-              <div className="bg-yellow-100 rounded-lg p-4">
-                <div className="text-5xl mb-2">🥇</div>
-                <h3 className="font-bold text-xl text-gray-900">Champion</h3>
-                <p className="text-lg font-semibold text-yellow-700">
+          <div
+            id="winners-section"
+            className="mb-6 overflow-hidden rounded-[32px] border border-amber-300/20 bg-slate-900/80 p-6 shadow-2xl shadow-black/20 backdrop-blur-md"
+          >
+            <div className="mb-5 text-center">
+              <h2 className="text-2xl font-bold text-white">
+                🏆 Tournament Champions 🏆
+              </h2>
+              <p className="mt-2 text-sm text-slate-300">
+                Final standings for the selected category.
+              </p>
+            </div>
+            <div className="grid grid-cols-1 gap-4 text-center md:grid-cols-3">
+              <div className="rounded-2xl border border-yellow-300/30 bg-gradient-to-b from-yellow-400/15 to-amber-500/10 p-4">
+                <div className="mb-2 text-5xl">🥇</div>
+                <h3 className="text-xl font-bold text-yellow-100">Champion</h3>
+                <p className="text-lg font-semibold text-yellow-200">
                   {winners.first?.firstName} {winners.first?.lastName}
                 </p>
               </div>
-              <div className="bg-gray-100 rounded-lg p-4">
-                <div className="text-5xl mb-2">🥈</div>
-                <h3 className="font-bold text-xl text-gray-900">Runner-up</h3>
-                <p className="text-lg font-semibold text-gray-700">
+              <div className="rounded-2xl border border-slate-300/20 bg-gradient-to-b from-slate-400/15 to-slate-600/10 p-4">
+                <div className="mb-2 text-5xl">🥈</div>
+                <h3 className="text-xl font-bold text-slate-100">Runner-up</h3>
+                <p className="text-lg font-semibold text-slate-200">
                   {winners.second?.firstName} {winners.second?.lastName}
                 </p>
               </div>
-              <div className="bg-amber-50 rounded-lg p-4">
-                <div className="text-5xl mb-2">🥉</div>
-                <h3 className="font-bold text-xl text-gray-900">
+              <div className="rounded-2xl border border-amber-300/30 bg-gradient-to-b from-amber-400/15 to-orange-500/10 p-4">
+                <div className="mb-2 text-5xl">🥉</div>
+                <h3 className="text-xl font-bold text-amber-100">
                   Second Runner-up
                 </h3>
-                <p className="text-lg font-semibold text-amber-700">
+                <p className="text-lg font-semibold text-amber-200">
                   {winners.third?.firstName} {winners.third?.lastName || "TBD"}
                 </p>
               </div>
