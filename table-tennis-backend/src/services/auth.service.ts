@@ -2,7 +2,6 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { Prisma } from '@prisma/client';
 import prisma from '../config/database';
-import { Prisma } from '@prisma/client';
 import { AppError } from '../utils/AppError';
 import { config } from '../config/env';
 //import crypto from 'crypto';
