@@ -29,11 +29,11 @@ export const getTournamentTeams = catchAsync(async (req: Request, res: Response)
 
 // Search partners by name or email
 export const searchPartners = catchAsync(async (req: Request, res: Response) => {
-  const { q } = req.query as { q: string };
+  const { q, categoryId } = req.query as { q: string; categoryId?: string };
   if (!q || q.trim().length < 2) {
     return sendResponse(res, 400, 'Search query must be at least 2 characters', []);
   }
-  const partners = await teamService.searchPartners(q.trim(), req.user!.id);
+  const partners = await teamService.searchPartners(q.trim(), req.user!.id, categoryId);
   sendResponse(res, 200, 'Partners found', partners);
 });
 
@@ -69,4 +69,10 @@ export const cancelInvite = catchAsync(async (req: Request, res: Response) => {
 export const getMyInvites = catchAsync(async (req: Request, res: Response) => {
   const invites = await teamService.getMyInvites(req.user!.id);
   sendResponse(res, 200, 'Invites fetched', invites);
+});
+
+// Get pending invites sent by this user
+export const getMySentInvites = catchAsync(async (req: Request, res: Response) => {
+  const invites = await teamService.getMySentInvites(req.user!.id);
+  sendResponse(res, 200, 'Sent invites fetched', invites);
 });

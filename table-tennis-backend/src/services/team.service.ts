@@ -214,22 +214,81 @@ export class TeamService {
   // ─── DOUBLES INVITE METHODS ─────────────────────────────────────────────────
 
   // Search all PLAYER accounts by name or email (for partner selection)
-  async searchPartners(query: string, excludeUserId: string) {
+  async searchPartners(query: string, excludeUserId: string, categoryId?: string) {
+    const excludeIds = [excludeUserId];
+
+    let genderFilter: any = undefined;
+
+    if (categoryId) {
+      const category = await prisma.category.findUnique({
+        where: { id: categoryId },
+      });
+
+      if (category) {
+        // Exclude players already registered in this category
+        const existingRegistrations = await prisma.tournamentRegistration.findMany({
+          where: { categoryId, status: { in: ['PENDING', 'APPROVED'] } },
+          select: { playerId: true, team: { select: { members: { select: { playerId: true } } } } },
+        });
+
+        for (const reg of existingRegistrations) {
+          if (reg.playerId) excludeIds.push(reg.playerId);
+          if (reg.team?.members) {
+            for (const m of reg.team.members) {
+              excludeIds.push(m.playerId);
+            }
+          }
+        }
+
+        // Gender constraints
+        if (category.type === 'MIXED_DOUBLES') {
+          const inviterProfile = await prisma.playerProfile.findUnique({
+            where: { userId: excludeUserId },
+            select: { gender: true },
+          });
+          if (inviterProfile?.gender === 'MALE') {
+            genderFilter = 'FEMALE';
+          } else if (inviterProfile?.gender === 'FEMALE') {
+            genderFilter = 'MALE';
+          }
+        } else if (category.type === 'DOUBLES' && category.gender && category.gender !== 'MIXED') {
+          genderFilter = category.gender;
+        }
+      }
+    }
+
+    const uniqueExcludeIds = [...new Set(excludeIds)];
+
+    const whereClause: any = {
+      role: 'PLAYER',
+      id: { notIn: uniqueExcludeIds },
+      OR: [
+        { firstName: { contains: query, mode: 'insensitive' } },
+        { lastName: { contains: query, mode: 'insensitive' } },
+        { email: { contains: query, mode: 'insensitive' } },
+      ],
+    };
+
+    if (genderFilter) {
+      whereClause.playerProfile = {
+        gender: genderFilter,
+      };
+    }
+
     const players = await prisma.user.findMany({
-      where: {
-        role: 'PLAYER',
-        id: { not: excludeUserId }, // exclude self
-        OR: [
-          { firstName: { contains: query, mode: 'insensitive' } },
-          { lastName: { contains: query, mode: 'insensitive' } },
-          { email: { contains: query, mode: 'insensitive' } },
-        ],
-      },
+      where: whereClause,
       select: {
         id: true,
         firstName: true,
         lastName: true,
         email: true,
+        playerProfile: {
+          select: {
+            gender: true,
+            skillLevel: true,
+            clubAffiliation: true,
+          },
+        },
       },
       take: 20,
     });
@@ -382,15 +441,21 @@ export class TeamService {
         ],
       });
 
-      // Create registration for the team (PENDING — admin needs to approve)
+      // Create registration for the team (APPROVED directly per Choice 1)
       await tx.tournamentRegistration.create({
         data: {
           tournamentId: invite.tournamentId,
           categoryId: invite.categoryId,
           playerId: invite.inviterId,
           teamId: team.id,
-          status: 'PENDING',
+          status: 'APPROVED',
         },
+      });
+
+      // Update currentParticipants count on category
+      await tx.category.update({
+        where: { id: invite.categoryId },
+        data: { currentParticipants: { increment: 1 } },
       });
 
       // Mark invite as ACCEPTED with teamId
@@ -408,7 +473,7 @@ export class TeamService {
         userId: invite.inviterId,
         type: 'DOUBLES_INVITE_ACCEPTED',
         title: 'Doubles Invite Accepted! 🎉',
-        message: `${invite.invitee.firstName} ${invite.invitee.lastName} accepted your doubles invite for ${invite.tournament.name} – ${invite.category.name}. Your team is pending admin approval.`,
+        message: `${invite.invitee.firstName} ${invite.invitee.lastName} accepted your doubles invite for ${invite.tournament.name} – ${invite.category.name}. Your team is officially confirmed and registered!`,
       },
     });
 
@@ -432,6 +497,19 @@ export class TeamService {
       where: { inviteeId: userId, status: 'PENDING' },
       include: {
         inviter: { select: { id: true, firstName: true, lastName: true, email: true } },
+        tournament: { select: { id: true, name: true } },
+        category: { select: { id: true, name: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  // Get all pending invites SENT BY this user
+  async getMySentInvites(userId: string) {
+    return prisma.doublesInvite.findMany({
+      where: { inviterId: userId, status: 'PENDING' },
+      include: {
+        invitee: { select: { id: true, firstName: true, lastName: true, email: true } },
         tournament: { select: { id: true, name: true } },
         category: { select: { id: true, name: true } },
       },

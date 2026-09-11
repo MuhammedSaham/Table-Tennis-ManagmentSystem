@@ -11,6 +11,7 @@ import KnockoutBracket from "../components/KnockoutBracket";
 import GuestRegistrationModal from "../components/GuestRegistrationModal";
 import { Link } from "react-router-dom";
 import CreateKnockoutModal from "../components/CreateKnockoutModal";
+import DoublesPartnerModal from "../components/DoublesPartnerModal";
 
 interface Category {
   id: string;
@@ -73,9 +74,6 @@ interface Tournament {
 
 const TournamentDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  if (!id) {
-    return <div className="text-center py-12">Invalid tournament ID</div>;
-  }
   const { user } = useAuth();
   const navigate = useNavigate();
   const [tournament, setTournament] = useState<Tournament | null>(null);
@@ -110,23 +108,42 @@ const TournamentDetails: React.FC = () => {
     maxPlayers: "",
   });
   const [editCategories, setEditCategories] = useState<Category[]>([]);
-  const [partnerDetails, setPartnerDetails] = useState({
-    firstName: "",
-    lastName: "",
-    email: "",
-    phone: "",
-  });
-  const [showPartnerForm, setShowPartnerForm] = useState(false);
-  const [selectedDoublesCategory, setSelectedDoublesCategory] = useState<
-    string | null
-  >(null);
+  
+  // Doubles Pairing States
+  const [partnerModalCategory, setPartnerModalCategory] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
+  const [myPendingInvites, setMyPendingInvites] = useState<any[]>([]);
+  const [mySentInvites, setMySentInvites] = useState<any[]>([]);
+  const [respondingInviteId, setRespondingInviteId] = useState<string | null>(null);
+
   const [showGuestModal, setShowGuestModal] = useState(false);
   const [showKnockoutModal, setShowKnockoutModal] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
 
+  const fetchInvites = async () => {
+    if (!user || user.role !== "PLAYER" || !id) return;
+    try {
+      const [receivedRes, sentRes] = await Promise.all([
+        api.get("/teams/invites/my-invites"),
+        api.get("/teams/invites/sent-invites"),
+      ]);
+      const allReceived = receivedRes.data.data || [];
+      const allSent = sentRes.data.data || [];
+      setMyPendingInvites(
+        allReceived.filter((inv: any) => inv.tournament?.id === id),
+      );
+      setMySentInvites(allSent.filter((inv: any) => inv.tournament?.id === id));
+    } catch (err) {
+      console.error("Failed to fetch doubles invites", err);
+    }
+  };
+
   useEffect(() => {
     fetchTournamentDetails();
-  }, [id]);
+    fetchInvites();
+  }, [id, user]);
 
   useEffect(() => {
     if (tournament?.categories?.length && !activeCategoryId) {
@@ -234,6 +251,43 @@ const TournamentDetails: React.FC = () => {
     }
   };
 
+  const handleAcceptInvite = async (inviteId: string) => {
+    setRespondingInviteId(inviteId);
+    try {
+      await api.post(`/teams/invites/${inviteId}/accept`);
+      toast.success("Doubles partner invite accepted! You are officially registered.");
+      await fetchTournamentDetails();
+      await fetchInvites();
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Failed to accept invite");
+    } finally {
+      setRespondingInviteId(null);
+    }
+  };
+
+  const handleDeclineInvite = async (inviteId: string) => {
+    setRespondingInviteId(inviteId);
+    try {
+      await api.post(`/teams/invites/${inviteId}/decline`);
+      toast.success("Doubles invite declined");
+      await fetchInvites();
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Failed to decline invite");
+    } finally {
+      setRespondingInviteId(null);
+    }
+  };
+
+  const handleCancelSentInvite = async (inviteId: string) => {
+    try {
+      await api.delete(`/teams/invites/${inviteId}/cancel`);
+      toast.success("Invitation cancelled");
+      await fetchInvites();
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Failed to cancel invite");
+    }
+  };
+
   const handleRegister = async () => {
     if (selectedCategories.length === 0) {
       toast.error("Please select at least one category");
@@ -258,24 +312,6 @@ const TournamentDetails: React.FC = () => {
       }
     }
 
-    // Check if any selected category is doubles and partner details are missing
-    const hasDoublesWithoutPartner = selectedCategories.some((catId) => {
-      const category = tournament?.categories.find((c) => c.id === catId);
-      const isDoubles =
-        category?.type === "DOUBLES" || category?.type === "MIXED";
-      return (
-        isDoubles &&
-        (!partnerDetails.firstName ||
-          !partnerDetails.lastName ||
-          !partnerDetails.email)
-      );
-    });
-
-    if (hasDoublesWithoutPartner) {
-      toast.error("Please fill in partner details for doubles categories");
-      return;
-    }
-
     setRegistering(true);
     let successCount = 0;
     let failCount = 0;
@@ -285,27 +321,13 @@ const TournamentDetails: React.FC = () => {
         const category = tournament?.categories.find(
           (c) => c.id === categoryId,
         );
-        const isDoubles =
-          category?.type === "DOUBLES" || category?.type === "MIXED";
 
         try {
-          if (isDoubles) {
-            // For doubles, create a team
-            await api.post("/teams", {
-              name: `${tournament?.name} - ${category?.name}`,
-              tournamentId: id,
-              categoryId: categoryId,
-              captainId: user?.id,
-              memberIds: [],
-              partnerDetails: partnerDetails,
-            });
-          } else {
-            // For singles, register directly
-            await api.post("/registrations", {
-              tournamentId: id,
-              categoryId: categoryId,
-            });
-          }
+          // Register singles directly
+          await api.post("/registrations", {
+            tournamentId: id,
+            categoryId: categoryId,
+          });
           successCount++;
         } catch (err: any) {
           console.error(`Failed to register for category ${categoryId}:`, err);
@@ -324,9 +346,6 @@ const TournamentDetails: React.FC = () => {
         toast.success(
           `Registered for ${successCount} category(s) successfully!`,
         );
-        if (partnerDetails.email) {
-          toast.success(`Partner invitation sent to ${partnerDetails.email}`);
-        }
       }
       if (failCount > 1) {
         toast.error(`Failed to register for ${failCount} categories`);
@@ -334,9 +353,6 @@ const TournamentDetails: React.FC = () => {
 
       await fetchTournamentDetails();
       setSelectedCategories([]);
-      setPartnerDetails({ firstName: "", lastName: "", email: "", phone: "" });
-      setShowPartnerForm(false);
-      setSelectedDoublesCategory(null);
     } catch (error: any) {
       console.error("Registration error:", error);
     } finally {
@@ -635,6 +651,14 @@ const TournamentDetails: React.FC = () => {
     </div>
   );
 
+  if (!id) {
+    return wrapInBaseLayout(
+      <div className="flex flex-col items-center justify-center rounded-[16px] border border-white/20 bg-[#061D23]/25 p-12 text-center backdrop-blur-xl">
+        <h2 className="text-xl font-black uppercase tracking-wider text-white">Invalid Tournament ID</h2>
+      </div>
+    );
+  }
+
   if (loading) {
     return wrapInBaseLayout(
       <div className="flex flex-col items-center justify-center py-32">
@@ -793,6 +817,58 @@ const TournamentDetails: React.FC = () => {
           </div>
         </div>
       </header>
+
+      {/* Incoming Partner Invites Alert Banner */}
+      {myPendingInvites.length > 0 && (
+        <div className="rounded-[18px] border border-cyan-500/40 bg-gradient-to-r from-[#0b2b36] via-[#08242c] to-[#061D23] p-5 sm:p-6 shadow-[0_12px_40px_-10px_rgba(74,238,255,0.3)] backdrop-blur-xl animate-in fade-in">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping" />
+            <span className="text-xs font-black uppercase tracking-widest text-[#4AEEFF]">
+              ⚡ Action Required • Doubles Partner Invitations ({myPendingInvites.length})
+            </span>
+          </div>
+          <div className="space-y-3">
+            {myPendingInvites.map((inv) => (
+              <div
+                key={inv.id}
+                className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl bg-black/40 border border-cyan-500/25"
+              >
+                <div>
+                  <p className="text-sm font-bold text-white flex items-center gap-2 flex-wrap">
+                    <span className="text-[#4AEEFF] font-black text-base">
+                      {inv.inviter?.firstName} {inv.inviter?.lastName}
+                    </span>
+                    <span>invited you to partner with them!</span>
+                  </p>
+                  <p className="text-xs text-slate-300 mt-1">
+                    Tournament Division:{" "}
+                    <span className="text-white font-bold">{inv.category?.name}</span>{" "}
+                    <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded bg-white/10 text-cyan-200 ml-1">
+                      {inv.category?.type}
+                    </span>
+                  </p>
+                </div>
+                <div className="flex items-center gap-2.5 self-end sm:self-auto flex-shrink-0">
+                  <button
+                    onClick={() => handleAcceptInvite(inv.id)}
+                    disabled={respondingInviteId === inv.id}
+                    className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-teal-500 hover:from-cyan-400 hover:to-teal-400 text-slate-950 text-xs font-black uppercase tracking-wider shadow-[0_4px_14px_rgba(74,238,255,0.35)] transition-all active:scale-95 disabled:opacity-50 flex items-center gap-1.5"
+                  >
+                    {respondingInviteId === inv.id ? "Enrolling..." : "✓ Accept & Confirm Team"}
+                  </button>
+                  <button
+                    onClick={() => handleDeclineInvite(inv.id)}
+                    disabled={respondingInviteId === inv.id}
+                    className="px-3.5 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white text-xs font-bold transition-all disabled:opacity-50"
+                  >
+                    Decline
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Edit Tournament Modal */}
       {showEditModal && (
@@ -1443,24 +1519,33 @@ const TournamentDetails: React.FC = () => {
               const isFull =
                 category.currentParticipants >= category.maxParticipants;
               const isDoubles = isDoublesCategory(category.type);
+              const pendingSentInvite = mySentInvites.find(
+                (inv) => inv.categoryId === category.id,
+              );
+              const pendingReceivedInvite = myPendingInvites.find(
+                (inv) => inv.categoryId === category.id,
+              );
 
               return (
-                <div key={category.id}>
-                  <label
-                    className={`flex items-center justify-between p-4 rounded-xl border transition-all ${
-                      isAlreadyRegistered
-                        ? "border-emerald-500/40 bg-emerald-500/10 cursor-default"
-                        : isSelected
-                        ? "border-[#4AEEFF] bg-[#4AEEFF]/15 shadow-md shadow-[#4AEEFF]/10 cursor-pointer"
-                        : isFull
-                        ? "border-white/10 bg-[#061D23]/40 opacity-50 cursor-not-allowed"
-                        : "border-white/10 bg-[#061D23]/40 hover:border-white/25 hover:bg-[#061D23]/60 cursor-pointer"
-                    }`}
-                  >
+                <div
+                  key={category.id}
+                  className={`rounded-xl border transition-all p-4 ${
+                    isAlreadyRegistered
+                      ? "border-emerald-500/40 bg-emerald-500/10"
+                      : isSelected
+                      ? "border-[#4AEEFF] bg-[#4AEEFF]/15 shadow-md shadow-[#4AEEFF]/10"
+                      : "border-white/10 bg-[#061D23]/40 hover:border-white/20"
+                  }`}
+                >
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div className="flex items-center gap-3.5 flex-1">
                       {isAlreadyRegistered ? (
-                        <div className="w-5 h-5 rounded-md bg-emerald-500/25 border border-emerald-400/60 flex items-center justify-center text-emerald-300 font-black text-xs shadow-[0_0_10px_rgba(16,185,129,0.3)]">
+                        <div className="w-5 h-5 rounded-md bg-emerald-500/25 border border-emerald-400/60 flex items-center justify-center text-emerald-300 font-black text-xs shadow-[0_0_10px_rgba(16,185,129,0.3)] flex-shrink-0">
                           ✓
+                        </div>
+                      ) : isDoubles ? (
+                        <div className="w-5 h-5 rounded-md bg-cyan-500/20 border border-cyan-400/40 flex items-center justify-center text-cyan-300 font-black text-xs flex-shrink-0">
+                          👥
                         </div>
                       ) : (
                         <input
@@ -1468,15 +1553,11 @@ const TournamentDetails: React.FC = () => {
                           checked={isSelected}
                           onChange={() => {
                             if (!isFull && !isAlreadyRegistered) {
-                              if (isDoubles) {
-                                setSelectedDoublesCategory(category.id);
-                                setShowPartnerForm(true);
-                              }
                               toggleCategory(category.id);
                             }
                           }}
                           disabled={isFull || isAlreadyRegistered}
-                          className="w-4 h-4 rounded border-white/30 text-[#4AEEFF] focus:ring-[#4AEEFF]"
+                          className="w-4 h-4 rounded border-white/30 text-[#4AEEFF] focus:ring-[#4AEEFF] cursor-pointer"
                         />
                       )}
                       <div>
@@ -1493,96 +1574,88 @@ const TournamentDetails: React.FC = () => {
                               {category.gender === "MALE" ? "♂ Men's Only" : "♀ Women's Only"}
                             </span>
                           )}
+                          {category.gender === "MIXED" && (
+                            <span className="px-2 py-0.5 text-[10px] font-black uppercase tracking-wider rounded bg-purple-500/15 text-purple-300 border border-purple-500/30">
+                              ⚤ Mixed Gender
+                            </span>
+                          )}
                         </div>
                         <p className="text-xs text-white/60 mt-0.5">
                           {category.type} • {category.currentParticipants} / {category.maxParticipants} participants
                           {isDoubles && (
                             <span className="ml-2 font-semibold text-[#4AEEFF]">
-                              (Team registration - partner required)
+                              (Doubles team - partner invite required)
                             </span>
                           )}
                         </p>
                       </div>
                     </div>
-                    {isAlreadyRegistered ? (
-                      <div className="flex items-center gap-1.5 px-3 py-1 text-[11px] font-black uppercase tracking-wider rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-sm">
-                        <span>✓</span> Enrolled
-                        {categoryRegistration.status && (
-                          <span className="text-[10px] opacity-80 font-mono">
-                            ({categoryRegistration.status})
-                          </span>
-                        )}
-                      </div>
-                    ) : isFull ? (
-                      <span className="text-xs font-black uppercase tracking-wider text-red-400 bg-red-500/15 border border-red-500/30 px-2 py-0.5 rounded">
-                        Full
-                      </span>
-                    ) : null}
-                  </label>
 
-                  {/* Partner Form for Doubles */}
-                  {isDoubles &&
-                    showPartnerForm &&
-                    selectedDoublesCategory === category.id && (
-                      <div className="mt-3 p-4 border border-[#4AEEFF]/30 rounded-xl bg-[#061D23]/60">
-                        <h4 className="font-bold text-white text-xs uppercase tracking-wider mb-3">
-                          Partner Details
-                        </h4>
-                        <div className="grid grid-cols-2 gap-3">
-                          <input
-                            type="text"
-                            placeholder="Partner First Name"
-                            value={partnerDetails.firstName}
-                            onChange={(e) =>
-                              setPartnerDetails({
-                                ...partnerDetails,
-                                firstName: e.target.value,
-                              })
-                            }
-                            className="rounded-xl border border-white/20 bg-[#061D23]/80 px-3.5 py-2.5 text-xs text-white placeholder-white/40 outline-none focus:border-[#4AEEFF]"
-                          />
-                          <input
-                            type="text"
-                            placeholder="Partner Last Name"
-                            value={partnerDetails.lastName}
-                            onChange={(e) =>
-                              setPartnerDetails({
-                                ...partnerDetails,
-                                lastName: e.target.value,
-                              })
-                            }
-                            className="rounded-xl border border-white/20 bg-[#061D23]/80 px-3.5 py-2.5 text-xs text-white placeholder-white/40 outline-none focus:border-[#4AEEFF]"
-                          />
-                          <input
-                            type="email"
-                            placeholder="Partner Email"
-                            value={partnerDetails.email}
-                            onChange={(e) =>
-                              setPartnerDetails({
-                                ...partnerDetails,
-                                email: e.target.value,
-                              })
-                            }
-                            className="rounded-xl border border-white/20 bg-[#061D23]/80 px-3.5 py-2.5 text-xs text-white placeholder-white/40 outline-none focus:border-[#4AEEFF] col-span-2"
-                          />
-                          <input
-                            type="tel"
-                            placeholder="Partner Phone (Optional)"
-                            value={partnerDetails.phone}
-                            onChange={(e) =>
-                              setPartnerDetails({
-                                ...partnerDetails,
-                                phone: e.target.value,
-                              })
-                            }
-                            className="rounded-xl border border-white/20 bg-[#061D23]/80 px-3.5 py-2.5 text-xs text-white placeholder-white/40 outline-none focus:border-[#4AEEFF] col-span-2"
-                          />
+                    {/* Action Area */}
+                    <div className="flex items-center gap-2 self-end sm:self-auto flex-shrink-0">
+                      {isAlreadyRegistered ? (
+                        <div className="flex items-center gap-1.5 px-3 py-1 text-[11px] font-black uppercase tracking-wider rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-sm">
+                          <span>✓</span> Enrolled
+                          {categoryRegistration.status && (
+                            <span className="text-[10px] opacity-80 font-mono">
+                              ({categoryRegistration.status})
+                            </span>
+                          )}
                         </div>
-                        <p className="text-[11px] text-white/50 mt-2">
-                          The partner will be notified and added to your doubles team
-                        </p>
-                      </div>
-                    )}
+                      ) : isFull ? (
+                        <span className="text-xs font-black uppercase tracking-wider text-red-400 bg-red-500/15 border border-red-500/30 px-2 py-0.5 rounded">
+                          Full
+                        </span>
+                      ) : isDoubles ? (
+                        pendingReceivedInvite ? (
+                          <div className="flex items-center gap-2 bg-cyan-950/60 border border-cyan-500/30 px-3 py-1.5 rounded-xl">
+                            <span className="text-xs font-bold text-cyan-300">
+                              Invited by {pendingReceivedInvite.inviter?.firstName}
+                            </span>
+                            <button
+                              onClick={() => handleAcceptInvite(pendingReceivedInvite.id)}
+                              disabled={respondingInviteId === pendingReceivedInvite.id}
+                              className="px-3 py-1 rounded-lg bg-gradient-to-r from-cyan-400 to-teal-400 text-slate-950 text-xs font-black uppercase tracking-wider shadow-sm hover:brightness-110 active:scale-95 transition-all"
+                            >
+                              ✓ Accept
+                            </button>
+                            <button
+                              onClick={() => handleDeclineInvite(pendingReceivedInvite.id)}
+                              disabled={respondingInviteId === pendingReceivedInvite.id}
+                              className="px-2 py-1 text-xs text-slate-400 hover:text-white"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        ) : pendingSentInvite ? (
+                          <div className="flex items-center gap-2 bg-amber-950/40 border border-amber-500/30 px-3 py-1.5 rounded-xl">
+                            <span className="text-xs text-amber-300 font-medium">
+                              ⏳ Invited {pendingSentInvite.invitee?.firstName} {pendingSentInvite.invitee?.lastName}
+                            </span>
+                            <button
+                              onClick={() => handleCancelSentInvite(pendingSentInvite.id)}
+                              className="px-2 py-0.5 rounded-md bg-red-500/20 hover:bg-red-500/40 text-red-300 border border-red-500/30 text-[11px] font-bold transition-all"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() =>
+                              setPartnerModalCategory({
+                                id: category.id,
+                                name: category.name,
+                              })
+                            }
+                            className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-cyan-500 to-teal-500 hover:from-cyan-400 hover:to-teal-400 text-slate-950 font-black text-xs uppercase tracking-wider shadow-[0_4px_12px_rgba(74,238,255,0.25)] transition-all active:scale-95 flex items-center gap-1.5"
+                          >
+                            <span>🤝</span>
+                            <span>Invite Partner</span>
+                          </button>
+                        )
+                      ) : null}
+                    </div>
+                  </div>
                 </div>
               );
             })}
@@ -1782,6 +1855,20 @@ const TournamentDetails: React.FC = () => {
           categories={tournament.categories}
           onClose={() => setShowGuestModal(false)}
           onSuccess={fetchTournamentDetails}
+        />
+      )}
+
+      {/* Doubles Partner Invite Modal */}
+      {partnerModalCategory && (
+        <DoublesPartnerModal
+          tournamentId={id}
+          categoryId={partnerModalCategory.id}
+          categoryName={partnerModalCategory.name}
+          onClose={() => setPartnerModalCategory(null)}
+          onInviteSent={() => {
+            fetchTournamentDetails();
+            fetchInvites();
+          }}
         />
       )}
       {showResetConfirm &&
