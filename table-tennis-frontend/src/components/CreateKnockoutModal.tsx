@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import api from "../services/api";
 import toast from "react-hot-toast";
 
@@ -136,18 +137,20 @@ const CreateKnockoutModal: React.FC<Props> = ({
     }
   };
 
-  return (
+  return createPortal(
     <div
       style={{
         position: "fixed",
         inset: 0,
-        background: "rgba(0,0,0,0.5)",
+        backgroundColor: "rgba(0,0,0,0.65)",
+        backdropFilter: "blur(4px)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        zIndex: 50,
+        zIndex: 9999,
         padding: 16,
       }}
+      onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <div
         style={{
@@ -438,7 +441,8 @@ const CreateKnockoutModal: React.FC<Props> = ({
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

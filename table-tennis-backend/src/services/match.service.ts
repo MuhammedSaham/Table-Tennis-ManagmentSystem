@@ -247,7 +247,7 @@ export class MatchService {
             },
           },
         },
-        referee: { include: { user: { select: { firstName: true, lastName: true } } } },
+        referee: { include: { user: { select: { id: true, firstName: true, lastName: true } } } },
         category: { select: { name: true, type: true } },
       },
       orderBy: { scheduledTime: 'asc' },

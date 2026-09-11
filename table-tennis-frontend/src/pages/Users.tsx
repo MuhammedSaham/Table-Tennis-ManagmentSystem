@@ -22,6 +22,7 @@ interface User {
   isSuperAdmin: boolean;
   ranking?: number | null;
   rankingNote?: string | null;
+  isClubMember?: boolean;
 }
 
 const Users: React.FC = () => {
@@ -29,6 +30,11 @@ const Users: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddPlayerModal, setShowAddPlayerModal] = useState(false);
+  const [createdPlayerData, setCreatedPlayerData] = useState<{
+    email: string;
+    name: string;
+    password: string;
+  } | null>(null);
   const [generatedPassword, setGeneratedPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [newPlayer, setNewPlayer] = useState({
@@ -44,6 +50,7 @@ const Users: React.FC = () => {
   const [editingRankId, setEditingRankId] = useState<string | null>(null);
   const [rankingInput, setRankingInput] = useState<string>("");
   const [rankingNote, setRankingNote] = useState<string>("");
+  const [activeTab, setActiveTab] = useState<"CLUB" | "GUEST">("CLUB");
 
   useEffect(() => {
     fetchUsers();
@@ -59,6 +66,15 @@ const Users: React.FC = () => {
       setLoading(false);
     }
   };
+
+  // Split players for tabs
+  const clubMembers = users.filter(
+    (u) => u.role !== "PLAYER" || u.isClubMember === true
+  );
+  const guestPlayers = users.filter(
+    (u) => u.role === "PLAYER" && !u.isClubMember
+  );
+  const displayedUsers = activeTab === "CLUB" ? clubMembers : guestPlayers;
 
   const handleDeleteUser = async (id: string) => {
     if (!window.confirm("Are you sure you want to delete this user?")) {
@@ -125,6 +141,7 @@ const Users: React.FC = () => {
   };
 
   const openAddPlayerModal = () => {
+    setCreatedPlayerData(null);
     setGeneratedPassword(generateRandomPassword());
     setNewPlayer({
       email: "",
@@ -158,6 +175,7 @@ const Users: React.FC = () => {
           dateOfBirth: newPlayer.dateOfBirth
             ? new Date(newPlayer.dateOfBirth)
             : undefined,
+          isClubMember: true, // Admin-created → always a club member
         },
       };
 
@@ -166,38 +184,13 @@ const Users: React.FC = () => {
         `Player ${newPlayer.firstName} ${newPlayer.lastName} added successfully!`,
       );
 
-      // Theme matching custom dark hot-toast injection layout
-      toast.custom(
-        (t) => (
-          <div className="bg-[#061D23] border border-[#4AEEFF] rounded-[16px] shadow-[0_20px_50px_rgba(0,0,0,0.5)] p-5 max-w-sm mx-auto backdrop-blur-xl text-white">
-            <p className="font-black uppercase tracking-wider text-[#4AEEFF]">
-              ✅ Player Created!
-            </p>
-            <p className="text-xs text-white/80 mt-2 break-all">
-              Email: {newPlayer.email}
-            </p>
-            <p className="text-xs text-white/80 mt-1">
-              Password:{" "}
-              <span className="font-mono font-bold bg-white/10 px-1.5 py-0.5 rounded text-[#4AEEFF]">
-                {generatedPassword}
-              </span>
-            </p>
-            <button
-              onClick={() => {
-                navigator.clipboard.writeText(generatedPassword);
-                toast.success("Password copied!");
-                toast.dismiss(t.id);
-              }}
-              className="mt-3 block w-full text-center bg-[#12679E]/40 border border-[#4AEEFF]/30 text-xs font-black uppercase tracking-widest text-[#4AEEFF] py-1.5 rounded-lg hover:bg-[#4AEEFF] hover:text-[#061D23] transition-all"
-            >
-              Copy Password
-            </button>
-          </div>
-        ),
-        { duration: 15000 },
-      );
+      // Present credentials directly inside the modal for professional enterprise UX
+      setCreatedPlayerData({
+        email: newPlayer.email,
+        name: `${newPlayer.firstName} ${newPlayer.lastName}`,
+        password: generatedPassword,
+      });
 
-      setShowAddPlayerModal(false);
       fetchUsers();
     } catch (error: any) {
       toast.error(error.response?.data?.message || "Failed to add player");
@@ -284,6 +277,49 @@ const Users: React.FC = () => {
         </button>
       </header>
 
+      {/* TABS */}
+      <div className="flex gap-3">
+        <button
+          id="tab-club-members-admin"
+          onClick={() => setActiveTab("CLUB")}
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-black text-xs uppercase tracking-wider transition-all duration-200 focus:outline-none ${
+            activeTab === "CLUB"
+              ? "bg-[#4AEEFF] text-[#061D23] shadow-lg"
+              : "bg-white/5 text-white/70 border border-white/10 hover:bg-white/10"
+          }`}
+        >
+          🏅 Club Members
+          <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-black ${
+            activeTab === "CLUB" ? "bg-[#061D23]/30 text-[#061D23]" : "bg-[#4AEEFF]/20 text-[#4AEEFF]"
+          }`}>
+            {clubMembers.filter(u => u.role === "PLAYER").length}
+          </span>
+        </button>
+
+        <button
+          id="tab-guest-players-admin"
+          onClick={() => setActiveTab("GUEST")}
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-black text-xs uppercase tracking-wider transition-all duration-200 focus:outline-none ${
+            activeTab === "GUEST"
+              ? "bg-[#4AEEFF] text-[#061D23] shadow-lg"
+              : "bg-white/5 text-white/70 border border-white/10 hover:bg-white/10"
+          }`}
+        >
+          👤 Guest Players
+          <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-black ${
+            activeTab === "GUEST" ? "bg-[#061D23]/30 text-[#061D23]" : "bg-[#4AEEFF]/20 text-[#4AEEFF]"
+          }`}>
+            {guestPlayers.length}
+          </span>
+        </button>
+
+        <p className="ml-2 self-center text-xs text-white/40">
+          {activeTab === "CLUB"
+            ? "🏅 Ranked club players + admins & referees"
+            : "👤 Self-registered players without a club ranking"}
+        </p>
+      </div>
+
       {/* CORE INDUSTRIAL DATA TABLE LAYER */}
       <main className="rounded-[16px] border border-white/20 bg-[#061D23]/10 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl overflow-hidden">
         <div className="overflow-x-auto">
@@ -299,7 +335,7 @@ const Users: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5 text-base">
-              {users.map((userItem) => (
+              {displayedUsers.map((userItem) => (
                 <tr
                   key={userItem.id}
                   className="group hover:bg-[#12679E]/10 transition-colors duration-200"
@@ -493,15 +529,94 @@ const Users: React.FC = () => {
       {/* PLAYER REGISTRATION DIALOG MODAL */}
       {showAddPlayerModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-fadeIn">
-          <div className="w-full max-w-2xl rounded-[16px] border border-white/20 bg-[#061D23]/55 p-8 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.8)] backdrop-blur-2xl max-h-[95vh] overflow-y-auto">
-            <h2 className="text-xl font-black uppercase tracking-widest text-white mb-1">
-              Register Profile
-            </h2>
-            <p className="text-xs text-[#4AEEFF] uppercase tracking-wider mb-6">
-              Create an operational table tennis player record
-            </p>
+          <div className="w-full max-w-2xl rounded-[16px] border border-white/20 bg-[#061D23]/90 p-8 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.8)] backdrop-blur-2xl max-h-[95vh] overflow-y-auto">
+            {createdPlayerData ? (
+              <div className="text-center py-2 space-y-6">
+                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[#4AEEFF]/20 border border-[#4AEEFF]/40 text-3xl">
+                  ✅
+                </div>
+                <div>
+                  <h2 className="text-2xl font-black uppercase tracking-widest text-white">
+                    Player Created Successfully!
+                  </h2>
+                  <p className="text-xs text-[#4AEEFF] uppercase tracking-wider mt-1">
+                    Save or share the login credentials with the player
+                  </p>
+                </div>
 
-            <form onSubmit={handleAddPlayer} className="space-y-4">
+                <div className="rounded-xl border border-white/10 bg-[#061D23]/80 p-5 text-left space-y-4">
+                  <div>
+                    <span className="text-[10px] font-black uppercase tracking-wider text-white/50 block mb-1">
+                      Player Name
+                    </span>
+                    <span className="text-sm font-semibold text-white">
+                      {createdPlayerData.name}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-black uppercase tracking-wider text-white/50 block mb-1">
+                      Login Email
+                    </span>
+                    <span className="text-sm font-mono text-[#4AEEFF] break-all">
+                      {createdPlayerData.email}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-black uppercase tracking-wider text-white/50 block mb-1">
+                      Temporary Password
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="flex-1 font-mono font-bold text-sm bg-white/10 px-3 py-2.5 rounded-lg text-[#4AEEFF] border border-[#4AEEFF]/30 tracking-wider">
+                        {createdPlayerData.password}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          navigator.clipboard.writeText(createdPlayerData.password);
+                          toast.success("Password copied to clipboard!");
+                        }}
+                        className="px-4 py-2.5 rounded-lg bg-[#4AEEFF] text-xs font-black uppercase tracking-wider text-[#061D23] hover:bg-white transition-all shadow-md"
+                      >
+                        Copy Password
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-2 flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const creds = `Table Tennis Portal Login\nEmail: ${createdPlayerData.email}\nPassword: ${createdPlayerData.password}`;
+                      navigator.clipboard.writeText(creds);
+                      toast.success("Full credentials copied!");
+                    }}
+                    className="flex-1 rounded-lg border border-white/20 bg-transparent py-3 text-xs font-black uppercase tracking-widest text-white hover:bg-white/10 transition-all"
+                  >
+                    📋 Copy Full Details
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowAddPlayerModal(false);
+                      setCreatedPlayerData(null);
+                    }}
+                    className="flex-1 rounded-lg bg-[#4AEEFF] py-3 text-xs font-black uppercase tracking-widest text-[#061D23] hover:bg-white transition-all font-bold"
+                  >
+                    Done
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <h2 className="text-xl font-black uppercase tracking-widest text-white mb-1">
+                  Register Profile
+                </h2>
+                <p className="text-xs text-[#4AEEFF] uppercase tracking-wider mb-6">
+                  Create an operational table tennis player record
+                </p>
+
+                <form onSubmit={handleAddPlayer} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-[10px] font-black uppercase tracking-wider text-white/70 mb-1.5">
@@ -689,9 +804,11 @@ const Users: React.FC = () => {
                 </button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
+          </>
+        )}
+      </div>
+    </div>
+  )}
 
       {/* SHADED BOTTOM FOOTER BRANDING MODULE */}
       <footer className="mt-auto rounded-[16px] border border-white/10 bg-[#061D23]/25 p-5 shadow-[0_15px_40px_rgba(0,0,0,0.3)] backdrop-blur-md">

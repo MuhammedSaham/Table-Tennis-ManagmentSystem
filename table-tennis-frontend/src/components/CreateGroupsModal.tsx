@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import api from "../services/api";
 import toast from "react-hot-toast";
 
@@ -78,18 +79,20 @@ const CreateGroupsModal: React.FC<Props> = ({
 
   // options removed
 
-  return (
+  return createPortal(
     <div
       style={{
         position: "fixed",
         inset: 0,
-        background: "rgba(0,0,0,0.5)",
+        backgroundColor: "rgba(0, 0, 0, 0.65)",
+        backdropFilter: "blur(4px)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        zIndex: 50,
+        zIndex: 9999,
         padding: 16,
       }}
+      onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <div
         style={{
@@ -178,7 +181,15 @@ const CreateGroupsModal: React.FC<Props> = ({
 
           {/* Group Count Input */}
           <div style={{ marginBottom: 20 }}>
-            <label style={{ display: "block", marginBottom: 8, fontWeight: 600, color: "#374151" }}>
+            <label
+              style={{
+                display: "block",
+                marginBottom: 8,
+                fontWeight: 700,
+                color: "#0f172a",
+                fontSize: 14,
+              }}
+            >
               Number of Groups:
             </label>
             <input
@@ -190,14 +201,17 @@ const CreateGroupsModal: React.FC<Props> = ({
                 width: "100%",
                 padding: "12px 16px",
                 borderRadius: 12,
-                border: "2px solid #e2e8f0",
+                border: "2px solid #cbd5e1",
                 fontSize: 16,
-                fontWeight: 600,
+                fontWeight: 700,
+                color: "#0f172a",
+                backgroundColor: "#ffffff",
                 outline: "none",
-                transition: "border-color 0.2s"
+                transition: "border-color 0.2s",
+                boxSizing: "border-box",
               }}
-              onFocus={(e) => e.target.style.borderColor = "#0f172a"}
-              onBlur={(e) => e.target.style.borderColor = "#e2e8f0"}
+              onFocus={(e) => (e.target.style.borderColor = "#0f172a")}
+              onBlur={(e) => (e.target.style.borderColor = "#cbd5e1")}
             />
           </div>
 
@@ -262,7 +276,8 @@ const CreateGroupsModal: React.FC<Props> = ({
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

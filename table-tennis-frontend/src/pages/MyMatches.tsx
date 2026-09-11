@@ -222,7 +222,7 @@ const MyMatches: React.FC = () => {
                     </span>
                   </div>
 
-                  <Link to={`/tournaments/${match.tournament.id}`}>
+                  <Link to={`/app/tournaments/${match.tournament.id}`}>
                     <h3 className="text-lg font-black text-white transition-colors hover:text-[#4AEEFF]">
                       {match.tournament.name}
                     </h3>

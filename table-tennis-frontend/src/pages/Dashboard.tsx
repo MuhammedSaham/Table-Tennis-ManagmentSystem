@@ -5,9 +5,6 @@ import api from "../services/api";
 import {
   TrophyIcon,
   CalendarIcon,
-  ChartBarIcon,
-  UserIcon,
-  EnvelopeIcon,
 } from "@heroicons/react/24/outline";
 
 interface Tournament {
@@ -85,7 +82,7 @@ const Dashboard: React.FC = () => {
             {newTournaments.map((tournament) => (
               <Link
                 key={tournament.id}
-                to={`/tournaments/${tournament.id}`}
+                to={`/app/tournaments/${tournament.id}`}
                 className="group rounded-lg border border-white/10 bg-[#061D23]/40 p-4 transition-all hover:border-[#4AEEFF] hover:text-[#4AEEFF]"
               >
                 <h3 className="font-bold text-white group-hover:text-[#4AEEFF] transition-colors">
@@ -124,19 +121,8 @@ const Dashboard: React.FC = () => {
       </section>
 
       {/* QUICK LINKS GRID */}
-      <main className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        <Link
-          to="/tournaments"
-          className="group rounded-[16px] border border-white/20 bg-[#061D23]/10 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl transition-all hover:border-[#4AEEFF]"
-        >
-          <TrophyIcon className="mb-3 h-8 w-8 text-[#4AEEFF]" />
-          <h3 className="mb-2 font-black uppercase tracking-wider text-white group-hover:text-[#4AEEFF] transition-colors">
-            Tournaments
-          </h3>
-          <p className="text-xs text-white/70">View and manage tournaments</p>
-        </Link>
-
-        {isPlayer && (
+      {isPlayer && (
+        <main className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           <Link
             to="/app/my-matches"
             className="group rounded-[16px] border border-white/20 bg-[#061D23]/10 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl transition-all hover:border-[#4AEEFF]"
@@ -147,38 +133,8 @@ const Dashboard: React.FC = () => {
             </h3>
             <p className="text-xs text-white/70">Check your upcoming matches</p>
           </Link>
-        )}
-
-        <Link
-          to="/leaderboard"
-          className="group rounded-[16px] border border-white/20 bg-[#061D23]/10 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl transition-all hover:border-[#4AEEFF]"
-        >
-          <ChartBarIcon className="mb-3 h-8 w-8 text-[#4AEEFF]" />
-          <h3 className="mb-2 font-black uppercase tracking-wider text-white group-hover:text-[#4AEEFF] transition-colors">
-            Leaderboard
-          </h3>
-          <p className="text-xs text-white/70">See tournament rankings</p>
-        </Link>
-      </main>
-
-      {/* SHADED BOTTOM FOOTER BRANDING MODULE */}
-      <footer className="mt-auto rounded-[16px] border border-white/10 bg-[#061D23]/25 p-5 shadow-[0_15px_40px_rgba(0,0,0,0.3)] backdrop-blur-md">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-2 text-sm text-white/80">
-            <UserIcon className="h-4 w-4 text-[#4AEEFF]" />
-            <span>Active Operator Identity:</span>
-            <span className="rounded bg-[#4AEEFF]/20 px-2 py-0.5 text-xs font-bold uppercase tracking-wider text-[#4AEEFF]">
-              {user?.role || "GUEST"}
-            </span>
-          </div>
-          {user?.email && (
-            <div className="flex items-center gap-2 text-sm text-white/70">
-              <EnvelopeIcon className="h-4 w-4 text-[#4AEEFF]/80" />
-              <span className="font-mono text-xs">{user.email}</span>
-            </div>
-          )}
-        </div>
-      </footer>
+        </main>
+      )}
     </>
   );
 };

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
-import api from "../services/api";
+import api, { getProfileImageUrl } from "../services/api";
 import toast from "react-hot-toast";
 import {
   TrophyIcon,
@@ -319,7 +319,7 @@ const Profile: React.FC = () => {
             <div className="flex flex-col items-start gap-5 pb-6 border-b border-white/10 sm:flex-row sm:items-center">
               {profile.profileImage ? (
                 <img
-                  src={profile.profileImage}
+                  src={getProfileImageUrl(profile.profileImage)}
                   alt="Profile"
                   className="h-24 w-24 rounded-full object-cover border-2 border-[#4AEEFF] shadow-[0_0_20px_rgba(74,238,255,0.3)]"
                 />
@@ -622,7 +622,7 @@ const Profile: React.FC = () => {
             <div className="flex flex-wrap items-center gap-5">
               {profile.profileImage && (
                 <div className="relative h-16 w-16 rounded-full overflow-hidden border-2 border-white/20 bg-[#061D23]">
-                  <img src={profile.profileImage} alt="Current profile" className="h-full w-full object-cover" />
+                  <img src={getProfileImageUrl(profile.profileImage)} alt="Current profile" className="h-full w-full object-cover" />
                 </div>
               )}
 

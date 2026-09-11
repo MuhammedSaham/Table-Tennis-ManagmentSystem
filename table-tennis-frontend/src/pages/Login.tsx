@@ -309,9 +309,13 @@ const Login: React.FC = () => {
     e.preventDefault();
     setIsLoading(true);
     try {
-      await login(email, password);
+      const loggedUser = await login(email, password);
       toast.success("Login successful!");
-      navigate("/app/dashboard");
+      if (loggedUser?.role === "REFEREE") {
+        navigate("/app/referee/matches");
+      } else {
+        navigate("/app/dashboard");
+      }
     } catch (error: any) {
       if (error.response?.status === 403) setUnverifiedEmail(email);
     } finally {

@@ -40,6 +40,7 @@ interface KnockoutMatch {
     id: string;
     user: { firstName: string; lastName: string };
   } | null;
+  resultDetails?: any;
 }
 interface GameScore {
   p1: string;
@@ -49,6 +50,7 @@ interface KnockoutBracketProps {
   tournamentId: string;
   categoryId: string;
   onScoreRecorded?: () => void;
+  refreshTrigger?: number;
 }
 
 /** Returns a display name for a singles player slot */
@@ -98,27 +100,64 @@ export const UmpireSheet: React.FC<{
   const today = new Date().toLocaleDateString("en-GB");
   const done = match.status === "COMPLETED";
 
-  const initGames = (): GameScore[] => {
-    if (match.score && done) {
+  const initBestOf = (): 3 | 5 => {
+    if (
+      match.resultDetails?.bestOf === 3 ||
+      match.resultDetails?.bestOf === 5
+    ) {
+      return match.resultDetails.bestOf;
+    }
+    if (match.score && done && match.score !== "BYE") {
       const parts = match.score.split(",").map((s) => s.trim());
-      if (parts.length > 1)
+      let p1Wins = 0;
+      let p2Wins = 0;
+      for (const p of parts) {
+        const [a, b] = p.split("-").map(Number);
+        if (!isNaN(a) && !isNaN(b)) {
+          if (a > b) p1Wins++;
+          else if (b > a) p2Wins++;
+        }
+      }
+      const maxWins = Math.max(p1Wins, p2Wins);
+      if (maxWins === 2 || (parts.length <= 3 && maxWins < 3)) {
+        return 3;
+      }
+      if (maxWins >= 3 || parts.length > 3) {
+        return 5;
+      }
+    }
+    return 5;
+  };
+
+  const [bestOf, setBestOf] = useState<3 | 5>(initBestOf);
+
+  const initGames = (currentBestOf: 3 | 5 = initBestOf()): GameScore[] => {
+    if (match.score && done && match.score !== "BYE") {
+      const parts = match.score.split(",").map((s) => s.trim());
+      if (parts.length > 0)
         return [
           ...parts.map((p) => {
             const n = p.split("-");
             return { p1: n[0]?.trim() ?? "", p2: n[1]?.trim() ?? "" };
           }),
-          ...Array(Math.max(0, 5 - parts.length)).fill({ p1: "", p2: "" }),
-        ].slice(0, 5);
+          ...Array(Math.max(0, currentBestOf - parts.length)).fill({ p1: "", p2: "" }),
+        ].slice(0, currentBestOf);
     }
-    return Array(5)
+    return Array(currentBestOf)
       .fill(null)
       .map(() => ({ p1: "", p2: "" }));
   };
 
-  const [bestOf, setBestOf] = useState<3 | 5>(5);
-  const [games, setGames] = useState<GameScore[]>(initGames);
+  const [games, setGames] = useState<GameScore[]>(() => initGames(initBestOf()));
+
+  useEffect(() => {
+    const bo = initBestOf();
+    setBestOf(bo);
+    setGames(initGames(bo));
+  }, [match.id, match.score, match.status]);
   const [saving, setSaving] = useState(false);
   const [pointsToWin, setPointsToWin] = useState<number>(11);
+  const targetPts = typeof pointsToWin === "number" && !isNaN(pointsToWin) && pointsToWin > 0 ? pointsToWin : 11;
 
   const getGameWinner = (p1Str: string, p2Str: string): "p1" | "p2" | null => {
     if (p1Str === "" || p2Str === "") return null;
@@ -126,8 +165,8 @@ export const UmpireSheet: React.FC<{
     const p2 = parseInt(p2Str);
     if (isNaN(p1) || isNaN(p2)) return null;
 
-    if (p1 >= pointsToWin && p1 - p2 >= 2) return "p1";
-    if (p2 >= pointsToWin && p2 - p1 >= 2) return "p2";
+    if (p1 >= targetPts && p1 - p2 >= 2) return "p1";
+    if (p2 >= targetPts && p2 - p1 >= 2) return "p2";
     return null;
   };
 
@@ -141,9 +180,9 @@ export const UmpireSheet: React.FC<{
     const winner = Math.max(p1, p2);
     const loser = Math.min(p1, p2);
 
-    if (winner < pointsToWin) return false;
-    if (winner === pointsToWin) return loser <= pointsToWin - 2;
-    if (winner > pointsToWin) return loser === winner - 2;
+    if (winner < targetPts) return false;
+    if (winner === targetPts) return loser <= targetPts - 2;
+    if (winner > targetPts) return loser === winner - 2;
 
     return false;
   };
@@ -188,6 +227,7 @@ export const UmpireSheet: React.FC<{
       <div
         style={{
           background: "#fff",
+          color: "#0f172a",
           borderRadius: 16,
           width: "100%",
           maxWidth: 640,
@@ -296,18 +336,27 @@ export const UmpireSheet: React.FC<{
                     type="number"
                     min={1}
                     value={pointsToWin}
-                    onChange={(e) =>
-                      setPointsToWin(parseInt(e.target.value) || 11)
-                    }
+                    placeholder="11"
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value);
+                      setPointsToWin(!isNaN(val) && val > 0 ? val : 11);
+                    }}
+                    onBlur={() => {
+                      if (!pointsToWin || isNaN(pointsToWin) || pointsToWin < 1) {
+                        setPointsToWin(11);
+                      }
+                    }}
                     style={{
                       width: 45,
                       padding: "4px",
                       borderRadius: 6,
-                      border: "1px solid #cbd5e1",
+                      border: "1.5px solid #cbd5e1",
                       fontSize: 13,
                       fontWeight: 700,
                       textAlign: "center",
                       outline: "none",
+                      color: "#0f172a",
+                      backgroundColor: "#ffffff",
                     }}
                   />
                 </div>
@@ -322,9 +371,11 @@ export const UmpireSheet: React.FC<{
                       key={n}
                       onClick={() => {
                         setBestOf(n);
-                        setGames((prev) =>
-                          prev.map((g, i) => (i >= n ? { p1: "", p2: "" } : g)),
-                        );
+                        setGames((prev) => {
+                          const next = [...prev];
+                          while (next.length < n) next.push({ p1: "", p2: "" });
+                          return next.slice(0, n);
+                        });
                       }}
                       style={{
                         padding: "4px 14px",
@@ -576,9 +627,7 @@ export const UmpireSheet: React.FC<{
               <span style={{ color: "#0f172a", fontWeight: 700 }}>
                 {match.referee?.user
                   ? `${match.referee.user.firstName} ${match.referee.user.lastName}`
-                  : user
-                    ? `${user.firstName} ${user.lastName}`
-                    : "…………………………"}
+                  : "…………………………"}
               </span>
             </div>
           </div>
@@ -634,7 +683,7 @@ export const UmpireSheet: React.FC<{
                   if (g.p1 === "" && g.p2 === "") continue;
                   if (!isGameValid(g.p1, g.p2)) {
                     toast.error(
-                      `Game ${i + 1} has an invalid score. A game is played to ${pointsToWin} points and must be won by 2 clear points.`,
+                      `Game ${i + 1} has an invalid score. A game is played to ${targetPts} points and must be won by 2 clear points.`,
                     );
                     return;
                   }
@@ -676,7 +725,8 @@ export const UmpireSheet: React.FC<{
 const MatchCard: React.FC<{
   match: KnockoutMatch;
   matchLabel: string;
-  isAdminOrReferee: boolean;
+  isAdmin: boolean;
+  canRecordScore: boolean;
   onOpen: (m: KnockoutMatch) => void;
   onEdit: (m: KnockoutMatch) => void; // ← NEW
   onAssignReferee?: (m: KnockoutMatch) => void;
@@ -684,7 +734,8 @@ const MatchCard: React.FC<{
 }> = ({
   match,
   matchLabel,
-  isAdminOrReferee,
+  isAdmin,
+  canRecordScore,
   onOpen,
   onEdit,
   onAssignReferee,
@@ -743,31 +794,35 @@ const MatchCard: React.FC<{
     >
       <div
         style={{
-          border: `1.5px solid ${isBye ? "#d1d5db" : border}`,
-          borderRadius: 10,
+          border: `1.5px solid ${isBye ? "#e2e8f0" : done ? "#22c55e" : "#cbd5e1"}`,
+          borderRadius: 12,
           overflow: "hidden",
-          background: isBye ? "#f9fafb" : "#fff",
+          background: "#ffffff",
           boxShadow: isBye
-            ? "none"
+            ? "0 2px 8px rgba(0,0,0,0.05)"
             : done
-              ? "0 1px 6px rgba(34,197,94,0.18)"
-              : "0 1px 4px rgba(0,0,0,0.07)",
-          opacity: isBye ? 0.82 : 1,
-          transition: "all 0.15s",
+              ? "0 4px 16px rgba(34,197,94,0.18)"
+              : "0 4px 16px rgba(0,0,0,0.12)",
+          opacity: isBye ? 0.85 : 1,
+          transition: "all 0.2s ease",
         }}
         onMouseEnter={(e) => {
           if (!isBye) {
             (e.currentTarget as HTMLElement).style.boxShadow =
-              "0 4px 18px rgba(0,0,0,0.13)";
+              "0 8px 24px rgba(74, 238, 255, 0.4)";
+            (e.currentTarget as HTMLElement).style.borderColor = "#0284c7";
             (e.currentTarget as HTMLElement).style.transform =
-              "translateY(-1px)";
+              "translateY(-2px)";
           }
         }}
         onMouseLeave={(e) => {
           if (!isBye) {
             (e.currentTarget as HTMLElement).style.boxShadow = done
-              ? "0 1px 6px rgba(34,197,94,0.18)"
-              : "0 1px 4px rgba(0,0,0,0.07)";
+              ? "0 4px 16px rgba(34,197,94,0.18)"
+              : "0 4px 16px rgba(0,0,0,0.12)";
+            (e.currentTarget as HTMLElement).style.borderColor = done
+              ? "#22c55e"
+              : "#cbd5e1";
             (e.currentTarget as HTMLElement).style.transform = "translateY(0)";
           }
         }}
@@ -775,9 +830,9 @@ const MatchCard: React.FC<{
         {/* Match header bar */}
         <div
           style={{
-            background: isBye ? "#f3f4f6" : "#f8fafc",
+            background: "#f8fafc",
             borderBottom: "1px solid #e2e8f0",
-            padding: "5px 12px",
+            padding: "6px 12px",
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
@@ -787,7 +842,7 @@ const MatchCard: React.FC<{
             style={{
               fontSize: 11,
               fontWeight: 800,
-              color: isBye ? "#9ca3af" : accent ? accent : "#475569",
+              color: isBye ? "#94a3b8" : accent ? accent : "#0284c7",
               letterSpacing: 0.5,
               textTransform: "uppercase",
             }}
@@ -799,8 +854,9 @@ const MatchCard: React.FC<{
               style={{
                 fontSize: 10,
                 fontWeight: 800,
-                color: "#6b7280",
-                background: "#e5e7eb",
+                color: "#64748b",
+                background: "#f1f5f9",
+                border: "1px solid #e2e8f0",
                 padding: "2px 8px",
                 borderRadius: 10,
                 letterSpacing: 0.5,
@@ -812,7 +868,7 @@ const MatchCard: React.FC<{
           ) : (
             <>
               {match.scheduledTime && (
-                <span style={{ fontSize: 10, color: "#94a3b8" }}>
+                <span style={{ fontSize: 10, color: "#64748b", fontWeight: 600 }}>
                   {fmtTime(match.scheduledTime)}
                 </span>
               )}
@@ -821,52 +877,53 @@ const MatchCard: React.FC<{
                   <span
                     style={{
                       fontSize: 10,
-                      color: "#16a34a",
-                      fontWeight: 700,
+                      color: "#166534",
+                      fontWeight: 800,
                       background: "#dcfce7",
-                      padding: "1px 8px",
+                      border: "1px solid #86efac",
+                      padding: "2px 8px",
                       borderRadius: 10,
                     }}
                   >
                     ✓ Done
                   </span>
                 )}
-                {isAdminOrReferee && !done && onAssignReferee && (
+                {isAdmin && !done && onAssignReferee && (
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
                       onAssignReferee(match);
                     }}
                     style={{
-                      background: "#f1f5f9",
-                      border: "1px solid #e2e8f0",
+                      background: "#f0f9ff",
+                      border: "1px solid #bae6fd",
                       cursor: "pointer",
-                      fontSize: 11,
-                      color: "#475569",
+                      fontSize: 10,
+                      color: "#0284c7",
                       padding: "2px 8px",
                       borderRadius: 6,
-                      fontWeight: 600,
+                      fontWeight: 700,
                     }}
                     title="Assign a referee to this match"
                   >
-                    👨‍⚖️ Assign Referee
+                    👨‍⚖️ Ref
                   </button>
                 )}
-                {isAdminOrReferee && !done && (
+                {isAdmin && !done && (
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
                       onEdit(match);
                     }}
                     style={{
-                      background: "#f1f5f9",
+                      background: "#f8fafc",
                       border: "1px solid #e2e8f0",
                       cursor: "pointer",
-                      fontSize: 11,
+                      fontSize: 10,
                       color: "#475569",
                       padding: "2px 8px",
                       borderRadius: 6,
-                      fontWeight: 600,
+                      fontWeight: 700,
                     }}
                     title="Edit players in this match"
                   >
@@ -886,7 +943,7 @@ const MatchCard: React.FC<{
               display: "flex",
               alignItems: "center",
               gap: 10,
-              background: "#f3f4f6",
+              background: "#ffffff",
             }}
           >
             <div
@@ -894,13 +951,14 @@ const MatchCard: React.FC<{
                 width: 22,
                 height: 22,
                 borderRadius: 6,
-                background: "#d1d5db",
+                background: "#f1f5f9",
+                border: "1px solid #e2e8f0",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 fontSize: 10,
                 fontWeight: 800,
-                color: "#6b7280",
+                color: "#64748b",
                 flexShrink: 0,
               }}
             >
@@ -910,7 +968,7 @@ const MatchCard: React.FC<{
               style={{
                 fontSize: 13,
                 fontWeight: 700,
-                color: "#374151",
+                color: "#0f172a",
                 flex: 1,
                 overflow: "hidden",
                 textOverflow: "ellipsis",
@@ -922,8 +980,8 @@ const MatchCard: React.FC<{
             <span
               style={{
                 fontSize: 11,
-                fontWeight: 700,
-                color: "#6b7280",
+                fontWeight: 800,
+                color: "#0284c7",
                 whiteSpace: "nowrap",
               }}
             >
@@ -954,7 +1012,7 @@ const MatchCard: React.FC<{
                   alignItems: "center",
                   gap: 10,
                   borderBottom: idx === 0 ? "1px solid #f1f5f9" : "none",
-                  background: won ? "#f0fdf4" : "#fff",
+                  background: won ? "#f0fdf4" : "#ffffff",
                 }}
               >
                 <div
@@ -965,14 +1023,15 @@ const MatchCard: React.FC<{
                     background: won
                       ? "#22c55e"
                       : isFilled
-                        ? "#e2e8f0"
+                        ? "#e0f2fe"
                         : "#f1f5f9",
+                    border: won ? "none" : isFilled ? "1px solid #bae6fd" : "1px solid #e2e8f0",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
                     fontSize: 10,
                     fontWeight: 800,
-                    color: won ? "#fff" : "#475569",
+                    color: won ? "#ffffff" : isFilled ? "#0369a1" : "#94a3b8",
                     flexShrink: 0,
                   }}
                 >
@@ -981,8 +1040,8 @@ const MatchCard: React.FC<{
                 <span
                   style={{
                     fontSize: 13,
-                    fontWeight: won ? 800 : 500,
-                    color: won ? "#166534" : isFilled ? "#0f172a" : "#94a3b8",
+                    fontWeight: won ? 800 : isFilled ? 600 : 400,
+                    color: won ? "#15803d" : isFilled ? "#0f172a" : "#94a3b8",
                     flex: 1,
                     overflow: "hidden",
                     textOverflow: "ellipsis",
@@ -999,28 +1058,34 @@ const MatchCard: React.FC<{
                       height: 24,
                       borderRadius: 6,
                       background: won ? "#22c55e" : "#f1f5f9",
+                      border: won ? "none" : "1px solid #e2e8f0",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
                       fontSize: 13,
                       fontWeight: 800,
-                      color: won ? "#fff" : "#64748b",
+                      color: won ? "#ffffff" : "#64748b",
                       flexShrink: 0,
                     }}
                   >
                     {gs}
                   </div>
                 )}
-                {!done && isAdminOrReferee && slot === 1 && (
+                {!done && canRecordScore && slot === 1 && (
                   <span
                     style={{
                       fontSize: 9,
-                      color: "#3b82f6",
-                      fontWeight: 600,
+                      color: "#0284c7",
+                      fontWeight: 800,
                       whiteSpace: "nowrap",
+                      textTransform: "uppercase",
+                      letterSpacing: 0.5,
+                      background: "#e0f2fe",
+                      padding: "2px 6px",
+                      borderRadius: 4,
                     }}
                   >
-                    click to score
+                    Score
                   </span>
                 )}
               </div>
@@ -1039,14 +1104,23 @@ interface ColDef {
   entries: { match: KnockoutMatch; tag: string }[];
 }
 
-// ← onEdit added to BracketCanvas props
 const BracketCanvas: React.FC<{
   cols: ColDef[];
-  isAdminOrReferee: boolean;
+  isAdmin: boolean;
+  isReferee: boolean;
+  currentUserId?: string;
   onOpen: (m: KnockoutMatch) => void;
   onEdit: (m: KnockoutMatch) => void;
   onAssignReferee?: (m: KnockoutMatch) => void;
-}> = ({ cols, isAdminOrReferee, onOpen, onEdit, onAssignReferee }) => {
+}> = ({
+  cols,
+  isAdmin,
+  isReferee,
+  currentUserId,
+  onOpen,
+  onEdit,
+  onAssignReferee,
+}) => {
   const maxN = Math.max(...cols.map((c) => c.entries.length));
   const bodyH = maxN * CH + (maxN - 1) * VGAP;
   const totalW = cols.length * CW + (cols.length - 1) * HG;
@@ -1074,8 +1148,8 @@ const BracketCanvas: React.FC<{
             y1={lY}
             x2={mx}
             y2={lY}
-            stroke="#d1d5db"
-            strokeWidth={1.5}
+            stroke="rgba(74, 238, 255, 0.45)"
+            strokeWidth={2}
           />,
         );
       });
@@ -1087,8 +1161,8 @@ const BracketCanvas: React.FC<{
             y1={cy(lc.entries.length, pair[0])}
             x2={mx}
             y2={cy(lc.entries.length, pair[1])}
-            stroke="#d1d5db"
-            strokeWidth={1.5}
+            stroke="rgba(74, 238, 255, 0.45)"
+            strokeWidth={2}
           />,
         );
       }
@@ -1099,8 +1173,8 @@ const BracketCanvas: React.FC<{
           y1={rY}
           x2={rx}
           y2={rY}
-          stroke="#d1d5db"
-          strokeWidth={1.5}
+          stroke="rgba(74, 238, 255, 0.45)"
+          strokeWidth={2}
         />,
       );
     });
@@ -1114,6 +1188,7 @@ const BracketCanvas: React.FC<{
       {cols.map((col, ci) => (
         <div
           key={`lbl${ci}`}
+          id={`bracket-col-${ci}`}
           style={{
             position: "absolute",
             top: 0,
@@ -1125,16 +1200,26 @@ const BracketCanvas: React.FC<{
         >
           <div
             style={{
-              padding: "6px 20px",
-              borderRadius: 6,
-              background: col.accent ? `${col.accent}15` : "#f1f5f9",
-              color: col.accent ?? "#374151",
-              fontSize: 13,
-              fontWeight: 800,
-              letterSpacing: 0.3,
-              border: `1px solid ${col.accent ? `${col.accent}40` : "#e5e7eb"}`,
+              padding: "6px 16px",
+              borderRadius: 20,
+              background: col.accent
+                ? `${col.accent}20`
+                : "rgba(255, 255, 255, 0.07)",
+              border: `1px solid ${
+                col.accent ? `${col.accent}60` : "rgba(255, 255, 255, 0.15)"
+              }`,
+              color: col.accent ?? "#4AEEFF",
+              fontWeight: 900,
+              fontSize: 12,
+              letterSpacing: 1.5,
+              textTransform: "uppercase",
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
             }}
           >
+            {col.label === "Final" && "🏆"}
+            {col.label === "3rd Place Playoff" && "🥉"}
             {col.label}
           </div>
         </div>
@@ -1157,26 +1242,39 @@ const BracketCanvas: React.FC<{
 
       {/* Cards — pass onEdit down */}
       {cols.map((col, ci) =>
-        col.entries.map(({ match, tag }, mi) => (
-          <div
-            key={match.id}
-            style={{
-              position: "absolute",
-              top: LH + 16 + top(col.entries.length) + mi * (CH + VGAP),
-              left: ci * (CW + HG),
-            }}
-          >
-            <MatchCard
-              match={match}
-              matchLabel={tag}
-              isAdminOrReferee={isAdminOrReferee}
-              onOpen={onOpen}
-              onEdit={onEdit}
-              onAssignReferee={onAssignReferee}
-              accent={col.accent}
-            />
-          </div>
-        )),
+        col.entries.map(({ match, tag }, mi) => {
+          const isAssignedReferee =
+            isReferee &&
+            Boolean(
+              (match.referee?.user &&
+                (match.referee.user as any).id === currentUserId) ||
+                (match.referee as any)?.userId === currentUserId ||
+                (match as any).refereeUserId === currentUserId,
+            );
+          const canRecordScore = isAdmin || isAssignedReferee;
+
+          return (
+            <div
+              key={match.id}
+              style={{
+                position: "absolute",
+                top: LH + 16 + top(col.entries.length) + mi * (CH + VGAP),
+                left: ci * (CW + HG),
+              }}
+            >
+              <MatchCard
+                match={match}
+                matchLabel={tag}
+                isAdmin={isAdmin}
+                canRecordScore={canRecordScore}
+                onOpen={onOpen}
+                onEdit={onEdit}
+                onAssignReferee={onAssignReferee}
+                accent={col.accent}
+              />
+            </div>
+          );
+        }),
       )}
     </div>
   );
@@ -1187,6 +1285,7 @@ const KnockoutBracket: React.FC<KnockoutBracketProps> = ({
   tournamentId,
   categoryId,
   onScoreRecorded,
+  refreshTrigger,
 }) => {
   const { user } = useAuth();
   const [matches, setMatches] = useState<KnockoutMatch[]>([]);
@@ -1211,11 +1310,12 @@ const KnockoutBracket: React.FC<KnockoutBracketProps> = ({
     }
   }, [matches]);
 
-  const isAdminOrReferee = user?.role === "ADMIN" || user?.role === "REFEREE";
+  const isAdmin = user?.role === "ADMIN";
+  const isReferee = user?.role === "REFEREE";
 
   useEffect(() => {
     load();
-  }, [tournamentId, categoryId]);
+  }, [tournamentId, categoryId, refreshTrigger]);
 
   const load = async () => {
     try {
@@ -1323,6 +1423,7 @@ const KnockoutBracket: React.FC<KnockoutBracketProps> = ({
         winnerTeamId,
         status: "COMPLETED",
         endTime: new Date().toISOString(),
+        resultDetails: { bestOf },
       });
 
       toast.success("Score saved!");
@@ -1337,20 +1438,22 @@ const KnockoutBracket: React.FC<KnockoutBracketProps> = ({
 
   if (loading)
     return (
-      <div style={{ textAlign: "center", padding: 60 }}>
+      <div style={{ textAlign: "center", padding: "80px 20px" }}>
         <div
           style={{
-            width: 40,
-            height: 40,
-            border: "3px solid #e2e8f0",
-            borderTopColor: "#e11d48",
+            width: 44,
+            height: 44,
+            border: "3px solid rgba(255, 255, 255, 0.15)",
+            borderTopColor: "#4AEEFF",
             borderRadius: "50%",
             animation: "spin 0.8s linear infinite",
             margin: "0 auto 16px",
           }}
         />
         <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
-        <p style={{ color: "#94a3b8" }}>Loading bracket…</p>
+        <p style={{ color: "#4AEEFF", fontSize: 13, fontWeight: 700, letterSpacing: 1, textTransform: "uppercase" }}>
+          Loading bracket…
+        </p>
       </div>
     );
 
@@ -1359,33 +1462,38 @@ const KnockoutBracket: React.FC<KnockoutBracketProps> = ({
       <div
         style={{
           textAlign: "center",
-          padding: 60,
-          background: "#f8fafc",
+          padding: "60px 24px",
+          background: "rgba(6, 29, 35, 0.4)",
           borderRadius: 16,
-          border: "1px dashed #cbd5e1",
+          border: "1px dashed rgba(255, 255, 255, 0.2)",
+          backdropFilter: "blur(10px)",
         }}
       >
         <div style={{ fontSize: 48, marginBottom: 12 }}>🏆</div>
-        <p style={{ fontWeight: 700, color: "#1e293b", fontSize: 16 }}>
+        <p style={{ fontWeight: 800, color: "#ffffff", fontSize: 18, textTransform: "uppercase", letterSpacing: 0.5 }}>
           No knockout matches yet
         </p>
-        <p style={{ color: "#94a3b8", fontSize: 13 }}>
-          Complete the group stage first.
+        <p style={{ color: "rgba(255, 255, 255, 0.6)", fontSize: 13, marginTop: 4 }}>
+          Generate the bracket above to populate this tournament draw.
         </p>
         <button
           onClick={load}
           style={{
-            marginTop: 16,
-            padding: "8px 20px",
-            background: "#0f172a",
-            color: "#fff",
+            marginTop: 18,
+            padding: "10px 24px",
+            background: "#4AEEFF",
+            color: "#061D23",
             border: "none",
             borderRadius: 10,
-            fontWeight: 600,
+            fontWeight: 800,
+            fontSize: 12,
+            textTransform: "uppercase",
+            letterSpacing: 0.5,
             cursor: "pointer",
+            transition: "all 0.2s",
           }}
         >
-          🔄 Refresh
+          🔄 Refresh Draw
         </button>
       </div>
     );
@@ -1426,13 +1534,13 @@ const KnockoutBracket: React.FC<KnockoutBracketProps> = ({
   if (fn)
     cols.push({
       label: "Final",
-      accent: "#16a34a",
+      accent: "#22c55e",
       entries: [{ match: fn, tag: "F" }],
     });
   if (tp)
     cols.push({
       label: "3rd Place Playoff",
-      accent: "#b45309",
+      accent: "#f59e0b",
       entries: [{ match: tp, tag: "3RD" }],
     });
 
@@ -1443,11 +1551,11 @@ const KnockoutBracket: React.FC<KnockoutBracketProps> = ({
         <div
           style={{
             fontSize: 11,
-            fontWeight: 800,
-            color: "#e11d48",
+            fontWeight: 900,
+            color: "#4AEEFF",
             letterSpacing: 2,
             textTransform: "uppercase",
-            marginBottom: 4,
+            marginBottom: 6,
           }}
         >
           Knockout Draw
@@ -1455,15 +1563,16 @@ const KnockoutBracket: React.FC<KnockoutBracketProps> = ({
         <h2
           style={{
             margin: 0,
-            fontSize: 28,
+            fontSize: 26,
             fontWeight: 900,
-            color: "#0f172a",
-            letterSpacing: -0.5,
+            color: "#ffffff",
+            letterSpacing: 1,
+            textTransform: "uppercase",
           }}
         >
           Tournament Bracket
         </h2>
-        <p style={{ margin: "4px 0 0", fontSize: 13, color: "#64748b" }}>
+        <p style={{ margin: "6px 0 0", fontSize: 13, color: "rgba(255, 255, 255, 0.6)" }}>
           All matches best of 5 games · Click any match to record score
         </p>
       </div>
@@ -1472,58 +1581,125 @@ const KnockoutBracket: React.FC<KnockoutBracketProps> = ({
       <div
         style={{
           display: "flex",
-          justifyContent: "flex-end",
-          gap: 10,
+          justifyContent: "space-between",
+          alignItems: "center",
+          gap: 12,
           marginBottom: 20,
+          flexWrap: "wrap",
         }}
       >
-        {isAdminOrReferee && (
-          <span
-            style={{
-              fontSize: 12,
-              color: "#3b82f6",
-              fontWeight: 600,
-              alignSelf: "center",
-            }}
-          >
-            💡 Click any match card to open umpire sheet · ✏️ Edit to change
-            players
-          </span>
-        )}
+        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+          {isAdmin && (
+            <span
+              style={{
+                fontSize: 12,
+                color: "#4AEEFF",
+                fontWeight: 600,
+              }}
+            >
+              💡 Click any match card to open umpire sheet · ✏️ Edit to change players
+            </span>
+          )}
+          {isReferee && (
+            <span
+              style={{
+                fontSize: 12,
+                color: "#4AEEFF",
+                fontWeight: 600,
+              }}
+            >
+              💡 Click your assigned match to record score
+            </span>
+          )}
+          {/* Quick jump pills */}
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+            <span
+              style={{
+                fontSize: 10,
+                fontWeight: 800,
+                color: "rgba(255, 255, 255, 0.45)",
+                textTransform: "uppercase",
+                letterSpacing: 0.5,
+              }}
+            >
+              Jump:
+            </span>
+            {cols.map((c, idx) => (
+              <button
+                key={c.label}
+                onClick={() => {
+                  const el = document.getElementById(`bracket-col-${idx}`);
+                  if (el) {
+                    el.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+                  }
+                }}
+                style={{
+                  padding: "4px 10px",
+                  borderRadius: 16,
+                  background: c.accent ? `${c.accent}25` : "rgba(255, 255, 255, 0.08)",
+                  border: `1px solid ${c.accent ? `${c.accent}70` : "rgba(255, 255, 255, 0.2)"}`,
+                  color: c.accent ?? "#4AEEFF",
+                  fontSize: 11,
+                  fontWeight: 800,
+                  cursor: "pointer",
+                  transition: "all 0.15s ease",
+                }}
+              >
+                {c.label === "Final"
+                  ? "🏆 Final"
+                  : c.label === "3rd Place Playoff"
+                    ? "🥉 3rd Place"
+                    : c.label}
+              </button>
+            ))}
+          </div>
+        </div>
         <button
           onClick={load}
           style={{
-            padding: "7px 16px",
-            background: "#fff",
-            color: "#374151",
-            border: "1.5px solid #e2e8f0",
-            borderRadius: 8,
-            fontWeight: 600,
-            fontSize: 13,
+            padding: "8px 18px",
+            background: "rgba(74, 238, 255, 0.12)",
+            color: "#4AEEFF",
+            border: "1px solid rgba(74, 238, 255, 0.35)",
+            borderRadius: 10,
+            fontWeight: 700,
+            fontSize: 12,
+            textTransform: "uppercase",
+            letterSpacing: 0.5,
             cursor: "pointer",
+            transition: "all 0.2s",
           }}
         >
-          🔄 Refresh
+          🔄 Refresh Draw
         </button>
       </div>
 
       {/* Bracket */}
-      <div style={{ overflowX: "auto", paddingBottom: 16 }}>
+      <div
+        style={{
+          overflowX: "auto",
+          paddingBottom: 16,
+          scrollbarWidth: "thin",
+          scrollbarColor: "rgba(74, 238, 255, 0.4) transparent",
+        }}
+      >
         <div
           style={{
             display: "flex",
-            justifyContent: "center",
-            padding: "8px 24px",
-            minWidth: "fit-content",
+            justifyContent: "flex-start",
+            padding: "12px 48px 24px 16px",
+            minWidth: "max-content",
           }}
         >
           <BracketCanvas
             cols={cols}
-            isAdminOrReferee={isAdminOrReferee}
+            isAdmin={isAdmin}
+            isReferee={isReferee}
+            currentUserId={user?.id}
             onOpen={setSelectedMatch}
             onEdit={setEditingMatch}
             onAssignReferee={
-              user?.role === "ADMIN" ? setAssignRefereeMatch : undefined
+              isAdmin ? setAssignRefereeMatch : undefined
             }
           />
         </div>
@@ -1532,34 +1708,37 @@ const KnockoutBracket: React.FC<KnockoutBracketProps> = ({
       {/* Footer */}
       <div
         style={{
-          marginTop: 8,
-          padding: "10px 16px",
-          background: "#f8fafc",
-          border: "1px solid #e2e8f0",
-          borderRadius: 10,
+          marginTop: 12,
+          padding: "12px 18px",
+          background: "rgba(6, 29, 35, 0.5)",
+          border: "1px solid rgba(255, 255, 255, 0.1)",
+          borderRadius: 12,
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
           fontSize: 12,
-          color: "#64748b",
+          color: "rgba(255, 255, 255, 0.6)",
+          flexWrap: "wrap",
+          gap: 12,
         }}
       >
-        <span>All matches are best of 5 games</span>
-        <div style={{ display: "flex", gap: 16 }}>
+        <span>Matches are standard best of 5 games</span>
+        <div style={{ display: "flex", gap: 20 }}>
           {[
             ["#22c55e", "Winner / Completed"],
-            ["#e2e8f0", "Pending"],
+            ["rgba(74, 238, 255, 0.3)", "Upcoming Match"],
           ].map(([c, l]) => (
             <span
               key={l}
-              style={{ display: "flex", alignItems: "center", gap: 5 }}
+              style={{ display: "flex", alignItems: "center", gap: 6 }}
             >
               <div
                 style={{
-                  width: 16,
-                  height: 16,
+                  width: 14,
+                  height: 14,
                   borderRadius: 4,
                   background: c,
+                  border: "1px solid rgba(255, 255, 255, 0.2)",
                 }}
               />
               {l}
@@ -1574,7 +1753,16 @@ const KnockoutBracket: React.FC<KnockoutBracketProps> = ({
           match={selectedMatch}
           onClose={() => setSelectedMatch(null)}
           onSave={handleSave}
-          isAdminOrReferee={isAdminOrReferee}
+          isAdminOrReferee={
+            isAdmin ||
+            (isReferee &&
+              Boolean(
+                (selectedMatch.referee?.user &&
+                  (selectedMatch.referee.user as any).id === user?.id) ||
+                  (selectedMatch.referee as any)?.userId === user?.id ||
+                  (selectedMatch as any).refereeUserId === user?.id,
+              ))
+          }
         />
       )}
 

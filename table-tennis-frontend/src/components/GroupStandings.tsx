@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import toast from "react-hot-toast";
@@ -112,6 +113,7 @@ export const UmpireSheet: React.FC<UmpireSheetProps> = ({
   const [games, setGames] = useState<GameScore[]>(initGames);
   const [saving, setSaving] = useState(false);
   const [pointsToWin, setPointsToWin] = useState<number>(11);
+  const targetPts = typeof pointsToWin === "number" && !isNaN(pointsToWin) && pointsToWin > 0 ? pointsToWin : 11;
 
   const getGameWinner = (p1Str: string, p2Str: string): "p1" | "p2" | null => {
     if (p1Str === "" || p2Str === "") return null;
@@ -119,8 +121,8 @@ export const UmpireSheet: React.FC<UmpireSheetProps> = ({
     const p2 = parseInt(p2Str);
     if (isNaN(p1) || isNaN(p2)) return null;
 
-    if (p1 >= pointsToWin && p1 - p2 >= 2) return "p1";
-    if (p2 >= pointsToWin && p2 - p1 >= 2) return "p2";
+    if (p1 >= targetPts && p1 - p2 >= 2) return "p1";
+    if (p2 >= targetPts && p2 - p1 >= 2) return "p2";
     return null;
   };
 
@@ -134,9 +136,9 @@ export const UmpireSheet: React.FC<UmpireSheetProps> = ({
     const winner = Math.max(p1, p2);
     const loser = Math.min(p1, p2);
 
-    if (winner < pointsToWin) return false;
-    if (winner === pointsToWin) return loser <= pointsToWin - 2;
-    if (winner > pointsToWin) return loser === winner - 2;
+    if (winner < targetPts) return false;
+    if (winner === targetPts) return loser <= targetPts - 2;
+    if (winner > targetPts) return loser === winner - 2;
 
     return false;
   };
@@ -178,7 +180,7 @@ export const UmpireSheet: React.FC<UmpireSheetProps> = ({
       const g = games[i];
       if (g.p1 === "" && g.p2 === "") continue;
       if (!isGameValid(g.p1, g.p2)) {
-        toast.error(`Game ${i + 1} has an invalid score. A game is played to ${pointsToWin} points and must be won by 2 clear points.`);
+        toast.error(`Game ${i + 1} has an invalid score. A game is played to ${targetPts} points and must be won by 2 clear points.`);
         return;
       }
     }
@@ -195,16 +197,17 @@ export const UmpireSheet: React.FC<UmpireSheetProps> = ({
   const p1Name = `${match.player1.firstName} ${match.player1.lastName}`;
   const p2Name = `${match.player2.firstName} ${match.player2.lastName}`;
 
-  return (
+  return createPortal(
     <div
       style={{
         position: "fixed",
         inset: 0,
-        background: "rgba(0,0,0,0.65)",
+        backgroundColor: "rgba(0, 0, 0, 0.7)",
+        backdropFilter: "blur(4px)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        zIndex: 1000,
+        zIndex: 99999,
         padding: 16,
         overflowY: "auto",
       }}
@@ -213,6 +216,7 @@ export const UmpireSheet: React.FC<UmpireSheetProps> = ({
       <div
         style={{
           background: "#fff",
+          color: "#0f172a",
           borderRadius: 16,
           width: "100%",
           maxWidth: 600,
@@ -323,17 +327,28 @@ export const UmpireSheet: React.FC<UmpireSheetProps> = ({
                   type="number"
                   min={1}
                   value={pointsToWin}
-                  onChange={(e) => setPointsToWin(parseInt(e.target.value) || 11)}
+                  placeholder="11"
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value);
+                    setPointsToWin(!isNaN(val) && val > 0 ? val : 11);
+                  }}
+                  onBlur={() => {
+                    if (!pointsToWin || isNaN(pointsToWin) || pointsToWin < 1) {
+                      setPointsToWin(11);
+                    }
+                  }}
                   disabled={!isAdminOrReferee || isCompleted}
                   style={{
                     width: 45,
                     padding: "4px",
                     borderRadius: 6,
-                    border: "1px solid #cbd5e1",
+                    border: "1.5px solid #cbd5e1",
                     fontSize: 13,
                     fontWeight: 700,
                     textAlign: "center",
-                    outline: "none"
+                    outline: "none",
+                    color: "#0f172a",
+                    backgroundColor: "#ffffff",
                   }}
                 />
               </div>
@@ -619,7 +634,9 @@ export const UmpireSheet: React.FC<UmpireSheetProps> = ({
             <div style={{ fontSize: 13, color: "#475569" }}>
               <strong>Umpire:</strong>{" "}
               <span style={{ color: "#0f172a", fontWeight: 700 }}>
-                {match.referee?.user ? `${match.referee.user.firstName} ${match.referee.user.lastName}` : (user ? `${user.firstName} ${user.lastName}` : "…………………………")}
+                {match.referee?.user
+                  ? `${match.referee.user.firstName} ${match.referee.user.lastName}`
+                  : "…………………………"}
               </span>
             </div>
           </div>
@@ -710,7 +727,8 @@ export const UmpireSheet: React.FC<UmpireSheetProps> = ({
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 
@@ -724,11 +742,22 @@ const GroupStandings: React.FC<Props> = ({
   isAdminOrReferee = false,
   onScoreUpdate,
 }) => {
+  const { user } = useAuth();
+  const isAdmin = user?.role === "ADMIN";
+  const isReferee = user?.role === "REFEREE";
   const [groups, setGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeMatch, setActiveMatch] = useState<GroupMatch | null>(null);
   const [activeGroupName, setActiveGroupName] = useState("");
   const [assignRefereeMatch, setAssignRefereeMatch] = useState<GroupMatch | null>(null);
+
+  const canRecordActiveMatch =
+    isAdmin ||
+    (isReferee &&
+      activeMatch &&
+      (activeMatch.referee?.user?.id === user?.id ||
+        (activeMatch.referee as any)?.userId === user?.id ||
+        (activeMatch as any)?.refereeUserId === user?.id));
 
   useEffect(() => {
     if (activeMatch) {
@@ -1155,7 +1184,7 @@ const GroupStandings: React.FC<Props> = ({
                 Loss
               </span>
               <span>MP = Match Points · R = Rank</span>
-              {isAdminOrReferee ? (
+              {isAdmin ? (
                 <span
                   style={{
                     marginLeft: "auto",
@@ -1164,6 +1193,16 @@ const GroupStandings: React.FC<Props> = ({
                   }}
                 >
                   💡 Click any cell to open umpire sheet
+                </span>
+              ) : isReferee ? (
+                <span
+                  style={{
+                    marginLeft: "auto",
+                    color: "#3b82f6",
+                    fontWeight: 600,
+                  }}
+                >
+                  💡 Click your assigned match to record score
                 </span>
               ) : (
                 <span style={{ marginLeft: "auto", color: "#94a3b8" }}>
@@ -1181,9 +1220,9 @@ const GroupStandings: React.FC<Props> = ({
           match={activeMatch}
           onClose={() => setActiveMatch(null)}
           onSave={handleSaveScore}
-          isAdminOrReferee={isAdminOrReferee}
+          isAdminOrReferee={Boolean(canRecordActiveMatch)}
           categoryName={activeGroupName}
-          onAssignReferee={setAssignRefereeMatch}
+          onAssignReferee={isAdmin ? setAssignRefereeMatch : undefined}
         />
       )}
 

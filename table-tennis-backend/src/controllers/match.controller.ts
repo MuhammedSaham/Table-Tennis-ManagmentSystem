@@ -108,8 +108,18 @@ export const getPlayerPerformanceStatsById = catchAsync(async (req: Request, res
 // Update match details (score, winner, etc.)
 export const updateMatch = catchAsync(async (req: Request, res: Response) => {
   const { matchId } = req.params;
-  const { score, winnerId,winnerTeamId, status, player1Id, player2Id,team1Id,team2Id } = req.body;
+  const { score, winnerId,winnerTeamId, status, player1Id, player2Id,team1Id,team2Id, resultDetails } = req.body;
   
+  if (req.user?.role === 'REFEREE') {
+    const existingMatch = await prisma.match.findUnique({
+      where: { id: matchId },
+      include: { referee: true },
+    });
+    if (!existingMatch || existingMatch.referee?.userId !== req.user.id) {
+      throw new AppError('You can only record scores for matches assigned to you', 403);
+    }
+  }
+
   const updateData: any = {};
   if (score !== undefined) updateData.score = score;
   if (winnerId !== undefined) updateData.winnerId = winnerId;
@@ -119,6 +129,7 @@ export const updateMatch = catchAsync(async (req: Request, res: Response) => {
   if (player2Id !== undefined) updateData.player2Id = player2Id;
   if (team1Id !== undefined) updateData.team1Id = team1Id;
   if (team2Id !== undefined) updateData.team2Id = team2Id;
+  if (resultDetails !== undefined) updateData.resultDetails = resultDetails;
   if (status === 'COMPLETED' && (winnerId || winnerTeamId)) updateData.endTime = new Date();
 
   const match = await prisma.match.update({
@@ -261,6 +272,16 @@ export const updateMatchAndAdvance = catchAsync(async (req: Request, res: Respon
   const { matchId } = req.params;
   const { player1Score, player2Score } = req.body;
   
+  if (req.user?.role === 'REFEREE') {
+    const existingMatch = await prisma.match.findUnique({
+      where: { id: matchId },
+      include: { referee: true },
+    });
+    if (!existingMatch || existingMatch.referee?.userId !== req.user.id) {
+      throw new AppError('You can only record scores for matches assigned to you', 403);
+    }
+  }
+
   // Update the current match
   const winnerId = player1Score > player2Score ? 
     (await prisma.match.findUnique({ where: { id: matchId } }))?.player1Id : 

@@ -140,13 +140,22 @@ export const getPublicPlayers = catchAsync(async (req: Request, res: Response) =
           skillLevel: true,
           clubAffiliation: true,
           dateOfBirth: true,
+          ranking: true,
+          isClubMember: true,
         },
       },
     },
     orderBy: { firstName: 'asc' },
   });
 
-  sendResponse(res, 200, 'Players retrieved successfully', players);
+  // Flatten isClubMember and ranking to root level
+  const result = players.map(p => ({
+    ...p,
+    ranking: p.playerProfile?.ranking ?? null,
+    isClubMember: p.playerProfile?.isClubMember ?? false,
+  }));
+
+  sendResponse(res, 200, 'Players retrieved successfully', result);
 });
 export const updatePlayerRanking = catchAsync(async (req: Request, res: Response) => {
   const { id } = req.params;                        // player userId

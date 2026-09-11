@@ -22,6 +22,7 @@ export class AuthService {
             skillLevel?: string;
             clubAffiliation?: string;
             gender?: 'MALE' | 'FEMALE';
+            isClubMember?: boolean;
         };
         refereeProfile?: {
             certification?: string;
@@ -79,6 +80,7 @@ export class AuthService {
                         skillLevel: userData.playerProfile.skillLevel,
                         clubAffiliation: userData.playerProfile.clubAffiliation,
                         gender: userData.playerProfile.gender,
+                        isClubMember: userData.playerProfile.isClubMember ?? false,
                     },
                 });
             } else if (userData.role === 'REFEREE' && userData.refereeProfile) {

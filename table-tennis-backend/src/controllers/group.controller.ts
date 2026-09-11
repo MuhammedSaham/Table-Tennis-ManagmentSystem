@@ -34,7 +34,8 @@ export const recordGroupScore = catchAsync(async (req: Request, res: Response) =
     matchId,
     games,
     req.user!.id,
-    bestOf ?? 5
+    bestOf ?? 5,
+    req.user?.role
   );
   sendResponse(res, 200, 'Score recorded successfully', match);
 });
