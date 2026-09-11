@@ -71,6 +71,7 @@ model PlayerProfile {
   rankingNote      String?
   rankingUpdatedAt DateTime?
   rankingUpdatedBy String?
+  isClubMember     Boolean   @default(false)
 
   // Relations
   teamMemberships         TeamMember[]

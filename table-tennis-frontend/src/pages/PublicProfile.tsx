@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import api from "../services/api";
+import api, { getProfileImageUrl } from "../services/api";
 import toast from "react-hot-toast";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -315,7 +315,7 @@ const PublicProfile: React.FC = () => {
           {/* Avatar */}
           {profile.profileImage ? (
             <img
-              src={profile.profileImage}
+              src={getProfileImageUrl(profile.profileImage)}
               alt={profile.firstName}
               style={{
                 width: 100,

@@ -4,13 +4,21 @@ import bcrypt from 'bcrypt';
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('🌱 Seeding database...');
+  console.log('🌱 Starting database seed...\n');
 
-  // ── ADMIN ─────────────────────────────────────────────────────
+  // ============================================================
+  // 1. SUPER ADMIN
+  // ============================================================
   const adminPassword = await bcrypt.hash('admin123', 10);
+
   const admin = await prisma.user.upsert({
-    where: { email: 'admin@tabletennis.com' },
-    update: {},
+    where: {
+      email: 'admin@tabletennis.com',
+    },
+    update: {
+      role: 'ADMIN',
+      isSuperAdmin: true,
+    },
     create: {
       email: 'admin@tabletennis.com',
       password: adminPassword,
@@ -18,22 +26,45 @@ async function main() {
       lastName: 'User',
       phone: '+94771234567',
       role: 'ADMIN',
-      isEmailVerified: true,
       isSuperAdmin: true,
+
       adminProfile: {
         create: {
           department: 'Tournament Management',
         },
       },
     },
+    include: {
+      adminProfile: true,
+    },
   });
-  console.log('✅ Admin created:', admin.email);
 
-  // ── REFEREE ───────────────────────────────────────────────────
+  // Ensure adminProfile exists even if the user already existed
+  if (!admin.adminProfile) {
+    await prisma.adminProfile.upsert({
+      where: { userId: admin.id },
+      update: {},
+      create: {
+        userId: admin.id,
+        department: 'Tournament Management',
+      },
+    });
+  }
+
+  console.log('✅ Super Admin ready:', admin.email);
+
+  // ============================================================
+  // 2. OFFICIAL REFEREE
+  // ============================================================
   const refereePassword = await bcrypt.hash('referee123', 10);
+
   const referee = await prisma.user.upsert({
-    where: { email: 'referee@tabletennis.com' },
-    update: {},
+    where: {
+      email: 'referee@tabletennis.com',
+    },
+    update: {
+      role: 'REFEREE',
+    },
     create: {
       email: 'referee@tabletennis.com',
       password: refereePassword,
@@ -41,7 +72,7 @@ async function main() {
       lastName: 'User',
       phone: '+94771234568',
       role: 'REFEREE',
-      isEmailVerified: true,
+
       refereeProfile: {
         create: {
           certification: 'ITTF Level 2',
@@ -49,19 +80,39 @@ async function main() {
         },
       },
     },
+    include: {
+      refereeProfile: true,
+    },
   });
-  console.log('✅ Referee created:', referee.email);
 
-  console.log('\n✅ Seeding completed!');
-  console.log('─'.repeat(45));
-  console.log('Admin:    admin@tabletennis.com   / admin123');
-  console.log('Referee:  referee@tabletennis.com / referee123');
-  console.log('─'.repeat(45));
+  // Ensure refereeProfile exists even if the user already existed
+  if (!referee.refereeProfile) {
+    await prisma.refereeProfile.upsert({
+      where: { userId: referee.id },
+      update: {},
+      create: {
+        userId: referee.id,
+        certification: 'ITTF Level 2',
+        experienceYears: 5,
+      },
+    });
+  }
+
+  console.log('✅ Official Referee ready:', referee.email);
+
+  console.log('\n==============================================');
+  console.log('🎉 Seed completed successfully!');
+  console.log('==============================================');
+  console.log('🔐 Accounts available:');
+  console.log('   Admin   : admin@tabletennis.com   / admin123');
+  console.log('   Referee : referee@tabletennis.com / referee123');
+  console.log('==============================================\n');
 }
 
 main()
   .catch((e) => {
-    console.error('❌ Seeding failed:', e);
+    console.error('\n❌ Seeding failed:');
+    console.error(e);
     process.exit(1);
   })
   .finally(async () => {

@@ -96,6 +96,7 @@ export class UserService {
                         skillLevel: true,
                         clubAffiliation: true,
                         dateOfBirth: true,
+                        isClubMember: true,
                     }
                 },
                 refereeProfile: true,
@@ -120,6 +121,7 @@ export class UserService {
             skillLevel: user.playerProfile?.skillLevel || null,
             clubAffiliation: user.playerProfile?.clubAffiliation || null,
             dateOfBirth: user.playerProfile?.dateOfBirth || null,
+            isClubMember: user.playerProfile?.isClubMember ?? false,
             // Keep original profiles if needed elsewhere
             playerProfile: user.playerProfile,
             refereeProfile: user.refereeProfile,

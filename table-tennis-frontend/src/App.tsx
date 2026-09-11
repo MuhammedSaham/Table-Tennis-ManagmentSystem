@@ -4,6 +4,7 @@ import {
   Routes,
   Route,
   Navigate,
+  useParams,
 } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import { AuthProvider, useAuth } from "./context/AuthContext";
@@ -44,10 +45,59 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({
   }
 
   if (!user) {
-    return <Navigate to="/login" />;
+    return <Navigate to="/login" replace />;
   }
 
   return <>{children}</>;
+};
+
+const DashboardRoute: React.FC = () => {
+  const { user } = useAuth();
+  if (user?.role === "REFEREE") {
+    return <Navigate to="/app/referee/matches" replace />;
+  }
+  return <Dashboard />;
+};
+
+const AppIndexRoute: React.FC = () => {
+  const { user } = useAuth();
+  if (user?.role === "REFEREE") {
+    return <Navigate to="/app/referee/matches" replace />;
+  }
+  return <Navigate to="/app/dashboard" replace />;
+};
+
+const PublicTournamentsRoute: React.FC = () => {
+  const { user } = useAuth();
+  if (user) {
+    return <Navigate to="/app/tournaments" replace />;
+  }
+  return <Tournaments />;
+};
+
+const PublicTournamentDetailsRoute: React.FC = () => {
+  const { user } = useAuth();
+  const { id } = useParams<{ id: string }>();
+  if (user) {
+    return <Navigate to={`/app/tournaments/${id}`} replace />;
+  }
+  return <TournamentDetails />;
+};
+
+const PublicLeaderboardRoute: React.FC = () => {
+  const { user } = useAuth();
+  if (user) {
+    return <Navigate to="/app/leaderboard" replace />;
+  }
+  return <Leaderboard />;
+};
+
+const PublicGlobalLeaderboardRoute: React.FC = () => {
+  const { user } = useAuth();
+  if (user) {
+    return <Navigate to="/app/global-leaderboard" replace />;
+  }
+  return <GlobalLeaderboard />;
 };
 
 function AppRoutes() {
@@ -56,10 +106,10 @@ function AppRoutes() {
       {/* Public routes - no login required */}
       <Route path="/" element={<PublicLayout />}>
         <Route index element={<Home />} />
-        <Route path="tournaments" element={<Tournaments />} />
-        <Route path="tournaments/:id" element={<TournamentDetails />} />
-        <Route path="leaderboard" element={<Leaderboard />} />
-        <Route path="global-leaderboard" element={<GlobalLeaderboard />} />
+        <Route path="tournaments" element={<PublicTournamentsRoute />} />
+        <Route path="tournaments/:id" element={<PublicTournamentDetailsRoute />} />
+        <Route path="leaderboard" element={<PublicLeaderboardRoute />} />
+        <Route path="global-leaderboard" element={<PublicGlobalLeaderboardRoute />} />
         <Route path="profile/:userId" element={<PublicProfile />} />
         <Route path="players" element={<Players />} />
         {/*<Route path="verify-email" element={<VerifyEmail />} />*/}
@@ -79,9 +129,10 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       >
-        <Route index element={<Navigate to="/app/dashboard" />} />
-        <Route path="dashboard" element={<Dashboard />} />
+        <Route index element={<AppIndexRoute />} />
+        <Route path="dashboard" element={<DashboardRoute />} />
         <Route path="tournaments" element={<Tournaments />} />
+        <Route path="tournaments/:id" element={<TournamentDetails />} />
         <Route path="leaderboard" element={<Leaderboard />} />
         <Route path="global-leaderboard" element={<GlobalLeaderboard />} />
         <Route path="create-tournament" element={<CreateTournament />} />
@@ -103,19 +154,21 @@ function App() {
         <Toaster
           position="top-right"
           toastOptions={{
-            duration: 4000,
+            duration: 1800,
             style: {
               background: "#363636",
               color: "#fff",
               borderRadius: "12px",
             },
             success: {
+              duration: 1800,
               icon: "🏆",
               style: {
                 background: "#10b981",
               },
             },
             error: {
+              duration: 3500,
               icon: "❌",
               style: {
                 background: "#ef4444",

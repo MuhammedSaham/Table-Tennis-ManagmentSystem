@@ -111,7 +111,7 @@ const MyRegistrations: React.FC = () => {
             <div key={registration.id} className="card">
               <div className="flex justify-between items-start">
                 <div className="flex-1">
-                  <Link to={`/tournaments/${registration.tournament.id}`}>
+                  <Link to={`/app/tournaments/${registration.tournament.id}`}>
                     <h3 className="text-xl font-semibold text-gray-900 hover:text-primary-600">
                       {registration.tournament.name}
                     </h3>

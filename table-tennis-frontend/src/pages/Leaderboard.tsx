@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import api from "../services/api";
 import toast from "react-hot-toast";
 import { Link } from "react-router-dom";
+import { TrophyIcon, CalendarIcon } from "@heroicons/react/24/outline";
 
 interface Tournament {
   id: string;
@@ -73,142 +74,191 @@ const Leaderboard: React.FC = () => {
     }
   };
 
-  const getMedalColor = (index: number) => {
-    if (index === 0) return "🥇";
-    if (index === 1) return "🥈";
-    if (index === 2) return "🥉";
-    return `${index + 1}.`;
-  };
+  const wrapInBaseLayout = (children: React.ReactNode) => (
+    <div className="relative min-h-screen w-full overflow-hidden bg-[#061D23] text-white">
+      {/* ─── BG.PNG FIXED FULL-BLEED BACKGROUND ─── */}
+      <div
+        className="fixed inset-0 bg-cover bg-center bg-no-repeat"
+        style={{ backgroundImage: "url('/bg1.png')" }}
+      />
+      {/* Light overlay for text legibility over the paper-texture artwork */}
+      <div className="fixed inset-0 bg-[#061D23]/25" />
+      <div className="fixed inset-0 bg-gradient-to-b from-[#061D23]/20 via-transparent to-[#061D23]/35" />
+
+      <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-7xl flex-col space-y-6">
+        {children}
+      </div>
+    </div>
+  );
 
   if (loading) {
-    return (
-      <div className="flex justify-center items-center h-64">
-        Loading tournaments...
+    return wrapInBaseLayout(
+      <div className="flex flex-col items-center justify-center py-32">
+        <div className="w-12 h-12 border-4 border-white/20 border-t-[#4AEEFF] rounded-full animate-spin" />
+        <p className="mt-4 text-xs font-black uppercase tracking-[0.2em] text-[#4AEEFF]">
+          Loading tournaments...
+        </p>
       </div>
     );
   }
 
-  return (
-    <div className="min-h-screen bg-gradient-to-r from-[#061D23] via-[#12679E] via-50% to-[#4AEEFF] py-12">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold text-white">
-          Tournament Leaderboard
-        </h1>
-      </div>
+  const selectedTourneyObj = tournaments.find((t) => t.id === selectedTournament);
 
-      {/* Tournament Selector */}
-      <div className="bg-white/10 backdrop-blur-md rounded-2xl p-6 mb-6 border-2 border-[#4AEEFF]/50">
-        <label className="block text-sm font-medium text-white mb-2">
-          Select Tournament
-        </label>
-        <select
-          value={selectedTournament}
-          onChange={(e) => setSelectedTournament(e.target.value)}
-          className="input-field max-w-md bg-white/90 text-gray-900 border border-[#4AEEFF]/30 rounded-lg px-4 py-2 focus:ring-2 focus:ring-[#4AEEFF]"
-        >
-          {tournaments.map((tournament) => (
-            <option key={tournament.id} value={tournament.id}>
-              {tournament.name} ({tournament.status})
-            </option>
-          ))}
-        </select>
-      </div>
+  return wrapInBaseLayout(
+    <>
+      {/* HEADER MODULE */}
+      <header className="flex flex-col justify-between gap-4 rounded-[16px] border border-white/20 bg-[#061D23]/15 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl sm:flex-row sm:items-center">
+        <div>
+          <div className="mb-3 h-[3px] w-16 bg-[#4AEEFF]" />
+          <span className="inline-block px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-md bg-[#4AEEFF]/20 text-[#4AEEFF] border border-[#4AEEFF]/40 align-middle mb-2">
+            Tournament Standings
+          </span>
+          <h1 className="text-2xl font-black uppercase tracking-[0.2em] text-white sm:text-4xl">
+            Leaderboard
+          </h1>
+          <p className="mt-1 text-xs uppercase tracking-[0.3em] text-[#4AEEFF]/90">
+            Official results and match performance per tournament
+          </p>
+        </div>
+        {selectedTourneyObj && (
+          <div className="rounded-xl border border-white/10 bg-[#061D23]/40 px-5 py-3 text-right">
+            <span className="inline-block px-2 py-0.5 text-[10px] font-black uppercase tracking-wider rounded bg-[#4AEEFF]/20 text-[#4AEEFF] border border-[#4AEEFF]/30 mb-1">
+              {selectedTourneyObj.status}
+            </span>
+            <p className="text-base font-black text-white">{selectedTourneyObj.name}</p>
+          </div>
+        )}
+      </header>
 
+      {/* TOURNAMENT SELECTOR MODULE */}
+      <section className="rounded-[16px] border border-white/20 bg-[#061D23]/15 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl">
+        <div className="mb-4 flex items-center gap-2">
+          <CalendarIcon className="h-5 w-5 text-[#4AEEFF]" />
+          <h2 className="text-xs font-black uppercase tracking-widest text-[#4AEEFF]">
+            Select Tournament
+          </h2>
+        </div>
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+          <select
+            value={selectedTournament}
+            onChange={(e) => setSelectedTournament(e.target.value)}
+            className="w-full max-w-md rounded-xl border border-white/20 bg-[#061D23]/80 px-4 py-3 text-sm font-medium text-white shadow-inner focus:border-[#4AEEFF] focus:outline-none focus:ring-1 focus:ring-[#4AEEFF]"
+          >
+            {tournaments.map((tournament) => (
+              <option key={tournament.id} value={tournament.id} className="bg-[#061D23] text-white">
+                {tournament.name} ({tournament.status})
+              </option>
+            ))}
+          </select>
+          <span className="text-xs font-mono uppercase tracking-wider text-white/60">
+            {standings.length} categories available
+          </span>
+        </div>
+      </section>
+
+      {/* CATEGORY STANDINGS */}
       {loadingStandings ? (
-        <div className="flex justify-center items-center h-64 text-[#4AEEFF]">
-          Loading standings...
+        <div className="flex flex-col items-center justify-center py-20">
+          <div className="w-10 h-10 border-4 border-white/20 border-t-[#4AEEFF] rounded-full animate-spin" />
+          <p className="mt-3 text-xs font-black uppercase tracking-widest text-[#4AEEFF]">
+            Loading standings...
+          </p>
         </div>
       ) : standings.length === 0 ? (
-        <div className="bg-white/10 backdrop-blur-md rounded-2xl text-center py-12 border-2 border-[#4AEEFF]/50">
-          <p className="text-[#4AEEFF] text-lg font-semibold">
+        <section className="rounded-[16px] border border-white/20 bg-[#061D23]/15 p-12 text-center shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl">
+          <TrophyIcon className="mx-auto mb-3 h-10 w-10 text-white/20" />
+          <p className="text-base font-bold text-white">
             No standings available for this tournament yet.
           </p>
-          <p className="text-sm text-[#4AEEFF]/80 mt-2">
-            Complete matches to generate rankings.
+          <p className="mt-1 text-xs text-white/60">
+            Complete matches to generate standings and calculate points.
           </p>
-        </div>
+        </section>
       ) : (
-        <div className="space-y-8">
+        <div className="space-y-6">
           {standings.map((category) => (
-            <div key={category.categoryId} className="bg-white/10 backdrop-blur-md rounded-2xl p-6 border-2 border-[#4AEEFF]/50">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-semibold text-white">
+            <section
+              key={category.categoryId}
+              className="rounded-[16px] border border-white/20 bg-[#061D23]/15 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl"
+            >
+              <div className="mb-5 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <h2 className="text-lg font-black uppercase tracking-wider text-white">
                   {category.categoryName}
                 </h2>
-                <div className="text-sm text-white/70">
-                  {category.totalPlayers} Players • {category.completedMatches}{" "}
-                  Matches
+                <div className="flex gap-2">
+                  <span className="rounded-md border border-white/10 bg-[#061D23]/40 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-white/70">
+                    {category.totalPlayers} Players
+                  </span>
+                  <span className="rounded-md border border-[#4AEEFF]/30 bg-[#4AEEFF]/10 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-[#4AEEFF]">
+                    {category.completedMatches} Matches Completed
+                  </span>
                 </div>
               </div>
 
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-white/10 border-b border-[#4AEEFF]/30">
-                    <tr>
-                      <th className="px-4 py-3 text-left text-sm font-medium text-white/80">
-                        Rank
-                      </th>
-                      <th className="px-4 py-3 text-left text-sm font-medium text-white/80">
-                        Player
-                      </th>
-                      <th className="px-4 py-3 text-center text-sm font-medium text-white/80">
-                        Played
-                      </th>
-                      <th className="px-4 py-3 text-center text-sm font-medium text-white/80">
-                        Wins
-                      </th>
-                      <th className="px-4 py-3 text-center text-sm font-medium text-white/80">
-                        Losses
-                      </th>
-                      <th className="px-4 py-3 text-center text-sm font-medium text-white/80">
-                        Games W/L
-                      </th>
-                      <th className="px-4 py-3 text-center text-sm font-medium text-white/80">
-                        Points
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[#4AEEFF]/20">
-                    {category.standings.map((player, index) => (
-                      <tr key={player.playerId} className="hover:bg-white/5">
-                        <td className="px-4 py-3 text-sm font-medium text-white/90">
-                          {getMedalColor(index)}
-                        </td>
-                        <td className="px-4 py-3 text-sm">
-                          <Link
-                            to={`/profile/${player.playerId}`}
-                            className="text-[#4AEEFF] hover:text-white hover:underline font-medium"
-                          >
-                            {player.playerName}
-                          </Link>
-                        </td>
-                        <td className="px-4 py-3 text-sm text-white/70 text-center">
-                          {player.matchesPlayed}
-                        </td>
-                        <td className="px-4 py-3 text-sm text-[#4AEEFF] font-medium text-center">
-                          {player.wins}
-                        </td>
-                        <td className="px-4 py-3 text-sm text-red-400 font-medium text-center">
-                          {player.losses}
-                        </td>
-                        <td className="px-4 py-3 text-sm text-white/70 text-center">
-                          {player.gamesWon} / {player.gamesLost}
-                        </td>
-                        <td className="px-4 py-3 text-sm font-bold text-[#4AEEFF] text-center">
-                          {player.points}
-                        </td>
+              {category.standings.length === 0 ? (
+                <p className="text-xs text-white/50 font-mono py-4">No completed fixtures in this category yet.</p>
+              ) : (
+                <div className="overflow-x-auto rounded-xl border border-white/10 bg-[#061D23]/30">
+                  <table className="w-full">
+                    <thead className="border-b border-white/15 bg-white/5 text-left text-xs font-black uppercase tracking-wider text-[#4AEEFF]">
+                      <tr>
+                        <th className="px-5 py-3.5 text-center w-16">Rank</th>
+                        <th className="px-5 py-3.5">Player</th>
+                        <th className="px-5 py-3.5 text-center">Played</th>
+                        <th className="px-5 py-3.5 text-center">Won</th>
+                        <th className="px-5 py-3.5 text-center">Lost</th>
+                        <th className="px-5 py-3.5 text-center">Points</th>
+                        <th className="px-5 py-3.5 text-center">Games</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+                    </thead>
+                    <tbody className="divide-y divide-white/5 font-mono text-sm">
+                      {category.standings.map((player, index) => (
+                        <tr key={player.playerId} className="hover:bg-white/5 transition-colors">
+                          <td className="px-5 py-4 text-center font-black">
+                            {index === 0 ? (
+                              <span className="text-xl">🥇</span>
+                            ) : index === 1 ? (
+                              <span className="text-xl">🥈</span>
+                            ) : index === 2 ? (
+                              <span className="text-xl">🥉</span>
+                            ) : (
+                              <span className="text-white/60 font-bold">{index + 1}</span>
+                            )}
+                          </td>
+                          <td className="px-5 py-4 font-sans font-bold">
+                            <Link
+                              to={`/profile/${player.playerId}`}
+                              className="text-white hover:text-[#4AEEFF] transition-colors"
+                            >
+                              {player.playerName}
+                            </Link>
+                          </td>
+                          <td className="px-5 py-4 text-center text-white/80">
+                            {player.matchesPlayed}
+                          </td>
+                          <td className="px-5 py-4 text-center font-bold text-emerald-400">
+                            {player.wins}
+                          </td>
+                          <td className="px-5 py-4 text-center font-bold text-rose-400">
+                            {player.losses}
+                          </td>
+                          <td className="px-5 py-4 text-center font-black text-[#4AEEFF] text-base">
+                            {player.points}
+                          </td>
+                          <td className="px-5 py-4 text-center text-white/70">
+                            {player.gamesWon} - {player.gamesLost}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </section>
           ))}
         </div>
       )}
-      </div>
-    </div>
+    </>
   );
 };
 

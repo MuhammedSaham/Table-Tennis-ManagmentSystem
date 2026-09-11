@@ -139,14 +139,21 @@ async recordGroupScore(
   matchId: string,
   games: { p1: number | null; p2: number | null }[],  // array of up to 5 games
   adminId: string,
-  bestOf: 3 | 5 = 5
+  bestOf: 3 | 5 = 5,
+  userRole?: string
 ) {
   const existingMatch = await prisma.groupMatch.findUnique({
     where: { id: matchId },
-    include: { group: { include: { players: true } } },
+    include: { group: { include: { players: true } }, referee: true },
   }) as any;
 
   if (!existingMatch) throw new AppError('Match not found', 404);
+
+  if (userRole === 'REFEREE') {
+    if (!existingMatch.referee || existingMatch.referee.userId !== adminId) {
+      throw new AppError('You can only record scores for matches assigned to you', 403);
+    }
+  }
 
   // Count games won per player
   const winsToWin = Math.ceil(bestOf / 2); // 2 for BO3, 3 for BO5
@@ -270,8 +277,9 @@ async recordGroupScore(
         },
         matches: {
           include: {
-            player1: { select: { firstName: true, lastName: true } },
-            player2: { select: { firstName: true, lastName: true } },
+            player1: { select: { id: true, firstName: true, lastName: true } },
+            player2: { select: { id: true, firstName: true, lastName: true } },
+            referee: { include: { user: { select: { id: true, firstName: true, lastName: true } } } },
           },
         },
       },
@@ -358,31 +366,33 @@ async recordGroupScore(
     });
 
     // ── 3. Determine bracket structure dynamically ───────────────────────────
-    //
-    // nextPowerOfTwo gives us the bracket "slots" (e.g. 4 → 4, 5 → 8, 6 → 8)
-    // byes = bracketSize - totalPlayers  (these players skip the first round)
-    // firstRoundPlayers = totalPlayers - byes  (these play immediately)
-    //
-    const bracketSize = this.nextPowerOfTwo(totalPlayers); // 4 → 4, 5-8 → 8
-    const byes = bracketSize - totalPlayers;               // 4 players → 0 byes
-    const firstRoundPlayerCount = totalPlayers - byes;     // players who play QF
+    const bracketSize = this.nextPowerOfTwo(totalPlayers); // 4, 8, 16
+    const byes = bracketSize - totalPlayers;
 
-    console.log(`📐 Bracket size: ${bracketSize}, Byes: ${byes}, First-round players: ${firstRoundPlayerCount}`);
+    console.log(`📐 Bracket size: ${bracketSize}, Byes: ${byes}, Total players: ${totalPlayers}`);
 
-    // Separate group winners (seeded, get byes if needed) from runners-up
-    const groupWinners  = qualifiedPlayers.filter(p => p.groupRank === 1); // seeds
-    const groupRunnerUps = qualifiedPlayers.filter(p => p.groupRank > 1);  // play first
+    // Sort group winners by record (seeds), then runners-up, then any others
+    const groupWinners = qualifiedPlayers
+      .filter(p => p.groupRank === 1)
+      .sort((a, b) => b.points - a.points || b.gamesWon - a.gamesWon || b.pointsScored - a.pointsScored);
+
+    const groupRunnerUps = qualifiedPlayers
+      .filter(p => p.groupRank === 2)
+      .sort((a, b) => b.points - a.points || b.gamesWon - a.gamesWon || b.pointsScored - a.pointsScored);
+
+    const otherQualified = qualifiedPlayers
+      .filter(p => p.groupRank > 2)
+      .sort((a, b) => b.points - a.points || b.gamesWon - a.gamesWon || b.pointsScored - a.pointsScored);
+
+    const seededPlayers = [...groupWinners, ...groupRunnerUps, ...otherQualified];
 
     const allMatches = [];
     let matchNumber = 1;
 
-    // ── 4a. CASE: 4 players — skip straight to Semi-finals ──────────────────
+    // ── 4a. CASE: 4 players with 0 byes — skip straight to Semi-finals ───────
     if (bracketSize === 4 && byes === 0) {
-      // Seed the draw so group winners meet runners-up, not each other
-      // SF1: Group A winner vs Group B runner-up
-      // SF2: Group B winner vs Group A runner-up
-      const [winner1, winner2]     = groupWinners;    // Group A winner, Group B winner
-      const [runnerUp1, runnerUp2] = groupRunnerUps;  // Group A runner-up, Group B runner-up
+      const [winner1, winner2] = groupWinners;
+      const [runnerUp1, runnerUp2] = groupRunnerUps;
 
       console.log('🏓 Creating Semi-finals (no Quarter-finals needed)');
 
@@ -391,8 +401,8 @@ async recordGroupScore(
           tournamentId,
           categoryId,
           matchType: 'SINGLES',
-          player1Id: winner1?.id  ?? null,
-          player2Id: runnerUp2?.id ?? null, // cross-seeding
+          player1Id: winner1?.id ?? null,
+          player2Id: runnerUp2?.id ?? runnerUp1?.id ?? null,
           round: 'Semi-Finals',
           matchNumber: matchNumber++,
           scheduledTime: new Date(),
@@ -406,8 +416,8 @@ async recordGroupScore(
           tournamentId,
           categoryId,
           matchType: 'SINGLES',
-          player1Id: winner2?.id  ?? null,
-          player2Id: runnerUp1?.id ?? null, // cross-seeding
+          player1Id: winner2?.id ?? null,
+          player2Id: runnerUp1?.id ?? runnerUp2?.id ?? null,
           round: 'Semi-Finals',
           matchNumber: matchNumber++,
           scheduledTime: new Date(),
@@ -415,144 +425,147 @@ async recordGroupScore(
         },
       });
       allMatches.push(sf2);
+
+      const finalMatch = await prisma.match.create({
+        data: {
+          tournamentId,
+          categoryId,
+          matchType: 'SINGLES',
+          player1Id: null,
+          player2Id: null,
+          round: 'Final',
+          matchNumber: matchNumber++,
+          scheduledTime: new Date(),
+          status: 'SCHEDULED',
+        },
+      });
+      allMatches.push(finalMatch);
+
+      const thirdPlaceMatch = await prisma.match.create({
+        data: {
+          tournamentId,
+          categoryId,
+          matchType: 'SINGLES',
+          player1Id: null,
+          player2Id: null,
+          round: '3rd Place Playoff',
+          matchNumber: matchNumber++,
+          scheduledTime: new Date(),
+          status: 'SCHEDULED',
+        },
+      });
+      allMatches.push(thirdPlaceMatch);
     }
 
-    // ── 4b. CASE: 8 players (or 5-8 with byes) — QF → SF → Final ───────────
+    // ── 4b. CASE: bracketSize >= 8 (e.g. 5-8 players with QF, or 9-16 with R16) ──
     else {
-      // Players who play in the first round (quarter-finals)
-      const qfPlayers = this.shuffleArray([...groupRunnerUps]);
-      // Players who get a bye straight to semi-finals
-      const byePlayers = [...groupWinners];
+      const firstRoundMatchCount = bracketSize / 2;
+      const byePlayers = seededPlayers.slice(0, byes);
+      const playingPlayers = this.shuffleArray(seededPlayers.slice(byes));
 
-      console.log(`🏓 Creating Quarter-finals with ${qfPlayers.length} players`);
+      const matchOrder = this.getSeededMatchOrder(firstRoundMatchCount);
+      const firstRoundPairs = Array.from({ length: firstRoundMatchCount }, () => ({
+        p1: null as string | null,
+        p2: null as string | null,
+        isBye: false,
+      }));
 
-      // Create QF matches in pairs
-      for (let i = 0; i < firstRoundPlayerCount; i += 2) {
-        const p1 = qfPlayers[i]     ?? null;
-        const p2 = qfPlayers[i + 1] ?? null;
+      // Place BYEs according to official seeded match order (top & bottom balanced)
+      for (let i = 0; i < byes; i++) {
+        const matchIndex = matchOrder[i];
+        firstRoundPairs[matchIndex].isBye = true;
+        firstRoundPairs[matchIndex].p1 = byePlayers[i].id;
+      }
 
-        const qf = await prisma.match.create({
+      // Fill remaining first round match slots with playing players
+      let playingIndex = 0;
+      for (let i = 0; i < firstRoundMatchCount; i++) {
+        if (!firstRoundPairs[i].isBye) {
+          firstRoundPairs[i].p1 = playingPlayers[playingIndex++]?.id || null;
+          firstRoundPairs[i].p2 = playingPlayers[playingIndex++]?.id || null;
+        }
+      }
+
+      // Create Round 1 matches (e.g. Quarter-Finals)
+      let currentRoundMatches: any[] = [];
+      const round1Name = this.getKnockoutRoundName(firstRoundMatchCount);
+
+      for (let i = 0; i < firstRoundMatchCount; i++) {
+        const pair = firstRoundPairs[i];
+        const match = await prisma.match.create({
           data: {
             tournamentId,
             categoryId,
             matchType: 'SINGLES',
-            player1Id: p1?.id ?? null,
-            player2Id: p2?.id ?? null,
-            round: 'Quarter-Finals',
+            player1Id: pair.p1,
+            player2Id: pair.p2,
+            round: round1Name,
+            matchNumber: matchNumber++,
+            scheduledTime: new Date(),
+            status: pair.isBye ? 'COMPLETED' : 'SCHEDULED',
+            winnerId: pair.isBye ? pair.p1 : null,
+            score: pair.isBye ? 'BYE' : null,
+          },
+        });
+        currentRoundMatches.push(match);
+        allMatches.push(match);
+      }
+
+      // Create subsequent rounds (e.g. Semi-Finals, Final)
+      let matchesInNextRound = Math.floor(firstRoundMatchCount / 2);
+      while (matchesInNextRound >= 1) {
+        const nextRoundName = this.getKnockoutRoundName(matchesInNextRound);
+        const nextRoundMatches: any[] = [];
+
+        for (let i = 0; i < matchesInNextRound; i++) {
+          const prev1 = currentRoundMatches[i * 2];
+          const prev2 = currentRoundMatches[i * 2 + 1];
+
+          const p1Id = prev1?.winnerId || null;
+          const p2Id = prev2?.winnerId || null;
+
+          const match = await prisma.match.create({
+            data: {
+              tournamentId,
+              categoryId,
+              matchType: 'SINGLES',
+              player1Id: p1Id,
+              player2Id: p2Id,
+              round: nextRoundName,
+              matchNumber: matchNumber++,
+              scheduledTime: new Date(),
+              status: 'SCHEDULED',
+            },
+          });
+          nextRoundMatches.push(match);
+          allMatches.push(match);
+        }
+        currentRoundMatches = nextRoundMatches;
+        matchesInNextRound = Math.floor(matchesInNextRound / 2);
+      }
+
+      // Create 3rd Place Playoff
+      if (bracketSize >= 4) {
+        const thirdPlaceMatch = await prisma.match.create({
+          data: {
+            tournamentId,
+            categoryId,
+            matchType: 'SINGLES',
+            player1Id: null,
+            player2Id: null,
+            round: '3rd Place Playoff',
             matchNumber: matchNumber++,
             scheduledTime: new Date(),
             status: 'SCHEDULED',
           },
         });
-        allMatches.push(qf);
+        allMatches.push(thirdPlaceMatch);
       }
-
-      // Create BYE QF matches for group winners — these are instantly COMPLETED
-      // so the bracket canvas shows a proper QF column with BYE cards feeding SF
-      console.log(`🏓 Creating BYE Quarter-final slots for ${byePlayers.length} group winners`);
-
-      for (const byePlayer of byePlayers) {
-        const byeQf = await prisma.match.create({
-          data: {
-            tournamentId,
-            categoryId,
-            matchType: 'SINGLES',
-            player1Id: byePlayer.id,
-            player2Id: null,
-            round: 'Quarter-Finals',
-            matchNumber: matchNumber++,
-            scheduledTime: new Date(),
-            status: 'COMPLETED',
-            score: 'BYE',
-            winnerId: byePlayer.id,
-          },
-        });
-        allMatches.push(byeQf);
-      }
-
-      // Create SF matches — bye players are pre-seeded, QF winner slots are null
-      console.log(`🏓 Creating Semi-finals with ${byePlayers.length} seeded players`);
-
-      const sf1 = await prisma.match.create({
-        data: {
-          tournamentId,
-          categoryId,
-          matchType: 'SINGLES',
-          player1Id: byePlayers[0]?.id ?? null,
-          player2Id: null, // filled when QF1 completes
-          round: 'Semi-Finals',
-          matchNumber: matchNumber++,
-          scheduledTime: new Date(),
-          status: 'SCHEDULED',
-        },
-      });
-      allMatches.push(sf1);
-
-      const sf2 = await prisma.match.create({
-        data: {
-          tournamentId,
-          categoryId,
-          matchType: 'SINGLES',
-          player1Id: byePlayers[1]?.id ?? null,
-          player2Id: null, // filled when QF2 completes
-          round: 'Semi-Finals',
-          matchNumber: matchNumber++,
-          scheduledTime: new Date(),
-          status: 'SCHEDULED',
-        },
-      });
-      allMatches.push(sf2);
     }
 
-    // ── 5. Always create the Final ───────────────────────────────────────────
-    console.log('🏆 Creating Final');
-
-    const finalMatch = await prisma.match.create({
-      data: {
-        tournamentId,
-        categoryId,
-        matchType: 'SINGLES',
-        player1Id: null, // filled when SF1 completes
-        player2Id: null, // filled when SF2 completes
-        round: 'Final',
-        matchNumber: matchNumber++,
-        scheduledTime: new Date(),
-        status: 'SCHEDULED',
-      },
-    });
-    allMatches.push(finalMatch);
-
-    const semiFinalMatches = await prisma.match.findMany({
-    where: {
-      tournamentId,
-      categoryId,
-      round: 'Semi-Finals',
-    },
-    orderBy: { matchNumber: 'asc' },
-  });
-
-  // Create 3rd place match if there are exactly 2 semi-finals
-  if (semiFinalMatches.length === 2) {
-    const thirdPlaceMatch = await prisma.match.create({
-      data: {
-        tournamentId,
-        categoryId,
-        matchType: 'SINGLES',
-        player1Id: null, // Will be filled with loser of SF1
-        player2Id: null, // Will be filled with loser of SF2
-        round: '3rd Place Playoff',
-        matchNumber: matchNumber++,
-        scheduledTime: new Date(),
-        status: 'SCHEDULED',
-      },
-    });
-    //matches.push(thirdPlaceMatch);
-    allMatches.push(thirdPlaceMatch);
-  }
-
-    // ── 6. Summary ───────────────────────────────────────────────────────────
-    const qfCount = allMatches.filter(m => m.round === 'Quarter-final').length;
-    const sfCount = allMatches.filter(m => m.round === 'Semi-final').length;
+    // ── 5. Summary ───────────────────────────────────────────────────────────
+    const qfCount = allMatches.filter(m => m.round === 'Quarter-Finals' || m.round === 'Quarter-final').length;
+    const sfCount = allMatches.filter(m => m.round === 'Semi-Finals' || m.round === 'Semi-final').length;
     const fCount  = allMatches.filter(m => m.round === 'Final').length;
 
     console.log(`\n✅ Generated ${allMatches.length} knockout matches`);
@@ -591,6 +604,24 @@ async recordGroupScore(
   /** Returns the smallest power of 2 >= n (e.g. 4→4, 5→8, 6→8, 9→16) */
   private nextPowerOfTwo(n: number): number {
     return Math.pow(2, Math.ceil(Math.log2(n)));
+  }
+
+  private getSeededMatchOrder(numMatches: number): number[] {
+    if (numMatches === 1) return [0];
+    if (numMatches === 2) return [0, 1];
+    if (numMatches === 4) return [0, 3, 1, 2];
+    if (numMatches === 8) return [0, 7, 3, 4, 1, 6, 2, 5];
+    if (numMatches === 16) return [0, 15, 7, 8, 3, 12, 4, 11, 1, 14, 6, 9, 2, 13, 5, 10];
+    return Array.from({ length: numMatches }, (_, i) => i);
+  }
+
+  private getKnockoutRoundName(numMatches: number): string {
+    if (numMatches === 1) return 'Final';
+    if (numMatches === 2) return 'Semi-Finals';
+    if (numMatches === 4) return 'Quarter-Finals';
+    if (numMatches === 8) return 'Round of 16';
+    if (numMatches === 16) return 'Round of 32';
+    return `Round of ${numMatches * 2}`;
   }
 
   // Add this method to revert old statistics when re-recording scores

@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import api from "../services/api";
+import api, { getProfileImageUrl } from "../services/api";
 
 interface Player {
   id: string;
   firstName: string;
   lastName: string;
   ranking?: number;
+  isClubMember?: boolean;
   profileImage?: string;
   createdAt: string;
   playerProfile?: {
@@ -16,11 +17,11 @@ interface Player {
   };
 }
 
-const skillColors: Record<string, { bg: string; text: string }> = {
-  BEGINNER: { bg: "#e0f2fe", text: "#0369a1" },
-  INTERMEDIATE: { bg: "#fef3c7", text: "#92400e" },
-  ADVANCED: { bg: "#dcfce7", text: "#166534" },
-  PROFESSIONAL: { bg: "#ede9fe", text: "#4c1d95" },
+const skillColors: Record<string, { badge: string }> = {
+  BEGINNER: { badge: "border-sky-400/40 bg-sky-400/10 text-sky-300" },
+  INTERMEDIATE: { badge: "border-amber-400/40 bg-amber-400/10 text-amber-300" },
+  ADVANCED: { badge: "border-emerald-400/40 bg-emerald-400/10 text-emerald-300" },
+  PROFESSIONAL: { badge: "border-purple-400/40 bg-purple-400/10 text-purple-300" },
 };
 
 const calculateAge = (dob: string) => {
@@ -32,31 +33,20 @@ const calculateAge = (dob: string) => {
   return age;
 };
 
+type TabType = "CLUB" | "GUEST";
+
 const Players: React.FC = () => {
   const [players, setPlayers] = useState<Player[]>([]);
   const [filtered, setFiltered] = useState<Player[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [skillFilter, setSkillFilter] = useState("ALL");
-
-  // Original fetchPlayers function
-  // const fetchPlayers = async () => {
-  //   try {
-  //     const res = await api.get("/users/public/players");
-  //     setPlayers(res.data.data);
-  //     setFiltered(res.data.data);
-  //   } catch {
-  //     setPlayers([]);
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
+  const [activeTab, setActiveTab] = useState<TabType>("CLUB");
 
   const fetchPlayers = async () => {
     try {
       const res = await api.get("/users/public/players");
       setPlayers(res.data.data);
-      setFiltered(res.data.data);
     } catch {
       setPlayers([]);
     } finally {
@@ -68,54 +58,131 @@ const Players: React.FC = () => {
     fetchPlayers();
   }, []);
 
+  // Split players by tab — use isClubMember set by admin on creation
+  const clubPlayers = players.filter((p) => p.isClubMember === true);
+  const guestPlayers = players.filter((p) => !p.isClubMember);
+  const tabPlayers = activeTab === "CLUB" ? clubPlayers : guestPlayers;
+
   useEffect(() => {
-    let result = players;
+    let result = tabPlayers;
     if (search.trim()) {
       const q = search.toLowerCase();
       result = result.filter(
         (p) =>
           p.firstName.toLowerCase().includes(q) ||
           p.lastName.toLowerCase().includes(q) ||
-          p.playerProfile?.clubAffiliation?.toLowerCase().includes(q),
+          p.playerProfile?.clubAffiliation?.toLowerCase().includes(q)
       );
     }
     if (skillFilter !== "ALL") {
       result = result.filter(
-        (p) => p.playerProfile?.skillLevel?.toUpperCase() === skillFilter,
+        (p) => p.playerProfile?.skillLevel?.toUpperCase() === skillFilter
       );
     }
     setFiltered(result);
-  }, [search, skillFilter, players]);
+  }, [search, skillFilter, players, activeTab]);
 
   const initials = (p: Player) =>
     `${p.firstName[0]}${p.lastName[0]}`.toUpperCase();
 
   return (
-    <div className="min-h-screen bg-gradient-to-r from-[#061D23] via-[#12679E] via-50% to-[#4AEEFF] py-12">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="mb-12">
-          <div className="flex items-center gap-4 mb-4">
-            <div className="w-12 h-12 bg-gradient-to-r from-[#4AEEFF] to-[#FFFFFF] rounded-full flex items-center justify-center">
-              <span className="text-2xl">🏓</span>
-            </div>
-            <h1 className="text-4xl md:text-5xl font-bold text-white">Players</h1>
+    <div className="relative min-h-screen w-full overflow-hidden bg-[#061D23] text-white">
+      {/* ─── BG.PNG FIXED FULL-BLEED BACKGROUND ─── */}
+      <div
+        className="fixed inset-0 bg-cover bg-center bg-no-repeat"
+        style={{ backgroundImage: "url('/bg1.png')" }}
+      />
+      {/* Light overlay for text legibility */}
+      <div className="fixed inset-0 bg-[#061D23]/25" />
+      <div className="fixed inset-0 bg-gradient-to-b from-[#061D23]/20 via-transparent to-[#061D23]/35" />
+
+      <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-7xl flex-col space-y-6 px-4 py-8 sm:px-6 lg:px-8">
+        {/* HEADER MODULE */}
+        <header className="flex flex-col justify-between gap-4 rounded-[16px] border border-white/20 bg-[#061D23]/15 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl sm:flex-row sm:items-center">
+          <div>
+            <div className="mb-3 h-[3px] w-16 bg-[#4AEEFF]" />
+            <span className="inline-block px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-md bg-[#4AEEFF]/20 text-[#4AEEFF] border border-[#4AEEFF]/40 align-middle mb-2">
+              Community Directory
+            </span>
+            <h1 className="text-2xl font-black uppercase tracking-[0.2em] text-white sm:text-4xl">
+              Players
+            </h1>
+            <p className="mt-1 text-xs uppercase tracking-[0.3em] text-[#4AEEFF]/90">
+              Browse all registered players and view their profiles
+            </p>
           </div>
-          <p className="text-[#4AEEFF] text-lg">Browse all registered players and view their profiles</p>
+        </header>
+
+        {/* ── TABS MODULE ── */}
+        <div className="flex flex-col sm:flex-row gap-3">
+          <button
+            id="tab-club-members"
+            onClick={() => { setActiveTab("CLUB"); setSearch(""); setSkillFilter("ALL"); }}
+            className={`flex items-center justify-center sm:justify-start gap-2.5 px-6 py-3 rounded-xl font-black text-xs uppercase tracking-wider transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#4AEEFF] ${
+              activeTab === "CLUB"
+                ? "bg-[#4AEEFF] text-[#061D23] shadow-lg shadow-[#4AEEFF]/25 scale-[1.02]"
+                : "bg-[#061D23]/40 text-white/80 border border-white/15 hover:border-[#4AEEFF]/50 hover:text-white"
+            }`}
+          >
+            <span>🏅 Club Members</span>
+            <span
+              className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
+                activeTab === "CLUB"
+                  ? "bg-[#061D23]/25 text-[#061D23]"
+                  : "bg-white/10 text-[#4AEEFF]"
+              }`}
+            >
+              {clubPlayers.length}
+            </span>
+          </button>
+
+          <button
+            id="tab-guest-players"
+            onClick={() => { setActiveTab("GUEST"); setSearch(""); setSkillFilter("ALL"); }}
+            className={`flex items-center justify-center sm:justify-start gap-2.5 px-6 py-3 rounded-xl font-black text-xs uppercase tracking-wider transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#4AEEFF] ${
+              activeTab === "GUEST"
+                ? "bg-[#4AEEFF] text-[#061D23] shadow-lg shadow-[#4AEEFF]/25 scale-[1.02]"
+                : "bg-[#061D23]/40 text-white/80 border border-white/15 hover:border-[#4AEEFF]/50 hover:text-white"
+            }`}
+          >
+            <span>👤 Guest Players</span>
+            <span
+              className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
+                activeTab === "GUEST"
+                  ? "bg-[#061D23]/25 text-[#061D23]"
+                  : "bg-white/10 text-[#4AEEFF]"
+              }`}
+            >
+              {guestPlayers.length}
+            </span>
+          </button>
         </div>
 
-        {/* Filters */}
-        <div className="bg-white/10 backdrop-blur-md rounded-2xl p-6 mb-8 border border-white/20">
+        {/* Tab description */}
+        <div className="text-xs text-white/70 px-1">
+          {activeTab === "CLUB" ? (
+            <p>
+              🏅 <strong className="text-white">Club Members</strong> are officially registered players with a club ranking assigned by the admin.
+            </p>
+          ) : (
+            <p>
+              👤 <strong className="text-white">Guest Players</strong> self-registered from the public page and do not have an official club ranking yet.
+            </p>
+          )}
+        </div>
+
+        {/* Filters & Search */}
+        <div className="rounded-[16px] border border-white/20 bg-[#061D23]/15 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl">
           <div className="flex flex-col md:flex-row gap-4 items-center">
             {/* Search */}
             <div className="relative flex-1 w-full">
-              <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-xl">🔍</span>
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-white/40">🔍</span>
               <input
                 type="text"
                 placeholder="Search by name or club..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-12 pr-4 py-3 rounded-lg bg-white/90 text-gray-900 placeholder-gray-500 outline-none focus:ring-2 focus:ring-[#4AEEFF]"
+                className="w-full pl-11 pr-4 py-3 rounded-xl bg-[#061D23]/70 border border-white/20 text-white placeholder-white/40 outline-none text-sm focus:border-[#4AEEFF] focus:ring-1 focus:ring-[#4AEEFF] transition-all"
               />
             </div>
 
@@ -125,10 +192,10 @@ const Players: React.FC = () => {
                 <button
                   key={s}
                   onClick={() => setSkillFilter(s)}
-                  className={`px-4 py-2 rounded-full font-semibold text-sm transition-all focus:outline-none focus:ring-2 focus:ring-[#4AEEFF] ${
+                  className={`px-3.5 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all focus:outline-none ${
                     skillFilter === s
-                      ? "bg-gradient-to-r from-[#4AEEFF] to-[#12679E] text-[#061D23] shadow-sm"
-                      : "bg-gradient-to-r from-[#061D23]/80 to-[#0a3a47]/80 text-white border border-[#4AEEFF]/30 hover:bg-gradient-to-r hover:from-[#061D23] hover:to-[#0a3a47] hover:text-white hover:border-[#4AEEFF]/60"
+                      ? "bg-[#4AEEFF] text-[#061D23] shadow-md shadow-[#4AEEFF]/25 scale-105"
+                      : "bg-[#061D23]/50 text-white/70 border border-white/10 hover:border-[#4AEEFF]/40 hover:text-white"
                   }`}
                 >
                   {s === "ALL" ? "All Levels" : s.charAt(0) + s.slice(1).toLowerCase()}
@@ -136,103 +203,133 @@ const Players: React.FC = () => {
               ))}
             </div>
           </div>
-          <div className="text-white/80 text-sm mt-4">{filtered.length} player{filtered.length !== 1 ? "s" : ""} found</div>
+          <div className="text-[#4AEEFF]/90 text-xs font-mono tracking-wider mt-4">
+            {filtered.length} PLAYER{filtered.length !== 1 ? "S" : ""} FOUND
+          </div>
         </div>
 
         {/* Loading */}
         {loading && (
-          <div className="text-center py-20">
-            <div className="inline-block">
-              <div className="w-12 h-12 border-4 border-white/30 border-t-[#4AEEFF] rounded-full animate-spin"></div>
-            </div>
-            <p className="text-white/80 mt-4 text-lg">Loading players…</p>
+          <div className="flex flex-col items-center justify-center py-28">
+            <div className="w-12 h-12 border-4 border-white/20 border-t-[#4AEEFF] rounded-full animate-spin" />
+            <p className="mt-4 text-xs font-black uppercase tracking-[0.2em] text-[#4AEEFF]">
+              Loading players...
+            </p>
           </div>
         )}
 
         {/* Empty */}
         {!loading && filtered.length === 0 && (
-          <div className="text-center py-20">
-            <div className="text-6xl mb-4">🏓</div>
-            <p className="text-white text-xl font-semibold mb-2">No players found</p>
-            <p className="text-white/70">Try adjusting your search or filter</p>
+          <div className="flex flex-col items-center justify-center rounded-[16px] border border-white/20 bg-[#061D23]/15 p-16 text-center backdrop-blur-xl">
+            <div className="text-5xl mb-4">{activeTab === "CLUB" ? "🏅" : "👤"}</div>
+            <h3 className="text-base font-black uppercase tracking-wider text-white">
+              No {activeTab === "CLUB" ? "club members" : "guest players"} found
+            </h3>
+            <p className="mt-1 text-xs text-white/60">
+              Try adjusting your search or skill level filter
+            </p>
           </div>
         )}
 
         {/* Player Grid */}
         {!loading && filtered.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-8">
             {filtered.map((player) => {
               const skill = player.playerProfile?.skillLevel?.toUpperCase();
-              const skillStyle = skill && skillColors[skill] ? skillColors[skill] : { bg: "#f1f5f9", text: "#475569" };
-              const age = player.playerProfile?.dateOfBirth ? calculateAge(player.playerProfile.dateOfBirth) : null;
+              const skillBadgeClass =
+                skill && skillColors[skill]
+                  ? skillColors[skill].badge
+                  : "border-white/20 bg-white/5 text-white/60";
+              const age =
+                player.playerProfile?.dateOfBirth
+                  ? calculateAge(player.playerProfile.dateOfBirth)
+                  : null;
+              const isClubMember = player.isClubMember === true;
 
               return (
-                <Link key={player.id} to={`/profile/${player.id}`} className="group">
-                  <div className="relative h-full bg-white/10 backdrop-blur-md rounded-2xl p-8 border-2 border-[#4AEEFF]/50 hover:border-[#4AEEFF] transition-all duration-300 hover:shadow-2xl hover:shadow-[#4AEEFF]/20 hover:scale-105 overflow-hidden">
-                    {/* Accent line */}
-                    <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#4AEEFF] via-[#12679E] to-transparent"></div>
+                <Link
+                  key={player.id}
+                  to={`/profile/${player.id}`}
+                  className="group relative flex flex-col justify-between rounded-[16px] border border-white/20 bg-[#061D23]/20 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl transition-all duration-200 hover:border-[#4AEEFF]/60 hover:-translate-y-1 overflow-hidden"
+                >
+                  {/* Subtle top accent line */}
+                  <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-[#4AEEFF]/50 to-transparent group-hover:via-[#4AEEFF] transition-all" />
 
-                    {/* Background decoration */}
-                    <div className="absolute -top-8 -right-8 w-24 h-24 bg-[#4AEEFF]/10 rounded-full blur-2xl"></div>
+                  {/* Corner light blur */}
+                  <div className="absolute -top-10 -right-10 w-28 h-28 bg-[#4AEEFF]/5 rounded-full blur-2xl group-hover:bg-[#4AEEFF]/10 transition-all pointer-events-none" />
 
+                  {/* Club member / Guest badge (top-right corner) */}
+                  {isClubMember ? (
+                    <span className="absolute top-4 right-4 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-md bg-[#4AEEFF]/20 text-[#4AEEFF] border border-[#4AEEFF]/40">
+                      🏅 Club
+                    </span>
+                  ) : (
+                    <span className="absolute top-4 right-4 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-md bg-white/10 text-white/60 border border-white/15">
+                      👤 Guest
+                    </span>
+                  )}
+
+                  <div>
                     {/* Avatar */}
-                    <div className="relative mb-6 flex justify-center">
+                    <div className="relative my-2 flex justify-center">
                       {player.profileImage ? (
-                        <div className="relative">
-                          <div className="absolute inset-0 bg-gradient-to-r from-[#4AEEFF] to-[#12679E] rounded-full p-1">
-                            <img
-                              src={player.profileImage}
-                              alt={player.firstName}
-                              className="w-20 h-20 rounded-full object-cover bg-white"
-                            />
-                          </div>
+                        <div className="relative w-20 h-20 rounded-full p-0.5 bg-gradient-to-tr from-[#4AEEFF] to-[#12679E] shadow-md shadow-[#4AEEFF]/20">
+                          <img
+                            src={getProfileImageUrl(player.profileImage)}
+                            alt={player.firstName}
+                            className="w-full h-full rounded-full object-cover bg-[#061D23]"
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none';
+                            }}
+                          />
                         </div>
                       ) : (
-                        <div className="relative w-20 h-20 rounded-full bg-gradient-to-br from-[#061D23] to-[#12679E] flex items-center justify-center border-2 border-[#4AEEFF]">
-                          <span className="text-2xl font-bold text-white">{initials(player)}</span>
+                        <div className="relative w-20 h-20 rounded-full bg-[#061D23] border-2 border-[#4AEEFF]/60 flex items-center justify-center text-xl font-black text-white group-hover:border-[#4AEEFF] group-hover:shadow-[0_0_15px_rgba(74,238,255,0.3)] transition-all">
+                          {initials(player)}
                         </div>
                       )}
                     </div>
 
                     {/* Player Info */}
-                    <div className="text-center mb-6">
-                      <h3 className="text-2xl font-bold text-white mb-1">
+                    <div className="text-center mt-3 mb-4">
+                      <h3 className="text-xl font-bold text-white group-hover:text-[#4AEEFF] transition-colors">
                         {player.firstName} {player.lastName}
                       </h3>
-                      {player.ranking !== undefined && (
-                        <div className="inline-block bg-gradient-to-r from-[#4AEEFF] to-[#12679E] text-[#061D23] px-3 py-1 rounded-full text-xs font-bold mb-2">
-                          Rank #{player.ranking}
+                      {isClubMember ? (
+                        <div className="mt-1">
+                          <span className="inline-block px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-md bg-[#4AEEFF] text-[#061D23]">
+                            Rank #{player.ranking}
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="mt-1">
+                          <span className="inline-block px-2.5 py-0.5 text-[10px] font-semibold tracking-wider rounded-md bg-white/10 text-white/60 border border-white/10">
+                            Unranked
+                          </span>
                         </div>
                       )}
                       {age !== null && (
-                        <p className="text-gray-300 text-sm">{age} years old</p>
+                        <p className="text-white/50 text-xs mt-1">{age} years old</p>
                       )}
                     </div>
 
-                    {/* Club */}
+                    {/* Club Affiliation */}
                     {player.playerProfile?.clubAffiliation && (
-                      <div className="text-center mb-4 pb-4 border-b border-gray-500">
-                        <p className="text-gray-200 font-medium text-sm">
-                          <span className="mr-2">🏛️</span>
-                          {player.playerProfile.clubAffiliation}
-                        </p>
+                      <div className="mt-2 pt-3 border-t border-white/10 text-center text-xs text-white/80 flex items-center justify-center gap-1.5 font-medium">
+                        <span>🏛️</span>
+                        <span>{player.playerProfile.clubAffiliation}</span>
                       </div>
                     )}
+                  </div>
 
-                    {/* Skill Badge */}
-                    <div className="flex justify-between items-center">
-                      {skill ? (
-                        <span
-                          style={{ background: skillStyle.bg, color: skillStyle.text }}
-                          className="px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider"
-                        >
-                          {player.playerProfile?.skillLevel}
-                        </span>
-                      ) : (
-                        <span className="text-gray-400 text-xs font-medium">No level set</span>
-                      )}
-                      <span className="text-[#4AEEFF] font-bold group-hover:translate-x-1 transition-transform">→</span>
-                    </div>
+                  {/* Skill Badge & Profile Link */}
+                  <div className="mt-5 pt-3 border-t border-white/10 flex items-center justify-between">
+                    <span className={`px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-wider border ${skillBadgeClass}`}>
+                      {player.playerProfile?.skillLevel || "NO LEVEL SET"}
+                    </span>
+                    <span className="text-xs font-black uppercase tracking-wider text-[#4AEEFF] flex items-center gap-1 group-hover:translate-x-1 transition-transform">
+                      Profile →
+                    </span>
                   </div>
                 </Link>
               );

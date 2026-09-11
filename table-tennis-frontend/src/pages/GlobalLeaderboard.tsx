@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import { Link } from "react-router-dom";
+import { TrophyIcon, ChartBarIcon } from "@heroicons/react/24/outline";
 
 interface Player {
   playerId: string;
@@ -40,7 +41,6 @@ const GlobalLeaderboard: React.FC = () => {
 
   const fetchAllCategories = async () => {
     try {
-      // Fetch all tournaments to get unique categories
       const response = await api.get("/tournaments");
       const tournaments = response.data.data;
 
@@ -52,7 +52,11 @@ const GlobalLeaderboard: React.FC = () => {
           }
         }
       }
-      setCategories(Array.from(uniqueCategories.values()));
+      const cats = Array.from(uniqueCategories.values());
+      setCategories(cats);
+      if (cats.length > 0 && !selectedCategory) {
+        setSelectedCategory(cats[0].name);
+      }
     } catch (error) {
       console.error("Failed to fetch categories");
     } finally {
@@ -74,118 +78,158 @@ const GlobalLeaderboard: React.FC = () => {
     }
   };
 
-  return (
-    <div className="min-h-screen bg-gradient-to-r from-[#061D23] via-[#12679E] via-50% to-[#4AEEFF] py-12">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold text-white">Global Leaderboard</h1>
-      </div>
+  const wrapInBaseLayout = (children: React.ReactNode) => (
+    <div className="relative min-h-screen w-full overflow-hidden bg-[#061D23] text-white">
+      {/* ─── BG.PNG FIXED FULL-BLEED BACKGROUND ─── */}
+      <div
+        className="fixed inset-0 bg-cover bg-center bg-no-repeat"
+        style={{ backgroundImage: "url('/bg1.png')" }}
+      />
+      {/* Light overlay for text legibility over the paper-texture artwork */}
+      <div className="fixed inset-0 bg-[#061D23]/25" />
+      <div className="fixed inset-0 bg-gradient-to-b from-[#061D23]/20 via-transparent to-[#061D23]/35" />
 
-      {/* Category Selector */}
-      <div className="bg-white/10 backdrop-blur-md rounded-2xl p-6 mb-6 border-2 border-[#4AEEFF]/50">
-        <label className="block text-sm font-medium text-white mb-2">
-          Select Category
-        </label>
-        {loadingCategories ? (
-          <p className="text-[#4AEEFF]">Loading categories...</p>
-        ) : (
-          <select
-            value={selectedCategory}
-            onChange={(e) => setSelectedCategory(e.target.value)}
-            className="input-field max-w-md bg-white/90 text-gray-900 border border-[#4AEEFF]/30 rounded-lg px-4 py-2 focus:ring-2 focus:ring-[#4AEEFF]"
-          >
-            <option value="">-- Select a category --</option>
-            {categories.map((category) => (
-              <option key={category.id} value={category.name}>
-                {category.name} ({category.type})
-              </option>
-            ))}
-          </select>
-        )}
-        <p className="text-xs text-[#4AEEFF]/70 mt-2">
-          Shows player rankings across ALL tournaments for this category
-        </p>
+      <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-7xl flex-col space-y-6">
+        {children}
       </div>
+    </div>
+  );
 
-      {/* Standings Table */}
-      {selectedCategory && (
-        <div className="bg-white/10 backdrop-blur-md rounded-2xl p-6 border-2 border-[#4AEEFF]/50">
-          <h2 className="text-xl font-semibold text-white mb-4">
-            {selectedCategory} - Overall Rankings
+  return wrapInBaseLayout(
+    <>
+      {/* HEADER MODULE */}
+      <header className="flex flex-col justify-between gap-4 rounded-[16px] border border-white/20 bg-[#061D23]/15 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl sm:flex-row sm:items-center">
+        <div>
+          <div className="mb-3 h-[3px] w-16 bg-[#4AEEFF]" />
+          <span className="inline-block px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-md bg-[#4AEEFF]/20 text-[#4AEEFF] border border-[#4AEEFF]/40 align-middle mb-2">
+            Official Rankings
+          </span>
+          <h1 className="text-2xl font-black uppercase tracking-[0.2em] text-white sm:text-4xl">
+            Global Leaderboard
+          </h1>
+          <p className="mt-1 text-xs uppercase tracking-[0.3em] text-[#4AEEFF]/90">
+            Player rankings and cross-tournament performance
+          </p>
+        </div>
+        <div className="flex gap-4 text-right">
+          <div className="rounded-xl border border-white/10 bg-[#061D23]/40 px-4 py-3">
+            <p className="text-xl font-black text-[#4AEEFF]">{categories.length}</p>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-white/60">Categories</p>
+          </div>
+          <div className="rounded-xl border border-white/10 bg-[#061D23]/40 px-4 py-3">
+            <p className="text-xl font-black text-[#4AEEFF]">{standings.length}</p>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-white/60">Ranked</p>
+          </div>
+        </div>
+      </header>
+
+      {/* CATEGORY SELECTOR MODULE */}
+      <section className="rounded-[16px] border border-white/20 bg-[#061D23]/15 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl">
+        <div className="mb-4 flex items-center gap-2">
+          <ChartBarIcon className="h-5 w-5 text-[#4AEEFF]" />
+          <h2 className="text-xs font-black uppercase tracking-widest text-[#4AEEFF]">
+            Filter Category
           </h2>
+        </div>
+        {loadingCategories ? (
+          <p className="text-sm font-semibold text-[#4AEEFF] animate-pulse">Loading categories...</p>
+        ) : (
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+            <select
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+              className="w-full max-w-md rounded-xl border border-white/20 bg-[#061D23]/80 px-4 py-3 text-sm font-medium text-white shadow-inner focus:border-[#4AEEFF] focus:outline-none focus:ring-1 focus:ring-[#4AEEFF]"
+            >
+              <option value="" className="bg-[#061D23] text-white">-- Select a category --</option>
+              {categories.map((category) => (
+                <option key={category.id} value={category.name} className="bg-[#061D23] text-white">
+                  {category.name} ({category.type})
+                </option>
+              ))}
+            </select>
+            <p className="text-xs uppercase tracking-wider text-white/60 font-mono">
+              Aggregated across all tournaments
+            </p>
+          </div>
+        )}
+      </section>
+
+      {/* STANDINGS TABLE MODULE */}
+      {selectedCategory && (
+        <section className="rounded-[16px] border border-white/20 bg-[#061D23]/15 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl">
+          <div className="mb-6 flex items-center justify-between">
+            <h2 className="text-lg font-black uppercase tracking-wider text-white">
+              {selectedCategory} — Overall Rankings
+            </h2>
+            <span className="rounded-md border border-[#4AEEFF]/30 bg-[#4AEEFF]/10 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-[#4AEEFF]">
+              {standings.length} Players
+            </span>
+          </div>
 
           {loading ? (
-            <div className="text-center py-8 text-[#4AEEFF]">Loading rankings...</div>
+            <div className="flex flex-col items-center justify-center py-16">
+              <div className="w-10 h-10 border-4 border-white/20 border-t-[#4AEEFF] rounded-full animate-spin" />
+              <p className="mt-3 text-xs font-black uppercase tracking-widest text-[#4AEEFF]">Loading rankings...</p>
+            </div>
           ) : standings.length === 0 ? (
-            <div className="text-center py-8">
-              <p className="text-[#4AEEFF] text-lg font-semibold">
+            <div className="rounded-xl border border-white/10 bg-[#061D23]/30 p-12 text-center">
+              <TrophyIcon className="mx-auto mb-3 h-10 w-10 text-white/20" />
+              <p className="text-base font-bold text-white">
                 No completed matches found for this category.
               </p>
-              <p className="text-sm text-[#4AEEFF]/70 mt-2">
-                Play and complete matches to see rankings.
+              <p className="mt-1 text-xs text-white/60">
+                Play and record tournament matches to generate rankings.
               </p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto rounded-xl border border-white/10 bg-[#061D23]/30">
               <table className="w-full">
-                <thead className="bg-white/10 border-b border-[#4AEEFF]/30">
+                <thead className="border-b border-white/15 bg-white/5 text-left text-xs font-black uppercase tracking-wider text-[#4AEEFF]">
                   <tr>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-[#4AEEFF]">
-                      Rank
-                    </th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-[#4AEEFF]">
-                      Player
-                    </th>
-                    <th className="px-4 py-3 text-center text-sm font-medium text-[#4AEEFF]">
-                      Matches
-                    </th>
-                    <th className="px-4 py-3 text-center text-sm font-medium text-[#4AEEFF]">
-                      Wins
-                    </th>
-                    <th className="px-4 py-3 text-center text-sm font-medium text-[#4AEEFF]">
-                      Losses
-                    </th>
-                    <th className="px-4 py-3 text-center text-sm font-medium text-[#4AEEFF]">
-                      Points
-                    </th>
-                    <th className="px-4 py-3 text-center text-sm font-medium text-[#4AEEFF]">
-                      Games
-                    </th>
+                    <th className="px-5 py-3.5 text-center w-16">Rank</th>
+                    <th className="px-5 py-3.5">Player</th>
+                    <th className="px-5 py-3.5 text-center">Matches</th>
+                    <th className="px-5 py-3.5 text-center">Wins</th>
+                    <th className="px-5 py-3.5 text-center">Losses</th>
+                    <th className="px-5 py-3.5 text-center">Points</th>
+                    <th className="px-5 py-3.5 text-center">Games</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[#4AEEFF]/20">
+                <tbody className="divide-y divide-white/5 font-mono text-sm">
                   {standings.map((player, index) => (
-                    <tr key={player.playerId} className="hover:bg-white/5">
-                      <td className="px-4 py-3 text-sm font-medium text-[#4AEEFF]">
-                        {index === 0
-                          ? "🥇"
-                          : index === 1
-                            ? "🥈"
-                            : index === 2
-                              ? "🥉"
-                              : `${index + 1}`}
+                    <tr key={player.playerId} className="hover:bg-white/5 transition-colors">
+                      <td className="px-5 py-4 text-center font-black">
+                        {index === 0 ? (
+                          <span className="text-xl">🥇</span>
+                        ) : index === 1 ? (
+                          <span className="text-xl">🥈</span>
+                        ) : index === 2 ? (
+                          <span className="text-xl">🥉</span>
+                        ) : (
+                          <span className="text-white/60 font-bold">{index + 1}</span>
+                        )}
                       </td>
-                      <td className="px-4 py-3 text-sm">
+                      <td className="px-5 py-4 font-sans font-bold">
                         <Link
                           to={`/profile/${player.playerId}`}
-                          className="text-[#4AEEFF] hover:text-white hover:underline font-medium"
+                          className="text-white hover:text-[#4AEEFF] transition-colors"
                         >
                           {player.playerName}
                         </Link>
                       </td>
-                      <td className="px-4 py-3 text-sm text-center text-white/70">
+                      <td className="px-5 py-4 text-center text-white/80">
                         {player.matchesPlayed}
                       </td>
-                      <td className="px-4 py-3 text-sm text-center text-[#4AEEFF] font-medium">
+                      <td className="px-5 py-4 text-center font-bold text-emerald-400">
                         {player.wins}
                       </td>
-                      <td className="px-4 py-3 text-sm text-center text-red-400 font-medium">
+                      <td className="px-5 py-4 text-center font-bold text-rose-400">
                         {player.losses}
                       </td>
-                      <td className="px-4 py-3 text-sm text-center font-bold text-[#4AEEFF]">
+                      <td className="px-5 py-4 text-center font-black text-[#4AEEFF] text-base">
                         {player.points}
                       </td>
-                      <td className="px-4 py-3 text-sm text-center text-white/70">
+                      <td className="px-5 py-4 text-center text-white/70">
                         {player.gamesWon} - {player.gamesLost}
                       </td>
                     </tr>
@@ -194,10 +238,9 @@ const GlobalLeaderboard: React.FC = () => {
               </table>
             </div>
           )}
-        </div>
+        </section>
       )}
-      </div>
-    </div>
+    </>
   );
 };
 

@@ -108,15 +108,29 @@ export const getPlayerPerformanceStatsById = catchAsync(async (req: Request, res
 // Update match details (score, winner, etc.)
 export const updateMatch = catchAsync(async (req: Request, res: Response) => {
   const { matchId } = req.params;
-  const { score, winnerId, status, player1Id, player2Id } = req.body;
+  const { score, winnerId,winnerTeamId, status, player1Id, player2Id,team1Id,team2Id, resultDetails } = req.body;
   
+  if (req.user?.role === 'REFEREE') {
+    const existingMatch = await prisma.match.findUnique({
+      where: { id: matchId },
+      include: { referee: true },
+    });
+    if (!existingMatch || existingMatch.referee?.userId !== req.user.id) {
+      throw new AppError('You can only record scores for matches assigned to you', 403);
+    }
+  }
+
   const updateData: any = {};
   if (score !== undefined) updateData.score = score;
   if (winnerId !== undefined) updateData.winnerId = winnerId;
+  if (winnerTeamId !== undefined) updateData.winnerTeamId = winnerTeamId;
   if (status !== undefined) updateData.status = status;
   if (player1Id !== undefined) updateData.player1Id = player1Id;
   if (player2Id !== undefined) updateData.player2Id = player2Id;
-  if (status === 'COMPLETED') updateData.endTime = new Date();
+  if (team1Id !== undefined) updateData.team1Id = team1Id;
+  if (team2Id !== undefined) updateData.team2Id = team2Id;
+  if (resultDetails !== undefined) updateData.resultDetails = resultDetails;
+  if (status === 'COMPLETED' && (winnerId || winnerTeamId)) updateData.endTime = new Date();
 
   const match = await prisma.match.update({
     where: { id: matchId },
@@ -130,7 +144,7 @@ export const updateMatch = catchAsync(async (req: Request, res: Response) => {
     },
   });
 
-  if (status === 'COMPLETED' && winnerId) {
+  if (status === 'COMPLETED' && (winnerId || winnerTeamId)) {
     const nextRoundMap: Record<string, string> = {
       'Round of 128': 'Round of 64',
       'Round of 64': 'Round of 32',
@@ -168,7 +182,7 @@ export const updateMatch = catchAsync(async (req: Request, res: Response) => {
             // winnerId is the winning team's ID
             await prisma.match.update({
               where: { id: nextMatch.id },
-              data: isSlot1 ? { team1Id: winnerId } : { team2Id: winnerId }
+              data: isSlot1 ? { team1Id: winnerTeamId } : { team2Id: winnerTeamId }
             });
           } else {
             await prisma.match.update({
@@ -185,7 +199,7 @@ export const updateMatch = catchAsync(async (req: Request, res: Response) => {
             if (thirdPlaceMatch) {
               if (isDoubles) {
                 // loserId = the team that is NOT the winner
-                const loserTeamId = match.team1Id === winnerId ? match.team2Id : match.team1Id;
+                const loserTeamId = match.team1Id === winnerTeamId ? match.team2Id : match.team1Id;
                 await prisma.match.update({
                   where: { id: thirdPlaceMatch.id },
                   data: isSlot1 ? { team1Id: loserTeamId } : { team2Id: loserTeamId }
@@ -258,6 +272,16 @@ export const updateMatchAndAdvance = catchAsync(async (req: Request, res: Respon
   const { matchId } = req.params;
   const { player1Score, player2Score } = req.body;
   
+  if (req.user?.role === 'REFEREE') {
+    const existingMatch = await prisma.match.findUnique({
+      where: { id: matchId },
+      include: { referee: true },
+    });
+    if (!existingMatch || existingMatch.referee?.userId !== req.user.id) {
+      throw new AppError('You can only record scores for matches assigned to you', 403);
+    }
+  }
+
   // Update the current match
   const winnerId = player1Score > player2Score ? 
     (await prisma.match.findUnique({ where: { id: matchId } }))?.player1Id : 
@@ -327,17 +351,136 @@ export const updateMatchAndAdvance = catchAsync(async (req: Request, res: Respon
   
   sendResponse(res, 200, 'Match updated and winner advanced', updatedMatch);
 });
-export const swapPlayers = catchAsync(async (req:any, res:any) => {
+export const swapPlayers = catchAsync(async (req: Request, res: Response) => {
   const { match1Id, match2Id, slot1, slot2 } = req.body;
-  const m1 = await prisma.match.findUnique({ where: { id: match1Id } });
-  const m2 = await prisma.match.findUnique({ where: { id: match2Id } });
-  if (!m1 || !m2) throw new AppError('Match not found', 404);
 
-  const p1 = slot1 === 'player1' ? m1.player1Id : m1.player2Id;
-  const p2 = slot2 === 'player1' ? m2.player1Id : m2.player2Id;
+  const m1 = await prisma.match.findUnique({
+    where: { id: match1Id },
+  });
 
-  await prisma.match.update({ where: { id: match1Id }, data: { [slot1 + 'Id']: p2 } });
-  await prisma.match.update({ where: { id: match2Id }, data: { [slot2 + 'Id']: p1 } });
+  const m2 = await prisma.match.findUnique({
+    where: { id: match2Id },
+  });
 
-  sendResponse(res, 200, 'Players swapped', { match1Id, match2Id });
+  if (!m1 || !m2) {
+    throw new AppError('Match not found', 404);
+  }
+
+  // Both matches must belong to the same tournament and category
+  if (
+    m1.tournamentId !== m2.tournamentId ||
+    m1.categoryId !== m2.categoryId
+  ) {
+    throw new AppError(
+      'Matches are not in the same tournament or category',
+      400
+    );
+  }
+
+  // Both matches must have the same match type
+  if (m1.matchType !== m2.matchType) {
+    throw new AppError(
+      'Cannot swap participants between different match types',
+      400
+    );
+  }
+
+  // ==========================================
+  // SINGLES
+  // ==========================================
+  if (m1.matchType === 'SINGLES') {
+
+    if (
+      !['player1', 'player2'].includes(slot1) ||
+      !['player1', 'player2'].includes(slot2)
+    ) {
+      throw new AppError(
+        'Invalid slots for singles match',
+        400
+      );
+    }
+
+    const p1 =
+      slot1 === 'player1'
+        ? m1.player1Id
+        : m1.player2Id;
+
+    const p2 =
+      slot2 === 'player1'
+        ? m2.player1Id
+        : m2.player2Id;
+
+    await prisma.match.update({
+      where: { id: match1Id },
+      data: {
+        [slot1 === 'player1' ? 'player1Id' : 'player2Id']: p2,
+      },
+    });
+
+    await prisma.match.update({
+      where: { id: match2Id },
+      data: {
+        [slot2 === 'player1' ? 'player1Id' : 'player2Id']: p1,
+      },
+    });
+  }
+
+  // ==========================================
+  // DOUBLES / MIXED DOUBLES
+  // ==========================================
+  else if (m1.matchType === 'DOUBLES') {
+
+    if (
+      !['team1', 'team2'].includes(slot1) ||
+      !['team1', 'team2'].includes(slot2)
+    ) {
+      throw new AppError(
+        'Invalid slots for doubles match',
+        400
+      );
+    }
+
+    const t1 =
+      slot1 === 'team1'
+        ? m1.team1Id
+        : m1.team2Id;
+
+    const t2 =
+      slot2 === 'team1'
+        ? m2.team1Id
+        : m2.team2Id;
+
+    await prisma.match.update({
+      where: { id: match1Id },
+      data: {
+        [slot1 === 'team1' ? 'team1Id' : 'team2Id']: t2,
+      },
+    });
+
+    await prisma.match.update({
+      where: { id: match2Id },
+      data: {
+        [slot2 === 'team1' ? 'team1Id' : 'team2Id']: t1,
+      },
+    });
+  }
+
+  else {
+    throw new AppError(
+      'Unsupported match type',
+      400
+    );
+  }
+
+  sendResponse(
+    res,
+    200,
+    'Participants swapped successfully',
+    {
+      match1Id,
+      match2Id,
+      matchType: m1.matchType,
+    }
+  );
 });
+
