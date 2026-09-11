@@ -10,14 +10,6 @@ interface Props {
   onSuccess: () => void;
 }
 
-interface FormatOption {
-  groups: number;
-  label: string;
-  description: string;
-  icon: string;
-  recommended?: boolean;
-}
-
 const CreateGroupsModal: React.FC<Props> = ({
   tournamentId,
   categoryId,

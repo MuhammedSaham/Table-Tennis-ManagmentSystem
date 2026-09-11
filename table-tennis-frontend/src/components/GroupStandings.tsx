@@ -739,7 +739,6 @@ import { AssignRefereeModal } from "./AssignRefereeModal";
 const GroupStandings: React.FC<Props> = ({
   tournamentId,
   categoryId,
-  isAdminOrReferee = false,
   onScoreUpdate,
 }) => {
   const { user } = useAuth();
@@ -755,7 +754,7 @@ const GroupStandings: React.FC<Props> = ({
     isAdmin ||
     (isReferee &&
       activeMatch &&
-      (activeMatch.referee?.user?.id === user?.id ||
+      ((activeMatch.referee?.user as any)?.id === user?.id ||
         (activeMatch.referee as any)?.userId === user?.id ||
         (activeMatch as any)?.refereeUserId === user?.id));
 

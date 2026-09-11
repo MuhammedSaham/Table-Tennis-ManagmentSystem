@@ -20,6 +20,7 @@
 
   body {
     @apply bg-gray-50 font-sans text-gray-900 antialiased;
+    font-family: "Ebrima";
     line-height: 1.55;
   }
 
@@ -27,12 +28,20 @@
   input,
   select,
   textarea {
-    font: inherit;
+    font-family: "Lemon Milk";
+    font-size: inherit;
   }
   
   h1, h2, h3, h4, h5, h6 {
     @apply font-heading font-semibold;
+    font-family: "Bison Bold";
     line-height: 1.2;
+  }
+}
+
+@layer utilities {
+  .font-mono {
+    font-family: "Ebrima";
   }
 }
 

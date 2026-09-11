@@ -330,14 +330,6 @@ const TournamentDetails: React.FC = () => {
     }
   };*/
 
-  const handleRecordScores = () => {
-    if (!activeCategoryId) {
-      toast.error("Please select a category first");
-      return;
-    }
-    setShowScoreModal(true);
-  };
-
   const handleGenerateGroupMatches = async () => {
     if (!activeCategoryId) {
       toast.error("Please select a category first");
@@ -738,8 +730,8 @@ const TournamentDetails: React.FC = () => {
 
       {/* Edit Tournament Modal */}
       {showEditModal && (
-        <div className="fixed inset-0 bg-black/75 backdrop-blur-md flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
-          <div className="bg-[#061D23]/95 border border-[#4AEEFF]/30 rounded-2xl p-6 sm:p-8 max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-[0_10px_40px_rgba(0,0,0,0.8)] text-white custom-scrollbar">
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/70 p-4 pt-24 backdrop-blur-sm animate-in fade-in duration-200 sm:pt-28">
+          <div className="w-full max-w-4xl rounded-2xl border border-white/20 bg-[#061D23]/90 p-6 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.8)] text-white backdrop-blur-2xl sm:p-8">
             <div className="flex items-center justify-between pb-4 mb-6 border-b border-white/10">
               <div className="flex items-center gap-3">
                 <span className="w-2.5 h-6 bg-[#4AEEFF] rounded-full shadow-[0_0_10px_#4AEEFF]"></span>

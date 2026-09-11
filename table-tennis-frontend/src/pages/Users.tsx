@@ -528,8 +528,8 @@ const Users: React.FC = () => {
 
       {/* PLAYER REGISTRATION DIALOG MODAL */}
       {showAddPlayerModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-fadeIn">
-          <div className="w-full max-w-2xl rounded-[16px] border border-white/20 bg-[#061D23]/90 p-8 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.8)] backdrop-blur-2xl max-h-[95vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/70 p-4 pt-24 backdrop-blur-sm animate-fadeIn sm:pt-28">
+          <div className="w-full max-w-4xl rounded-2xl border border-white/20 bg-[#061D23]/90 p-6 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.8)] backdrop-blur-2xl sm:p-8">
             {createdPlayerData ? (
               <div className="text-center py-2 space-y-6">
                 <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[#4AEEFF]/20 border border-[#4AEEFF]/40 text-3xl">
@@ -539,14 +539,14 @@ const Users: React.FC = () => {
                   <h2 className="text-2xl font-black uppercase tracking-widest text-white">
                     Player Created Successfully!
                   </h2>
-                  <p className="text-xs text-[#4AEEFF] uppercase tracking-wider mt-1">
+                  <p className="text-sm text-[#4AEEFF] uppercase tracking-wider mt-1">
                     Save or share the login credentials with the player
                   </p>
                 </div>
 
                 <div className="rounded-xl border border-white/10 bg-[#061D23]/80 p-5 text-left space-y-4">
                   <div>
-                    <span className="text-[10px] font-black uppercase tracking-wider text-white/50 block mb-1">
+                    <span className="text-xs font-black uppercase tracking-wider text-white/50 block mb-1">
                       Player Name
                     </span>
                     <span className="text-sm font-semibold text-white">
@@ -554,7 +554,7 @@ const Users: React.FC = () => {
                     </span>
                   </div>
                   <div>
-                    <span className="text-[10px] font-black uppercase tracking-wider text-white/50 block mb-1">
+                    <span className="text-xs font-black uppercase tracking-wider text-white/50 block mb-1">
                       Login Email
                     </span>
                     <span className="text-sm font-mono text-[#4AEEFF] break-all">
@@ -562,7 +562,7 @@ const Users: React.FC = () => {
                     </span>
                   </div>
                   <div>
-                    <span className="text-[10px] font-black uppercase tracking-wider text-white/50 block mb-1">
+                    <span className="text-xs font-black uppercase tracking-wider text-white/50 block mb-1">
                       Temporary Password
                     </span>
                     <div className="flex items-center gap-2">
@@ -575,7 +575,7 @@ const Users: React.FC = () => {
                           navigator.clipboard.writeText(createdPlayerData.password);
                           toast.success("Password copied to clipboard!");
                         }}
-                        className="px-4 py-2.5 rounded-lg bg-[#4AEEFF] text-xs font-black uppercase tracking-wider text-[#061D23] hover:bg-white transition-all shadow-md"
+                        className="px-4 py-2.5 rounded-lg bg-[#4AEEFF] text-sm font-black uppercase tracking-wider text-[#061D23] hover:bg-white transition-all shadow-md"
                       >
                         Copy Password
                       </button>
@@ -591,7 +591,7 @@ const Users: React.FC = () => {
                       navigator.clipboard.writeText(creds);
                       toast.success("Full credentials copied!");
                     }}
-                    className="flex-1 rounded-lg border border-white/20 bg-transparent py-3 text-xs font-black uppercase tracking-widest text-white hover:bg-white/10 transition-all"
+                    className="flex-1 rounded-lg border border-white/20 bg-transparent py-3 text-sm font-black uppercase tracking-widest text-white hover:bg-white/10 transition-all"
                   >
                     📋 Copy Full Details
                   </button>
@@ -601,7 +601,7 @@ const Users: React.FC = () => {
                       setShowAddPlayerModal(false);
                       setCreatedPlayerData(null);
                     }}
-                    className="flex-1 rounded-lg bg-[#4AEEFF] py-3 text-xs font-black uppercase tracking-widest text-[#061D23] hover:bg-white transition-all font-bold"
+                    className="flex-1 rounded-lg bg-[#4AEEFF] py-3 text-sm font-black uppercase tracking-widest text-[#061D23] hover:bg-white transition-all font-bold"
                   >
                     Done
                   </button>
@@ -609,17 +609,17 @@ const Users: React.FC = () => {
               </div>
             ) : (
               <>
-                <h2 className="text-xl font-black uppercase tracking-widest text-white mb-1">
+                <h2 className="text-xl sm:text-2xl font-black uppercase tracking-widest text-white mb-1">
                   Register Profile
                 </h2>
-                <p className="text-xs text-[#4AEEFF] uppercase tracking-wider mb-6">
+                <p className="text-sm text-[#4AEEFF] uppercase tracking-wider mb-6">
                   Create an operational table tennis player record
                 </p>
 
                 <form onSubmit={handleAddPlayer} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[10px] font-black uppercase tracking-wider text-white/70 mb-1.5">
+                  <label className="block text-xs font-black uppercase tracking-wider text-white/70 mb-1.5">
                     First Name *
                   </label>
                   <input
@@ -633,7 +633,7 @@ const Users: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-black uppercase tracking-wider text-white/70 mb-1.5">
+                  <label className="block text-xs font-black uppercase tracking-wider text-white/70 mb-1.5">
                     Last Name *
                   </label>
                   <input
@@ -649,7 +649,7 @@ const Users: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-[10px] font-black uppercase tracking-wider text-white/70 mb-1.5">
+                <label className="block text-xs font-black uppercase tracking-wider text-white/70 mb-1.5">
                   Email *
                 </label>
                 <input
@@ -664,7 +664,7 @@ const Users: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-[10px] font-black uppercase tracking-wider text-white/70 mb-1.5">
+                <label className="block text-xs font-black uppercase tracking-wider text-white/70 mb-1.5">
                   Automated Security Access Token
                 </label>
                 <div className="flex gap-2">
@@ -672,12 +672,12 @@ const Users: React.FC = () => {
                     type="text"
                     value={generatedPassword}
                     readOnly
-                    className="flex-1 rounded-lg border border-white/10 bg-[#061D23] px-3 py-2 text-xs font-mono text-[#4AEEFF] tracking-wider"
+                    className="flex-1 rounded-lg border border-white/10 bg-[#061D23] px-3 py-2 text-sm font-mono text-[#4AEEFF] tracking-wider"
                   />
                   <button
                     type="button"
                     onClick={copyPassword}
-                    className="rounded-lg border border-white/20 bg-transparent px-3 text-xs font-bold uppercase tracking-wider text-white hover:bg-white/5 transition-all"
+                    className="rounded-lg border border-white/20 bg-transparent px-3 text-sm font-bold uppercase tracking-wider text-white hover:bg-white/5 transition-all"
                   >
                     Copy
                   </button>
@@ -692,14 +692,14 @@ const Users: React.FC = () => {
                     🔄
                   </button>
                 </div>
-                <p className="text-[10px] font-bold text-amber-400 mt-1.5 uppercase tracking-wide">
+                <p className="text-xs font-bold text-amber-400 mt-1.5 uppercase tracking-wide">
                   ⚠️ Save credential. Hidden past submission phase.
                 </p>
               </div>
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="block text-[10px] font-black uppercase tracking-wider text-white/70 mb-1.5">
+                  <label className="block text-xs font-black uppercase tracking-wider text-white/70 mb-1.5">
                     Phone Number
                   </label>
                   <input
@@ -714,7 +714,7 @@ const Users: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-black uppercase tracking-wider text-white/70 mb-1.5">
+                  <label className="block text-xs font-black uppercase tracking-wider text-white/70 mb-1.5">
                     Gender *
                   </label>
 
@@ -733,7 +733,7 @@ const Users: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-black uppercase tracking-wider text-white/70 mb-1.5">
+                  <label className="block text-xs font-black uppercase tracking-wider text-white/70 mb-1.5">
                     Date of Birth
                   </label>
                   <input
@@ -752,7 +752,7 @@ const Users: React.FC = () => {
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="block text-[10px] font-black uppercase tracking-wider text-white/70 mb-1.5">
+                  <label className="block text-xs font-black uppercase tracking-wider text-white/70 mb-1.5">
                     Skill Classification
                   </label>
                   <select
@@ -769,7 +769,7 @@ const Users: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-black uppercase tracking-wider text-white/70 mb-1.5">
+                  <label className="block text-xs font-black uppercase tracking-wider text-white/70 mb-1.5">
                     Club / Academy Branch
                   </label>
                   <input
@@ -791,14 +791,14 @@ const Users: React.FC = () => {
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="flex-1 rounded-lg bg-[#4AEEFF] py-3 text-xs font-black uppercase tracking-widest text-[#061D23] transition-all hover:bg-white disabled:opacity-50"
+                  className="flex-1 rounded-lg bg-[#4AEEFF] py-3 text-sm font-black uppercase tracking-widest text-[#061D23] transition-all hover:bg-white disabled:opacity-50"
                 >
                   {submitting ? "Processing..." : "Add Player"}
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowAddPlayerModal(false)}
-                  className="flex-1 rounded-lg border border-white/20 bg-transparent py-3 text-xs font-black uppercase tracking-widest text-[#4AEEFF] transition-all hover:bg-white/5"
+                  className="flex-1 rounded-lg border border-white/20 bg-transparent py-3 text-sm font-black uppercase tracking-widest text-[#4AEEFF] transition-all hover:bg-white/5"
                 >
                   Cancel
                 </button>
