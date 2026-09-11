@@ -52,8 +52,8 @@ export class BracketService {
     if (!tournament) throw new AppError('Tournament not found', 404);
 
     // ── DOUBLES: delegate to team-based bracket builder ─────────────────────────
-    if (category.type === 'DOUBLES') {
-      return this.generateDoublesBracket(adminId, tournamentId, categoryId, new Date(tournament.startDate));
+    if (category.type === 'DOUBLES' || category.type === 'MIXED_DOUBLES') {
+      return this.generateDoublesBracket(adminId, tournamentId, categoryId, new Date(tournament.startDate),MatchType.DOUBLES);
     }
 
     // ── SINGLES: existing logic unchanged ────────────────────────────────────────
@@ -90,7 +90,8 @@ export class BracketService {
       categoryId,
       seededPlayers,
       bracketSize,
-      startDate
+      startDate,
+      MatchType.SINGLES
     );
     console.log(
   matches.map(m => ({
@@ -127,6 +128,7 @@ export class BracketService {
     tournamentId: string,
     categoryId: string,
     startDate: Date,
+    matchType: MatchType
   ) {
     // Fetch all APPROVED team registrations for this doubles category
     const teamRegistrations = await prisma.tournamentRegistration.findMany({
@@ -193,7 +195,7 @@ export class BracketService {
       matchesToCreate.push({
         tournamentId,
         categoryId,
-        matchType: 'DOUBLES',
+        matchType,
         team1Id: t1?.id ?? null,
         team2Id: t2?.id ?? null,
         round: getRoundName(firstRoundMatchCount),
@@ -208,7 +210,7 @@ export class BracketService {
       matchesToCreate.push({
         tournamentId,
         categoryId,
-        matchType: 'DOUBLES',
+        matchType,
         team1Id: byeTeam.id,
         team2Id: null,
         round: getRoundName(firstRoundMatchCount),
@@ -216,7 +218,7 @@ export class BracketService {
         scheduledTime: startDate,
         status: 'COMPLETED',
         score: 'BYE',
-        winnerId: byeTeam.captainId, // use captain as winner placeholder
+        winnerTeamId: byeTeam.id, // use captain as winner placeholder
       });
     }
 
@@ -228,7 +230,7 @@ export class BracketService {
         matchesToCreate.push({
           tournamentId,
           categoryId,
-          matchType: 'DOUBLES',
+          matchType,
           team1Id: null,
           team2Id: null,
           round: roundName,
@@ -245,7 +247,7 @@ export class BracketService {
       matchesToCreate.push({
         tournamentId,
         categoryId,
-        matchType: 'DOUBLES',
+        matchType,
         team1Id: null,
         team2Id: null,
         round: '3rd Place Playoff',
@@ -285,6 +287,7 @@ export class BracketService {
     seededPlayers: SeededPlayer[],
     bracketSize: number,
     startDate: Date,
+    matchType: MatchType
   ): any[] {
     const totalPlayers = seededPlayers.length;
     const byes = bracketSize - totalPlayers;
@@ -352,7 +355,7 @@ export class BracketService {
       const matchObj = {
         tournamentId,
         categoryId,
-        matchType: MatchType.SINGLES,
+        matchType,
         player1Id: pair.p1,
         player2Id: pair.p2,
         round: round1Name,
@@ -384,7 +387,7 @@ export class BracketService {
         const matchObj = {
           tournamentId,
           categoryId,
-          matchType: MatchType.SINGLES,
+          matchType,
           player1Id: p1Id,
           player2Id: p2Id,
           round: nextRoundName,
@@ -406,7 +409,7 @@ export class BracketService {
       matches.push({
         tournamentId,
         categoryId,
-        matchType: MatchType.SINGLES,
+        matchType,
         round: '3rd Place Playoff',
         matchNumber: matchNumber++,
         scheduledTime: startDate,

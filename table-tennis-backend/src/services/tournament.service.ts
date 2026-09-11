@@ -189,9 +189,7 @@ if (data.status === 'ONGOING') {
       throw new AppError('Tournament not found', 404);
     }
 
-    await prisma.tournament.delete({
-      where: { id: tournamentId },
-    });
+    
 
     // 1. Delete group matches
   await prisma.groupMatch.deleteMany({
@@ -234,7 +232,7 @@ if (data.status === 'ONGOING') {
   // Add category
   async addCategory(adminId: string, tournamentId: string, data: {
     name: string;
-    type: 'SINGLES' | 'DOUBLES' | 'TEAM';
+    type: 'SINGLES' | 'DOUBLES' | 'MIXED_DOUBLES' | 'TEAM';
     minAge?: number;
     maxAge?: number;
     gender?: 'MALE' | 'FEMALE' | 'MIXED';
@@ -283,7 +281,7 @@ if (data.status === 'ONGOING') {
   // Update category
   async updateCategory(adminId: string, categoryId: string, data: {
     name?: string;
-    type?: 'SINGLES' | 'DOUBLES' | 'TEAM';
+    type?: 'SINGLES' | 'DOUBLES' | 'MIXED_DOUBLES' | 'TEAM';
     minAge?: number;
     maxAge?: number;
     gender?: 'MALE' | 'FEMALE' | 'MIXED';
@@ -339,98 +337,226 @@ if (data.status === 'ONGOING') {
   }
 
   // Register player for tournament
-  async registerForTournament(playerId: string, data: {
-    tournamentId: string;
-    categoryId?: string;
-    teamId?: string;
-  }) {
-    // Verify player exists
-    const player = await prisma.playerProfile.findUnique({
-      where: { userId: playerId },
-      include: { user: true },
+  // Register player for tournament
+async registerForTournament(playerId: string, data: {
+  tournamentId: string;
+  categoryId?: string;
+  teamId?: string;
+  partnerId?: string; // For doubles or mixed doubles
+}) {
+  // Verify player exists
+  const player = await prisma.playerProfile.findUnique({
+    where: { userId: playerId },
+    include: { user: true },
+  });
+
+  if (!player) {
+    throw new AppError('Player profile not found', 404);
+  }
+
+  const tournament = await prisma.tournament.findUnique({
+    where: { id: data.tournamentId },
+    include: { categories: true },
+  });
+
+  if (!tournament) {
+    throw new AppError('Tournament not found', 404);
+  }
+
+  // Check registration deadline
+  if (new Date() > tournament.registrationDeadline) {
+    throw new AppError('Registration deadline has passed', 400);
+  }
+
+  // Check tournament status
+  if (tournament.status !== 'UPCOMING') {
+    throw new AppError('Tournament is no longer accepting registrations', 400);
+  }
+
+  let category: any = null;
+
+  // Check category
+  if (data.categoryId) {
+    category = await prisma.category.findUnique({
+      where: { id: data.categoryId },
     });
 
-    if (!player) {
-      throw new AppError('Player profile not found', 404);
+    if (!category) {
+      throw new AppError('Category not found', 404);
     }
 
-    const tournament = await prisma.tournament.findUnique({
-      where: { id: data.tournamentId },
-      include: { categories: true },
-    });
-
-    if (!tournament) {
-      throw new AppError('Tournament not found', 404);
+    if (category.currentParticipants >= category.maxParticipants) {
+      throw new AppError('Category is full', 400);
     }
 
-    // Check registration deadline
-    if (new Date() > tournament.registrationDeadline) {
-      throw new AppError('Registration deadline has passed', 400);
-    }
+    // ============================================================
+    // DOUBLES / MIXED DOUBLES VALIDATION
+    // ============================================================
 
-    // Check if tournament is still open
-    if (tournament.status !== 'UPCOMING') {
-      throw new AppError('Tournament is no longer accepting registrations', 400);
-    }
+    if (
+      category.type === 'DOUBLES' ||
+      category.type === 'MIXED_DOUBLES'
+    ) {
+      if (!data.partnerId) {
+        throw new AppError(
+          'Partner ID is required for doubles',
+          400
+        );
+      }
 
-    // Check if category exists and has space
-    if (data.categoryId) {
-      const category = await prisma.category.findUnique({
-        where: { id: data.categoryId },
+      // Player cannot select themselves as partner
+      if (data.partnerId === playerId) {
+        throw new AppError(
+          'You cannot select yourself as your partner',
+          400
+        );
+      }
+
+      // Find partner
+      const partner = await prisma.playerProfile.findUnique({
+        where: { userId: data.partnerId },
+        include: { user: true },
       });
 
-      if (!category) {
-        throw new AppError('Category not found', 404);
+      if (!partner) {
+        throw new AppError('Partner profile not found', 404);
       }
 
-      if (category.currentParticipants >= category.maxParticipants) {
-        throw new AppError('Category is full', 400);
+      // ------------------------------------------------------------
+      // Mixed Doubles: players must have different genders
+      // ------------------------------------------------------------
+      if (category.type === 'MIXED_DOUBLES') {
+        if (!player.gender || !partner.gender) {
+          throw new AppError(
+            'Both players must have a gender specified for mixed doubles',
+            400
+          );
+        }
+
+        if (player.gender === partner.gender) {
+          throw new AppError(
+            'Players in a mixed doubles team must be of different genders',
+            400
+          );
+        }
       }
 
-      // Check age restrictions
-      if (category.minAge !== null || category.maxAge !== null) {
-        const playerProfile = await prisma.playerProfile.findUnique({
-          where: { userId: playerId },
+      // ------------------------------------------------------------
+      // Check whether either player is already registered
+      // in this category.
+      // ------------------------------------------------------------
+      const existingPlayerRegistration =
+        await prisma.tournamentRegistration.findFirst({
+          where: {
+            tournamentId: data.tournamentId,
+            categoryId: data.categoryId,
+            status: { not: 'CANCELLED' },
+            OR: [
+              { playerId: playerId },
+              { playerId: data.partnerId },
+              { partnerId: playerId },
+              { partnerId: data.partnerId },
+            ],
+          },
         });
 
-        if (playerProfile?.dateOfBirth) {
-          const age = this.calculateAge(playerProfile.dateOfBirth);
+      if (existingPlayerRegistration) {
+        throw new AppError(
+          'One of the players is already registered in this category',
+          400
+        );
+      }
 
-          if (category.minAge !== null && age < category.minAge) {
-            throw new AppError(`Minimum age requirement: ${category.minAge} years`, 400);
-          }
+      // ------------------------------------------------------------
+      // Create a team for doubles / mixed doubles
+      // ------------------------------------------------------------
 
-          if (category.maxAge !== null && age > category.maxAge) {
-            throw new AppError(`Maximum age requirement: ${category.maxAge} years`, 400);
-          }
+      const team = await prisma.team.create({
+        data: {
+          name: `${player.user.firstName} & ${partner.user.firstName}`,
+          tournamentId: data.tournamentId,
+          captainId: playerId,
+
+          members: {
+            create: [
+              {
+                playerId: playerId,
+              },
+              {
+                playerId: data.partnerId,
+              },
+            ],
+          },
+        },
+      });
+
+      // Store the created team ID
+      data.teamId = team.id;
+    }
+
+    // ============================================================
+    // Age restrictions
+    // ============================================================
+
+    if (category.minAge !== null || category.maxAge !== null) {
+      if (player.dateOfBirth) {
+        const age = this.calculateAge(player.dateOfBirth);
+
+        if (category.minAge !== null && age < category.minAge) {
+          throw new AppError(
+            `Minimum age requirement: ${category.minAge} years`,
+            400
+          );
+        }
+
+        if (category.maxAge !== null && age > category.maxAge) {
+          throw new AppError(
+            `Maximum age requirement: ${category.maxAge} years`,
+            400
+          );
         }
       }
     }
+  }
 
-    // Check if already registered
-    if(data.categoryId){
-      const existingRegistration = await prisma.tournamentRegistration.findFirst({
-      where: {
-        tournamentId: data.tournamentId,
-        categoryId: data.categoryId,
-        playerId,
-        status: { not: 'CANCELLED' },
-      },
-    });
+  // ============================================================
+  // Singles registration duplicate check
+  // ============================================================
+
+  if (
+    data.categoryId &&
+    category &&
+    category.type === 'SINGLES'
+  ) {
+    const existingRegistration =
+      await prisma.tournamentRegistration.findFirst({
+        where: {
+          tournamentId: data.tournamentId,
+          categoryId: data.categoryId,
+          playerId: playerId,
+          status: { not: 'CANCELLED' },
+        },
+      });
 
     if (existingRegistration) {
-      throw new AppError('You are already registered for this tournament', 400);
+      throw new AppError(
+        'You are already registered for this tournament',
+        400
+      );
     }
+  }
 
-    }
-    
+  // ============================================================
+  // Create registration
+  // ============================================================
 
-    // Create registration
-    const registration = await prisma.tournamentRegistration.create({
+  const registration =
+    await prisma.tournamentRegistration.create({
       data: {
         tournamentId: data.tournamentId,
         categoryId: data.categoryId,
         playerId,
+        partnerId: data.partnerId,
         teamId: data.teamId,
         status: 'APPROVED',
         approvedAt: new Date(),
@@ -438,35 +564,58 @@ if (data.status === 'ONGOING') {
       include: {
         tournament: true,
         category: true,
+        team: {
+          include: {
+            members: {
+              include: {
+                player: {
+                  select: {
+                    id: true,
+                    firstName: true,
+                    lastName: true,
+                  },
+                },
+              },
+            },
+          },
+        },
       },
     });
 
-    if (data.categoryId) {
-  await prisma.category.update({
-    where: { id: data.categoryId },
-    data: { currentParticipants: { increment: 1 } },
-  });
-}
-
-    // Create notification for admin
-    const admins = await prisma.user.findMany({
-      where: { role: 'ADMIN' },
-      select: { id: true },
+  // Update category participant count
+  if (data.categoryId) {
+    await prisma.category.update({
+      where: { id: data.categoryId },
+      data: {
+        currentParticipants: {
+          increment: 1,
+        },
+      },
     });
-
-    if (admins.length > 0) {
-      await prisma.notification.createMany({
-        data: admins.map((admin: { id: any; }) => ({
-          userId: admin.id,
-          type: 'REGISTRATION_PENDING',
-          title: 'New Tournament Registration',
-          message: `${player.user.firstName} ${player.user.lastName} has registered for ${tournament.name}`,
-        })),
-      });
-    }
-
-    return registration;
   }
+
+  // ============================================================
+  // Notify admins
+  // ============================================================
+
+  const admins = await prisma.user.findMany({
+    where: { role: 'ADMIN' },
+    select: { id: true },
+  });
+
+  if (admins.length > 0) {
+    await prisma.notification.createMany({
+      data: admins.map((admin: { id: string }) => ({
+        userId: admin.id,
+        type: 'REGISTRATION_PENDING',
+        title: 'New Tournament Registration',
+        message: `${player.user.firstName} ${player.user.lastName} has registered for ${tournament.name}`,
+      })),
+    });
+  }
+
+  return registration;
+}
 
   // Get my registrations (Player)
   async getMyRegistrations(playerId: string) {

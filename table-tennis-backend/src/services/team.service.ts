@@ -248,7 +248,7 @@ export class TeamService {
 
     // Verify tournament + category exist and category is DOUBLES/MIXED
     const category = await prisma.category.findFirst({
-      where: { id: categoryId, tournamentId, type: { in: ['DOUBLES'] } },
+      where: { id: categoryId, tournamentId, type: { in: ['DOUBLES', 'MIXED_DOUBLES'] } },
     });
     if (!category) throw new AppError('Category not found or is not a doubles category', 404);
 
@@ -296,7 +296,7 @@ export class TeamService {
         inviter: { select: { id: true, firstName: true, lastName: true } },
         invitee: { select: { id: true, firstName: true, lastName: true } },
         tournament: { select: { name: true } },
-        category: { select: { name: true } },
+        category: { select: { name: true,type: true } },
       },
     });
 
@@ -317,6 +317,49 @@ export class TeamService {
       });
       return { status: 'DECLINED' };
     }
+    
+    if (invite.category.type === 'MIXED_DOUBLES') {
+  const players = await prisma.user.findMany({
+    where: {
+      id: {
+        in: [invite.inviterId, invite.inviteeId],
+      },
+    },
+    include: {
+      playerProfile: {
+        select: {
+          gender: true,
+        },
+      },
+    },
+  });
+
+  const inviter = players.find(
+    player => player.id === invite.inviterId
+  );
+
+  const invitee = players.find(
+    player => player.id === invite.inviteeId
+  );
+
+  if (!inviter || !invitee) {
+    throw new AppError('Both players must exist', 404);
+  }
+
+  const inviterGender = inviter.playerProfile?.gender;
+  const inviteeGender = invitee.playerProfile?.gender;
+
+  if (
+    !inviterGender ||
+    !inviteeGender ||
+    inviterGender === inviteeGender
+  ) {
+    throw new AppError(
+      'Mixed doubles requires one male and one female player',
+      400
+    );
+  }
+}
 
     // ACCEPT — create team + 2 members + registration
     const teamName = `${invite.inviter.firstName} & ${invite.invitee.firstName}`;
@@ -395,4 +438,4 @@ export class TeamService {
       orderBy: { createdAt: 'desc' },
     });
   }
-}
+}

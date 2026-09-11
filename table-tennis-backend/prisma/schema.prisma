@@ -68,6 +68,7 @@ model PlayerProfile {
   skillLevel       String?
   clubAffiliation  String?
   ranking          Int?
+  gender           Gender?
   rankingNote      String?
   rankingUpdatedAt DateTime?
   rankingUpdatedBy String?
@@ -160,6 +161,7 @@ model Category {
 enum CategoryType {
   SINGLES
   DOUBLES
+  MIXED_DOUBLES
   TEAM
 }
 
@@ -180,9 +182,13 @@ model Team {
   createdAt    DateTime    @default(now())
 
   // Relations
-  members                TeamMember[]
-  matchesAsTeam1         Match[]                  @relation("team1")
-  matchesAsTeam2         Match[]                  @relation("team2")
+  members             TeamMember[]
+  matchesAsTeam1      Match[]      @relation("team1")
+  matchesAsTeam2      Match[]      @relation("team2")
+  groupMatchesAsTeam1 GroupMatch[] @relation("groupTeam1")
+  groupMatchesAsTeam2 GroupMatch[] @relation("groupTeam2")
+
+  winnerMatches          Match[]                  @relation("winnerTeam")
   TournamentRegistration TournamentRegistration[]
   doublesInvites         DoublesInvite[]
 }
@@ -209,6 +215,7 @@ model TournamentRegistration {
   categoryId      String?
   category        Category?          @relation(fields: [categoryId], references: [id])
   playerId        String
+  partnerId       String?
   player          User               @relation(fields: [playerId], references: [id])
   teamId          String?
   team            Team?              @relation(fields: [teamId], references: [id])
@@ -272,7 +279,10 @@ model Match {
   status        MatchStatus @default(SCHEDULED)
 
   // Results
-  winnerId      String?
+  winnerId     String?
+  winnerTeamId String?
+  winnerTeam   Team?   @relation("winnerTeam", fields: [winnerTeamId], references: [id])
+
   score         String?
   resultDetails Json?
 
@@ -307,6 +317,7 @@ model Game {
   player1Score Int     @default(0)
   player2Score Int     @default(0)
   winnerId     String?
+  winnerTeamId String?
   duration     Int?
 
   @@unique([matchId, gameNumber])
@@ -424,10 +435,17 @@ model GroupMatch {
   player2Id String
   player2   User   @relation("groupMatch_player2", fields: [player2Id], references: [id])
 
+  //Doubles
+  team1Id String?
+  team1   Team?   @relation("groupTeam1", fields: [team1Id], references: [id])
+  team2Id String?
+  team2   Team?   @relation("groupTeam2", fields: [team2Id], references: [id])
+
   player1Score Int?
   player2Score Int?
   winnerId     String?
-  status       MatchStatus @default(SCHEDULED)
+  winnerTeamId String?
+  status       MatchStatus     @default(SCHEDULED)
   refereeId    String?
   referee      RefereeProfile? @relation(fields: [refereeId], references: [id])
 

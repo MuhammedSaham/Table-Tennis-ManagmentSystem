@@ -14,12 +14,25 @@
     min-height: 100%;
   }
 
+  html {
+    font-size: 106.25%;
+  }
+
   body {
     @apply bg-gray-50 font-sans text-gray-900 antialiased;
+    line-height: 1.55;
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
   }
   
   h1, h2, h3, h4, h5, h6 {
     @apply font-heading font-semibold;
+    line-height: 1.2;
   }
 }
 

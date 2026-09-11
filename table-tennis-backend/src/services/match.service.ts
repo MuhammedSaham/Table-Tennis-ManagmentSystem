@@ -1,3 +1,4 @@
+import { any } from 'zod';
 import prisma from '../config/database';
 import { AppError } from '../utils/AppError';
 
@@ -261,14 +262,29 @@ export class MatchService {
     // ── Knockout matches ────────────────────────────────────────────────────────
     const knockoutMatches = await prisma.match.findMany({
       where: {
-        OR: [{ player1Id: playerId }, { player2Id: playerId }],
+        OR: [{ player1Id: playerId }, { player2Id: playerId }, { team1: { members: { some: { playerId, isActive: true } } } }, { team2: { members: { some: { playerId, isActive: true } } } }],
       },
       include: {
         player1: { select: { id: true, firstName: true, lastName: true } },
         player2: { select: { id: true, firstName: true, lastName: true } },
+        team1: {
+          include:{
+            members:{
+              include:{player:{select:{id:true,firstName:true,lastName:true}}}
+            }
+          },
+        },
+        team2: {
+          include:{
+            members:{
+              include:{player:{select:{id:true,firstName:true,lastName:true}}}
+            }
+          },
+        },
         tournament: { select: { id: true, name: true, venue: true } },
         category: { select: { name: true, type: true } },
         referee: { include: { user: { select: { firstName: true, lastName: true } } } },
+
       },
       orderBy: { scheduledTime: 'asc' },
     });
@@ -276,7 +292,7 @@ export class MatchService {
     // ── Group stage matches ─────────────────────────────────────────────────────
     const groupMatches = await prisma.groupMatch.findMany({
   where: {
-    OR: [{ player1Id: playerId }, { player2Id: playerId }],
+    OR: [{ player1Id: playerId }, { player2Id: playerId }, { team1: { members: { some: { playerId, isActive: true } } } }, { team2: { members: { some: { playerId, isActive: true } } } }],
   },
   include: {                                          // ← use include not select
     player1: { select: { id: true, firstName: true, lastName: true } },
@@ -289,6 +305,41 @@ export class MatchService {
     },
   },
 });
+
+    // Show approved registrations before brackets or groups have been generated.
+    const registrations = await prisma.tournamentRegistration.findMany({
+      where: { playerId, status: { in: ['PENDING', 'APPROVED'] } },
+      include: {
+        tournament: { select: { id: true, name: true, venue: true, startDate: true } },
+        category: { select: { id: true, name: true, type: true } },
+        player: { select: { id: true, firstName: true, lastName: true } },
+      },
+    });
+
+    const generatedFixtureKeys = new Set([
+      ...knockoutMatches.map(match => `${match.tournamentId}:${match.categoryId ?? ''}`),
+      ...groupMatches.map((match: any) => `${match.group?.tournamentId ?? ''}:${match.group?.categoryId ?? ''}`),
+    ]);
+
+    const pendingRegistrations: NormalizedMatch[] = registrations
+      .filter(registration => !generatedFixtureKeys.has(`${registration.tournamentId}:${registration.categoryId ?? ''}`))
+      .map(registration => ({
+        id: `registration-${registration.id}`,
+        round: 'Awaiting Fixture',
+        matchNumber: 0,
+        scheduledTime: registration.tournament.startDate,
+        status: 'SCHEDULED',
+        score: null,
+        winnerId: null,
+        player1: registration.player,
+        player2: null,
+        tournament: {
+          id: registration.tournament.id,
+          name: registration.tournament.name,
+          venue: registration.tournament.venue,
+        },
+        category: registration.category ?? { name: 'Tournament Entry', type: '' },
+      }));
 
     // ── Normalize knockout matches ───────────────────────────────────────────────
     const normalizedKnockout: NormalizedMatch[] = knockoutMatches.map(match => ({
@@ -305,6 +356,8 @@ export class MatchService {
       player2: match.player2
         ? { id: match.player2.id, firstName: match.player2.firstName, lastName: match.player2.lastName }
         : null,
+      team1: match.team1,
+      team2: match.team2,
       tournament: match.tournament ?? { id: '', name: '', venue: '' },
       category: match.category ?? { name: '', type: '' },
     }));
@@ -329,9 +382,13 @@ export class MatchService {
     : null,
   tournament: match.group?.tournament ?? { id: '', name: '', venue: '' },
   category: match.group?.category ?? { name: '', type: '' },
-}));
+  }));
     // ── Combine and sort descending by date ─────────────────────────────────────
-    const allMatches: NormalizedMatch[] = [...normalizedKnockout, ...normalizedGroup];
+    const allMatches: NormalizedMatch[] = [
+      ...normalizedKnockout,
+      ...normalizedGroup,
+      ...pendingRegistrations,
+    ];
     allMatches.sort(
       (a, b) =>
         new Date(b.scheduledTime).getTime() - new Date(a.scheduledTime).getTime(),
@@ -531,13 +588,28 @@ export class MatchService {
       throw new AppError('Can only record scores for scheduled or ongoing matches', 400);
     }
 
+    let player1Id: string | null = null;
+    let player2Id: string | null = null;
+    let team1Id: string | null = null;
+    let team2Id: string | null = null;
+
     // Null-guard player IDs — required for game winner assignment
+    if (match.matchType === 'SINGLES') {
     if (!match.player1Id || !match.player2Id) {
       throw new AppError('Match is missing player assignments', 400);
     }
 
-    const player1Id = match.player1Id;
-    const player2Id = match.player2Id;
+    player1Id = match.player1Id;
+    player2Id = match.player2Id;
+  }
+  if (match.matchType !== 'SINGLES') {
+    if (!match.team1Id || !match.team2Id) {
+      throw new AppError('Match is missing team assignments', 400);
+    }
+
+    team1Id = match.team1Id;
+    team2Id = match.team2Id;
+  }
 
     // Replace existing games
     await prisma.game.deleteMany({ where: { matchId } });
@@ -548,7 +620,7 @@ export class MatchService {
         gameNumber: game.gameNumber,
         player1Score: game.player1Score,
         player2Score: game.player2Score,
-        winnerId: game.player1Score > game.player2Score ? player1Id : player2Id,
+        winnerId:match.matchType === 'SINGLES'? (game.player1Score > game.player2Score ? player1Id : player2Id) : null,
       })),
     });
 
@@ -560,13 +632,22 @@ export class MatchService {
       else player2Wins++;
     }
 
-    const winnerId = player1Wins > player2Wins ? player1Id : player2Id;
+    let winnerId: string | null = null;
+    let winnerTeamId: string | null = null;
+    if (match.matchType === 'SINGLES') {
+      winnerId = player1Wins > player2Wins ? player1Id : player2Id;
+    } 
+    if (match.matchType !== 'SINGLES') {
+      winnerTeamId = team1Id && team2Id ? (player1Wins > player2Wins ? team1Id : team2Id) : null;
+    }
+
     const scoreString = games.map(g => `${g.player1Score}-${g.player2Score}`).join(', ');
 
     const updatedMatch = await prisma.match.update({
       where: { id: matchId },
       data: {
         winnerId,
+        winnerTeamId,
         score: scoreString,
         status: 'COMPLETED',
         endTime: new Date(),
@@ -579,23 +660,25 @@ export class MatchService {
     });
 
     // Notify both players
-    await prisma.notification.createMany({
+    if(match.matchType === 'SINGLES'){
+      await prisma.notification.createMany({
       data: [
         {
-          userId: player1Id,
+          userId: player1Id!,
           type: 'MATCH_RESULT',
           title: 'Match Result Available',
           message: `Your match against ${updatedMatch.player2?.firstName ?? ''} ${updatedMatch.player2?.lastName ?? ''} has been completed. Result: ${scoreString}`,
         },
         {
-          userId: player2Id,
+          userId: player2Id!,
           type: 'MATCH_RESULT',
           title: 'Match Result Available',
           message: `Your match against ${updatedMatch.player1?.firstName ?? ''} ${updatedMatch.player1?.lastName ?? ''} has been completed. Result: ${scoreString}`,
         },
       ],
     });
-
+    }
+    
     return updatedMatch;
   }
 
@@ -606,8 +689,8 @@ export class MatchService {
       include: {
         player1: { select: { id: true, firstName: true, lastName: true, email: true } },
         player2: { select: { id: true, firstName: true, lastName: true, email: true } },
-        team1: { select: { id: true, name: true } },
-        team2: { select: { id: true, name: true } },
+        team1: {include: {members:{select:{playerId:true,isActive:true}}}},
+        team2: {include: {members:{select:{playerId:true,isActive:true}}}},
         referee: { include: { user: { select: { firstName: true, lastName: true } } } },
         tournament: { select: { name: true } },
         category: { select: { name: true } },
@@ -617,7 +700,7 @@ export class MatchService {
 
     if (!match) throw new AppError('Match not found', 404);
 
-    const isParticipant = match.player1Id === userId || match.player2Id === userId;
+    const isParticipant = match.player1Id === userId || match.player2Id === userId || match.team1?.members?.some(member => member.playerId === userId && member.isActive) || match.team2?.members.some(member => member.playerId === userId && member.isActive);
     const isReferee = match.referee?.userId === userId;
     const isAdmin = userRole === 'ADMIN';
 

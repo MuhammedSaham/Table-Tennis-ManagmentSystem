@@ -209,6 +209,23 @@ export const addCategory = catchAsync(async (req: Request, res: Response) => {
 
   const { name, type, minAge, maxAge, gender, maxParticipants } = req.body;
 
+  const existingCategory = await prisma.category.findFirst({
+  where: {
+    tournamentId,
+    name: {
+      equals: name,
+      mode: 'insensitive',
+    },
+  },
+});
+
+if (existingCategory) {
+  throw new AppError(
+    `A category named "${name}" already exists in this tournament`,
+    400
+  );
+}
+
   const category = await prisma.category.create({
     data: {
       tournamentId,
