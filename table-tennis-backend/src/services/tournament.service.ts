@@ -390,6 +390,26 @@ async registerForTournament(playerId: string, data: {
     }
 
     // ============================================================
+    // GENDER RESTRICTION VALIDATION
+    // ============================================================
+    if (category.gender && category.gender !== 'MIXED') {
+      if (!player.gender) {
+        throw new AppError(
+          'Please specify your gender in your profile before registering for this category',
+          400
+        );
+      }
+
+      if (player.gender !== category.gender) {
+        const required = category.gender === 'MALE' ? "men's" : "women's";
+        throw new AppError(
+          `This category is restricted to ${required} players only`,
+          400
+        );
+      }
+    }
+
+    // ============================================================
     // DOUBLES / MIXED DOUBLES VALIDATION
     // ============================================================
 
@@ -420,6 +440,23 @@ async registerForTournament(playerId: string, data: {
 
       if (!partner) {
         throw new AppError('Partner profile not found', 404);
+      }
+
+      // Same-gender doubles: partner must also match category gender
+      if (category.type === 'DOUBLES' && category.gender && category.gender !== 'MIXED') {
+        if (!partner.gender) {
+          throw new AppError(
+            'Your partner must have a gender specified in their profile',
+            400
+          );
+        }
+        if (partner.gender !== category.gender) {
+          const required = category.gender === 'MALE' ? "men's" : "women's";
+          throw new AppError(
+            `Your partner must also be eligible for this ${required} category`,
+            400
+          );
+        }
       }
 
       // ------------------------------------------------------------

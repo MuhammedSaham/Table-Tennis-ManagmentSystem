@@ -153,25 +153,61 @@ function App() {
       <AuthProvider>
         <Toaster
           position="top-right"
+          gutter={10}
           toastOptions={{
-            duration: 1800,
+            duration: 3500,
             style: {
-              background: "#363636",
-              color: "#fff",
-              borderRadius: "12px",
+              background: "rgba(6, 29, 35, 0.96)",
+              color: "#ffffff",
+              backdropFilter: "blur(14px)",
+              border: "1px solid rgba(74, 238, 255, 0.25)",
+              borderRadius: "14px",
+              padding: "14px 18px",
+              boxShadow: "0 20px 40px -15px rgba(0, 0, 0, 0.8), 0 0 20px rgba(74, 238, 255, 0.08)",
+              fontSize: "13px",
+              fontWeight: "600",
+              letterSpacing: "0.015em",
+              maxWidth: "420px",
             },
             success: {
-              duration: 1800,
-              icon: "🏆",
+              duration: 2500,
+              iconTheme: {
+                primary: "#10b981",
+                secondary: "#061D23",
+              },
               style: {
-                background: "#10b981",
+                background: "rgba(6, 29, 35, 0.96)",
+                border: "1px solid rgba(16, 185, 129, 0.4)",
+                borderLeft: "4px solid #10b981",
+                boxShadow: "0 20px 40px -15px rgba(0, 0, 0, 0.8), 0 0 25px rgba(16, 185, 129, 0.15)",
+                color: "#ffffff",
               },
             },
             error: {
-              duration: 3500,
-              icon: "❌",
+              duration: 4000,
+              iconTheme: {
+                primary: "#f43f5e",
+                secondary: "#0f172a",
+              },
               style: {
-                background: "#ef4444",
+                background: "rgba(15, 23, 42, 0.96)",
+                border: "1px solid rgba(244, 63, 94, 0.35)",
+                borderLeft: "4px solid #f43f5e",
+                boxShadow: "0 20px 40px -15px rgba(0, 0, 0, 0.8), 0 0 25px rgba(244, 63, 94, 0.15)",
+                color: "#ffffff",
+              },
+            },
+            loading: {
+              iconTheme: {
+                primary: "#4AEEFF",
+                secondary: "#061D23",
+              },
+              style: {
+                background: "rgba(6, 29, 35, 0.96)",
+                border: "1px solid rgba(74, 238, 255, 0.35)",
+                borderLeft: "4px solid #4AEEFF",
+                boxShadow: "0 20px 40px -15px rgba(0, 0, 0, 0.8), 0 0 25px rgba(74, 238, 255, 0.15)",
+                color: "#ffffff",
               },
             },
           }}
