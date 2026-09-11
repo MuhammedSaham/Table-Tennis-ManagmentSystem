@@ -1111,21 +1111,35 @@ const TournamentDetails: React.FC = () => {
       )}
 
       {/* Categories & Bracket Draw Section */}
-      <div className="rounded-[16px] border border-white/20 bg-[#061D23]/25 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl mb-6">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
+      <div className="rounded-[20px] border border-white/20 bg-[#061D23]/35 p-6 sm:p-7 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.6)] backdrop-blur-xl mb-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 pb-5 border-b border-white/10">
           <div>
-            <h2 className="text-xl font-black uppercase tracking-wider text-white">Categories & Draws</h2>
-            <p className="text-xs text-white/60 mt-1">Select a category to view its matches, standings, and tournament bracket</p>
+            <div className="flex items-center gap-2.5 mb-1.5">
+              <span className="w-2 h-5 bg-[#4AEEFF] rounded-full shadow-[0_0_10px_#4AEEFF]"></span>
+              <h2 className="text-xl sm:text-2xl font-black uppercase tracking-wider text-white">
+                Categories & Draws
+              </h2>
+              {tournament.categories.length > 0 && (
+                <span className="px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-md bg-[#4AEEFF]/15 text-[#4AEEFF] border border-[#4AEEFF]/30">
+                  {tournament.categories.length} {tournament.categories.length === 1 ? "Division" : "Divisions"}
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-slate-300">
+              Select a division below to view bracket draws, fixtures, and registered participants
+            </p>
           </div>
+
           {tournament.categories.length > 0 && (
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold uppercase tracking-wider text-[#4AEEFF]">Active Category:</span>
+            <div className="flex items-center gap-2.5 self-stretch sm:self-auto bg-black/30 border border-white/10 p-1.5 rounded-xl">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-[#4AEEFF] pl-2 whitespace-nowrap">
+                Active Draw:
+              </span>
               <select
                 value={activeCategoryId}
                 onChange={(e) => setActiveCategoryId(e.target.value)}
-                className="rounded-xl border border-white/20 bg-[#061D23]/80 px-3 py-2 text-xs font-bold text-white outline-none focus:border-[#4AEEFF] focus:ring-1 focus:ring-[#4AEEFF]"
+                className="w-full sm:w-auto rounded-lg border border-white/15 bg-[#061D23] px-3 py-1.5 text-xs font-bold text-white outline-none focus:border-[#4AEEFF] cursor-pointer"
               >
-                <option value="" className="bg-[#061D23]">Select category</option>
                 {tournament.categories.map((category) => (
                   <option key={category.id} value={category.id} className="bg-[#061D23]">
                     {category.name} ({category.type})
@@ -1137,80 +1151,156 @@ const TournamentDetails: React.FC = () => {
         </div>
 
         {tournament.categories.length === 0 ? (
-          <p className="text-white/60 text-sm">
-            No categories available for this tournament.
-          </p>
+          <div className="text-center py-10 rounded-xl border border-dashed border-white/10 bg-white/5">
+            <p className="text-slate-400 text-sm">
+              No categories configured for this tournament yet.
+            </p>
+          </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {tournament.categories.map((category) => {
               const isActive = activeCategoryId === category.id;
-              const fillPct = Math.round((category.currentParticipants / category.maxParticipants) * 100) || 0;
+              const fillPct =
+                Math.round(
+                  (category.currentParticipants / category.maxParticipants) * 100,
+                ) || 0;
+              const isFull =
+                category.currentParticipants >= category.maxParticipants;
+              const spotsLeft =
+                category.maxParticipants - category.currentParticipants;
+
               return (
                 <div
                   key={category.id}
                   onClick={() => setActiveCategoryId(category.id)}
-                  className={`relative cursor-pointer rounded-2xl border p-5 transition-all duration-200 backdrop-blur-md ${
+                  className={`group relative cursor-pointer rounded-2xl border transition-all duration-300 backdrop-blur-md flex flex-col justify-between overflow-hidden ${
                     isActive
-                      ? "border-[#4AEEFF] bg-[#061D23]/70 shadow-lg shadow-[#4AEEFF]/20"
-                      : "border-white/10 bg-[#061D23]/30 hover:border-white/30 hover:bg-[#061D23]/50"
+                      ? "border-[#4AEEFF] bg-gradient-to-b from-[#4AEEFF]/15 via-[#061D23]/90 to-[#061D23]/95 shadow-[0_12px_35px_-8px_rgba(74,238,255,0.25)] ring-1 ring-[#4AEEFF]/40 -translate-y-0.5"
+                      : "border-white/10 bg-[#061D23]/40 hover:border-white/25 hover:bg-[#061D23]/65 hover:-translate-y-0.5"
                   }`}
                 >
-                  <div className="flex justify-between items-start mb-3">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-bold text-white text-lg">
-                          {category.name}
-                        </h3>
-                        {isActive && (
-                          <span className="px-2 py-0.5 text-[9px] font-black uppercase tracking-wider rounded-full bg-[#4AEEFF] text-[#061D23]">
-                            Viewing Draw
+                  {/* Top indicator bar for active card */}
+                  {isActive && (
+                    <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-[#4AEEFF] to-transparent shadow-[0_0_8px_#4AEEFF]" />
+                  )}
+
+                  <div className="p-5 space-y-4">
+                    {/* Header Badges */}
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="px-2 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-md bg-white/10 text-white border border-white/15">
+                          {category.type}
+                        </span>
+                        {category.gender && category.gender !== "MIXED" && (
+                          <span className="px-2 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-md bg-[#4AEEFF]/15 text-[#4AEEFF] border border-[#4AEEFF]/30">
+                            {category.gender === "MALE" ? "♂ Men" : "♀ Women"}
                           </span>
                         )}
                       </div>
-                      <span className="text-xs font-mono uppercase tracking-wider text-[#4AEEFF]/80">
-                        {category.type}
-                      </span>
+
+                      {isActive ? (
+                        <span className="flex items-center gap-1.5 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-full bg-[#4AEEFF] text-[#061D23] shadow-[0_0_10px_rgba(74,238,255,0.4)]">
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#061D23] animate-pulse"></span>
+                          Viewing Draw
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-bold text-slate-400 group-hover:text-white transition-colors">
+                          Click to view
+                        </span>
+                      )}
                     </div>
-                    {isAdmin && tournamentType === "KNOCKOUT" && (
+
+                    {/* Category Title */}
+                    <div>
+                      <h3 className="font-black text-white text-lg tracking-wide group-hover:text-[#4AEEFF] transition-colors line-clamp-1">
+                        {category.name}
+                      </h3>
+                      <div className="flex items-center gap-2 mt-1 text-xs text-slate-400">
+                        {category.minAge || category.maxAge ? (
+                          <span>
+                            Age: {category.minAge ? `${category.minAge}+` : ""}
+                            {category.minAge && category.maxAge ? " - " : ""}
+                            {category.maxAge ? `Under ${category.maxAge}` : ""}
+                          </span>
+                        ) : (
+                          <span>All Ages</span>
+                        )}
+                        <span>•</span>
+                        <span>
+                          {tournamentType === "GROUP_KNOCKOUT"
+                            ? "Group & Knockout"
+                            : "Knockout"}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Capacity Progress */}
+                    <div className="space-y-2 pt-2 border-t border-white/10">
+                      <div className="flex justify-between items-center text-xs font-mono">
+                        <span className="text-slate-300 font-sans text-[11px] uppercase tracking-wider">
+                          Participants
+                        </span>
+                        <span className="font-bold text-white">
+                          {category.currentParticipants} / {category.maxParticipants}{" "}
+                          <span className="text-slate-400 font-normal">
+                            ({fillPct}%)
+                          </span>
+                        </span>
+                      </div>
+
+                      <div className="w-full bg-black/40 border border-white/10 h-2 rounded-full overflow-hidden p-0.5">
+                        <div
+                          className={`h-full rounded-full transition-all duration-500 ${
+                            isFull
+                              ? "bg-gradient-to-r from-red-500 to-amber-500"
+                              : "bg-gradient-to-r from-[#4AEEFF] via-[#22d3ee] to-[#0ea5e9] shadow-[0_0_8px_rgba(74,238,255,0.4)]"
+                          }`}
+                          style={{ width: `${Math.min(100, fillPct)}%` }}
+                        />
+                      </div>
+
+                      <div className="flex justify-between items-center text-[11px] text-slate-400 pt-0.5">
+                        <span>
+                          {isFull ? (
+                            <strong className="text-red-400 font-semibold">
+                              Division Full
+                            </strong>
+                          ) : (
+                            <span>{spotsLeft} spots available</span>
+                          )}
+                        </span>
+                        <span className="font-mono text-slate-400 text-[10px]">
+                          MAX {category.maxParticipants}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Dedicated Action Button Area */}
+                  {isAdmin && tournamentType === "KNOCKOUT" && (
+                    <div className="p-3.5 bg-black/25 border-t border-white/10 mt-auto">
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
                           handleGenerateBracket(category.id);
                         }}
                         disabled={generating === category.id}
-                        className="rounded-lg bg-[#4AEEFF] px-3 py-1.5 text-xs font-black uppercase tracking-wider text-[#061D23] shadow-sm hover:bg-white transition-all disabled:opacity-50"
+                        className="w-full rounded-xl border border-[#4AEEFF]/40 bg-[#4AEEFF]/15 hover:bg-[#4AEEFF] text-[#4AEEFF] hover:text-[#061D23] px-3.5 py-2 text-xs font-black uppercase tracking-wider transition-all duration-200 flex items-center justify-center gap-2 shadow-sm disabled:opacity-50 active:scale-[0.98]"
                       >
-                        {generating === category.id
-                          ? "Generating..."
-                          : "🎲 Draw Bracket"}
+                        {generating === category.id ? (
+                          <>
+                            <span className="animate-spin text-sm">⏳</span>
+                            <span>Generating Bracket...</span>
+                          </>
+                        ) : (
+                          <>
+                            <span>🎲</span>
+                            <span>Generate / Update Bracket</span>
+                          </>
+                        )}
                       </button>
-                    )}
-                  </div>
-
-                  <div className="space-y-2 mt-4 pt-3 border-t border-white/10 text-xs text-white/70">
-                    <div className="flex justify-between text-[11px] font-mono">
-                      <span>Capacity</span>
-                      <span className="font-bold text-white">
-                        {category.currentParticipants} / {category.maxParticipants} players ({fillPct}%)
-                      </span>
                     </div>
-                    <div className="w-full bg-white/10 h-1.5 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-gradient-to-r from-[#4AEEFF] to-[#12679E] rounded-full"
-                        style={{ width: `${Math.min(100, fillPct)}%` }}
-                      />
-                    </div>
-                    <div className="flex justify-between text-[11px] text-white/50 pt-1">
-                      <span>Spots left: {category.maxParticipants - category.currentParticipants}</span>
-                      {(category.minAge || category.maxAge) && (
-                        <span>
-                          Age: {category.minAge ? `${category.minAge}+` : ""}
-                          {category.minAge && category.maxAge ? " - " : ""}
-                          {category.maxAge ? `Under ${category.maxAge}` : ""}
-                        </span>
-                      )}
-                    </div>
-                  </div>
+                  )}
                 </div>
               );
             })}
