@@ -286,10 +286,10 @@ export const updateCategory = catchAsync(async (req: Request, res: Response) => 
     data: {
       name: name || undefined,
       type: type || undefined,
-      minAge: minAge !== undefined ? minAge : undefined,
-      maxAge: maxAge !== undefined ? maxAge : undefined,
-      gender: gender || undefined,
-      maxParticipants: maxParticipants !== undefined ? maxParticipants : undefined,
+      minAge: minAge !== undefined ? (minAge !== null && minAge !== '' ? Number(minAge) : null) : undefined,
+      maxAge: maxAge !== undefined ? (maxAge !== null && maxAge !== '' ? Number(maxAge) : null) : undefined,
+      gender: gender !== undefined ? (gender ? gender : null) : undefined,
+      maxParticipants: maxParticipants !== undefined ? Number(maxParticipants) : undefined,
     },
   });
 

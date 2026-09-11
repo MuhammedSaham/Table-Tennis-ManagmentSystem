@@ -20,6 +20,7 @@ interface Category {
   currentParticipants: number;
   minAge?: number;
   maxAge?: number;
+  gender?: "MALE" | "FEMALE" | "MIXED";
   _count?: {
     registrations: number;
   };
@@ -91,6 +92,7 @@ const TournamentDetails: React.FC = () => {
   //const [creatingGroups, setCreatingGroups] = useState(false);
   const [_generatingMatches, setGeneratingMatches] = useState(false);
   const [playerAge, setPlayerAge] = useState<number | null>(null);
+  const [playerGender, setPlayerGender] = useState<string | null>(null);
   const [winners, setWinners] = useState<{
     first: any;
     second: any;
@@ -155,11 +157,29 @@ const TournamentDetails: React.FC = () => {
   const isPlayerEligibleForCategory = (
     category: Category,
     age: number | null,
-  ): boolean => {
-    if (age === null) return true;
-    if (category.minAge && age < category.minAge) return false;
-    if (category.maxAge && age > category.maxAge) return false;
-    return true;
+    gender: string | null,
+  ): { eligible: boolean; reason?: string } => {
+    // Gender restriction check
+    if (category.gender && category.gender !== "MIXED") {
+      if (gender && gender !== category.gender) {
+        return {
+          eligible: false,
+          reason: category.gender === "MALE" ? "Men's only" : "Women's only",
+        };
+      }
+    }
+
+    // Age restriction check
+    if (age !== null) {
+      if (category.minAge && age < category.minAge) {
+        return { eligible: false, reason: `Need ${category.minAge}+ years` };
+      }
+      if (category.maxAge && age > category.maxAge) {
+        return { eligible: false, reason: `Under ${category.maxAge} only` };
+      }
+    }
+
+    return { eligible: true };
   };
 
   const toggleCategory = (categoryId: string) => {
@@ -195,12 +215,15 @@ const TournamentDetails: React.FC = () => {
         setActiveCategoryId("");
       }
 
-      // Set player age if logged in as player
+      // Set player age and gender if logged in as player
       if (user?.role === "PLAYER") {
         const profileResponse = await api.get("/users/profile");
-        const dob = profileResponse.data.data.playerProfile?.dateOfBirth;
-        if (dob) {
-          setPlayerAge(calculateAge(dob));
+        const profile = profileResponse.data.data.playerProfile;
+        if (profile?.dateOfBirth) {
+          setPlayerAge(calculateAge(profile.dateOfBirth));
+        }
+        if (profile?.gender) {
+          setPlayerGender(profile.gender);
         }
       }
     } catch (error) {
@@ -215,6 +238,24 @@ const TournamentDetails: React.FC = () => {
     if (selectedCategories.length === 0) {
       toast.error("Please select at least one category");
       return;
+    }
+
+    // Check gender eligibility before proceeding
+    for (const catId of selectedCategories) {
+      const category = tournament?.categories.find((c) => c.id === catId);
+      if (category) {
+        const check = isPlayerEligibleForCategory(
+          category,
+          playerAge,
+          playerGender,
+        );
+        if (!check.eligible) {
+          toast.error(
+            `You cannot register for ${category.name}: ${check.reason}`,
+          );
+          return;
+        }
+      }
     }
 
     // Check if any selected category is doubles and partner details are missing
@@ -269,8 +310,12 @@ const TournamentDetails: React.FC = () => {
         } catch (err: any) {
           console.error(`Failed to register for category ${categoryId}:`, err);
           failCount++;
+          const errorMsg =
+            err.response?.data?.message || "Registration failed";
           toast.error(
-            `Failed to register for ${category?.name}: ${err.response?.data?.message}`,
+            selectedCategories.length > 1
+              ? `${category?.name}: ${errorMsg}`
+              : errorMsg,
           );
         }
       }
@@ -283,8 +328,8 @@ const TournamentDetails: React.FC = () => {
           toast.success(`Partner invitation sent to ${partnerDetails.email}`);
         }
       }
-      if (failCount > 0) {
-        toast.error(`Failed to register for ${failCount} category(s)`);
+      if (failCount > 1) {
+        toast.error(`Failed to register for ${failCount} categories`);
       }
 
       await fetchTournamentDetails();
@@ -539,6 +584,7 @@ const TournamentDetails: React.FC = () => {
             type: category.type,
             minAge: category.minAge,
             maxAge: category.maxAge,
+            gender: category.gender,
             maxParticipants: category.maxParticipants,
           });
         } else if (existingIds.includes(category.id)) {
@@ -548,6 +594,7 @@ const TournamentDetails: React.FC = () => {
             type: category.type,
             minAge: category.minAge,
             maxAge: category.maxAge,
+            gender: category.gender,
             maxParticipants: category.maxParticipants,
           });
         }
@@ -619,12 +666,18 @@ const TournamentDetails: React.FC = () => {
   const hasRegistration = userRegistrations.length > 0;
   const canRegister = isPlayer && isRegistrationOpen;
 
-  const eligibleCategories = tournament.categories.filter((c) =>
-    isPlayerEligibleForCategory(c, playerAge),
+  const eligibleCategories = tournament.categories.filter(
+    (c) => isPlayerEligibleForCategory(c, playerAge, playerGender).eligible,
   );
   const ineligibleCategories = tournament.categories.filter(
-    (c) => !isPlayerEligibleForCategory(c, playerAge),
+    (c) => !isPlayerEligibleForCategory(c, playerAge, playerGender).eligible,
   );
+
+  const allEligibleRegistered =
+    eligibleCategories.length > 0 &&
+    eligibleCategories.every((cat) =>
+      userRegistrations.some((r) => r.categoryId === cat.id),
+    );
 
   // Function to check if category is doubles
   const isDoublesCategory = (categoryType: string) => {
@@ -675,6 +728,11 @@ const TournamentDetails: React.FC = () => {
                         tournament.registrationDeadline.slice(0, 16),
                       maxPlayers: tournament.maxPlayers?.toString() || "",
                     });
+                    setEditCategories(
+                      tournament.categories?.map((c) => ({
+                        ...c,
+                      })) || [],
+                    );
                     setShowEditModal(true);
                   }}
                   className="rounded-xl border border-[#4AEEFF]/40 bg-[#4AEEFF]/15 px-4 py-2.5 text-xs font-black uppercase tracking-wider text-[#4AEEFF] hover:bg-[#4AEEFF] hover:text-[#061D23] transition-all shadow-md shadow-[#4AEEFF]/10 active:scale-95"
@@ -912,72 +970,114 @@ const TournamentDetails: React.FC = () => {
                           </button>
                         )}
                       </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                        <input
-                          type="text"
-                          placeholder="Category Name"
-                          value={category.name}
-                          onChange={(e) =>
-                            updateEditCategory(index, "name", e.target.value)
-                          }
-                          className="w-full px-3 py-2 rounded-lg bg-black/40 border border-white/20 text-white text-xs placeholder-slate-400 focus:outline-none focus:border-[#4AEEFF]"
-                        />
-                        <select
-                          value={category.type}
-                          onChange={(e) =>
-                            updateEditCategory(index, "type", e.target.value)
-                          }
-                          className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-white/20 text-white text-xs focus:outline-none focus:border-[#4AEEFF]"
-                        >
-                          <option value="SINGLES">Singles</option>
-                          <option value="DOUBLES">Doubles</option>
-                          <option value="TEAM">Team</option>
-                        </select>
-                        <div className="flex gap-2 sm:col-span-2">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">
+                            Category Name
+                          </label>
                           <input
-                            type="number"
-                            placeholder="Min Age"
-                            value={category.minAge || ""}
+                            type="text"
+                            placeholder="Category Name"
+                            value={category.name}
                             onChange={(e) =>
-                              updateEditCategory(
-                                index,
-                                "minAge",
-                                e.target.value
-                                  ? parseInt(e.target.value)
-                                  : undefined,
-                              )
+                              updateEditCategory(index, "name", e.target.value)
                             }
-                            className="w-1/2 px-3 py-2 rounded-lg bg-black/40 border border-white/20 text-white text-xs placeholder-slate-400 focus:outline-none focus:border-[#4AEEFF]"
-                          />
-                          <input
-                            type="number"
-                            placeholder="Max Age"
-                            value={category.maxAge || ""}
-                            onChange={(e) =>
-                              updateEditCategory(
-                                index,
-                                "maxAge",
-                                e.target.value
-                                  ? parseInt(e.target.value)
-                                  : undefined,
-                              )
-                            }
-                            className="w-1/2 px-3 py-2 rounded-lg bg-black/40 border border-white/20 text-white text-xs placeholder-slate-400 focus:outline-none focus:border-[#4AEEFF]"
+                            className="w-full px-3 py-2 rounded-lg bg-black/40 border border-white/20 text-white text-xs placeholder-slate-400 focus:outline-none focus:border-[#4AEEFF]"
                           />
                         </div>
-                        <input
-                          type="number"
-                          placeholder="Max Participants"
-                          value={category.maxParticipants}
-                          onChange={(e) =>
-                            updateEditCategory(
-                              index,
-                              "maxParticipants",
-                              parseInt(e.target.value),
-                            )
-                          }
-                          className="w-full px-3 py-2 rounded-lg bg-black/40 border border-white/20 text-white text-xs placeholder-slate-400 focus:outline-none focus:border-[#4AEEFF] sm:col-span-2"
-                        />
+                        <div>
+                          <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">
+                            Match Type
+                          </label>
+                          <select
+                            value={category.type}
+                            onChange={(e) =>
+                              updateEditCategory(index, "type", e.target.value)
+                            }
+                            className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-white/20 text-white text-xs focus:outline-none focus:border-[#4AEEFF]"
+                          >
+                            <option value="SINGLES">Singles</option>
+                            <option value="DOUBLES">Doubles</option>
+                            <option value="TEAM">Team</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">
+                            Gender Division
+                          </label>
+                          <select
+                            value={category.gender || ""}
+                            onChange={(e) =>
+                              updateEditCategory(
+                                index,
+                                "gender",
+                                (e.target.value as "MALE" | "FEMALE" | "MIXED") || undefined,
+                              )
+                            }
+                            className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-white/20 text-white text-xs focus:outline-none focus:border-[#4AEEFF]"
+                          >
+                            <option value="">Mixed / Open</option>
+                            <option value="MALE">Men's Only</option>
+                            <option value="FEMALE">Women's Only</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">
+                            Max Participants
+                          </label>
+                          <input
+                            type="number"
+                            placeholder="Max Participants"
+                            value={category.maxParticipants}
+                            onChange={(e) =>
+                              updateEditCategory(
+                                index,
+                                "maxParticipants",
+                                parseInt(e.target.value) || 2,
+                              )
+                            }
+                            min="2"
+                            max="256"
+                            className="w-full px-3 py-2 rounded-lg bg-black/40 border border-white/20 text-white text-xs placeholder-slate-400 focus:outline-none focus:border-[#4AEEFF]"
+                          />
+                        </div>
+                        <div className="sm:col-span-2">
+                          <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">
+                            Age Restrictions (Optional)
+                          </label>
+                          <div className="flex gap-2">
+                            <input
+                              type="number"
+                              placeholder="Min Age (e.g. 15)"
+                              value={category.minAge || ""}
+                              onChange={(e) =>
+                                updateEditCategory(
+                                  index,
+                                  "minAge",
+                                  e.target.value
+                                    ? parseInt(e.target.value)
+                                    : undefined,
+                                )
+                              }
+                              className="w-1/2 px-3 py-2 rounded-lg bg-black/40 border border-white/20 text-white text-xs placeholder-slate-400 focus:outline-none focus:border-[#4AEEFF]"
+                            />
+                            <input
+                              type="number"
+                              placeholder="Max Age (e.g. 18)"
+                              value={category.maxAge || ""}
+                              onChange={(e) =>
+                                updateEditCategory(
+                                  index,
+                                  "maxAge",
+                                  e.target.value
+                                    ? parseInt(e.target.value)
+                                    : undefined,
+                                )
+                              }
+                              className="w-1/2 px-3 py-2 rounded-lg bg-black/40 border border-white/20 text-white text-xs placeholder-slate-400 focus:outline-none focus:border-[#4AEEFF]"
+                            />
+                          </div>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -1245,6 +1345,10 @@ const TournamentDetails: React.FC = () => {
 
           <div className="space-y-3 mb-4">
             {eligibleCategories.map((category) => {
+              const categoryRegistration = userRegistrations.find(
+                (r) => r.categoryId === category.id,
+              );
+              const isAlreadyRegistered = !!categoryRegistration;
               const isSelected = selectedCategories.includes(category.id);
               const isFull =
                 category.currentParticipants >= category.maxParticipants;
@@ -1253,30 +1357,53 @@ const TournamentDetails: React.FC = () => {
               return (
                 <div key={category.id}>
                   <label
-                    className={`flex items-center justify-between p-4 rounded-xl border cursor-pointer transition-all ${
-                      isSelected
-                        ? "border-[#4AEEFF] bg-[#4AEEFF]/15 shadow-md shadow-[#4AEEFF]/10"
-                        : "border-white/10 bg-[#061D23]/40 hover:border-white/25 hover:bg-[#061D23]/60"
-                    } ${isFull ? "opacity-50 cursor-not-allowed" : ""}`}
+                    className={`flex items-center justify-between p-4 rounded-xl border transition-all ${
+                      isAlreadyRegistered
+                        ? "border-emerald-500/40 bg-emerald-500/10 cursor-default"
+                        : isSelected
+                        ? "border-[#4AEEFF] bg-[#4AEEFF]/15 shadow-md shadow-[#4AEEFF]/10 cursor-pointer"
+                        : isFull
+                        ? "border-white/10 bg-[#061D23]/40 opacity-50 cursor-not-allowed"
+                        : "border-white/10 bg-[#061D23]/40 hover:border-white/25 hover:bg-[#061D23]/60 cursor-pointer"
+                    }`}
                   >
                     <div className="flex items-center gap-3.5 flex-1">
-                      <input
-                        type="checkbox"
-                        checked={isSelected}
-                        onChange={() => {
-                          if (!isFull) {
-                            if (isDoubles) {
-                              setSelectedDoublesCategory(category.id);
-                              setShowPartnerForm(true);
+                      {isAlreadyRegistered ? (
+                        <div className="w-5 h-5 rounded-md bg-emerald-500/25 border border-emerald-400/60 flex items-center justify-center text-emerald-300 font-black text-xs shadow-[0_0_10px_rgba(16,185,129,0.3)]">
+                          ✓
+                        </div>
+                      ) : (
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => {
+                            if (!isFull && !isAlreadyRegistered) {
+                              if (isDoubles) {
+                                setSelectedDoublesCategory(category.id);
+                                setShowPartnerForm(true);
+                              }
+                              toggleCategory(category.id);
                             }
-                            toggleCategory(category.id);
-                          }
-                        }}
-                        disabled={isFull}
-                        className="w-4 h-4 rounded border-white/30 text-[#4AEEFF] focus:ring-[#4AEEFF]"
-                      />
+                          }}
+                          disabled={isFull || isAlreadyRegistered}
+                          className="w-4 h-4 rounded border-white/30 text-[#4AEEFF] focus:ring-[#4AEEFF]"
+                        />
+                      )}
                       <div>
-                        <p className="font-bold text-white text-sm">{category.name}</p>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p
+                            className={`font-bold text-sm ${
+                              isAlreadyRegistered ? "text-emerald-100" : "text-white"
+                            }`}
+                          >
+                            {category.name}
+                          </p>
+                          {category.gender && category.gender !== "MIXED" && (
+                            <span className="px-2 py-0.5 text-[10px] font-black uppercase tracking-wider rounded bg-[#4AEEFF]/15 text-[#4AEEFF] border border-[#4AEEFF]/30">
+                              {category.gender === "MALE" ? "♂ Men's Only" : "♀ Women's Only"}
+                            </span>
+                          )}
+                        </div>
                         <p className="text-xs text-white/60 mt-0.5">
                           {category.type} • {category.currentParticipants} / {category.maxParticipants} participants
                           {isDoubles && (
@@ -1287,11 +1414,20 @@ const TournamentDetails: React.FC = () => {
                         </p>
                       </div>
                     </div>
-                    {isFull && (
+                    {isAlreadyRegistered ? (
+                      <div className="flex items-center gap-1.5 px-3 py-1 text-[11px] font-black uppercase tracking-wider rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-sm">
+                        <span>✓</span> Enrolled
+                        {categoryRegistration.status && (
+                          <span className="text-[10px] opacity-80 font-mono">
+                            ({categoryRegistration.status})
+                          </span>
+                        )}
+                      </div>
+                    ) : isFull ? (
                       <span className="text-xs font-black uppercase tracking-wider text-red-400 bg-red-500/15 border border-red-500/30 px-2 py-0.5 rounded">
                         Full
                       </span>
-                    )}
+                    ) : null}
                   </label>
 
                   {/* Partner Form for Doubles */}
@@ -1366,36 +1502,43 @@ const TournamentDetails: React.FC = () => {
           {ineligibleCategories.length > 0 && (
             <div className="mt-4 pt-3 border-t border-white/10">
               <p className="text-xs text-white/50 mb-2 uppercase tracking-wider">
-                Ineligible for these categories (age restriction):
+                Ineligible for these categories:
               </p>
-              {ineligibleCategories.map((category) => (
-                <div
-                  key={category.id}
-                  className="flex items-center justify-between p-3 border border-white/10 rounded-xl bg-white/5 opacity-50 mb-2 text-xs"
-                >
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="checkbox"
-                      disabled
-                      className="w-4 h-4 rounded text-gray-500"
-                    />
-                    <div>
-                      <p className="font-medium text-white/70">{category.name}</p>
-                      <p className="text-[11px] text-white/40">{category.type}</p>
+              {ineligibleCategories.map((category) => {
+                const eligibility = isPlayerEligibleForCategory(
+                  category,
+                  playerAge,
+                  playerGender,
+                );
+                return (
+                  <div
+                    key={category.id}
+                    className="flex items-center justify-between p-3 border border-white/10 rounded-xl bg-white/5 opacity-50 mb-2 text-xs"
+                  >
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="checkbox"
+                        disabled
+                        className="w-4 h-4 rounded text-gray-500"
+                      />
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium text-white/70">{category.name}</p>
+                          {category.gender && category.gender !== "MIXED" && (
+                            <span className="px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider rounded bg-white/10 text-white/50 border border-white/10">
+                              {category.gender === "MALE" ? "Men's" : "Women's"}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[11px] text-white/40">{category.type}</p>
+                      </div>
                     </div>
+                    <span className="text-xs text-red-400 font-mono font-bold">
+                      {eligibility.reason}
+                    </span>
                   </div>
-                  <span className="text-xs text-red-400 font-mono">
-                    {playerAge &&
-                      category.minAge &&
-                      playerAge < category.minAge &&
-                      `Need ${category.minAge}+`}
-                    {playerAge &&
-                      category.maxAge &&
-                      playerAge > category.maxAge &&
-                      `Under ${category.maxAge}`}
-                  </span>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
 
@@ -1406,15 +1549,21 @@ const TournamentDetails: React.FC = () => {
           )}
 
           <div className="flex gap-3 mt-4">
-            <button
-              onClick={handleRegister}
-              disabled={registering || selectedCategories.length === 0}
-              className="flex-1 rounded-xl bg-[#4AEEFF] py-3 text-xs font-black uppercase tracking-wider text-[#061D23] hover:bg-white transition-all disabled:opacity-50 shadow-md shadow-[#4AEEFF]/20"
-            >
-              {registering
-                ? "Registering..."
-                : `Register for ${selectedCategories.length} Category(s)`}
-            </button>
+            {allEligibleRegistered ? (
+              <div className="flex-1 rounded-xl bg-emerald-500/15 border border-emerald-500/40 py-3 px-4 text-xs font-black uppercase tracking-wider text-emerald-300 text-center flex items-center justify-center gap-2 shadow-sm">
+                <span className="text-sm">✓</span> You Are Registered for This Tournament
+              </div>
+            ) : (
+              <button
+                onClick={handleRegister}
+                disabled={registering || selectedCategories.length === 0}
+                className="flex-1 rounded-xl bg-[#4AEEFF] py-3 text-xs font-black uppercase tracking-wider text-[#061D23] hover:bg-white transition-all disabled:opacity-50 shadow-md shadow-[#4AEEFF]/20"
+              >
+                {registering
+                  ? "Registering..."
+                  : `Register for ${selectedCategories.length} Category(s)`}
+              </button>
+            )}
             <button
               onClick={() => setShowGuestModal(true)}
               className="rounded-xl border border-white/20 bg-white/5 px-5 py-3 text-xs font-black uppercase tracking-wider text-white hover:bg-white/10 transition-all"
