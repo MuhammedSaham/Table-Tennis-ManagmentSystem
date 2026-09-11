@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import api from "../services/api";
+import api, { getProfileImageUrl } from "../services/api";
 import toast from "react-hot-toast";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -65,15 +65,15 @@ const getAgeCategory = (age: number) => {
 const getSkillColor = (level: string | null) => {
   switch (level?.toUpperCase()) {
     case "BEGINNER":
-      return { bg: "#e0f2fe", text: "#0369a1", bar: "#38bdf8" };
+      return "bg-sky-500/20 text-sky-300 border border-sky-500/40";
     case "INTERMEDIATE":
-      return { bg: "#fef3c7", text: "#92400e", bar: "#f59e0b" };
+      return "bg-amber-500/20 text-amber-300 border border-amber-500/40";
     case "ADVANCED":
-      return { bg: "#dcfce7", text: "#14532d", bar: "#22c55e" };
+      return "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40";
     case "PROFESSIONAL":
-      return { bg: "#ede9fe", text: "#4c1d95", bar: "#8b5cf6" };
+      return "bg-purple-500/20 text-purple-300 border border-purple-500/40";
     default:
-      return { bg: "#f1f5f9", text: "#475569", bar: "#94a3b8" };
+      return "bg-white/10 text-white/60 border border-white/20";
   }
 };
 
@@ -92,61 +92,25 @@ const skillProgress = (level: string | null) => {
   }
 };
 
+// ─── Shared card surface (matches Users.tsx <main> treatment exactly) ─────────
+const CARD =
+  "rounded-[16px] border border-white/20 bg-[#061D23]/10 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl";
+
 // ─── Stat Card ────────────────────────────────────────────────────────────────
 
 const StatCard = ({
   value,
   label,
-  accent,
 }: {
   value: string | number;
   label: string;
-  accent: string;
 }) => (
-  <div
-    style={{
-      background: "#fff",
-      border: "1px solid #e2e8f0",
-      borderRadius: 16,
-      padding: "20px 16px",
-      textAlign: "center",
-      position: "relative",
-      overflow: "hidden",
-    }}
-  >
-    <div
-      style={{
-        position: "absolute",
-        top: 0,
-        left: 0,
-        right: 0,
-        height: 3,
-        background: accent,
-        borderRadius: "16px 16px 0 0",
-      }}
-    />
-    <div
-      style={{
-        fontSize: 32,
-        fontWeight: 800,
-        color: accent,
-        lineHeight: 1,
-        fontFamily: "'Bebas Neue', 'Impact', sans-serif",
-        letterSpacing: 1,
-      }}
-    >
+  <div className={`relative overflow-hidden ${CARD} p-5 text-center`}>
+    <div className="absolute inset-x-0 top-0 h-[3px] bg-[#4AEEFF]" />
+    <div className="font-black text-3xl leading-none text-[#4AEEFF] tracking-wide">
       {value}
     </div>
-    <div
-      style={{
-        fontSize: 11,
-        color: "#64748b",
-        marginTop: 6,
-        textTransform: "uppercase",
-        letterSpacing: 1,
-        fontWeight: 600,
-      }}
-    >
+    <div className="mt-2 text-[11px] font-bold uppercase tracking-widest text-white/60">
       {label}
     </div>
   </div>
@@ -202,34 +166,31 @@ const PublicProfile: React.FC = () => {
     }
   };
 
+  // Matches Users.tsx wrapInBaseLayout exactly: max-w-7xl, space-y-6, p-4 sm:p-6 lg:p-8
+  const wrapInBaseLayout = (children: React.ReactNode) => (
+    <div className="relative min-h-screen w-full overflow-hidden bg-[#061D23] text-white">
+      <div
+        className="fixed inset-0 bg-cover bg-center bg-no-repeat"
+        style={{ backgroundImage: "url('/bg1.png')" }}
+      />
+      <div className="fixed inset-0 bg-[#061D23]/25" />
+      <div className="fixed inset-0 bg-gradient-to-b from-[#061D23]/20 via-transparent to-[#061D23]/35" />
+
+      <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-7xl flex-col space-y-6 p-4 sm:p-6 lg:p-8">
+        {children}
+      </div>
+    </div>
+  );
+
   // ── Loading ──────────────────────────────────────────────────────────────────
   if (loading) {
-    return (
-      <div
-        style={{
-          minHeight: "60vh",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          flexDirection: "column",
-          gap: 16,
-        }}
-      >
-        <div
-          style={{
-            width: 48,
-            height: 48,
-            border: "3px solid #e2e8f0",
-            borderTopColor: "#e11d48",
-            borderRadius: "50%",
-            animation: "spin 0.8s linear infinite",
-          }}
-        />
-        <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
-        <p style={{ color: "#94a3b8", fontSize: 14 }}>
-          Loading player profile…
-        </p>
-      </div>
+    return wrapInBaseLayout(
+      <div className="flex h-[60vh] flex-col items-center justify-center space-y-4">
+        <div className="h-12 w-12 animate-spin rounded-full border-b-2 border-[#4AEEFF]" />
+        <div className="text-sm font-black uppercase tracking-[0.2em] text-[#4AEEFF]">
+          Loading player profile...
+        </div>
+      </div>,
     );
   }
 
@@ -239,214 +200,92 @@ const PublicProfile: React.FC = () => {
     ? calculateAge(profile.playerProfile.dateOfBirth)
     : null;
   const ageCategory = age !== null ? getAgeCategory(age) : null;
-  const skillColor = getSkillColor(profile.playerProfile?.skillLevel ?? null);
+  const skillBadge = getSkillColor(profile.playerProfile?.skillLevel ?? null);
   const progress = skillProgress(profile.playerProfile?.skillLevel ?? null);
   const winRateNum = stats ? parseFloat(stats.winRate) : 0;
 
   const initials =
     `${profile.firstName[0]}${profile.lastName[0]}`.toUpperCase();
 
-  return (
-    <div
-      style={{
-        maxWidth: 860,
-        margin: "0 auto",
-        padding: "24px 16px 64px",
-        fontFamily: "'Segoe UI', system-ui, sans-serif",
-      }}
-    >
+  return wrapInBaseLayout(
+    <>
       {/* ── Breadcrumb ── */}
-      <div style={{ marginBottom: 20, fontSize: 13, color: "#94a3b8" }}>
-        <Link
-          to="/tournaments"
-          style={{ color: "#94a3b8", textDecoration: "none" }}
-        >
+      <div className="text-xs text-white/50">
+        <Link to="/tournaments" className="hover:text-[#4AEEFF] transition-colors">
           Tournaments
         </Link>
-        <span style={{ margin: "0 6px" }}>›</span>
-        <span style={{ color: "#1e293b" }}>
+        <span className="mx-2">/</span>
+        <span className="text-white/80">
           {profile.firstName} {profile.lastName}
         </span>
       </div>
 
-      {/* ── Hero Card ── */}
-      <div
-        style={{
-          background: "#0f172a",
-          borderRadius: 20,
-          overflow: "hidden",
-          marginBottom: 24,
-          position: "relative",
-        }}
-      >
-        {/* decorative ping pong ball pattern */}
-        <div
-          style={{
-            position: "absolute",
-            inset: 0,
-            opacity: 0.04,
-            backgroundImage:
-              "radial-gradient(circle, #fff 2px, transparent 2px)",
-            backgroundSize: "32px 32px",
-          }}
-        />
-        {/* red accent bar on left */}
-        <div
-          style={{
-            position: "absolute",
-            left: 0,
-            top: 0,
-            bottom: 0,
-            width: 5,
-            background: "linear-gradient(180deg, #e11d48, #f97316)",
-          }}
-        />
+      {/* ── Hero Card (matches Users.tsx <header> treatment exactly) ── */}
+      <header className={`relative overflow-hidden ${CARD.replace("bg-[#061D23]/10", "bg-[#061D23]/15")} p-6`}>
+        <div className="absolute inset-y-0 left-0 w-[5px] bg-gradient-to-b from-[#4AEEFF] to-[#12679E]" />
 
-        <div
-          style={{
-            padding: "36px 36px 36px 48px",
-            display: "flex",
-            alignItems: "center",
-            gap: 28,
-            flexWrap: "wrap",
-            position: "relative",
-          }}
-        >
+        <div className="flex flex-wrap items-center gap-7 pl-2 sm:pl-4">
           {/* Avatar */}
           {profile.profileImage ? (
             <img
-              src={profile.profileImage}
+              src={getProfileImageUrl(profile.profileImage)}
               alt={profile.firstName}
-              style={{
-                width: 100,
-                height: 100,
-                borderRadius: "50%",
-                objectFit: "cover",
-                border: "3px solid #e11d48",
-                flexShrink: 0,
-              }}
+              className="h-24 w-24 flex-shrink-0 rounded-full border-2 border-[#4AEEFF] object-cover"
             />
           ) : (
-            <div
-              style={{
-                width: 100,
-                height: 100,
-                borderRadius: "50%",
-                background: "linear-gradient(135deg, #e11d48, #f97316)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: 36,
-                fontWeight: 800,
-                color: "#fff",
-                flexShrink: 0,
-                letterSpacing: -1,
-              }}
-            >
+            <div className="flex h-24 w-24 flex-shrink-0 items-center justify-center rounded-full border-2 border-[#4AEEFF] bg-gradient-to-br from-[#12679E] to-[#061D23] text-3xl font-black tracking-tight text-white">
               {initials}
             </div>
           )}
 
           {/* Name & badges */}
-          <div style={{ flex: 1, minWidth: 200 }}>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 10,
-                flexWrap: "wrap",
-                marginBottom: 6,
-              }}
-            >
-              <span
-                style={{
-                  background: "#e11d48",
-                  color: "#fff",
-                  fontSize: 10,
-                  fontWeight: 700,
-                  padding: "3px 10px",
-                  borderRadius: 20,
-                  textTransform: "uppercase",
-                  letterSpacing: 1.5,
-                }}
-              >
+          <div className="min-w-[200px] flex-1">
+            <div className="mb-2 flex flex-wrap items-center gap-2">
+              <span className="rounded-full bg-[#4AEEFF] px-3 py-1 text-[10px] font-black uppercase tracking-widest text-[#061D23]">
                 Player
               </span>
               {ageCategory && (
-                <span
-                  style={{
-                    background: "rgba(255,255,255,0.1)",
-                    color: "#94a3b8",
-                    fontSize: 10,
-                    fontWeight: 600,
-                    padding: "3px 10px",
-                    borderRadius: 20,
-                    textTransform: "uppercase",
-                    letterSpacing: 1.2,
-                  }}
-                >
+                <span className="rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-white/70">
                   {ageCategory}
                 </span>
               )}
             </div>
 
-            <h1
-              style={{
-                fontSize: "clamp(24px, 5vw, 38px)",
-                fontWeight: 900,
-                color: "#fff",
-                margin: 0,
-                letterSpacing: -1,
-                lineHeight: 1.05,
-              }}
-            >
+            <h1 className="text-2xl font-black uppercase tracking-[0.2em] text-white sm:text-4xl">
               {profile.firstName}{" "}
-              <span style={{ color: "#e11d48" }}>{profile.lastName}</span>
+              <span className="text-[#4AEEFF]">{profile.lastName}</span>
             </h1>
 
-            <div
-              style={{
-                display: "flex",
-                gap: 20,
-                marginTop: 12,
-                flexWrap: "wrap",
-              }}
-            >
+            <div className="mt-3 flex flex-wrap gap-5">
               {profile.playerProfile?.clubAffiliation && (
-                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <span style={{ fontSize: 14 }}>🏓</span>
-                  <span style={{ color: "#cbd5e1", fontSize: 13 }}>
-                    {profile.playerProfile.clubAffiliation}
-                  </span>
+                <div className="flex items-center gap-2 text-sm text-white/70">
+                  <span>🏓</span>
+                  <span>{profile.playerProfile.clubAffiliation}</span>
                 </div>
               )}
               {age !== null && (
-                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <span style={{ fontSize: 14 }}>🎂</span>
-                  <span style={{ color: "#cbd5e1", fontSize: 13 }}>
-                    {age} years old
-                  </span>
+                <div className="flex items-center gap-2 text-sm text-white/70">
+                  <span>🎂</span>
+                  <span>{age} years old</span>
                 </div>
               )}
-              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <span style={{ fontSize: 14 }}>📅</span>
-                <span style={{ color: "#cbd5e1", fontSize: 13 }}>
-                  Since {new Date(profile.createdAt).getFullYear()}
-                </span>
+              <div className="flex items-center gap-2 text-sm text-white/70">
+                <span>📅</span>
+                <span>Since {new Date(profile.createdAt).getFullYear()}</span>
               </div>
             </div>
           </div>
 
           {/* Win Rate Circle */}
           {stats && (
-            <div style={{ textAlign: "center", flexShrink: 0 }}>
-              <svg width="88" height="88" viewBox="0 0 88 88">
+            <div className="flex-shrink-0 text-center">
+              <svg width="92" height="92" viewBox="0 0 88 88">
                 <circle
                   cx="44"
                   cy="44"
                   r="36"
                   fill="none"
-                  stroke="rgba(255,255,255,0.08)"
+                  stroke="rgba(255,255,255,0.1)"
                   strokeWidth="8"
                 />
                 <circle
@@ -454,7 +293,7 @@ const PublicProfile: React.FC = () => {
                   cy="44"
                   r="36"
                   fill="none"
-                  stroke="#e11d48"
+                  stroke="#4AEEFF"
                   strokeWidth="8"
                   strokeLinecap="round"
                   strokeDasharray={`${(winRateNum / 100) * 226} 226`}
@@ -462,20 +301,22 @@ const PublicProfile: React.FC = () => {
                 />
                 <text
                   x="44"
-                  y="40"
+                  y="41"
                   textAnchor="middle"
                   fill="#fff"
-                  fontSize="15"
+                  fontSize="16"
                   fontWeight="800"
                 >
                   {stats.winRate}
                 </text>
                 <text
                   x="44"
-                  y="54"
+                  y="55"
                   textAnchor="middle"
-                  fill="#64748b"
+                  fill="#4AEEFF"
                   fontSize="9"
+                  fontWeight="700"
+                  letterSpacing="0.5"
                 >
                   WIN RATE
                 </text>
@@ -483,515 +324,237 @@ const PublicProfile: React.FC = () => {
             </div>
           )}
         </div>
-      </div>
+      </header>
 
       {/* ── Stats Row ── */}
       {stats && (
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))",
-            gap: 12,
-            marginBottom: 24,
-          }}
-        >
-          <StatCard
-            value={stats.totalMatches}
-            label="Matches"
-            accent="#3b82f6"
-          />
-          <StatCard value={stats.wins} label="Wins" accent="#22c55e" />
-          <StatCard value={stats.losses} label="Losses" accent="#ef4444" />
-          <StatCard
-            value={stats.gamesStats.total}
-            label="Games Played"
-            accent="#f59e0b"
-          />
-          <StatCard
-            value={stats.pointsStats.scored}
-            label="Points Scored"
-            accent="#8b5cf6"
-          />
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+          <StatCard value={stats.totalMatches} label="Matches" />
+          <StatCard value={stats.wins} label="Wins" />
+          <StatCard value={stats.losses} label="Losses" />
+          <StatCard value={stats.gamesStats.total} label="Games Played" />
+          <StatCard value={stats.pointsStats.scored} label="Points Scored" />
         </div>
       )}
 
-      {/* ── Tabs ── */}
-      <div
-        style={{
-          display: "flex",
-          borderBottom: "2px solid #e2e8f0",
-          marginBottom: 24,
-          gap: 4,
-        }}
-      >
-        {(["overview", "matches"] as const).map((tab) => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            style={{
-              padding: "10px 24px",
-              background: "none",
-              border: "none",
-              borderBottom:
+      {/* ── Tabs (wrapped in the same card surface as the table header row in Users.tsx) ── */}
+      <div className={`${CARD} overflow-hidden`}>
+        <div className="flex gap-1 border-b border-white/10 bg-[#061D23]/30 px-2">
+          {(["overview", "matches"] as const).map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`-mb-px border-b-2 px-6 py-4 text-xs font-black uppercase tracking-widest transition-colors ${
                 activeTab === tab
-                  ? "2px solid #e11d48"
-                  : "2px solid transparent",
-              marginBottom: -2,
-              color: activeTab === tab ? "#e11d48" : "#64748b",
-              fontWeight: activeTab === tab ? 700 : 500,
-              fontSize: 14,
-              cursor: "pointer",
-              textTransform: "capitalize",
-              letterSpacing: 0.3,
-              transition: "all 0.15s",
-            }}
-          >
-            {tab === "overview"
-              ? "Overview"
-              : `Recent Matches ${stats ? `(${stats.recentMatches.length})` : ""}`}
-          </button>
-        ))}
-      </div>
-
-      {/* ── Overview Tab ── */}
-      {activeTab === "overview" && (
-        <div
-          style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}
-        >
-          {/* Skill Level */}
-          {profile.playerProfile?.skillLevel && (
-            <div
-              style={{
-                background: "#fff",
-                border: "1px solid #e2e8f0",
-                borderRadius: 16,
-                padding: 24,
-              }}
+                  ? "border-[#4AEEFF] text-[#4AEEFF]"
+                  : "border-transparent text-white/50 hover:text-white/80"
+              }`}
             >
-              <p
-                style={{
-                  fontSize: 11,
-                  color: "#94a3b8",
-                  textTransform: "uppercase",
-                  letterSpacing: 1.2,
-                  fontWeight: 700,
-                  marginBottom: 12,
-                }}
-              >
-                Skill Level
-              </p>
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 12,
-                  marginBottom: 12,
-                }}
-              >
-                <span
-                  style={{
-                    background: skillColor.bg,
-                    color: skillColor.text,
-                    padding: "6px 16px",
-                    borderRadius: 20,
-                    fontWeight: 700,
-                    fontSize: 14,
-                  }}
-                >
-                  {profile.playerProfile.skillLevel}
-                </span>
-              </div>
-              <div
-                style={{
-                  background: "#f1f5f9",
-                  borderRadius: 8,
-                  height: 8,
-                  overflow: "hidden",
-                }}
-              >
-                <div
-                  style={{
-                    width: `${progress}%`,
-                    height: "100%",
-                    background: skillColor.bar,
-                    borderRadius: 8,
-                    transition: "width 1s ease",
-                  }}
-                />
-              </div>
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  marginTop: 6,
-                  fontSize: 10,
-                  color: "#94a3b8",
-                }}
-              >
-                <span>Beginner</span>
-                <span>Intermediate</span>
-                <span>Advanced</span>
-                <span>Pro</span>
-              </div>
-            </div>
-          )}
-
-          {/* Club */}
-          {profile.playerProfile?.clubAffiliation && (
-            <div
-              style={{
-                background: "#fff",
-                border: "1px solid #e2e8f0",
-                borderRadius: 16,
-                padding: 24,
-              }}
-            >
-              <p
-                style={{
-                  fontSize: 11,
-                  color: "#94a3b8",
-                  textTransform: "uppercase",
-                  letterSpacing: 1.2,
-                  fontWeight: 700,
-                  marginBottom: 12,
-                }}
-              >
-                Club Affiliation
-              </p>
-              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <div
-                  style={{
-                    width: 44,
-                    height: 44,
-                    background: "#fef3c7",
-                    borderRadius: 12,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontSize: 22,
-                  }}
-                >
-                  🏓
-                </div>
-                <div>
-                  <p
-                    style={{
-                      fontWeight: 700,
-                      color: "#1e293b",
-                      fontSize: 16,
-                      margin: 0,
-                    }}
-                  >
-                    {profile.playerProfile.clubAffiliation}
-                  </p>
-                  <p style={{ color: "#94a3b8", fontSize: 12, margin: 0 }}>
-                    Active Member
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Games breakdown */}
-          {stats && (
-            <div
-              style={{
-                background: "#fff",
-                border: "1px solid #e2e8f0",
-                borderRadius: 16,
-                padding: 24,
-              }}
-            >
-              <p
-                style={{
-                  fontSize: 11,
-                  color: "#94a3b8",
-                  textTransform: "uppercase",
-                  letterSpacing: 1.2,
-                  fontWeight: 700,
-                  marginBottom: 16,
-                }}
-              >
-                Games Breakdown
-              </p>
-              <div style={{ display: "flex", gap: 16 }}>
-                <div style={{ textAlign: "center", flex: 1 }}>
-                  <div
-                    style={{ fontSize: 28, fontWeight: 800, color: "#22c55e" }}
-                  >
-                    {stats.gamesStats.won}
-                  </div>
-                  <div
-                    style={{ fontSize: 11, color: "#94a3b8", fontWeight: 600 }}
-                  >
-                    WON
-                  </div>
-                </div>
-                <div style={{ width: 1, background: "#e2e8f0" }} />
-                <div style={{ textAlign: "center", flex: 1 }}>
-                  <div
-                    style={{ fontSize: 28, fontWeight: 800, color: "#ef4444" }}
-                  >
-                    {stats.gamesStats.lost}
-                  </div>
-                  <div
-                    style={{ fontSize: 11, color: "#94a3b8", fontWeight: 600 }}
-                  >
-                    LOST
-                  </div>
-                </div>
-                <div style={{ width: 1, background: "#e2e8f0" }} />
-                <div style={{ textAlign: "center", flex: 1 }}>
-                  <div
-                    style={{ fontSize: 28, fontWeight: 800, color: "#3b82f6" }}
-                  >
-                    {stats.gamesStats.total}
-                  </div>
-                  <div
-                    style={{ fontSize: 11, color: "#94a3b8", fontWeight: 600 }}
-                  >
-                    TOTAL
-                  </div>
-                </div>
-              </div>
-              {/* stacked bar */}
-              <div
-                style={{
-                  display: "flex",
-                  borderRadius: 8,
-                  overflow: "hidden",
-                  height: 8,
-                  marginTop: 16,
-                  background: "#f1f5f9",
-                }}
-              >
-                <div
-                  style={{
-                    width: `${stats.gamesStats.total ? (stats.gamesStats.won / stats.gamesStats.total) * 100 : 0}%`,
-                    background: "#22c55e",
-                    transition: "width 1s",
-                  }}
-                />
-                <div
-                  style={{
-                    width: `${stats.gamesStats.total ? (stats.gamesStats.lost / stats.gamesStats.total) * 100 : 0}%`,
-                    background: "#ef4444",
-                    transition: "width 1s",
-                  }}
-                />
-              </div>
-            </div>
-          )}
-
-          {/* Points */}
-          {stats && (
-            <div
-              style={{
-                background: "#fff",
-                border: "1px solid #e2e8f0",
-                borderRadius: 16,
-                padding: 24,
-              }}
-            >
-              <p
-                style={{
-                  fontSize: 11,
-                  color: "#94a3b8",
-                  textTransform: "uppercase",
-                  letterSpacing: 1.2,
-                  fontWeight: 700,
-                  marginBottom: 16,
-                }}
-              >
-                Points Stats
-              </p>
-              <div
-                style={{ display: "flex", flexDirection: "column", gap: 12 }}
-              >
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                  }}
-                >
-                  <span style={{ color: "#64748b", fontSize: 13 }}>
-                    Points Scored
-                  </span>
-                  <span
-                    style={{ fontWeight: 700, color: "#22c55e", fontSize: 16 }}
-                  >
-                    {stats.pointsStats.scored}
-                  </span>
-                </div>
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                  }}
-                >
-                  <span style={{ color: "#64748b", fontSize: 13 }}>
-                    Points Conceded
-                  </span>
-                  <span
-                    style={{ fontWeight: 700, color: "#ef4444", fontSize: 16 }}
-                  >
-                    {stats.pointsStats.conceded}
-                  </span>
-                </div>
-                <div
-                  style={{
-                    borderTop: "1px solid #e2e8f0",
-                    paddingTop: 12,
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                  }}
-                >
-                  <span style={{ color: "#64748b", fontSize: 13 }}>
-                    Avg / Game
-                  </span>
-                  <span
-                    style={{ fontWeight: 800, color: "#8b5cf6", fontSize: 18 }}
-                  >
-                    {stats.pointsStats.averagePerGame}
-                  </span>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* No stats fallback */}
-          {!stats && (
-            <div
-              style={{
-                gridColumn: "1 / -1",
-                background: "#f8fafc",
-                border: "1px dashed #cbd5e1",
-                borderRadius: 16,
-                padding: 40,
-                textAlign: "center",
-              }}
-            >
-              <div style={{ fontSize: 40, marginBottom: 12 }}>🏓</div>
-              <p style={{ color: "#94a3b8", fontSize: 14 }}>
-                No match statistics yet.
-              </p>
-            </div>
-          )}
+              {tab === "overview"
+                ? "Overview"
+                : `Recent Matches ${stats ? `(${stats.recentMatches.length})` : ""}`}
+            </button>
+          ))}
         </div>
-      )}
 
-      {/* ── Recent Matches Tab ── */}
-      {activeTab === "matches" && (
-        <div>
-          {stats && stats.recentMatches.length > 0 ? (
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              {stats.recentMatches.map((match) => {
-                const isWin = match.result === "Win";
-                return (
-                  <div
-                    key={match.id}
-                    style={{
-                      background: "#fff",
-                      border: "1px solid #e2e8f0",
-                      borderRadius: 14,
-                      padding: "16px 20px",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 16,
-                      borderLeft: `4px solid ${isWin ? "#22c55e" : "#ef4444"}`,
-                    }}
-                  >
+        <div className="p-6">
+          {/* ── Overview Tab ── */}
+          {activeTab === "overview" && (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              {/* Skill Level */}
+              {profile.playerProfile?.skillLevel && (
+                <div className={`${CARD} p-6`}>
+                  <p className="mb-3 text-[11px] font-black uppercase tracking-widest text-white/50">
+                    Skill Level
+                  </p>
+                  <div className="mb-3 flex items-center gap-3">
+                    <span className={`rounded-full px-4 py-1.5 text-sm font-bold ${skillBadge}`}>
+                      {profile.playerProfile.skillLevel}
+                    </span>
+                  </div>
+                  <div className="h-2 overflow-hidden rounded-full bg-white/10">
                     <div
-                      style={{
-                        width: 36,
-                        height: 36,
-                        borderRadius: "50%",
-                        background: isWin ? "#dcfce7" : "#fee2e2",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        fontSize: 16,
-                        flexShrink: 0,
-                      }}
-                    >
-                      {isWin ? "✓" : "✗"}
+                      className="h-full rounded-full bg-[#4AEEFF] transition-all duration-700"
+                      style={{ width: `${progress}%` }}
+                    />
+                  </div>
+                  <div className="mt-2 flex justify-between text-[10px] text-white/40">
+                    <span>Beginner</span>
+                    <span>Intermediate</span>
+                    <span>Advanced</span>
+                    <span>Pro</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Club */}
+              {profile.playerProfile?.clubAffiliation && (
+                <div className={`${CARD} p-6`}>
+                  <p className="mb-3 text-[11px] font-black uppercase tracking-widest text-white/50">
+                    Club Affiliation
+                  </p>
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-11 w-11 items-center justify-center rounded-lg border border-white/10 bg-[#4AEEFF]/10 text-xl">
+                      🏓
                     </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <p
-                        style={{
-                          fontWeight: 700,
-                          color: "#1e293b",
-                          fontSize: 14,
-                          margin: 0,
-                          whiteSpace: "nowrap",
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                        }}
-                      >
-                        {match.tournamentName}
+                    <div>
+                      <p className="font-bold text-white">
+                        {profile.playerProfile.clubAffiliation}
                       </p>
-                      <p
-                        style={{
-                          color: "#64748b",
-                          fontSize: 12,
-                          margin: "2px 0 0",
-                        }}
-                      >
-                        vs <strong>{match.opponent}</strong> ·{" "}
-                        {match.categoryName}
-                      </p>
-                    </div>
-                    <div style={{ textAlign: "right", flexShrink: 0 }}>
-                      <p
-                        style={{
-                          fontWeight: 800,
-                          color: isWin ? "#16a34a" : "#dc2626",
-                          fontSize: 15,
-                          margin: 0,
-                        }}
-                      >
-                        {match.score}
-                      </p>
-                      <p
-                        style={{
-                          color: "#94a3b8",
-                          fontSize: 11,
-                          margin: "2px 0 0",
-                        }}
-                      >
-                        {new Date(match.date).toLocaleDateString("en-GB", {
-                          day: "numeric",
-                          month: "short",
-                          year: "numeric",
-                        })}
-                      </p>
+                      <p className="text-xs text-white/50">Active Member</p>
                     </div>
                   </div>
-                );
-              })}
+                </div>
+              )}
+
+              {/* Games breakdown */}
+              {stats && (
+                <div className={`${CARD} p-6`}>
+                  <p className="mb-4 text-[11px] font-black uppercase tracking-widest text-white/50">
+                    Games Breakdown
+                  </p>
+                  <div className="flex gap-4">
+                    <div className="flex-1 text-center">
+                      <div className="text-2xl font-black text-emerald-400">
+                        {stats.gamesStats.won}
+                      </div>
+                      <div className="text-[11px] font-bold text-white/50">WON</div>
+                    </div>
+                    <div className="w-px bg-white/10" />
+                    <div className="flex-1 text-center">
+                      <div className="text-2xl font-black text-red-400">
+                        {stats.gamesStats.lost}
+                      </div>
+                      <div className="text-[11px] font-bold text-white/50">LOST</div>
+                    </div>
+                    <div className="w-px bg-white/10" />
+                    <div className="flex-1 text-center">
+                      <div className="text-2xl font-black text-[#4AEEFF]">
+                        {stats.gamesStats.total}
+                      </div>
+                      <div className="text-[11px] font-bold text-white/50">TOTAL</div>
+                    </div>
+                  </div>
+                  <div className="mt-4 flex h-2 overflow-hidden rounded-full bg-white/10">
+                    <div
+                      className="bg-emerald-400 transition-all duration-700"
+                      style={{
+                        width: `${stats.gamesStats.total ? (stats.gamesStats.won / stats.gamesStats.total) * 100 : 0}%`,
+                      }}
+                    />
+                    <div
+                      className="bg-red-400 transition-all duration-700"
+                      style={{
+                        width: `${stats.gamesStats.total ? (stats.gamesStats.lost / stats.gamesStats.total) * 100 : 0}%`,
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Points */}
+              {stats && (
+                <div className={`${CARD} p-6`}>
+                  <p className="mb-4 text-[11px] font-black uppercase tracking-widest text-white/50">
+                    Points Stats
+                  </p>
+                  <div className="flex flex-col gap-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-white/60">Points Scored</span>
+                      <span className="text-base font-bold text-emerald-400">
+                        {stats.pointsStats.scored}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-white/60">Points Conceded</span>
+                      <span className="text-base font-bold text-red-400">
+                        {stats.pointsStats.conceded}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between border-t border-white/10 pt-3">
+                      <span className="text-sm text-white/60">Avg / Game</span>
+                      <span className="text-lg font-black text-[#4AEEFF]">
+                        {stats.pointsStats.averagePerGame}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* No stats fallback */}
+              {!stats && (
+                <div className="rounded-[16px] border border-dashed border-white/20 bg-[#061D23]/20 p-10 text-center sm:col-span-2">
+                  <div className="mb-3 text-4xl">🏓</div>
+                  <p className="text-sm text-white/50">No match statistics yet.</p>
+                </div>
+              )}
             </div>
-          ) : (
-            <div
-              style={{
-                background: "#f8fafc",
-                border: "1px dashed #cbd5e1",
-                borderRadius: 16,
-                padding: 60,
-                textAlign: "center",
-              }}
-            >
-              <div style={{ fontSize: 48, marginBottom: 12 }}>🏓</div>
-              <p style={{ color: "#94a3b8", fontSize: 15 }}>
-                No matches played yet.
-              </p>
+          )}
+
+          {/* ── Recent Matches Tab ── */}
+          {activeTab === "matches" && (
+            <div>
+              {stats && stats.recentMatches.length > 0 ? (
+                <div className="flex flex-col gap-3">
+                  {stats.recentMatches.map((match) => {
+                    const isWin = match.result === "Win";
+                    return (
+                      <div
+                        key={match.id}
+                        className={`flex items-center gap-4 ${CARD} p-4`}
+                        style={{
+                          borderLeft: `4px solid ${isWin ? "#34d399" : "#f87171"}`,
+                        }}
+                      >
+                        <div
+                          className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-base ${
+                            isWin
+                              ? "bg-emerald-500/20 text-emerald-300"
+                              : "bg-red-500/20 text-red-300"
+                          }`}
+                        >
+                          {isWin ? "✓" : "✗"}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate font-bold text-white">
+                            {match.tournamentName}
+                          </p>
+                          <p className="mt-0.5 text-xs text-white/60">
+                            vs <strong className="text-white/80">{match.opponent}</strong> ·{" "}
+                            {match.categoryName}
+                          </p>
+                        </div>
+                        <div className="flex-shrink-0 text-right">
+                          <p
+                            className={`text-base font-black ${
+                              isWin ? "text-emerald-400" : "text-red-400"
+                            }`}
+                          >
+                            {match.score}
+                          </p>
+                          <p className="mt-0.5 text-[11px] text-white/40">
+                            {new Date(match.date).toLocaleDateString("en-GB", {
+                              day: "numeric",
+                              month: "short",
+                              year: "numeric",
+                            })}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="rounded-[16px] border border-dashed border-white/20 bg-[#061D23]/20 p-16 text-center">
+                  <div className="mb-3 text-5xl">🏓</div>
+                  <p className="text-sm text-white/50">No matches played yet.</p>
+                </div>
+              )}
             </div>
           )}
         </div>
-      )}
-    </div>
+      </div>
+    </>,
   );
 };
 

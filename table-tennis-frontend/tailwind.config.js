@@ -52,9 +52,9 @@ export default {
         },
       },
       fontFamily: {
-        'sans': ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
-        'heading': ['Poppins', 'Inter', 'system-ui', 'sans-serif'],
-        'display': ['Montserrat', 'Poppins', 'sans-serif'],
+        'sans': ['Ebrima'],
+        'heading': ['Bison Bold'],
+        'display': ['Lemon Milk'],
       },
       animation: {
         'fade-in': 'fadeIn 0.6s ease-in-out',

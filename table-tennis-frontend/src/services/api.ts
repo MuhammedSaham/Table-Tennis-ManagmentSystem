@@ -1,7 +1,14 @@
 import axios from 'axios';
 import toast from 'react-hot-toast';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api/v1';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1';
+
+export const getProfileImageUrl = (path?: string | null): string => {
+  if (!path) return '';
+  if (path.startsWith('http://') || path.startsWith('https://')) return path;
+  const backendBase = (import.meta.env.VITE_API_URL || 'http://localhost:3000/api/v1').replace(/\/api\/v1\/?$/, '');
+  return `${backendBase}${path.startsWith('/') ? '' : '/'}${path}`;
+};
 
 const api = axios.create({
   baseURL: API_BASE_URL,

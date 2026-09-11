@@ -34,7 +34,7 @@ const PublicLayout: React.FC = () => {
                 alt="Sam's College"
                 className="w-10 h-10 object-contain rounded-lg"
               />
-              <span className="font-bold text-xl text-gray-900">
+              <span className="font-bold text-xl text-white tracking-wide">
                 SAM'S COLLEGE
               </span>
             </Link>
@@ -45,10 +45,10 @@ const PublicLayout: React.FC = () => {
                 <Link
                   key={item.name}
                   to={item.href}
-                  className={`px-4 py-2 rounded-full text-sm font-medium transition duration-200 ${
+                  className={`px-4 py-2 rounded-full text-sm transition duration-200 border ${
                     location.pathname === item.href
-                      ? "bg-[#0099cc] text-black"
-                      : "bg-[#4AEEFF] text-black hover:bg-[#80ffff]"
+                      ? "bg-[#4AEEFF]/20 text-[#4AEEFF] border-[#4AEEFF] font-bold shadow-lg shadow-[#4AEEFF]/25 backdrop-blur-md"
+                      : "bg-[#4AEEFF] text-black border-transparent hover:bg-[#80ffff] font-medium"
                   }`}
                 >
                   {item.name}
@@ -100,10 +100,10 @@ const PublicLayout: React.FC = () => {
                   key={item.name}
                   to={item.href}
                   onClick={() => setMobileMenuOpen(false)}
-                  className={`block px-3 py-2 rounded-lg text-sm font-medium ${
+                  className={`block px-4 py-2 rounded-full text-sm transition duration-200 border ${
                     location.pathname === item.href
-                      ? "bg-[#0099cc] text-black"
-                      : "bg-[#4AEEFF] text-black hover:bg-[#80ffff]"
+                      ? "bg-[#4AEEFF]/20 text-[#4AEEFF] border-[#4AEEFF] font-bold shadow-md shadow-[#4AEEFF]/20"
+                      : "bg-[#4AEEFF] text-black border-transparent hover:bg-[#80ffff] font-medium"
                   }`}
                 >
                   {item.name}

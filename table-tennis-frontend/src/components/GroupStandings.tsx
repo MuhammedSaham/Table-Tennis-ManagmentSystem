@@ -1,5 +1,8 @@
 import React, { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import api from "../services/api";
+import { useAuth } from "../context/AuthContext";
+import toast from "react-hot-toast";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -15,7 +18,7 @@ interface GroupPlayer {
   pointsConceded: number;
 }
 
-interface GroupMatch {
+export interface GroupMatch {
   id: string;
   player1Id: string;
   player2Id: string;
@@ -25,16 +28,17 @@ interface GroupMatch {
   player2Score: number | null;
   status: string;
   bestOf?: number;
-  game1Player1?: number | null;
-  game1Player2?: number | null;
-  game2Player1?: number | null;
-  game2Player2?: number | null;
-  game3Player1?: number | null;
-  game3Player2?: number | null;
-  game4Player1?: number | null;
-  game4Player2?: number | null;
-  game5Player1?: number | null;
-  game5Player2?: number | null;
+  game1player1?: number | null;
+  game1player2?: number | null;
+  game2player1?: number | null;
+  game2player2?: number | null;
+  game3player1?: number | null;
+  game3player2?: number | null;
+  game4player1?: number | null;
+  game4player2?: number | null;
+  game5player1?: number | null;
+  game5player2?: number | null;
+  referee?: { id: string; user: { firstName: string; lastName: string; } } | null;
 }
 
 interface Group {
@@ -51,28 +55,31 @@ interface Props {
   onScoreUpdate?: () => void;
 }
 
-interface UmpireSheetProps {
+export interface UmpireSheetProps {
   match: GroupMatch;
   onClose: () => void;
   onSave: (matchId: string, games: GameScore[], bestOf: 3 | 5) => Promise<void>;
   isAdminOrReferee: boolean;
   categoryName?: string;
+  onAssignReferee?: (match: GroupMatch) => void;
 }
 
-interface GameScore {
+export interface GameScore {
   p1: string;
   p2: string;
 }
 
 // ─── Umpire Sheet Modal ───────────────────────────────────────────────────────
 
-const UmpireSheet: React.FC<UmpireSheetProps> = ({
+export const UmpireSheet: React.FC<UmpireSheetProps> = ({
   match,
   onClose,
   onSave,
   isAdminOrReferee,
-  categoryName = "",
+  categoryName,
+  onAssignReferee,
 }) => {
+  const { user } = useAuth();
   const today = new Date().toLocaleDateString("en-GB");
   const isCompleted = match.status === "COMPLETED";
 
@@ -82,38 +89,63 @@ const UmpireSheet: React.FC<UmpireSheetProps> = ({
 
   const initGames = (): GameScore[] => [
     {
-      p1: match.game1Player1 != null ? String(match.game1Player1) : "",
-      p2: match.game1Player2 != null ? String(match.game1Player2) : "",
+      p1: match.game1player1 != null ? String(match.game1player1) : "",
+      p2: match.game1player2 != null ? String(match.game1player2) : "",
     },
     {
-      p1: match.game2Player1 != null ? String(match.game2Player1) : "",
-      p2: match.game2Player2 != null ? String(match.game2Player2) : "",
+      p1: match.game2player1 != null ? String(match.game2player1) : "",
+      p2: match.game2player2 != null ? String(match.game2player2) : "",
     },
     {
-      p1: match.game3Player1 != null ? String(match.game3Player1) : "",
-      p2: match.game3Player2 != null ? String(match.game3Player2) : "",
+      p1: match.game3player1 != null ? String(match.game3player1) : "",
+      p2: match.game3player2 != null ? String(match.game3player2) : "",
     },
     {
-      p1: match.game4Player1 != null ? String(match.game4Player1) : "",
-      p2: match.game4Player2 != null ? String(match.game4Player2) : "",
+      p1: match.game4player1 != null ? String(match.game4player1) : "",
+      p2: match.game4player2 != null ? String(match.game4player2) : "",
     },
     {
-      p1: match.game5Player1 != null ? String(match.game5Player1) : "",
-      p2: match.game5Player2 != null ? String(match.game5Player2) : "",
+      p1: match.game5player1 != null ? String(match.game5player1) : "",
+      p2: match.game5player2 != null ? String(match.game5player2) : "",
     },
   ];
 
   const [games, setGames] = useState<GameScore[]>(initGames);
   const [saving, setSaving] = useState(false);
+  const [pointsToWin, setPointsToWin] = useState<number>(11);
+  const targetPts = typeof pointsToWin === "number" && !isNaN(pointsToWin) && pointsToWin > 0 ? pointsToWin : 11;
+
+  const getGameWinner = (p1Str: string, p2Str: string): "p1" | "p2" | null => {
+    if (p1Str === "" || p2Str === "") return null;
+    const p1 = parseInt(p1Str);
+    const p2 = parseInt(p2Str);
+    if (isNaN(p1) || isNaN(p2)) return null;
+
+    if (p1 >= targetPts && p1 - p2 >= 2) return "p1";
+    if (p2 >= targetPts && p2 - p1 >= 2) return "p2";
+    return null;
+  };
+
+  const isGameValid = (p1Str: string, p2Str: string): boolean => {
+    if (p1Str === "" && p2Str === "") return true;
+    if (p1Str === "" || p2Str === "") return false;
+    const p1 = parseInt(p1Str);
+    const p2 = parseInt(p2Str);
+    if (isNaN(p1) || isNaN(p2)) return false;
+
+    const winner = Math.max(p1, p2);
+    const loser = Math.min(p1, p2);
+
+    if (winner < targetPts) return false;
+    if (winner === targetPts) return loser <= targetPts - 2;
+    if (winner > targetPts) return loser === winner - 2;
+
+    return false;
+  };
 
   // Count games won so far
   const countWins = (side: "p1" | "p2") =>
-    games.filter((g) => {
-      if (g.p1 === "" || g.p2 === "") return false;
-      return side === "p1"
-        ? parseInt(g.p1) > parseInt(g.p2)
-        : parseInt(g.p2) > parseInt(g.p1);
-    }).length;
+    games.filter((g) => getGameWinner(g.p1, g.p2) === side).length;
 
   const p1Wins = countWins("p1");
   const p2Wins = countWins("p2");
@@ -125,10 +157,9 @@ const UmpireSheet: React.FC<UmpireSheetProps> = ({
       w2 = 0;
     for (let i = 0; i < gameIndex; i++) {
       const g = games[i];
-      if (g.p1 !== "" && g.p2 !== "") {
-        if (parseInt(g.p1) > parseInt(g.p2)) w1++;
-        else if (parseInt(g.p2) > parseInt(g.p1)) w2++;
-      }
+      const winner = getGameWinner(g.p1, g.p2);
+      if (winner === "p1") w1++;
+      if (winner === "p2") w2++;
     }
     return w1 < winsNeeded && w2 < winsNeeded;
   };
@@ -145,8 +176,17 @@ const UmpireSheet: React.FC<UmpireSheetProps> = ({
   };
 
   const handleSave = async () => {
+    for (let i = 0; i < games.length; i++) {
+      const g = games[i];
+      if (g.p1 === "" && g.p2 === "") continue;
+      if (!isGameValid(g.p1, g.p2)) {
+        toast.error(`Game ${i + 1} has an invalid score. A game is played to ${targetPts} points and must be won by 2 clear points.`);
+        return;
+      }
+    }
+
     if (!matchOver) {
-      alert(`Match not complete. ${winsNeeded} game wins needed to win.`);
+      toast.error(`Match not complete. ${winsNeeded} game wins needed to win.`);
       return;
     }
     setSaving(true);
@@ -157,16 +197,17 @@ const UmpireSheet: React.FC<UmpireSheetProps> = ({
   const p1Name = `${match.player1.firstName} ${match.player1.lastName}`;
   const p2Name = `${match.player2.firstName} ${match.player2.lastName}`;
 
-  return (
+  return createPortal(
     <div
       style={{
         position: "fixed",
         inset: 0,
-        background: "rgba(0,0,0,0.65)",
+        backgroundColor: "rgba(0, 0, 0, 0.7)",
+        backdropFilter: "blur(4px)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        zIndex: 1000,
+        zIndex: 99999,
         padding: 16,
         overflowY: "auto",
       }}
@@ -175,6 +216,7 @@ const UmpireSheet: React.FC<UmpireSheetProps> = ({
       <div
         style={{
           background: "#fff",
+          color: "#0f172a",
           borderRadius: 16,
           width: "100%",
           maxWidth: 600,
@@ -267,14 +309,49 @@ const UmpireSheet: React.FC<UmpireSheetProps> = ({
               gap: 10,
             }}
           >
-            <span style={{ fontSize: 13, color: "#475569" }}>
-              <strong>DATE:</strong> {today}
-            </span>
-            {categoryName && (
-              <span style={{ color: "#e11d48", fontWeight: 700, fontSize: 13 }}>
-                {categoryName}
+            <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
+              <span style={{ fontSize: 13, color: "#475569" }}>
+                <strong>DATE:</strong> {today}
               </span>
-            )}
+              {categoryName && (
+                <span style={{ color: "#e11d48", fontWeight: 700, fontSize: 13 }}>
+                  {categoryName}
+                </span>
+              )}
+            </div>
+
+            <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ fontSize: 12, color: "#64748b", fontWeight: 600 }}>Pts to Win:</span>
+                <input
+                  type="number"
+                  min={1}
+                  value={pointsToWin}
+                  placeholder="11"
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value);
+                    setPointsToWin(!isNaN(val) && val > 0 ? val : 11);
+                  }}
+                  onBlur={() => {
+                    if (!pointsToWin || isNaN(pointsToWin) || pointsToWin < 1) {
+                      setPointsToWin(11);
+                    }
+                  }}
+                  disabled={!isAdminOrReferee || isCompleted}
+                  style={{
+                    width: 45,
+                    padding: "4px",
+                    borderRadius: 6,
+                    border: "1.5px solid #cbd5e1",
+                    fontSize: 13,
+                    fontWeight: 700,
+                    textAlign: "center",
+                    outline: "none",
+                    color: "#0f172a",
+                    backgroundColor: "#ffffff",
+                  }}
+                />
+              </div>
 
             {/* Best Of toggle — only editable before match starts */}
             {!isCompleted && isAdminOrReferee && (
@@ -325,6 +402,7 @@ const UmpireSheet: React.FC<UmpireSheetProps> = ({
                 Best of {bestOf}
               </span>
             )}
+            </div>
           </div>
 
           {/* Progress indicator */}
@@ -554,8 +632,12 @@ const UmpireSheet: React.FC<UmpireSheetProps> = ({
               )}
             </div>
             <div style={{ fontSize: 13, color: "#475569" }}>
-              <strong>Umpire Signature:</strong>{" "}
-              <span style={{ color: "#94a3b8" }}>…………………………</span>
+              <strong>Umpire:</strong>{" "}
+              <span style={{ color: "#0f172a", fontWeight: 700 }}>
+                {match.referee?.user
+                  ? `${match.referee.user.firstName} ${match.referee.user.lastName}`
+                  : "…………………………"}
+              </span>
             </div>
           </div>
 
@@ -603,6 +685,24 @@ const UmpireSheet: React.FC<UmpireSheetProps> = ({
           >
             Close
           </button>
+          {user?.role === "ADMIN" && !isCompleted && onAssignReferee && (
+            <button
+              onClick={() => onAssignReferee(match)}
+              style={{
+                padding: "9px 20px",
+                border: "1.5px solid #e2e8f0",
+                borderRadius: 10,
+                background: "#f8fafc",
+                color: "#0f172a",
+                fontWeight: 600,
+                fontSize: 14,
+                cursor: "pointer",
+                marginRight: "auto",
+              }}
+            >
+              👨‍⚖️ Assign Referee
+            </button>
+          )}
           {isAdminOrReferee && !isCompleted && (
             <button
               onClick={handleSave}
@@ -627,11 +727,14 @@ const UmpireSheet: React.FC<UmpireSheetProps> = ({
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 
 // ─── Main GroupStandings ──────────────────────────────────────────────────────
+
+import { AssignRefereeModal } from "./AssignRefereeModal";
 
 const GroupStandings: React.FC<Props> = ({
   tournamentId,
@@ -639,10 +742,34 @@ const GroupStandings: React.FC<Props> = ({
   isAdminOrReferee = false,
   onScoreUpdate,
 }) => {
+  const { user } = useAuth();
+  const isAdmin = user?.role === "ADMIN";
+  const isReferee = user?.role === "REFEREE";
   const [groups, setGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeMatch, setActiveMatch] = useState<GroupMatch | null>(null);
   const [activeGroupName, setActiveGroupName] = useState("");
+  const [assignRefereeMatch, setAssignRefereeMatch] = useState<GroupMatch | null>(null);
+
+  const canRecordActiveMatch =
+    isAdmin ||
+    (isReferee &&
+      activeMatch &&
+      (activeMatch.referee?.user?.id === user?.id ||
+        (activeMatch.referee as any)?.userId === user?.id ||
+        (activeMatch as any)?.refereeUserId === user?.id));
+
+  useEffect(() => {
+    if (activeMatch) {
+      for (const group of groups) {
+        const updatedMatch = group.matches?.find((m) => m.id === activeMatch.id);
+        if (updatedMatch && JSON.stringify(updatedMatch.referee) !== JSON.stringify(activeMatch.referee)) {
+          setActiveMatch(updatedMatch);
+          break;
+        }
+      }
+    }
+  }, [groups]);
 
   useEffect(() => {
     fetchStandings();
@@ -1057,7 +1184,7 @@ const GroupStandings: React.FC<Props> = ({
                 Loss
               </span>
               <span>MP = Match Points · R = Rank</span>
-              {isAdminOrReferee ? (
+              {isAdmin ? (
                 <span
                   style={{
                     marginLeft: "auto",
@@ -1066,6 +1193,16 @@ const GroupStandings: React.FC<Props> = ({
                   }}
                 >
                   💡 Click any cell to open umpire sheet
+                </span>
+              ) : isReferee ? (
+                <span
+                  style={{
+                    marginLeft: "auto",
+                    color: "#3b82f6",
+                    fontWeight: 600,
+                  }}
+                >
+                  💡 Click your assigned match to record score
                 </span>
               ) : (
                 <span style={{ marginLeft: "auto", color: "#94a3b8" }}>
@@ -1083,8 +1220,22 @@ const GroupStandings: React.FC<Props> = ({
           match={activeMatch}
           onClose={() => setActiveMatch(null)}
           onSave={handleSaveScore}
-          isAdminOrReferee={isAdminOrReferee}
+          isAdminOrReferee={Boolean(canRecordActiveMatch)}
           categoryName={activeGroupName}
+          onAssignReferee={isAdmin ? setAssignRefereeMatch : undefined}
+        />
+      )}
+
+      {assignRefereeMatch && (
+        <AssignRefereeModal
+          isOpen={true}
+          matchId={assignRefereeMatch.id}
+          onClose={() => setAssignRefereeMatch(null)}
+          onSuccess={() => {
+            setAssignRefereeMatch(null);
+            fetchStandings();
+          }}
+          isGroupMatch={true}
         />
       )}
     </div>

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import api from "../services/api";
 import toast from "react-hot-toast";
+import { CalendarIcon, TrophyIcon } from "@heroicons/react/24/outline";
 
 interface Match {
   id: string;
@@ -55,15 +56,15 @@ const MyMatches: React.FC = () => {
   const getStatusColor = (status: string) => {
     switch (status) {
       case "SCHEDULED":
-        return "bg-blue-100 text-blue-800";
+        return "bg-blue-500/20 text-blue-300 border border-blue-400/30";
       case "ONGOING":
-        return "bg-yellow-100 text-yellow-800";
+        return "bg-amber-500/20 text-amber-300 border border-amber-400/30";
       case "COMPLETED":
-        return "bg-green-100 text-green-800";
+        return "bg-emerald-500/20 text-emerald-300 border border-emerald-400/30";
       case "CANCELLED":
-        return "bg-red-100 text-red-800";
+        return "bg-red-500/20 text-red-300 border border-red-400/30";
       default:
-        return "bg-gray-100 text-gray-800";
+        return "bg-white/10 text-white/70 border border-white/20";
     }
   };
 
@@ -107,122 +108,165 @@ const MyMatches: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-64">
-        Loading your matches...
+      <div className="relative min-h-screen w-full overflow-hidden bg-[#061D23] text-white">
+        <div
+          className="fixed inset-0 bg-cover bg-center bg-no-repeat"
+          style={{ backgroundImage: "url('/bg1.png')" }}
+        />
+        <div className="fixed inset-0 bg-[#061D23]/25" />
+        <div className="relative z-10 flex min-h-screen items-center justify-center text-sm font-black uppercase tracking-[0.2em] text-[#4AEEFF]">
+          Loading your matches...
+        </div>
       </div>
     );
   }
 
   return (
-    <div>
-      <h1 className="text-3xl font-bold text-gray-900 mb-8">My Matches</h1>
+    <div className="relative min-h-screen w-full overflow-hidden bg-[#061D23] text-white">
+      <div
+        className="fixed inset-0 bg-cover bg-center bg-no-repeat"
+        style={{ backgroundImage: "url('/bg1.png')" }}
+      />
+      <div className="fixed inset-0 bg-[#061D23]/25" />
+      <div className="fixed inset-0 bg-gradient-to-b from-[#061D23]/20 via-transparent to-[#061D23]/35" />
 
-      <div className="text-right">
-        <p className="text-sm text-gray-600">Total: {totalMatches} matches</p>
-        <p className="text-sm text-gray-600">Win Rate: {winRate}%</p>
-      </div>
+      <main className="relative z-10 mx-auto flex min-h-screen w-full max-w-7xl flex-col space-y-6 p-4 sm:p-6 lg:p-8">
+        <header className="flex flex-col justify-between gap-4 rounded-[16px] border border-white/20 bg-[#061D23]/15 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl sm:flex-row sm:items-center">
+          <div>
+            <div className="mb-3 h-[3px] w-16 bg-[#4AEEFF]" />
+            <h1 className="text-2xl font-black uppercase tracking-[0.2em] text-white sm:text-4xl">
+              My Matches
+            </h1>
+            <p className="mt-1 text-xs uppercase tracking-[0.3em] text-[#4AEEFF]/90">
+              Track your tournament fixtures and results
+            </p>
+          </div>
+          <div className="flex gap-5 text-right">
+            <div>
+              <p className="text-2xl font-black text-[#4AEEFF]">{totalMatches}</p>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-white/60">Matches</p>
+            </div>
+            <div>
+              <p className="text-2xl font-black text-[#4AEEFF]">{winRate}%</p>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-white/60">Win Rate</p>
+            </div>
+          </div>
+        </header>
 
-      {/* Filter Tabs */}
-      <div className="flex gap-2 mb-6">
+        <section className="rounded-[16px] border border-white/20 bg-[#061D23]/10 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl">
+          <div className="mb-5 flex items-center gap-2">
+            <CalendarIcon className="h-5 w-5 text-[#4AEEFF]" />
+            <h2 className="text-xs font-black uppercase tracking-widest text-[#4AEEFF]">Match Log</h2>
+          </div>
+          <div className="flex flex-wrap gap-2">
         <button
           onClick={() => setFilter("all")}
-          className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+          className={`rounded-lg border px-4 py-2 text-xs font-black uppercase tracking-wider transition-all ${
             filter === "all"
-              ? "bg-primary-600 text-white"
-              : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+              ? "border-[#4AEEFF] bg-[#4AEEFF] text-[#061D23]"
+              : "border-white/10 bg-[#061D23]/40 text-white/70 hover:border-[#4AEEFF] hover:text-[#4AEEFF]"
           }`}
         >
           All Matches ({matches.length})
         </button>
         <button
           onClick={() => setFilter("upcoming")}
-          className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+          className={`rounded-lg border px-4 py-2 text-xs font-black uppercase tracking-wider transition-all ${
             filter === "upcoming"
-              ? "bg-primary-600 text-white"
-              : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+              ? "border-[#4AEEFF] bg-[#4AEEFF] text-[#061D23]"
+              : "border-white/10 bg-[#061D23]/40 text-white/70 hover:border-[#4AEEFF] hover:text-[#4AEEFF]"
           }`}
         >
           Upcoming ({matches.filter((m) => m.status === "SCHEDULED").length})
         </button>
         <button
           onClick={() => setFilter("completed")}
-          className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+          className={`rounded-lg border px-4 py-2 text-xs font-black uppercase tracking-wider transition-all ${
             filter === "completed"
-              ? "bg-primary-600 text-white"
-              : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+              ? "border-[#4AEEFF] bg-[#4AEEFF] text-[#061D23]"
+              : "border-white/10 bg-[#061D23]/40 text-white/70 hover:border-[#4AEEFF] hover:text-[#4AEEFF]"
           }`}
         >
           Completed ({completedMatches})
         </button>
-      </div>
+          </div>
+        </section>
 
       {filteredMatches.length === 0 ? (
-        <div className="card text-center py-12">
-          <p className="text-gray-500">No matches found.</p>
+        <section className="rounded-[16px] border border-white/20 bg-[#061D23]/10 p-12 text-center shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl">
+          <TrophyIcon className="mx-auto mb-3 h-10 w-10 text-white/20" />
+          <p className="text-sm font-semibold text-white/70">No matches found.</p>
           {filter !== "all" && (
             <button
               onClick={() => setFilter("all")}
-              className="btn-secondary mt-4 inline-block"
+              className="mt-4 rounded-lg border border-[#4AEEFF]/40 px-4 py-2 text-xs font-black uppercase tracking-wider text-[#4AEEFF] transition-all hover:bg-[#4AEEFF] hover:text-[#061D23]"
             >
               View All Matches
             </button>
           )}
-        </div>
+        </section>
       ) : (
         <div className="space-y-4">
           {filteredMatches.map((match) => (
-            <div key={match.id} className="card">
-              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <section key={match.id} className="rounded-[16px] border border-white/20 bg-[#061D23]/10 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl transition-all hover:border-[#4AEEFF]/60">
+              <div className="flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
                 <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-2">
+                  <div className="mb-3 flex items-center gap-2">
                     <span
-                      className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(match.status)}`}
+                      className={`rounded-md px-2.5 py-1 text-[10px] font-black uppercase tracking-wider ${getStatusColor(match.status)}`}
                     >
                       {getStatusText(match.status)}
                     </span>
-                    <span className="text-xs text-gray-500">
+                    <span className="text-xs uppercase tracking-wider text-white/50">
                       {match.category.name} • {match.round}
                     </span>
                   </div>
 
-                  <Link to={`/tournaments/${match.tournament.id}`}>
-                    <h3 className="text-lg font-semibold text-gray-900 hover:text-primary-600">
+                  <Link to={`/app/tournaments/${match.tournament.id}`}>
+                    <h3 className="text-lg font-black text-white transition-colors hover:text-[#4AEEFF]">
                       {match.tournament.name}
                     </h3>
                   </Link>
 
-                  <div className="mt-3 text-center">
+                  <div className="mt-4 text-center">
                     <div className="flex items-center justify-center gap-8">
                       <div className="text-right">
-                        <p className="font-medium text-gray-900">
+                        <p className="font-bold text-white">
                           {match.player1?.firstName} {match.player1?.lastName}
                         </p>
                       </div>
-                      <div className="text-xl font-bold text-gray-700">VS</div>
+                      <div className="text-xl font-black text-[#4AEEFF]">VS</div>
                       <div className="text-left">
-                        <p className="font-medium text-gray-900">
-                          {match.player2?.firstName} {match.player2?.lastName}
-                        </p>
+                        {match.player2 ? (
+                          <p className="font-bold text-white">
+                            {match.player2.firstName} {match.player2.lastName}
+                          </p>
+                        ) : (
+                          <p className="text-sm font-semibold text-white/60">
+                            Fixture not generated yet
+                          </p>
+                        )}
                       </div>
                     </div>
 
                     {match.score && (
-                      <div className="mt-2 text-lg font-semibold text-primary-600">
+                        <div className="mt-2 text-lg font-black text-[#4AEEFF]">
                         Score: {match.score}
                       </div>
                     )}
                   </div>
 
-                  <div className="mt-3 text-sm text-gray-500 text-center">
+                  <div className="mt-4 flex flex-wrap justify-center gap-x-3 gap-y-1 text-xs font-mono text-white/50">
                     📍 {match.tournament.venue} • 🕐{" "}
                     {new Date(match.scheduledTime).toLocaleString()}
                   </div>
                 </div>
               </div>
-            </div>
+            </section>
           ))}
         </div>
       )}
+      </main>
     </div>
   );
 };

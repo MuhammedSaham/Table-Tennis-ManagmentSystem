@@ -28,6 +28,7 @@ const Register: React.FC = () => {
       dateOfBirth: "",
       skillLevel: "Intermediate",
       clubAffiliation: "",
+      gender: "",
     },
   });
   const [errors, setErrors] = useState<FormErrors>({});
@@ -61,16 +62,28 @@ const Register: React.FC = () => {
 
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {};
-    if (!formData.firstName.trim()) newErrors.firstName = "First name is required";
-    else if (formData.firstName.trim().length < 2) newErrors.firstName = "First name must be at least 2 characters";
+    if (!formData.firstName.trim())
+      newErrors.firstName = "First name is required";
+    else if (formData.firstName.trim().length < 2)
+      newErrors.firstName = "First name must be at least 2 characters";
     if (!formData.lastName.trim()) newErrors.lastName = "Last name is required";
-    else if (formData.lastName.trim().length < 2) newErrors.lastName = "Last name must be at least 2 characters";
+    else if (formData.lastName.trim().length < 2)
+      newErrors.lastName = "Last name must be at least 2 characters";
     if (!formData.email.trim()) newErrors.email = "Email address is required";
-    else if (!/\S+@\S+\.\S+/.test(formData.email)) newErrors.email = "Please enter a valid email address (e.g., name@example.com)";
+    else if (!/\S+@\S+\.\S+/.test(formData.email))
+      newErrors.email =
+        "Please enter a valid email address (e.g., name@example.com)";
     if (!formData.phone.trim()) newErrors.phone = "Phone number is required";
-    else if (!validateSriLankanPhone(formData.phone)) newErrors.phone = "Please enter a valid Sri Lanka phone number (e.g., 071-1234567 or 011-1234567)";
+    else if (!validateSriLankanPhone(formData.phone))
+      newErrors.phone =
+        "Please enter a valid Sri Lanka phone number (e.g., 071-1234567 or 011-1234567)";
     if (!formData.password) newErrors.password = "Password is required";
-    else if (!passwordValid.length || !passwordValid.uppercase || !passwordValid.lowercase || !passwordValid.number)
+    else if (
+      !passwordValid.length ||
+      !passwordValid.uppercase ||
+      !passwordValid.lowercase ||
+      !passwordValid.number
+    )
       newErrors.password = "Please meet all password requirements below";
     if (!profileImage) newErrors.profileImage = "Profile picture is required";
     setErrors(newErrors);
@@ -80,8 +93,14 @@ const Register: React.FC = () => {
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (!file.type.startsWith("image/")) { toast.error("Please select an image file"); return; }
-      if (file.size > 5 * 1024 * 1024) { toast.error("Image must be less than 5MB"); return; }
+      if (!file.type.startsWith("image/")) {
+        toast.error("Please select an image file");
+        return;
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error("Image must be less than 5MB");
+        return;
+      }
       setProfileImage(file);
       setImagePreview(URL.createObjectURL(file));
     }
@@ -89,7 +108,10 @@ const Register: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validateForm()) { toast.error("Please fix the errors above"); return; }
+    if (!validateForm()) {
+      toast.error("Please fix the errors above");
+      return;
+    }
     setIsLoading(true);
     try {
       const registerData: any = {
@@ -102,12 +124,18 @@ const Register: React.FC = () => {
       };
       if (formData.role === "PLAYER") {
         registerData.playerProfile = {
-          dateOfBirth: formData.playerProfile.dateOfBirth ? new Date(formData.playerProfile.dateOfBirth) : undefined,
+          dateOfBirth: formData.playerProfile.dateOfBirth
+            ? new Date(formData.playerProfile.dateOfBirth)
+            : undefined,
           skillLevel: formData.playerProfile.skillLevel,
           clubAffiliation: formData.playerProfile.clubAffiliation,
+          gender: formData.playerProfile.gender,
         };
       } else if (formData.role === "REFEREE") {
-        registerData.refereeProfile = { certification: "National Level", experienceYears: 2 };
+        registerData.refereeProfile = {
+          certification: "National Level",
+          experienceYears: 2,
+        };
       } else if (formData.role === "ADMIN") {
         registerData.adminProfile = { department: "Tournament Management" };
       }
@@ -128,19 +156,33 @@ const Register: React.FC = () => {
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
+  ) => {
     const { name, value } = e.target;
     if (name === "password") validatePassword(value);
-    if (name === "skillLevel" || name === "clubAffiliation" || name === "dateOfBirth") {
-      setFormData((prev) => ({ ...prev, playerProfile: { ...prev.playerProfile, [name]: value } }));
+    if (
+      name === "skillLevel" ||
+      name === "clubAffiliation" ||
+      name === "dateOfBirth" ||
+      name === "gender"
+    ) {
+      setFormData((prev) => ({
+        ...prev,
+        playerProfile: { ...prev.playerProfile, [name]: value },
+      }));
     } else {
       setFormData((prev) => ({ ...prev, [name]: value }));
     }
-    if (errors[name as keyof FormErrors]) setErrors((prev) => ({ ...prev, [name]: undefined }));
+    if (errors[name as keyof FormErrors])
+      setErrors((prev) => ({ ...prev, [name]: undefined }));
   };
 
   const isPasswordValid =
-    passwordValid.length && passwordValid.uppercase && passwordValid.lowercase && passwordValid.number;
+    passwordValid.length &&
+    passwordValid.uppercase &&
+    passwordValid.lowercase &&
+    passwordValid.number;
 
   return (
     /* ─── Full-screen background ─── */
@@ -172,7 +214,8 @@ const Register: React.FC = () => {
           backdropFilter: "blur(24px)",
           WebkitBackdropFilter: "blur(24px)",
           border: "1.5px solid rgba(255, 255, 255, 0.25)",
-          boxShadow: "0 0 14px rgba(74, 238, 255, 0.10), 0 8px 32px rgba(0,0,0,0.18), 0 25px 50px rgba(0,0,0,0.35)",
+          boxShadow:
+            "0 0 14px rgba(74, 238, 255, 0.10), 0 8px 32px rgba(0,0,0,0.18), 0 25px 50px rgba(0,0,0,0.35)",
         }}
       >
         {/* ── Logo + heading ── */}
@@ -194,7 +237,6 @@ const Register: React.FC = () => {
 
         {/* ── Form ── */}
         <form onSubmit={handleSubmit} className="space-y-5">
-
           {/* First + Last name */}
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
@@ -281,16 +323,40 @@ const Register: React.FC = () => {
             </div>
             {/* Password strength indicators */}
             <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1">
-              <p className={passwordValid.length ? "text-sm font-bold text-[#061D23]" : "text-sm font-semibold text-[#0d4a75]"}>
+              <p
+                className={
+                  passwordValid.length
+                    ? "text-sm font-bold text-[#061D23]"
+                    : "text-sm font-semibold text-[#0d4a75]"
+                }
+              >
                 {passwordValid.length ? "✓" : "○"} At least 8 characters
               </p>
-              <p className={passwordValid.uppercase ? "text-sm font-bold text-[#061D23]" : "text-sm font-semibold text-[#0d4a75]"}>
+              <p
+                className={
+                  passwordValid.uppercase
+                    ? "text-sm font-bold text-[#061D23]"
+                    : "text-sm font-semibold text-[#0d4a75]"
+                }
+              >
                 {passwordValid.uppercase ? "✓" : "○"} One uppercase letter
               </p>
-              <p className={passwordValid.lowercase ? "text-sm font-bold text-[#061D23]" : "text-sm font-semibold text-[#0d4a75]"}>
+              <p
+                className={
+                  passwordValid.lowercase
+                    ? "text-sm font-bold text-[#061D23]"
+                    : "text-sm font-semibold text-[#0d4a75]"
+                }
+              >
                 {passwordValid.lowercase ? "✓" : "○"} One lowercase letter
               </p>
-              <p className={passwordValid.number ? "text-sm font-bold text-[#061D23]" : "text-sm font-semibold text-[#0d4a75]"}>
+              <p
+                className={
+                  passwordValid.number
+                    ? "text-sm font-bold text-[#061D23]"
+                    : "text-sm font-semibold text-[#0d4a75]"
+                }
+              >
                 {passwordValid.number ? "✓" : "○"} One number (0-9)
               </p>
             </div>
@@ -338,9 +404,12 @@ const Register: React.FC = () => {
               <option value="ADMIN">👑 Admin - Manage tournaments</option>
             </select>
             <p className="mt-1 text-sm font-semibold text-[#0d4a75]">
-              {formData.role === "PLAYER" && "Join tournaments, track your progress, and compete with others!"}
-              {formData.role === "REFEREE" && "Officiate matches, record scores, and manage games."}
-              {formData.role === "ADMIN" && "Create tournaments, manage players, and oversee everything."}
+              {formData.role === "PLAYER" &&
+                "Join tournaments, track your progress, and compete with others!"}
+              {formData.role === "REFEREE" &&
+                "Officiate matches, record scores, and manage games."}
+              {formData.role === "ADMIN" &&
+                "Create tournaments, manage players, and oversee everything."}
             </p>
           </div>
 
@@ -364,6 +433,27 @@ const Register: React.FC = () => {
                   Helps us determine your age category for tournaments
                 </p>
               </div>
+              <div>
+                <label className="mb-1.5 block text-sm font-black uppercase tracking-[0.18em] text-[#0d4a75]">
+                  Gender *
+                </label>
+
+                <select
+                  name="gender"
+                  value={formData.playerProfile.gender}
+                  onChange={handleChange}
+                  required
+                  className="w-full rounded-lg border border-white/60 bg-white/40 px-4 py-3 text-base text-[#061D23] focus:border-[#4AEEFF] focus:outline-none focus:ring-1 focus:ring-[#4AEEFF]"
+                >
+                  <option value="">Select Gender</option>
+                  <option value="MALE">Male</option>
+                  <option value="FEMALE">Female</option>
+                </select>
+
+                <p className="mt-1 text-sm font-semibold text-[#0d4a75]">
+                  Required for mixed doubles tournament validation
+                </p>
+              </div>
 
               <div>
                 <label className="mb-1.5 block text-sm font-black uppercase tracking-[0.18em] text-[#0d4a75]">
@@ -375,16 +465,24 @@ const Register: React.FC = () => {
                   onChange={handleChange}
                   className="w-full rounded-lg border border-white/60 bg-white/40 px-4 py-3 text-base text-[#061D23] focus:border-[#4AEEFF] focus:outline-none focus:ring-1 focus:ring-[#4AEEFF]"
                 >
-                  <option value="Beginner">🏅 Beginner - Just starting out</option>
-                  <option value="Intermediate">🎯 Intermediate - Have some experience</option>
-                  <option value="Advanced">🏆 Advanced - Competing at high level</option>
+                  <option value="Beginner">
+                    🏅 Beginner - Just starting out
+                  </option>
+                  <option value="Intermediate">
+                    🎯 Intermediate - Have some experience
+                  </option>
+                  <option value="Advanced">
+                    🏆 Advanced - Competing at high level
+                  </option>
                 </select>
               </div>
 
               <div>
                 <label className="mb-1.5 block text-sm font-black uppercase tracking-[0.18em] text-[#0d4a75]">
                   Club or Academy{" "}
-                  <span className="normal-case tracking-normal text-[#061D23]/50">(Optional)</span>
+                  <span className="normal-case tracking-normal text-[#061D23]/50">
+                    (Optional)
+                  </span>
                 </label>
                 <input
                   type="text"
@@ -395,6 +493,7 @@ const Register: React.FC = () => {
                   className="w-full rounded-lg border border-white/60 bg-white/40 px-4 py-3 text-base text-[#061D23] placeholder:text-[#061D23]/40 focus:border-[#4AEEFF] focus:outline-none focus:ring-1 focus:ring-[#4AEEFF]"
                 />
               </div>
+
             </>
           )}
 
@@ -410,11 +509,20 @@ const Register: React.FC = () => {
                     src={imagePreview}
                     alt="Profile preview"
                     className="rounded-full border-2 border-[#4AEEFF] object-cover"
-                    style={{ width: "64px", height: "64px", minWidth: "64px", maxWidth: "64px", display: "block" }}
+                    style={{
+                      width: "64px",
+                      height: "64px",
+                      minWidth: "64px",
+                      maxWidth: "64px",
+                      display: "block",
+                    }}
                   />
                   <button
                     type="button"
-                    onClick={() => { setProfileImage(null); setImagePreview(null); }}
+                    onClick={() => {
+                      setProfileImage(null);
+                      setImagePreview(null);
+                    }}
                     className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-[#4AEEFF] text-xs font-bold text-[#061D23] hover:bg-white"
                   >
                     ×
@@ -435,7 +543,9 @@ const Register: React.FC = () => {
             {errors.profileImage && (
               <p className="mt-1 text-xs text-red-600">{errors.profileImage}</p>
             )}
-            <p className="mt-1 text-sm font-semibold text-[#0d4a75]">JPG, PNG or GIF. Max 5MB.</p>
+            <p className="mt-1 text-sm font-semibold text-[#0d4a75]">
+              JPG, PNG or GIF. Max 5MB.
+            </p>
           </div>
 
           {/* Submit */}
@@ -451,7 +561,10 @@ const Register: React.FC = () => {
         {/* Sign in link */}
         <p className="mt-6 text-center text-base text-[#061D23]">
           Already have an account?{" "}
-          <Link to="/login" className="font-semibold text-[#0d4a75] hover:text-[#061D23]">
+          <Link
+            to="/login"
+            className="font-semibold text-[#0d4a75] hover:text-[#061D23]"
+          >
             Sign in here
           </Link>
         </p>
