@@ -91,6 +91,29 @@ export class TournamentService {
                 email: true,
               },
             },
+            team: {
+              include: {
+                members: {
+                  include: {
+                    player: {
+                      select: {
+                        id: true,
+                        firstName: true,
+                        lastName: true,
+                        email: true,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            category: {
+              select: {
+                id: true,
+                name: true,
+                type: true,
+              },
+            },
           },
         },
         matches: {

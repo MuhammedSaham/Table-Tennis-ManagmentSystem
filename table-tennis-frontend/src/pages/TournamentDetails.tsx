@@ -41,12 +41,27 @@ interface Match {
 interface Registration {
   id: string;
   playerId: string;
+  categoryId?: string;
   player: {
     id: string;
     firstName: string;
     lastName: string;
     email: string;
   };
+  teamId?: string;
+  team?: {
+    id: string;
+    name: string;
+    members?: Array<{
+      playerId: string;
+      player?: {
+        id: string;
+        firstName: string;
+        lastName: string;
+        email: string;
+      };
+    }>;
+  } | null;
   category?: {
     id: string;
     name: string;
@@ -686,7 +701,11 @@ const TournamentDetails: React.FC = () => {
   const isReferee = user?.role === "REFEREE";
 
   const userRegistrations =
-    tournament.registrations?.filter((r) => r.playerId === user?.id) || [];
+    tournament.registrations?.filter(
+      (r) =>
+        r.playerId === user?.id ||
+        r.team?.members?.some((m) => m.playerId === user?.id),
+    ) || [];
   const hasRegistration = userRegistrations.length > 0;
   const canRegister = isPlayer && isRegistrationOpen;
 
@@ -700,7 +719,7 @@ const TournamentDetails: React.FC = () => {
   const allEligibleRegistered =
     eligibleCategories.length > 0 &&
     eligibleCategories.every((cat) =>
-      userRegistrations.some((r) => r.categoryId === cat.id),
+      userRegistrations.some((r) => r.categoryId === cat.id || r.category?.id === cat.id),
     );
 
   // Function to check if category is doubles
@@ -1512,7 +1531,7 @@ const TournamentDetails: React.FC = () => {
           <div className="space-y-3 mb-4">
             {eligibleCategories.map((category) => {
               const categoryRegistration = userRegistrations.find(
-                (r) => r.categoryId === category.id,
+                (r) => r.categoryId === category.id || r.category?.id === category.id,
               );
               const isAlreadyRegistered = !!categoryRegistration;
               const isSelected = selectedCategories.includes(category.id);
@@ -1594,11 +1613,23 @@ const TournamentDetails: React.FC = () => {
                     {/* Action Area */}
                     <div className="flex items-center gap-2 self-end sm:self-auto flex-shrink-0">
                       {isAlreadyRegistered ? (
-                        <div className="flex items-center gap-1.5 px-3 py-1 text-[11px] font-black uppercase tracking-wider rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-sm">
-                          <span>✓</span> Enrolled
-                          {categoryRegistration.status && (
-                            <span className="text-[10px] opacity-80 font-mono">
-                              ({categoryRegistration.status})
+                        <div className="flex flex-col items-end gap-1">
+                          <div className="flex items-center gap-1.5 px-3 py-1 text-[11px] font-black uppercase tracking-wider rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-sm">
+                            <span>✓</span> Enrolled
+                            {categoryRegistration.status && (
+                              <span className="text-[10px] opacity-80 font-mono">
+                                ({categoryRegistration.status})
+                              </span>
+                            )}
+                          </div>
+                          {categoryRegistration.team?.members && categoryRegistration.team.members.length > 0 && (
+                            <span className="text-[11px] text-cyan-300 font-medium">
+                              Partner:{" "}
+                              {categoryRegistration.team.members
+                                .filter((m) => m.playerId !== user?.id)
+                                .map((m) => `${m.player?.firstName || ""} ${m.player?.lastName || ""}`.trim())
+                                .filter(Boolean)
+                                .join(", ") || (categoryRegistration.playerId !== user?.id ? `${categoryRegistration.player?.firstName || ""} ${categoryRegistration.player?.lastName || ""}`.trim() : "Confirmed Partner")}
                             </span>
                           )}
                         </div>
@@ -1782,12 +1813,26 @@ const TournamentDetails: React.FC = () => {
                 {tournament.registrations.map((registration) => (
                   <tr key={registration.id} className="hover:bg-white/5 transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <Link
-                        to={`/profile/${registration.player.id}`}
-                        className="text-white hover:text-[#4AEEFF] font-bold text-sm transition-colors"
-                      >
-                        {registration.player.firstName} {registration.player.lastName}
-                      </Link>
+                      {registration.team?.members && registration.team.members.length > 0 ? (
+                        <div className="flex flex-col">
+                          <span className="text-white font-bold text-sm">
+                            {registration.team.members
+                              .map((m) => `${m.player?.firstName || ""} ${m.player?.lastName || ""}`.trim())
+                              .filter(Boolean)
+                              .join(" & ") || `${registration.player?.firstName || ""} ${registration.player?.lastName || ""}`}
+                          </span>
+                          <span className="text-[10px] uppercase font-bold text-[#4AEEFF]">
+                            Doubles Pair
+                          </span>
+                        </div>
+                      ) : (
+                        <Link
+                          to={`/profile/${registration.player?.id}`}
+                          className="text-white hover:text-[#4AEEFF] font-bold text-sm transition-colors"
+                        >
+                          {registration.player?.firstName} {registration.player?.lastName}
+                        </Link>
+                      )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className="px-2.5 py-1 text-xs font-black uppercase tracking-wider rounded-md bg-[#4AEEFF]/15 text-[#4AEEFF] border border-[#4AEEFF]/30">
@@ -1795,7 +1840,12 @@ const TournamentDetails: React.FC = () => {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-white/70">
-                      {registration.player.email}
+                      {registration.team?.members && registration.team.members.length > 0
+                        ? registration.team.members
+                            .map((m) => m.player?.email)
+                            .filter(Boolean)
+                            .join(", ")
+                        : registration.player?.email}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-xs text-white/50 font-mono">
                       {new Date(registration.registeredAt).toLocaleDateString()}
