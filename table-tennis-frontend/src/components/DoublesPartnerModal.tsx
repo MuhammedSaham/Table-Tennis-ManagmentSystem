@@ -7,6 +7,11 @@ interface Partner {
   firstName: string;
   lastName: string;
   email: string;
+  playerProfile?: {
+    gender?: string;
+    skillLevel?: string;
+    clubAffiliation?: string;
+  };
 }
 
 interface Props {
@@ -31,7 +36,7 @@ const DoublesPartnerModal: React.FC<Props> = ({
   const [inviteSentTo, setInviteSentTo] = useState<string | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Debounced search
+  // Debounced search with category filter
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     if (query.trim().length < 2) {
@@ -41,21 +46,23 @@ const DoublesPartnerModal: React.FC<Props> = ({
     debounceRef.current = setTimeout(async () => {
       setSearching(true);
       try {
-        const res = await api.get(`/teams/invites/search?q=${encodeURIComponent(query.trim())}`);
+        const res = await api.get(
+          `/teams/invites/search?q=${encodeURIComponent(query.trim())}&categoryId=${encodeURIComponent(categoryId)}`
+        );
         setResults(res.data.data || []);
       } catch {
         setResults([]);
       } finally {
         setSearching(false);
       }
-    }, 400);
-  }, [query]);
+    }, 350);
+  }, [query, categoryId]);
 
   const handleSend = async (inviteeId: string, inviteeName: string) => {
     setSending(inviteeId);
     try {
       await api.post("/teams/invites/send", { tournamentId, categoryId, inviteeId });
-      toast.success(`Invite sent to ${inviteeName}!`);
+      toast.success(`Invitation sent to ${inviteeName}!`);
       setInviteSentTo(inviteeName);
       onInviteSent?.();
     } catch (e: any) {
@@ -65,253 +72,168 @@ const DoublesPartnerModal: React.FC<Props> = ({
     }
   };
 
+  const getInitials = (first?: string, last?: string) => {
+    const f = first?.[0] || "";
+    const l = last?.[0] || "";
+    return (f + l).toUpperCase() || "TT";
+  };
+
   return (
     <div
-      style={{
-        position: "fixed",
-        inset: 0,
-        background: "rgba(0,0,0,0.55)",
-        zIndex: 999,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        fontFamily: "'Segoe UI', system-ui, sans-serif",
-      }}
+      className="fixed inset-0 bg-black/75 backdrop-blur-sm z-[999] flex items-center justify-center p-4 animate-in fade-in duration-200"
       onClick={onClose}
     >
       <div
-        style={{
-          background: "#fff",
-          borderRadius: 18,
-          width: "100%",
-          maxWidth: 480,
-          boxShadow: "0 24px 60px rgba(0,0,0,0.22)",
-          overflow: "hidden",
-          margin: "0 16px",
-        }}
+        className="bg-[#082028] border border-cyan-500/25 rounded-2xl w-full max-w-lg shadow-[0_24px_70px_rgba(0,0,0,0.6)] overflow-hidden text-slate-100 flex flex-col max-h-[90vh]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div
-          style={{
-            background: "linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%)",
-            padding: "22px 24px",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
+        <div className="bg-gradient-to-r from-[#0b2b36] via-[#0e3542] to-[#082028] px-6 py-5 border-b border-cyan-500/20 flex items-start justify-between">
           <div>
-            <div style={{ fontSize: 11, fontWeight: 700, color: "#60a5fa", letterSpacing: 2, textTransform: "uppercase", marginBottom: 4 }}>
-              Doubles Registration
+            <div className="flex items-center gap-2 mb-1">
+              <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold tracking-widest uppercase bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+                Doubles Pairing
+              </span>
             </div>
-            <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: "#fff" }}>
-              Find Your Partner
+            <h2 className="text-xl font-bold text-white tracking-wide flex items-center gap-2">
+              <span>Find Your Partner</span>
             </h2>
-            <p style={{ margin: "4px 0 0", fontSize: 13, color: "#94a3b8" }}>
-              {categoryName}
+            <p className="text-xs text-cyan-200/70 mt-0.5">
+              Category: <span className="text-white font-medium">{categoryName}</span>
             </p>
           </div>
           <button
             onClick={onClose}
-            style={{
-              background: "rgba(255,255,255,0.1)",
-              border: "none",
-              borderRadius: 8,
-              width: 32,
-              height: 32,
-              cursor: "pointer",
-              color: "#fff",
-              fontSize: 18,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              flexShrink: 0,
-            }}
+            className="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white flex items-center justify-center transition-colors text-lg"
           >
-            ×
+            ✕
           </button>
         </div>
 
-        <div style={{ padding: 24 }}>
-          {/* Invite sent success banner */}
-          {inviteSentTo && (
-            <div
-              style={{
-                background: "#f0fdf4",
-                border: "1.5px solid #86efac",
-                borderRadius: 12,
-                padding: "14px 16px",
-                marginBottom: 20,
-                display: "flex",
-                alignItems: "center",
-                gap: 10,
-              }}
-            >
-              <span style={{ fontSize: 20 }}>✅</span>
+        {/* Body */}
+        <div className="p-6 space-y-4 overflow-y-auto flex-1">
+          {/* Invite sent confirmation */}
+          {inviteSentTo ? (
+            <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-start gap-3 animate-in fade-in">
+              <span className="text-2xl">🎉</span>
               <div>
-                <div style={{ fontWeight: 700, fontSize: 13, color: "#15803d" }}>
-                  Invite Sent!
+                <div className="text-sm font-bold text-emerald-300">
+                  Invitation Sent to {inviteSentTo}!
                 </div>
-                <div style={{ fontSize: 12, color: "#16a34a", marginTop: 2 }}>
-                  Waiting for {inviteSentTo} to accept. They'll see it in their notifications.
+                <div className="text-xs text-emerald-200/80 mt-1 leading-relaxed">
+                  As soon as {inviteSentTo} clicks <strong>Accept</strong> on this tournament, your doubles team will be officially confirmed and ready for the bracket!
                 </div>
+              </div>
+            </div>
+          ) : (
+            <div className="p-3.5 rounded-xl bg-cyan-950/40 border border-cyan-500/15 text-xs text-cyan-100/80 leading-relaxed flex items-center gap-2.5">
+              <span className="text-cyan-400 text-base">💡</span>
+              <div>
+                Search a registered college player below and click <strong className="text-cyan-300">Invite</strong>. When they accept, your pair is automatically enrolled!
               </div>
             </div>
           )}
 
-          {/* How it works */}
-          {!inviteSentTo && (
-            <div
-              style={{
-                background: "#f8fafc",
-                borderRadius: 10,
-                padding: "12px 14px",
-                marginBottom: 20,
-                fontSize: 12,
-                color: "#64748b",
-                lineHeight: 1.6,
-              }}
-            >
-              <strong style={{ color: "#0f172a" }}>How it works:</strong> Search your partner below → Send invite → They accept via their notifications → Admin approves your team registration.
-            </div>
-          )}
-
-          {/* Search bar */}
-          <div style={{ position: "relative", marginBottom: 16 }}>
+          {/* Search Input */}
+          <div className="relative">
             <input
-              id="partner-search-input"
+              id="doubles-partner-search-input"
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search by name or email…"
+              placeholder="Search partner by name or email..."
               autoFocus
-              style={{
-                width: "100%",
-                padding: "12px 16px 12px 44px",
-                border: "1.5px solid #e2e8f0",
-                borderRadius: 10,
-                fontSize: 14,
-                outline: "none",
-                boxSizing: "border-box",
-              }}
+              className="w-full bg-[#05171d] border border-cyan-500/30 focus:border-cyan-400 rounded-xl px-4 py-3 pl-11 text-sm text-white placeholder-slate-500 outline-none focus:ring-2 focus:ring-cyan-500/20 transition-all"
             />
-            <span
-              style={{
-                position: "absolute",
-                left: 14,
-                top: "50%",
-                transform: "translateY(-50%)",
-                fontSize: 18,
-                color: "#94a3b8",
-                pointerEvents: "none",
-              }}
-            >
+            <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-cyan-400/60 pointer-events-none text-base">
               🔍
             </span>
             {searching && (
-              <span
-                style={{
-                  position: "absolute",
-                  right: 14,
-                  top: "50%",
-                  transform: "translateY(-50%)",
-                  fontSize: 12,
-                  color: "#94a3b8",
-                }}
-              >
-                Searching…
+              <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs text-cyan-400 animate-pulse">
+                Searching...
               </span>
             )}
           </div>
 
-          {/* Results */}
-          <div style={{ maxHeight: 260, overflowY: "auto" }}>
+          {/* Results List */}
+          <div className="space-y-2 min-h-[160px] max-h-[260px] overflow-y-auto pr-1">
             {query.trim().length >= 2 && !searching && results.length === 0 && (
-              <div style={{ textAlign: "center", padding: "28px 0", color: "#94a3b8", fontSize: 13 }}>
-                <div style={{ fontSize: 32, marginBottom: 8 }}>👤</div>
-                No players found for "{query}"
+              <div className="text-center py-8 text-slate-400 text-xs">
+                <div className="text-3xl mb-2 opacity-50">👤</div>
+                No eligible players found matching &ldquo;{query}&rdquo;
+                <div className="text-[11px] text-slate-500 mt-1">
+                  (Players already registered or of ineligible gender are hidden)
+                </div>
               </div>
             )}
 
             {query.trim().length < 2 && (
-              <div style={{ textAlign: "center", padding: "28px 0", color: "#94a3b8", fontSize: 13 }}>
-                <div style={{ fontSize: 32, marginBottom: 8 }}>🏓</div>
-                Type at least 2 characters to search
+              <div className="text-center py-8 text-slate-400 text-xs">
+                <div className="text-3xl mb-2 opacity-50">🏓</div>
+                Type at least 2 characters to search registered players
               </div>
             )}
 
-            {results.map((p) => (
-              <div
-                key={p.id}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  padding: "12px 14px",
-                  borderRadius: 10,
-                  marginBottom: 8,
-                  background: "#f8fafc",
-                  border: "1px solid #e2e8f0",
-                }}
-              >
-                <div>
-                  <div style={{ fontWeight: 700, fontSize: 14, color: "#0f172a" }}>
-                    {p.firstName} {p.lastName}
-                  </div>
-                  <div style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>
-                    {p.email}
-                  </div>
-                </div>
-                <button
-                  id={`invite-btn-${p.id}`}
-                  onClick={() => handleSend(p.id, `${p.firstName} ${p.lastName}`)}
-                  disabled={!!sending || !!inviteSentTo}
-                  style={{
-                    background: (sending === p.id || inviteSentTo)
-                      ? "#e2e8f0"
-                      : "linear-gradient(135deg, #2563eb, #1d4ed8)",
-                    color: (sending === p.id || inviteSentTo) ? "#64748b" : "#fff",
-                    border: "none",
-                    borderRadius: 8,
-                    padding: "8px 16px",
-                    fontSize: 13,
-                    fontWeight: 700,
-                    cursor: (sending || inviteSentTo) ? "not-allowed" : "pointer",
-                    whiteSpace: "nowrap",
-                    flexShrink: 0,
-                  }}
+            {results.map((p) => {
+              const gender = p.playerProfile?.gender;
+              return (
+                <div
+                  key={p.id}
+                  className="flex items-center justify-between p-3 rounded-xl bg-[#061920] border border-cyan-500/15 hover:border-cyan-500/35 transition-all group"
                 >
-                  {sending === p.id ? "Sending…" : "📩 Invite"}
-                </button>
-              </div>
-            ))}
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-cyan-600 to-teal-800 text-white font-bold text-xs flex items-center justify-center flex-shrink-0 shadow-inner">
+                      {getInitials(p.firstName, p.lastName)}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-sm font-semibold text-white truncate flex items-center gap-2">
+                        <span>
+                          {p.firstName} {p.lastName}
+                        </span>
+                        {gender && (
+                          <span
+                            className={`px-1.5 py-0.2 rounded text-[10px] font-semibold uppercase tracking-wider ${
+                              gender === "MALE"
+                                ? "bg-sky-500/15 text-sky-300 border border-sky-500/30"
+                                : "bg-rose-500/15 text-rose-300 border border-rose-500/30"
+                            }`}
+                          >
+                            {gender}
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-xs text-slate-400 truncate">{p.email}</div>
+                    </div>
+                  </div>
+
+                  <button
+                    id={`invite-partner-btn-${p.id}`}
+                    onClick={() => handleSend(p.id, `${p.firstName} ${p.lastName}`)}
+                    disabled={!!sending || !!inviteSentTo}
+                    className={`ml-3 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex-shrink-0 flex items-center gap-1.5 ${
+                      sending === p.id || inviteSentTo
+                        ? "bg-slate-700/50 text-slate-400 cursor-not-allowed"
+                        : "bg-gradient-to-r from-cyan-500 to-teal-500 hover:from-cyan-400 hover:to-teal-400 text-slate-950 shadow-[0_4px_12px_rgba(74,238,255,0.25)] active:scale-95"
+                    }`}
+                  >
+                    {sending === p.id ? "Sending..." : "📩 Send Invite"}
+                  </button>
+                </div>
+              );
+            })}
           </div>
         </div>
 
         {/* Footer */}
-        <div
-          style={{
-            padding: "16px 24px",
-            borderTop: "1px solid #f1f5f9",
-            display: "flex",
-            justifyContent: "flex-end",
-          }}
-        >
+        <div className="px-6 py-4 bg-[#05171d]/80 border-t border-cyan-500/15 flex items-center justify-between">
+          <span className="text-[11px] text-slate-400">
+            {inviteSentTo ? "✅ Ready to close" : "Pairing is confirmed upon partner acceptance"}
+          </span>
           <button
             onClick={onClose}
-            style={{
-              background: "#f1f5f9",
-              border: "none",
-              borderRadius: 10,
-              padding: "10px 24px",
-              fontWeight: 700,
-              fontSize: 14,
-              color: "#374151",
-              cursor: "pointer",
-            }}
+            className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white text-xs font-semibold transition-colors"
           >
-            Close
+            {inviteSentTo ? "Done" : "Cancel"}
           </button>
         </div>
       </div>
