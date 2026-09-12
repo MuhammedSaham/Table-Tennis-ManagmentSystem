@@ -11,7 +11,6 @@ import KnockoutBracket from "../components/KnockoutBracket";
 import GuestRegistrationModal from "../components/GuestRegistrationModal";
 import { Link } from "react-router-dom";
 import CreateKnockoutModal from "../components/CreateKnockoutModal";
-import DoublesPartnerModal from "../components/DoublesPartnerModal";
 
 interface Category {
   id: string;
@@ -41,27 +40,12 @@ interface Match {
 interface Registration {
   id: string;
   playerId: string;
-  categoryId?: string;
   player: {
     id: string;
     firstName: string;
     lastName: string;
     email: string;
   };
-  teamId?: string;
-  team?: {
-    id: string;
-    name: string;
-    members?: Array<{
-      playerId: string;
-      player?: {
-        id: string;
-        firstName: string;
-        lastName: string;
-        email: string;
-      };
-    }>;
-  } | null;
   category?: {
     id: string;
     name: string;
@@ -123,44 +107,23 @@ const TournamentDetails: React.FC = () => {
     maxPlayers: "",
   });
   const [editCategories, setEditCategories] = useState<Category[]>([]);
-  
-  // Doubles Pairing States
-  const [partnerModalCategory, setPartnerModalCategory] = useState<{
-    id: string;
-    name: string;
-  } | null>(null);
-  const [myPendingInvites, setMyPendingInvites] = useState<any[]>([]);
-  const [mySentInvites, setMySentInvites] = useState<any[]>([]);
-  const [respondingInviteId, setRespondingInviteId] = useState<string | null>(null);
-
+  const [partnerDetails, setPartnerDetails] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+  });
+  const [showPartnerForm, setShowPartnerForm] = useState(false);
+  const [selectedDoublesCategory, setSelectedDoublesCategory] = useState<
+    string | null
+  >(null);
   const [showGuestModal, setShowGuestModal] = useState(false);
   const [showKnockoutModal, setShowKnockoutModal] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
-  const [showIneligible, setShowIneligible] = useState(false);
-  const [confirmDrawCategory, setConfirmDrawCategory] = useState<Category | null>(null);
-
-  const fetchInvites = async () => {
-    if (!user || user.role !== "PLAYER" || !id) return;
-    try {
-      const [receivedRes, sentRes] = await Promise.all([
-        api.get("/teams/invites/my-invites"),
-        api.get("/teams/invites/sent-invites"),
-      ]);
-      const allReceived = receivedRes.data.data || [];
-      const allSent = sentRes.data.data || [];
-      setMyPendingInvites(
-        allReceived.filter((inv: any) => inv.tournament?.id === id),
-      );
-      setMySentInvites(allSent.filter((inv: any) => inv.tournament?.id === id));
-    } catch (err) {
-      console.error("Failed to fetch doubles invites", err);
-    }
-  };
 
   useEffect(() => {
     fetchTournamentDetails();
-    fetchInvites();
-  }, [id, user]);
+  }, [id]);
 
   useEffect(() => {
     if (tournament?.categories?.length && !activeCategoryId) {
@@ -173,6 +136,10 @@ const TournamentDetails: React.FC = () => {
       fetchWinners();
     }
   }, [tournament?.status]);
+
+  if (!id) {
+    return <div className="text-center py-12">Invalid tournament ID</div>;
+  }
 
   const calculateAge = (dateOfBirth: string | Date): number => {
     const birthDate = new Date(dateOfBirth);
@@ -231,7 +198,7 @@ const TournamentDetails: React.FC = () => {
 
       if (user?.role === "ADMIN") {
         const regResponse = await api.get(
-          `/registrations/tournaments/${id}${id}${selectedCategories ? `?categoryId=${selectedCategories}` : ""}`,
+          `/registrations/tournaments/${id}${selectedCategories.length ? `?categoryId=${selectedCategories.join(",")}` : ""}`,
         );
         tournamentData.registrations = regResponse.data.data;
       }
@@ -268,43 +235,6 @@ const TournamentDetails: React.FC = () => {
     }
   };
 
-  const handleAcceptInvite = async (inviteId: string) => {
-    setRespondingInviteId(inviteId);
-    try {
-      await api.post(`/teams/invites/${inviteId}/accept`);
-      toast.success("Doubles partner invite accepted! You are officially registered.");
-      await fetchTournamentDetails();
-      await fetchInvites();
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || "Failed to accept invite");
-    } finally {
-      setRespondingInviteId(null);
-    }
-  };
-
-  const handleDeclineInvite = async (inviteId: string) => {
-    setRespondingInviteId(inviteId);
-    try {
-      await api.post(`/teams/invites/${inviteId}/decline`);
-      toast.success("Doubles invite declined");
-      await fetchInvites();
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || "Failed to decline invite");
-    } finally {
-      setRespondingInviteId(null);
-    }
-  };
-
-  const handleCancelSentInvite = async (inviteId: string) => {
-    try {
-      await api.delete(`/teams/invites/${inviteId}/cancel`);
-      toast.success("Invitation cancelled");
-      await fetchInvites();
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || "Failed to cancel invite");
-    }
-  };
-
   const handleRegister = async () => {
     if (selectedCategories.length === 0) {
       toast.error("Please select at least one category");
@@ -329,6 +259,24 @@ const TournamentDetails: React.FC = () => {
       }
     }
 
+    // Check if any selected category is doubles and partner details are missing
+    const hasDoublesWithoutPartner = selectedCategories.some((catId) => {
+      const category = tournament?.categories.find((c) => c.id === catId);
+      const isDoubles =
+        category?.type === "DOUBLES" || category?.type === "MIXED";
+      return (
+        isDoubles &&
+        (!partnerDetails.firstName ||
+          !partnerDetails.lastName ||
+          !partnerDetails.email)
+      );
+    });
+
+    if (hasDoublesWithoutPartner) {
+      toast.error("Please fill in partner details for doubles categories");
+      return;
+    }
+
     setRegistering(true);
     let successCount = 0;
     let failCount = 0;
@@ -338,13 +286,27 @@ const TournamentDetails: React.FC = () => {
         const category = tournament?.categories.find(
           (c) => c.id === categoryId,
         );
+        const isDoubles =
+          category?.type === "DOUBLES" || category?.type === "MIXED";
 
         try {
-          // Register singles directly
-          await api.post("/registrations", {
-            tournamentId: id,
-            categoryId: categoryId,
-          });
+          if (isDoubles) {
+            // For doubles, create a team
+            await api.post("/teams", {
+              name: `${tournament?.name} - ${category?.name}`,
+              tournamentId: id,
+              categoryId: categoryId,
+              captainId: user?.id,
+              memberIds: [],
+              partnerDetails: partnerDetails,
+            });
+          } else {
+            // For singles, register directly
+            await api.post("/registrations", {
+              tournamentId: id,
+              categoryId: categoryId,
+            });
+          }
           successCount++;
         } catch (err: any) {
           console.error(`Failed to register for category ${categoryId}:`, err);
@@ -363,6 +325,9 @@ const TournamentDetails: React.FC = () => {
         toast.success(
           `Registered for ${successCount} category(s) successfully!`,
         );
+        if (partnerDetails.email) {
+          toast.success(`Partner invitation sent to ${partnerDetails.email}`);
+        }
       }
       if (failCount > 1) {
         toast.error(`Failed to register for ${failCount} categories`);
@@ -370,6 +335,9 @@ const TournamentDetails: React.FC = () => {
 
       await fetchTournamentDetails();
       setSelectedCategories([]);
+      setPartnerDetails({ firstName: "", lastName: "", email: "", phone: "" });
+      setShowPartnerForm(false);
+      setSelectedDoublesCategory(null);
     } catch (error: any) {
       console.error("Registration error:", error);
     } finally {
@@ -407,14 +375,6 @@ const TournamentDetails: React.FC = () => {
       setCreatingGroups(false);
     }
   };*/
-
-  const handleRecordScores = () => {
-    if (!activeCategoryId) {
-      toast.error("Please select a category first");
-      return;
-    }
-    setShowScoreModal(true);
-  };
 
   const handleGenerateGroupMatches = async () => {
     if (!activeCategoryId) {
@@ -466,13 +426,16 @@ const TournamentDetails: React.FC = () => {
   };
 
   const handleGenerateBracket = async (categoryId: string) => {
+    if (
+      !window.confirm("This will create matches for this category. Continue?")
+    )
+      return;
     setGenerating(categoryId);
     try {
       await api.post(
         `/brackets/tournaments/${id}/categories/${categoryId}/generate`,
       );
       toast.success("Bracket generated successfully!");
-      setConfirmDrawCategory(null);
       setRefreshKnockout((prev) => prev + 1);
       fetchTournamentDetails();
     } catch (error) {
@@ -665,14 +628,6 @@ const TournamentDetails: React.FC = () => {
     </div>
   );
 
-  if (!id) {
-    return wrapInBaseLayout(
-      <div className="flex flex-col items-center justify-center rounded-[16px] border border-white/20 bg-[#061D23]/25 p-12 text-center backdrop-blur-xl">
-        <h2 className="text-xl font-black uppercase tracking-wider text-white">Invalid Tournament ID</h2>
-      </div>
-    );
-  }
-
   if (loading) {
     return wrapInBaseLayout(
       <div className="flex flex-col items-center justify-center py-32">
@@ -700,18 +655,9 @@ const TournamentDetails: React.FC = () => {
   const isReferee = user?.role === "REFEREE";
 
   const userRegistrations =
-    tournament.registrations?.filter(
-      (r) =>
-        r.playerId === user?.id ||
-        r.team?.members?.some((m) => m.playerId === user?.id || m.player?.id === user?.id),
-    ) || [];
+    tournament.registrations?.filter((r) => r.playerId === user?.id) || [];
   const hasRegistration = userRegistrations.length > 0;
   const canRegister = isPlayer && isRegistrationOpen;
-
-  // Function to check if category is doubles
-  const isDoublesCategory = (categoryType: string) => {
-    return categoryType === "DOUBLES" || categoryType === "MIXED" || categoryType === "MIXED_DOUBLES";
-  };
 
   const eligibleCategories = tournament.categories.filter(
     (c) => isPlayerEligibleForCategory(c, playerAge, playerGender).eligible,
@@ -720,19 +666,16 @@ const TournamentDetails: React.FC = () => {
     (c) => !isPlayerEligibleForCategory(c, playerAge, playerGender).eligible,
   );
 
-  const eligibleSinglesCategories = eligibleCategories.filter(
-    (cat) =>
-      !isDoublesCategory(cat.type) &&
-      !userRegistrations.some(
-        (r) => r.categoryId === cat.id || r.category?.id === cat.id,
-      ),
-  );
-
   const allEligibleRegistered =
     eligibleCategories.length > 0 &&
     eligibleCategories.every((cat) =>
-      userRegistrations.some((r) => r.categoryId === cat.id || r.category?.id === cat.id),
+      userRegistrations.some((r) => r.category?.id === cat.id),
     );
+
+  // Function to check if category is doubles
+  const isDoublesCategory = (categoryType: string) => {
+    return categoryType === "DOUBLES" || categoryType === "MIXED";
+  };
 
   return wrapInBaseLayout(
     <>
@@ -844,62 +787,10 @@ const TournamentDetails: React.FC = () => {
         </div>
       </header>
 
-      {/* Incoming Partner Invites Alert Banner */}
-      {myPendingInvites.length > 0 && (
-        <div className="rounded-[18px] border border-cyan-500/40 bg-gradient-to-r from-[#0b2b36] via-[#08242c] to-[#061D23] p-5 sm:p-6 shadow-[0_12px_40px_-10px_rgba(74,238,255,0.3)] backdrop-blur-xl animate-in fade-in">
-          <div className="flex items-center gap-2 mb-3">
-            <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping" />
-            <span className="text-xs font-black uppercase tracking-widest text-[#4AEEFF]">
-              ⚡ Action Required • Doubles Partner Invitations ({myPendingInvites.length})
-            </span>
-          </div>
-          <div className="space-y-3">
-            {myPendingInvites.map((inv) => (
-              <div
-                key={inv.id}
-                className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl bg-black/40 border border-cyan-500/25"
-              >
-                <div>
-                  <p className="text-sm font-bold text-white flex items-center gap-2 flex-wrap">
-                    <span className="text-[#4AEEFF] font-black text-base">
-                      {inv.inviter?.firstName} {inv.inviter?.lastName}
-                    </span>
-                    <span>invited you to partner with them!</span>
-                  </p>
-                  <p className="text-xs text-slate-300 mt-1">
-                    Tournament Division:{" "}
-                    <span className="text-white font-bold">{inv.category?.name}</span>{" "}
-                    <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded bg-white/10 text-cyan-200 ml-1">
-                      {inv.category?.type}
-                    </span>
-                  </p>
-                </div>
-                <div className="flex items-center gap-2.5 self-end sm:self-auto flex-shrink-0">
-                  <button
-                    onClick={() => handleAcceptInvite(inv.id)}
-                    disabled={respondingInviteId === inv.id}
-                    className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-teal-500 hover:from-cyan-400 hover:to-teal-400 text-slate-950 text-xs font-black uppercase tracking-wider shadow-[0_4px_14px_rgba(74,238,255,0.35)] transition-all active:scale-95 disabled:opacity-50 flex items-center gap-1.5"
-                  >
-                    {respondingInviteId === inv.id ? "Enrolling..." : "✓ Accept & Confirm Team"}
-                  </button>
-                  <button
-                    onClick={() => handleDeclineInvite(inv.id)}
-                    disabled={respondingInviteId === inv.id}
-                    className="px-3.5 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white text-xs font-bold transition-all disabled:opacity-50"
-                  >
-                    Decline
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
       {/* Edit Tournament Modal */}
       {showEditModal && (
-        <div className="fixed inset-0 bg-black/75 backdrop-blur-md flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
-          <div className="bg-[#061D23]/95 border border-[#4AEEFF]/30 rounded-2xl p-6 sm:p-8 max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-[0_10px_40px_rgba(0,0,0,0.8)] text-white custom-scrollbar">
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/70 p-4 pt-24 backdrop-blur-sm animate-in fade-in duration-200 sm:pt-28">
+          <div className="w-full max-w-4xl rounded-2xl border border-white/20 bg-[#061D23]/90 p-6 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.8)] text-white backdrop-blur-2xl sm:p-8">
             <div className="flex items-center justify-between pb-4 mb-6 border-b border-white/10">
               <div className="flex items-center gap-3">
                 <span className="w-2.5 h-6 bg-[#4AEEFF] rounded-full shadow-[0_0_10px_#4AEEFF]"></span>
@@ -1384,7 +1275,7 @@ const TournamentDetails: React.FC = () => {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          setConfirmDrawCategory(category);
+                          handleGenerateBracket(category.id);
                         }}
                         disabled={generating === category.id}
                         className="w-full rounded-xl border border-[#4AEEFF]/40 bg-[#4AEEFF]/15 hover:bg-[#4AEEFF] text-[#4AEEFF] hover:text-[#061D23] px-3.5 py-2 text-xs font-black uppercase tracking-wider transition-all duration-200 flex items-center justify-center gap-2 shadow-sm disabled:opacity-50 active:scale-[0.98]"
@@ -1519,84 +1410,50 @@ const TournamentDetails: React.FC = () => {
         </div>
       )}
 
-      {/* Professional Tournament Division Entry Section */}
+      {/* Registration Form with Age Filtering */}
       {canRegister && tournament.categories.length > 0 && (
-        <div className="rounded-[18px] border border-white/20 bg-[#061D23]/30 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl mb-6">
-          {/* Athlete Passport & Eligibility Bar */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-white/10">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-400 to-teal-500 text-slate-950 font-black text-base flex items-center justify-center shadow-md shadow-cyan-500/20 flex-shrink-0">
-                🏓
-              </div>
-              <div>
-                <h3 className="text-base sm:text-lg font-black uppercase tracking-wider text-white">
-                  Tournament Division Entry
-                </h3>
-                <p className="text-xs text-white/60">
-                  Official player registration & doubles team pairings
-                </p>
-              </div>
+        <div className="rounded-[16px] border border-white/20 bg-[#061D23]/25 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl mb-6">
+          <h3 className="text-xl font-black uppercase tracking-wider text-white mb-2">
+            Register for this Tournament
+          </h3>
+          {playerAge !== null && (
+            <div className="rounded-xl border border-[#4AEEFF]/30 bg-[#4AEEFF]/10 p-3.5 mb-4 text-xs font-mono text-[#4AEEFF]">
+              Your verified age: <strong className="text-white text-sm">{playerAge} years</strong>
             </div>
+          )}
 
-            <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
-              {playerAge !== null && (
-                <div className="flex items-center gap-2 bg-black/40 border border-cyan-500/30 px-3.5 py-1.5 rounded-xl text-xs">
-                  <span className="text-white/50">Verified:</span>
-                  <span className="font-bold text-[#4AEEFF]">{playerAge} yrs</span>
-                  <span className="text-white/30">•</span>
-                  <span className="font-bold text-white capitalize">{playerGender?.toLowerCase() || "Athlete"}</span>
-                </div>
-              )}
-              <span className="px-3 py-1.5 rounded-xl bg-cyan-400/10 text-cyan-300 border border-cyan-400/25 text-xs font-bold font-mono">
-                {userRegistrations.length} / {eligibleCategories.length} Divisions Enrolled
-              </span>
-            </div>
-          </div>
+          <p className="text-xs uppercase tracking-wider text-white/60 mb-3 font-semibold">
+            Select categories to register:
+          </p>
 
-          <div className="space-y-3 mb-5">
+          <div className="space-y-3 mb-4">
             {eligibleCategories.map((category) => {
               const categoryRegistration = userRegistrations.find(
-                (r) => r.categoryId === category.id || r.category?.id === category.id,
+                (r) => r.category?.id === category.id,
               );
               const isAlreadyRegistered = !!categoryRegistration;
               const isSelected = selectedCategories.includes(category.id);
-              const isFull = category.currentParticipants >= category.maxParticipants;
+              const isFull =
+                category.currentParticipants >= category.maxParticipants;
               const isDoubles = isDoublesCategory(category.type);
-              const pendingSentInvite = mySentInvites.find(
-                (inv) => inv.categoryId === category.id,
-              );
-              const pendingReceivedInvite = myPendingInvites.find(
-                (inv) => inv.categoryId === category.id,
-              );
-
-              // Extract confirmed partner name if registered
-              const partnerMember = categoryRegistration?.team?.members?.find((m: any) => m.playerId !== user?.id);
-              const partnerName = partnerMember
-                ? `${partnerMember.player?.firstName || ""} ${partnerMember.player?.lastName || ""}`.trim()
-                : (categoryRegistration?.playerId !== user?.id
-                  ? `${categoryRegistration?.player?.firstName || ""} ${categoryRegistration?.player?.lastName || ""}`.trim()
-                  : "Confirmed Partner");
 
               return (
-                <div
-                  key={category.id}
-                  className={`rounded-xl border transition-all p-4 ${
-                    isAlreadyRegistered
-                      ? "border-emerald-500/50 bg-gradient-to-r from-emerald-950/40 via-emerald-900/15 to-[#061D23]/60 shadow-sm"
-                      : isSelected
-                      ? "border-[#4AEEFF] bg-[#4AEEFF]/15 shadow-md shadow-[#4AEEFF]/10"
-                      : "border-white/10 bg-[#061D23]/40 hover:border-white/20"
-                  }`}
-                >
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div className="flex items-center gap-3.5 flex-1 min-w-0">
+                <div key={category.id}>
+                  <label
+                    className={`flex items-center justify-between p-4 rounded-xl border transition-all ${
+                      isAlreadyRegistered
+                        ? "border-emerald-500/40 bg-emerald-500/10 cursor-default"
+                        : isSelected
+                        ? "border-[#4AEEFF] bg-[#4AEEFF]/15 shadow-md shadow-[#4AEEFF]/10 cursor-pointer"
+                        : isFull
+                        ? "border-white/10 bg-[#061D23]/40 opacity-50 cursor-not-allowed"
+                        : "border-white/10 bg-[#061D23]/40 hover:border-white/25 hover:bg-[#061D23]/60 cursor-pointer"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3.5 flex-1">
                       {isAlreadyRegistered ? (
-                        <div className="w-7 h-7 rounded-lg bg-emerald-500/20 border border-emerald-400/50 flex items-center justify-center text-emerald-300 font-black text-sm shadow-[0_0_12px_rgba(16,185,129,0.3)] flex-shrink-0">
+                        <div className="w-5 h-5 rounded-md bg-emerald-500/25 border border-emerald-400/60 flex items-center justify-center text-emerald-300 font-black text-xs shadow-[0_0_10px_rgba(16,185,129,0.3)]">
                           ✓
-                        </div>
-                      ) : isDoubles ? (
-                        <div className="w-7 h-7 rounded-lg bg-cyan-500/15 border border-cyan-400/30 flex items-center justify-center text-cyan-300 font-bold text-sm flex-shrink-0">
-                          👥
                         </div>
                       ) : (
                         <input
@@ -1604,214 +1461,198 @@ const TournamentDetails: React.FC = () => {
                           checked={isSelected}
                           onChange={() => {
                             if (!isFull && !isAlreadyRegistered) {
+                              if (isDoubles) {
+                                setSelectedDoublesCategory(category.id);
+                                setShowPartnerForm(true);
+                              }
                               toggleCategory(category.id);
                             }
                           }}
                           disabled={isFull || isAlreadyRegistered}
-                          className="w-5 h-5 rounded border-white/30 text-[#4AEEFF] focus:ring-[#4AEEFF] cursor-pointer flex-shrink-0"
+                          className="w-4 h-4 rounded border-white/30 text-[#4AEEFF] focus:ring-[#4AEEFF]"
                         />
                       )}
-
-                      <div className="min-w-0">
+                      <div>
                         <div className="flex items-center gap-2 flex-wrap">
-                          <h4
-                            className={`font-black text-sm sm:text-base ${
+                          <p
+                            className={`font-bold text-sm ${
                               isAlreadyRegistered ? "text-emerald-100" : "text-white"
                             }`}
                           >
                             {category.name}
-                          </h4>
+                          </p>
                           {category.gender && category.gender !== "MIXED" && (
                             <span className="px-2 py-0.5 text-[10px] font-black uppercase tracking-wider rounded bg-[#4AEEFF]/15 text-[#4AEEFF] border border-[#4AEEFF]/30">
-                              {category.gender === "MALE" ? "♂ Men's" : "♀ Women's"}
+                              {category.gender === "MALE" ? "♂ Men's Only" : "♀ Women's Only"}
                             </span>
                           )}
-                          {category.gender === "MIXED" && (
-                            <span className="px-2 py-0.5 text-[10px] font-black uppercase tracking-wider rounded bg-purple-500/15 text-purple-300 border border-purple-500/30">
-                              ⚤ Mixed Gender
+                        </div>
+                        <p className="text-xs text-white/60 mt-0.5">
+                          {category.type} • {category.currentParticipants} / {category.maxParticipants} participants
+                          {isDoubles && (
+                            <span className="ml-2 font-semibold text-[#4AEEFF]">
+                              (Team registration - partner required)
                             </span>
                           )}
-                          <span className="px-2 py-0.5 text-[10px] font-mono rounded bg-white/5 text-white/50 border border-white/10">
-                            {isDoubles ? "Doubles Format" : "Singles Format"}
-                          </span>
-                        </div>
-
-                        {/* Status detail line */}
-                        <div className="mt-1 text-xs">
-                          {isAlreadyRegistered && isDoubles ? (
-                            <div className="flex items-center gap-2 text-white/80 flex-wrap">
-                              <span className="text-emerald-400 font-semibold">Confirmed Doubles Pair:</span>
-                              <span className="font-bold text-white flex items-center gap-1">
-                                <span>🤝</span> {partnerName}
-                              </span>
-                            </div>
-                          ) : (
-                            <p className="text-white/60">
-                              {category.currentParticipants} / {category.maxParticipants} participants
-                              {isDoubles && (
-                                <span className="ml-2 text-cyan-300 font-medium">
-                                  • Invite partner required
-                                </span>
-                              )}
-                            </p>
-                          )}
-                        </div>
+                        </p>
                       </div>
                     </div>
+                    {isAlreadyRegistered ? (
+                      <div className="flex items-center gap-1.5 px-3 py-1 text-[11px] font-black uppercase tracking-wider rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-sm">
+                        <span>✓</span> Enrolled
+                        {categoryRegistration.status && (
+                          <span className="text-[10px] opacity-80 font-mono">
+                            ({categoryRegistration.status})
+                          </span>
+                        )}
+                      </div>
+                    ) : isFull ? (
+                      <span className="text-xs font-black uppercase tracking-wider text-red-400 bg-red-500/15 border border-red-500/30 px-2 py-0.5 rounded">
+                        Full
+                      </span>
+                    ) : null}
+                  </label>
 
-                    {/* Action Area */}
-                    <div className="flex items-center gap-2 self-end sm:self-auto flex-shrink-0">
-                      {isAlreadyRegistered ? (
-                        <div className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-black uppercase tracking-wider rounded-xl bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-sm">
-                          <span>✓</span> Enrolled
-                          {categoryRegistration.status && (
-                            <span className="text-[10px] opacity-80 font-mono ml-0.5">
-                              ({categoryRegistration.status})
-                            </span>
-                          )}
-                        </div>
-                      ) : isFull ? (
-                        <span className="text-xs font-black uppercase tracking-wider text-red-400 bg-red-500/15 border border-red-500/30 px-3 py-1 rounded-xl">
-                          Division Full
-                        </span>
-                      ) : isDoubles ? (
-                        pendingReceivedInvite ? (
-                          <div className="flex items-center gap-2 bg-cyan-950/60 border border-cyan-500/30 px-3 py-1.5 rounded-xl">
-                            <span className="text-xs font-bold text-cyan-300">
-                              Invited by {pendingReceivedInvite.inviter?.firstName}
-                            </span>
-                            <button
-                              onClick={() => handleAcceptInvite(pendingReceivedInvite.id)}
-                              disabled={respondingInviteId === pendingReceivedInvite.id}
-                              className="px-3 py-1 rounded-lg bg-gradient-to-r from-cyan-400 to-teal-400 text-slate-950 text-xs font-black uppercase tracking-wider shadow-sm hover:brightness-110 active:scale-95 transition-all"
-                            >
-                              ✓ Accept
-                            </button>
-                            <button
-                              onClick={() => handleDeclineInvite(pendingReceivedInvite.id)}
-                              disabled={respondingInviteId === pendingReceivedInvite.id}
-                              className="px-2 py-1 text-xs text-slate-400 hover:text-white"
-                            >
-                              ✕
-                            </button>
-                          </div>
-                        ) : pendingSentInvite ? (
-                          <div className="flex items-center gap-2 bg-amber-950/40 border border-amber-500/30 px-3 py-1.5 rounded-xl">
-                            <span className="text-xs text-amber-300 font-medium">
-                              ⏳ Invited {pendingSentInvite.invitee?.firstName} {pendingSentInvite.invitee?.lastName}
-                            </span>
-                            <button
-                              onClick={() => handleCancelSentInvite(pendingSentInvite.id)}
-                              className="px-2 py-0.5 rounded-md bg-red-500/20 hover:bg-red-500/40 text-red-300 border border-red-500/30 text-[11px] font-bold transition-all"
-                            >
-                              Cancel
-                            </button>
-                          </div>
-                        ) : (
-                          <button
-                            onClick={() =>
-                              setPartnerModalCategory({
-                                id: category.id,
-                                name: category.name,
+                  {/* Partner Form for Doubles */}
+                  {isDoubles &&
+                    showPartnerForm &&
+                    selectedDoublesCategory === category.id && (
+                      <div className="mt-3 p-4 border border-[#4AEEFF]/30 rounded-xl bg-[#061D23]/60">
+                        <h4 className="font-bold text-white text-xs uppercase tracking-wider mb-3">
+                          Partner Details
+                        </h4>
+                        <div className="grid grid-cols-2 gap-3">
+                          <input
+                            type="text"
+                            placeholder="Partner First Name"
+                            value={partnerDetails.firstName}
+                            onChange={(e) =>
+                              setPartnerDetails({
+                                ...partnerDetails,
+                                firstName: e.target.value,
                               })
                             }
-                            className="px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-teal-500 hover:from-cyan-400 hover:to-teal-400 text-slate-950 font-black text-xs uppercase tracking-wider shadow-[0_4px_14px_rgba(74,238,255,0.25)] transition-all active:scale-95 flex items-center gap-1.5"
-                          >
-                            <span>🤝</span>
-                            <span>Invite Partner</span>
-                          </button>
-                        )
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => toggleCategory(category.id)}
-                          className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider border transition-all ${
-                            isSelected
-                              ? "bg-[#4AEEFF] text-[#061D23] border-[#4AEEFF]"
-                              : "bg-white/5 text-white/70 border-white/10 hover:border-white/20"
-                          }`}
-                        >
-                          {isSelected ? "Selected" : "Select"}
-                        </button>
-                      )}
-                    </div>
-                  </div>
+                            className="rounded-xl border border-white/20 bg-[#061D23]/80 px-3.5 py-2.5 text-xs text-white placeholder-white/40 outline-none focus:border-[#4AEEFF]"
+                          />
+                          <input
+                            type="text"
+                            placeholder="Partner Last Name"
+                            value={partnerDetails.lastName}
+                            onChange={(e) =>
+                              setPartnerDetails({
+                                ...partnerDetails,
+                                lastName: e.target.value,
+                              })
+                            }
+                            className="rounded-xl border border-white/20 bg-[#061D23]/80 px-3.5 py-2.5 text-xs text-white placeholder-white/40 outline-none focus:border-[#4AEEFF]"
+                          />
+                          <input
+                            type="email"
+                            placeholder="Partner Email"
+                            value={partnerDetails.email}
+                            onChange={(e) =>
+                              setPartnerDetails({
+                                ...partnerDetails,
+                                email: e.target.value,
+                              })
+                            }
+                            className="rounded-xl border border-white/20 bg-[#061D23]/80 px-3.5 py-2.5 text-xs text-white placeholder-white/40 outline-none focus:border-[#4AEEFF] col-span-2"
+                          />
+                          <input
+                            type="tel"
+                            placeholder="Partner Phone (Optional)"
+                            value={partnerDetails.phone}
+                            onChange={(e) =>
+                              setPartnerDetails({
+                                ...partnerDetails,
+                                phone: e.target.value,
+                              })
+                            }
+                            className="rounded-xl border border-white/20 bg-[#061D23]/80 px-3.5 py-2.5 text-xs text-white placeholder-white/40 outline-none focus:border-[#4AEEFF] col-span-2"
+                          />
+                        </div>
+                        <p className="text-[11px] text-white/50 mt-2">
+                          The partner will be notified and added to your doubles team
+                        </p>
+                      </div>
+                    )}
                 </div>
               );
             })}
           </div>
 
-          {/* Clean Collapsible Ineligible Categories */}
+          {/* Show ineligible categories (disabled) */}
           {ineligibleCategories.length > 0 && (
             <div className="mt-4 pt-3 border-t border-white/10">
-              <button
-                type="button"
-                onClick={() => setShowIneligible(!showIneligible)}
-                className="flex items-center justify-between w-full py-1 text-xs font-bold uppercase tracking-wider text-white/40 hover:text-white/70 transition-colors"
-              >
-                <span>Ineligible Divisions ({ineligibleCategories.length})</span>
-                <span className="font-mono text-xs">{showIneligible ? "▲ Collapse" : "▼ Expand to view reasons"}</span>
-              </button>
-
-              {showIneligible && (
-                <div className="mt-3 space-y-2">
-                  {ineligibleCategories.map((category) => {
-                    const eligibility = isPlayerEligibleForCategory(
-                      category,
-                      playerAge,
-                      playerGender,
-                    );
-                    return (
-                      <div
-                        key={category.id}
-                        className="flex items-center justify-between p-3 border border-white/5 rounded-xl bg-white/[0.02] text-xs"
-                      >
-                        <div className="flex items-center gap-2.5">
-                          <span className="w-1.5 h-1.5 rounded-full bg-red-400/60"></span>
-                          <span className="font-medium text-white/60">{category.name}</span>
-                          <span className="text-[10px] text-white/30 uppercase font-mono">
-                            {category.type}
-                          </span>
+              <p className="text-xs text-white/50 mb-2 uppercase tracking-wider">
+                Ineligible for these categories:
+              </p>
+              {ineligibleCategories.map((category) => {
+                const eligibility = isPlayerEligibleForCategory(
+                  category,
+                  playerAge,
+                  playerGender,
+                );
+                return (
+                  <div
+                    key={category.id}
+                    className="flex items-center justify-between p-3 border border-white/10 rounded-xl bg-white/5 opacity-50 mb-2 text-xs"
+                  >
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="checkbox"
+                        disabled
+                        className="w-4 h-4 rounded text-gray-500"
+                      />
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium text-white/70">{category.name}</p>
+                          {category.gender && category.gender !== "MIXED" && (
+                            <span className="px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider rounded bg-white/10 text-white/50 border border-white/10">
+                              {category.gender === "MALE" ? "Men's" : "Women's"}
+                            </span>
+                          )}
                         </div>
-                        <span className="text-xs text-red-400/80 font-mono font-bold">
-                          {eligibility.reason}
-                        </span>
+                        <p className="text-[11px] text-white/40">{category.type}</p>
                       </div>
-                    );
-                  })}
-                </div>
-              )}
+                    </div>
+                    <span className="text-xs text-red-400 font-mono font-bold">
+                      {eligibility.reason}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           )}
 
-          {/* Context-Aware Bottom Action Bar */}
-          <div className="mt-5 pt-4 border-t border-white/10 flex items-center justify-between gap-4 flex-wrap">
+          {selectedCategories.length > 0 && (
+            <div className="rounded-xl border border-[#4AEEFF]/30 bg-[#4AEEFF]/10 p-3 mb-4 text-xs font-mono text-[#4AEEFF]">
+              Selected {selectedCategories.length} category(s)
+            </div>
+          )}
+
+          <div className="flex gap-3 mt-4">
             {allEligibleRegistered ? (
-              <div className="w-full rounded-xl bg-emerald-500/15 border border-emerald-500/40 py-3.5 px-4 text-xs font-black uppercase tracking-wider text-emerald-300 text-center flex items-center justify-center gap-2 shadow-sm">
-                <span className="text-base">✓</span> You Are Officially Registered For All Eligible Divisions!
-              </div>
-            ) : eligibleSinglesCategories.length > 0 ? (
-              <div className="flex items-center justify-between w-full gap-4 flex-wrap">
-                <span className="text-xs text-white/60">
-                  {selectedCategories.length > 0
-                    ? `Selected ${selectedCategories.length} singles category(s)`
-                    : "Check one or more singles categories above to submit"}
-                </span>
-                <button
-                  onClick={handleRegister}
-                  disabled={registering || selectedCategories.length === 0}
-                  className="px-6 py-3 rounded-xl bg-[#4AEEFF] text-xs font-black uppercase tracking-wider text-[#061D23] hover:bg-white transition-all disabled:opacity-40 shadow-md shadow-[#4AEEFF]/20 active:scale-95"
-                >
-                  {registering
-                    ? "Registering..."
-                    : `Submit Registration (${selectedCategories.length})`}
-                </button>
+              <div className="flex-1 rounded-xl bg-emerald-500/15 border border-emerald-500/40 py-3 px-4 text-xs font-black uppercase tracking-wider text-emerald-300 text-center flex items-center justify-center gap-2 shadow-sm">
+                <span className="text-sm">✓</span> You Are Registered for This Tournament
               </div>
             ) : (
-              <div className="w-full text-center py-2 text-xs text-cyan-300/80 font-medium">
-                💡 To enter remaining divisions, click <strong>"Invite Partner"</strong> on any doubles division card above.
-              </div>
+              <button
+                onClick={handleRegister}
+                disabled={registering || selectedCategories.length === 0}
+                className="flex-1 rounded-xl bg-[#4AEEFF] py-3 text-xs font-black uppercase tracking-wider text-[#061D23] hover:bg-white transition-all disabled:opacity-50 shadow-md shadow-[#4AEEFF]/20"
+              >
+                {registering
+                  ? "Registering..."
+                  : `Register for ${selectedCategories.length} Category(s)`}
+              </button>
             )}
+            <button
+              onClick={() => setShowGuestModal(true)}
+              className="rounded-xl border border-white/20 bg-white/5 px-5 py-3 text-xs font-black uppercase tracking-wider text-white hover:bg-white/10 transition-all"
+            >
+              Register as Guest
+            </button>
           </div>
         </div>
       )}
@@ -1861,26 +1702,12 @@ const TournamentDetails: React.FC = () => {
                 {tournament.registrations.map((registration) => (
                   <tr key={registration.id} className="hover:bg-white/5 transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap">
-                      {registration.team?.members && registration.team.members.length > 0 ? (
-                        <div className="flex flex-col">
-                          <span className="text-white font-bold text-sm">
-                            {registration.team.members
-                              .map((m) => `${m.player?.firstName || ""} ${m.player?.lastName || ""}`.trim())
-                              .filter(Boolean)
-                              .join(" & ") || `${registration.player?.firstName || ""} ${registration.player?.lastName || ""}`}
-                          </span>
-                          <span className="text-[10px] uppercase font-bold text-[#4AEEFF]">
-                            Doubles Pair
-                          </span>
-                        </div>
-                      ) : (
-                        <Link
-                          to={`/profile/${registration.player?.id}`}
-                          className="text-white hover:text-[#4AEEFF] font-bold text-sm transition-colors"
-                        >
-                          {registration.player?.firstName} {registration.player?.lastName}
-                        </Link>
-                      )}
+                      <Link
+                        to={`/profile/${registration.player.id}`}
+                        className="text-white hover:text-[#4AEEFF] font-bold text-sm transition-colors"
+                      >
+                        {registration.player.firstName} {registration.player.lastName}
+                      </Link>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className="px-2.5 py-1 text-xs font-black uppercase tracking-wider rounded-md bg-[#4AEEFF]/15 text-[#4AEEFF] border border-[#4AEEFF]/30">
@@ -1888,12 +1715,7 @@ const TournamentDetails: React.FC = () => {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-white/70">
-                      {registration.team?.members && registration.team.members.length > 0
-                        ? registration.team.members
-                            .map((m) => m.player?.email)
-                            .filter(Boolean)
-                            .join(", ")
-                        : registration.player?.email}
+                      {registration.player.email}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-xs text-white/50 font-mono">
                       {new Date(registration.registeredAt).toLocaleDateString()}
@@ -1953,20 +1775,6 @@ const TournamentDetails: React.FC = () => {
           categories={tournament.categories}
           onClose={() => setShowGuestModal(false)}
           onSuccess={fetchTournamentDetails}
-        />
-      )}
-
-      {/* Doubles Partner Invite Modal */}
-      {partnerModalCategory && (
-        <DoublesPartnerModal
-          tournamentId={id}
-          categoryId={partnerModalCategory.id}
-          categoryName={partnerModalCategory.name}
-          onClose={() => setPartnerModalCategory(null)}
-          onInviteSent={() => {
-            fetchTournamentDetails();
-            fetchInvites();
-          }}
         />
       )}
       {showResetConfirm &&
@@ -2107,235 +1915,6 @@ const TournamentDetails: React.FC = () => {
         </div>,
         document.body
       )}
-
-      {/* Custom Glassmorphic Modal for Generate / Update Bracket Confirmation */}
-      {confirmDrawCategory &&
-        createPortal(
-          <div
-            style={{
-              position: "fixed",
-              inset: 0,
-              background: "rgba(0, 0, 0, 0.78)",
-              backdropFilter: "blur(10px)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              zIndex: 99999,
-              padding: 16,
-            }}
-            onClick={() => !generating && setConfirmDrawCategory(null)}
-          >
-            <div
-              onClick={(e) => e.stopPropagation()}
-              style={{
-                background: "#082229",
-                border: "1px solid rgba(74, 238, 255, 0.35)",
-                borderRadius: 20,
-                maxWidth: 440,
-                width: "100%",
-                overflow: "hidden",
-                boxShadow: "0 25px 60px rgba(0, 0, 0, 0.75), 0 0 35px rgba(74, 238, 255, 0.15)",
-                fontFamily: "'Segoe UI',system-ui,sans-serif",
-                color: "#ffffff",
-              }}
-            >
-              {/* Header */}
-              <div
-                style={{
-                  background: "linear-gradient(135deg, rgba(74, 238, 255, 0.15), rgba(6, 29, 35, 0.8))",
-                  padding: "20px 24px",
-                  borderBottom: "1px solid rgba(74, 238, 255, 0.2)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                }}
-              >
-                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                  <div
-                    style={{
-                      width: 44,
-                      height: 44,
-                      borderRadius: "50%",
-                      background: "rgba(74, 238, 255, 0.15)",
-                      border: "1px solid rgba(74, 238, 255, 0.4)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontSize: 22,
-                    }}
-                  >
-                    🎲
-                  </div>
-                  <div>
-                    <h3
-                      style={{
-                        margin: 0,
-                        fontWeight: 900,
-                        color: "#ffffff",
-                        fontSize: 16,
-                        textTransform: "uppercase",
-                        letterSpacing: 0.5,
-                      }}
-                    >
-                      Generate Knockout Draw
-                    </h3>
-                    <div style={{ fontSize: 12, color: "#4AEEFF", fontWeight: 700, marginTop: 2 }}>
-                      Official Bracket Generation
-                    </div>
-                  </div>
-                </div>
-                <button
-                  onClick={() => !generating && setConfirmDrawCategory(null)}
-                  style={{
-                    background: "rgba(255, 255, 255, 0.08)",
-                    border: "none",
-                    color: "rgba(255, 255, 255, 0.7)",
-                    width: 32,
-                    height: 32,
-                    borderRadius: "50%",
-                    cursor: "pointer",
-                    fontSize: 18,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  ×
-                </button>
-              </div>
-
-              {/* Body */}
-              <div style={{ padding: "22px 24px" }}>
-                {/* Category preview pill */}
-                <div
-                  style={{
-                    background: "rgba(0, 0, 0, 0.35)",
-                    border: "1px solid rgba(255, 255, 255, 0.1)",
-                    borderRadius: 14,
-                    padding: "14px 16px",
-                    marginBottom: 16,
-                  }}
-                >
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                    <span style={{ fontSize: 11, color: "rgba(255, 255, 255, 0.5)", textTransform: "uppercase", fontWeight: 700 }}>
-                      Division / Category
-                    </span>
-                    <span
-                      style={{
-                        fontSize: 10,
-                        padding: "2px 8px",
-                        borderRadius: 8,
-                        fontWeight: 800,
-                        background: "rgba(74, 238, 255, 0.15)",
-                        color: "#4AEEFF",
-                        border: "1px solid rgba(74, 238, 255, 0.3)",
-                        textTransform: "uppercase",
-                      }}
-                    >
-                      {isDoublesCategory(confirmDrawCategory) ? "Doubles" : "Singles"}
-                    </span>
-                  </div>
-                  <div style={{ fontSize: 16, fontWeight: 800, color: "#ffffff" }}>
-                    {confirmDrawCategory.name}
-                  </div>
-                  <div style={{ fontSize: 12, color: "rgba(255, 255, 255, 0.7)", marginTop: 4 }}>
-                    {confirmDrawCategory.currentParticipants ?? 0} approved entries ready to seed
-                  </div>
-                </div>
-
-                <p
-                  style={{
-                    margin: "0 0 12px",
-                    color: "rgba(255, 255, 255, 0.8)",
-                    fontSize: 13,
-                    lineHeight: 1.5,
-                  }}
-                >
-                  This will seed approved participants, calculate any necessary BYEs according to tournament rules, and generate official fixtures.
-                </p>
-
-                <div
-                  style={{
-                    background: "rgba(74, 238, 255, 0.08)",
-                    border: "1px solid rgba(74, 238, 255, 0.25)",
-                    borderRadius: 10,
-                    padding: "10px 14px",
-                    fontSize: 12,
-                    color: "#a5f3fc",
-                  }}
-                >
-                  💡 Any unplayed or empty fixtures for this division will be updated to reflect the new draw.
-                </div>
-              </div>
-
-              {/* Footer */}
-              <div
-                style={{
-                  padding: "14px 24px",
-                  borderTop: "1px solid rgba(255, 255, 255, 0.1)",
-                  display: "flex",
-                  gap: 12,
-                  background: "rgba(6, 29, 35, 0.8)",
-                }}
-              >
-                <button
-                  type="button"
-                  onClick={() => setConfirmDrawCategory(null)}
-                  disabled={generating === confirmDrawCategory.id}
-                  style={{
-                    flex: 1,
-                    padding: "11px 0",
-                    border: "1px solid rgba(255, 255, 255, 0.15)",
-                    borderRadius: 12,
-                    background: "rgba(255, 255, 255, 0.05)",
-                    color: "#fff",
-                    fontWeight: 700,
-                    fontSize: 13,
-                    cursor: "pointer",
-                  }}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleGenerateBracket(confirmDrawCategory.id)}
-                  disabled={generating === confirmDrawCategory.id}
-                  style={{
-                    flex: 1.4,
-                    padding: "11px 0",
-                    border: "none",
-                    borderRadius: 12,
-                    background: "linear-gradient(135deg, #4AEEFF, #0284c7)",
-                    color: "#061D23",
-                    fontWeight: 900,
-                    fontSize: 13,
-                    cursor: generating === confirmDrawCategory.id ? "default" : "pointer",
-                    textTransform: "uppercase",
-                    letterSpacing: 0.5,
-                    boxShadow: "0 4px 14px rgba(74, 238, 255, 0.35)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: 8,
-                  }}
-                >
-                  {generating === confirmDrawCategory.id ? (
-                    <>
-                      <span className="animate-spin text-sm">⏳</span>
-                      <span>Generating...</span>
-                    </>
-                  ) : (
-                    <>
-                      <span>✓</span>
-                      <span>Confirm & Generate</span>
-                    </>
-                  )}
-                </button>
-              </div>
-            </div>
-          </div>,
-          document.body
-        )}
     </>
   );
 };

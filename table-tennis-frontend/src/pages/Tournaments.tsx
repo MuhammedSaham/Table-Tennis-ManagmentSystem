@@ -20,7 +20,6 @@ interface Tournament {
 
 const Tournaments: React.FC = () => {
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
-  const [pendingTournamentIds, setPendingTournamentIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
   const location = useLocation();
@@ -31,16 +30,6 @@ const Tournaments: React.FC = () => {
       try {
         const response = await api.get("/tournaments");
         setTournaments(response.data.data);
-
-        if (user?.role === "PLAYER") {
-          try {
-            const invitesRes = await api.get("/teams/invites/my-invites");
-            const ids = new Set<string>((invitesRes.data.data || []).map((i: any) => i.tournamentId || i.tournament?.id).filter(Boolean));
-            setPendingTournamentIds(ids);
-          } catch {
-            // Ignored
-          }
-        }
       } catch {
         toast.error("Failed to fetch tournaments");
       } finally {
@@ -49,7 +38,7 @@ const Tournaments: React.FC = () => {
     };
 
     fetchTournaments();
-  }, [user]);
+  }, []);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -77,7 +66,7 @@ const Tournaments: React.FC = () => {
       <div className="fixed inset-0 bg-[#061D23]/25" />
       <div className="fixed inset-0 bg-gradient-to-b from-[#061D23]/20 via-transparent to-[#061D23]/35" />
 
-      <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-7xl flex-col space-y-6">
+      <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-7xl flex-col space-y-6 p-4 sm:p-6 lg:p-8">
         {children}
       </div>
     </div>
@@ -135,20 +124,13 @@ const Tournaments: React.FC = () => {
                 <h3 className="text-xl font-bold text-white group-hover:text-[#4AEEFF] transition-colors line-clamp-1">
                   {tournament.name}
                 </h3>
-                <div className="flex flex-col items-end gap-1.5">
-                  <span
-                    className={`px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-md border ${getStatusBadge(
-                      tournament.status
-                    )}`}
-                  >
-                    {tournament.status}
-                  </span>
-                  {pendingTournamentIds.has(tournament.id) && (
-                    <span className="px-2 py-0.5 text-[9px] font-black uppercase tracking-wider rounded-md bg-cyan-400/20 text-[#4AEEFF] border border-cyan-400/40 shadow-[0_0_10px_rgba(74,238,255,0.3)] animate-pulse flex items-center gap-1">
-                      <span>⚡</span> Partner Request
-                    </span>
-                  )}
-                </div>
+                <span
+                  className={`px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-md border ${getStatusBadge(
+                    tournament.status
+                  )}`}
+                >
+                  {tournament.status}
+                </span>
               </div>
 
               <p className="text-white/70 text-sm mb-4 line-clamp-2 leading-relaxed">
