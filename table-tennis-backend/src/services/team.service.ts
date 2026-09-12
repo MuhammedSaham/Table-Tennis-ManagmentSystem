@@ -366,6 +366,14 @@ export class TeamService {
     if (!accept) {
       // DECLINE
       await prisma.doublesInvite.update({ where: { id: inviteId }, data: { status: 'DECLINED' } });
+      await prisma.notification.updateMany({
+        where: {
+          userId: inviteeId,
+          type: 'DOUBLES_INVITE',
+          message: { contains: inviteId },
+        },
+        data: { isRead: true },
+      });
       await prisma.notification.create({
         data: {
           userId: invite.inviterId,
@@ -462,6 +470,16 @@ export class TeamService {
       await tx.doublesInvite.update({
         where: { id: inviteId },
         data: { status: 'ACCEPTED', teamId: team.id },
+      });
+
+      // Mark invitee's DOUBLES_INVITE notification as read
+      await tx.notification.updateMany({
+        where: {
+          userId: inviteeId,
+          type: 'DOUBLES_INVITE',
+          message: { contains: inviteId },
+        },
+        data: { isRead: true },
       });
 
       return team;

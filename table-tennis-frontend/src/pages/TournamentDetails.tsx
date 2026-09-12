@@ -136,6 +136,7 @@ const TournamentDetails: React.FC = () => {
   const [showGuestModal, setShowGuestModal] = useState(false);
   const [showKnockoutModal, setShowKnockoutModal] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [showIneligible, setShowIneligible] = useState(false);
 
   const fetchInvites = async () => {
     if (!user || user.role !== "PLAYER" || !id) return;
@@ -709,6 +710,11 @@ const TournamentDetails: React.FC = () => {
   const hasRegistration = userRegistrations.length > 0;
   const canRegister = isPlayer && isRegistrationOpen;
 
+  // Function to check if category is doubles
+  const isDoublesCategory = (categoryType: string) => {
+    return categoryType === "DOUBLES" || categoryType === "MIXED" || categoryType === "MIXED_DOUBLES";
+  };
+
   const eligibleCategories = tournament.categories.filter(
     (c) => isPlayerEligibleForCategory(c, playerAge, playerGender).eligible,
   );
@@ -716,16 +722,19 @@ const TournamentDetails: React.FC = () => {
     (c) => !isPlayerEligibleForCategory(c, playerAge, playerGender).eligible,
   );
 
+  const eligibleSinglesCategories = eligibleCategories.filter(
+    (cat) =>
+      !isDoublesCategory(cat.type) &&
+      !userRegistrations.some(
+        (r) => r.categoryId === cat.id || r.category?.id === cat.id,
+      ),
+  );
+
   const allEligibleRegistered =
     eligibleCategories.length > 0 &&
     eligibleCategories.every((cat) =>
       userRegistrations.some((r) => r.categoryId === cat.id || r.category?.id === cat.id),
     );
-
-  // Function to check if category is doubles
-  const isDoublesCategory = (categoryType: string) => {
-    return categoryType === "DOUBLES" || categoryType === "MIXED";
-  };
 
   return wrapInBaseLayout(
     <>
@@ -1512,31 +1521,48 @@ const TournamentDetails: React.FC = () => {
         </div>
       )}
 
-      {/* Registration Form with Age Filtering */}
+      {/* Professional Tournament Division Entry Section */}
       {canRegister && tournament.categories.length > 0 && (
-        <div className="rounded-[16px] border border-white/20 bg-[#061D23]/25 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl mb-6">
-          <h3 className="text-xl font-black uppercase tracking-wider text-white mb-2">
-            Register for this Tournament
-          </h3>
-          {playerAge !== null && (
-            <div className="rounded-xl border border-[#4AEEFF]/30 bg-[#4AEEFF]/10 p-3.5 mb-4 text-xs font-mono text-[#4AEEFF]">
-              Your verified age: <strong className="text-white text-sm">{playerAge} years</strong>
+        <div className="rounded-[18px] border border-white/20 bg-[#061D23]/30 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl mb-6">
+          {/* Athlete Passport & Eligibility Bar */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-white/10">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-400 to-teal-500 text-slate-950 font-black text-base flex items-center justify-center shadow-md shadow-cyan-500/20 flex-shrink-0">
+                🏓
+              </div>
+              <div>
+                <h3 className="text-base sm:text-lg font-black uppercase tracking-wider text-white">
+                  Tournament Division Entry
+                </h3>
+                <p className="text-xs text-white/60">
+                  Official player registration & doubles team pairings
+                </p>
+              </div>
             </div>
-          )}
 
-          <p className="text-xs uppercase tracking-wider text-white/60 mb-3 font-semibold">
-            Select categories to register:
-          </p>
+            <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
+              {playerAge !== null && (
+                <div className="flex items-center gap-2 bg-black/40 border border-cyan-500/30 px-3.5 py-1.5 rounded-xl text-xs">
+                  <span className="text-white/50">Verified:</span>
+                  <span className="font-bold text-[#4AEEFF]">{playerAge} yrs</span>
+                  <span className="text-white/30">•</span>
+                  <span className="font-bold text-white capitalize">{playerGender?.toLowerCase() || "Athlete"}</span>
+                </div>
+              )}
+              <span className="px-3 py-1.5 rounded-xl bg-cyan-400/10 text-cyan-300 border border-cyan-400/25 text-xs font-bold font-mono">
+                {userRegistrations.length} / {eligibleCategories.length} Divisions Enrolled
+              </span>
+            </div>
+          </div>
 
-          <div className="space-y-3 mb-4">
+          <div className="space-y-3 mb-5">
             {eligibleCategories.map((category) => {
               const categoryRegistration = userRegistrations.find(
                 (r) => r.categoryId === category.id || r.category?.id === category.id,
               );
               const isAlreadyRegistered = !!categoryRegistration;
               const isSelected = selectedCategories.includes(category.id);
-              const isFull =
-                category.currentParticipants >= category.maxParticipants;
+              const isFull = category.currentParticipants >= category.maxParticipants;
               const isDoubles = isDoublesCategory(category.type);
               const pendingSentInvite = mySentInvites.find(
                 (inv) => inv.categoryId === category.id,
@@ -1545,25 +1571,33 @@ const TournamentDetails: React.FC = () => {
                 (inv) => inv.categoryId === category.id,
               );
 
+              // Extract confirmed partner name if registered
+              const partnerMember = categoryRegistration?.team?.members?.find((m: any) => m.playerId !== user?.id);
+              const partnerName = partnerMember
+                ? `${partnerMember.player?.firstName || ""} ${partnerMember.player?.lastName || ""}`.trim()
+                : (categoryRegistration?.playerId !== user?.id
+                  ? `${categoryRegistration?.player?.firstName || ""} ${categoryRegistration?.player?.lastName || ""}`.trim()
+                  : "Confirmed Partner");
+
               return (
                 <div
                   key={category.id}
                   className={`rounded-xl border transition-all p-4 ${
                     isAlreadyRegistered
-                      ? "border-emerald-500/40 bg-emerald-500/10"
+                      ? "border-emerald-500/50 bg-gradient-to-r from-emerald-950/40 via-emerald-900/15 to-[#061D23]/60 shadow-sm"
                       : isSelected
                       ? "border-[#4AEEFF] bg-[#4AEEFF]/15 shadow-md shadow-[#4AEEFF]/10"
                       : "border-white/10 bg-[#061D23]/40 hover:border-white/20"
                   }`}
                 >
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    <div className="flex items-center gap-3.5 flex-1">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="flex items-center gap-3.5 flex-1 min-w-0">
                       {isAlreadyRegistered ? (
-                        <div className="w-5 h-5 rounded-md bg-emerald-500/25 border border-emerald-400/60 flex items-center justify-center text-emerald-300 font-black text-xs shadow-[0_0_10px_rgba(16,185,129,0.3)] flex-shrink-0">
+                        <div className="w-7 h-7 rounded-lg bg-emerald-500/20 border border-emerald-400/50 flex items-center justify-center text-emerald-300 font-black text-sm shadow-[0_0_12px_rgba(16,185,129,0.3)] flex-shrink-0">
                           ✓
                         </div>
                       ) : isDoubles ? (
-                        <div className="w-5 h-5 rounded-md bg-cyan-500/20 border border-cyan-400/40 flex items-center justify-center text-cyan-300 font-black text-xs flex-shrink-0">
+                        <div className="w-7 h-7 rounded-lg bg-cyan-500/15 border border-cyan-400/30 flex items-center justify-center text-cyan-300 font-bold text-sm flex-shrink-0">
                           👥
                         </div>
                       ) : (
@@ -1576,21 +1610,22 @@ const TournamentDetails: React.FC = () => {
                             }
                           }}
                           disabled={isFull || isAlreadyRegistered}
-                          className="w-4 h-4 rounded border-white/30 text-[#4AEEFF] focus:ring-[#4AEEFF] cursor-pointer"
+                          className="w-5 h-5 rounded border-white/30 text-[#4AEEFF] focus:ring-[#4AEEFF] cursor-pointer flex-shrink-0"
                         />
                       )}
-                      <div>
+
+                      <div className="min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <p
-                            className={`font-bold text-sm ${
+                          <h4
+                            className={`font-black text-sm sm:text-base ${
                               isAlreadyRegistered ? "text-emerald-100" : "text-white"
                             }`}
                           >
                             {category.name}
-                          </p>
+                          </h4>
                           {category.gender && category.gender !== "MIXED" && (
                             <span className="px-2 py-0.5 text-[10px] font-black uppercase tracking-wider rounded bg-[#4AEEFF]/15 text-[#4AEEFF] border border-[#4AEEFF]/30">
-                              {category.gender === "MALE" ? "♂ Men's Only" : "♀ Women's Only"}
+                              {category.gender === "MALE" ? "♂ Men's" : "♀ Women's"}
                             </span>
                           )}
                           {category.gender === "MIXED" && (
@@ -1598,44 +1633,48 @@ const TournamentDetails: React.FC = () => {
                               ⚤ Mixed Gender
                             </span>
                           )}
+                          <span className="px-2 py-0.5 text-[10px] font-mono rounded bg-white/5 text-white/50 border border-white/10">
+                            {isDoubles ? "Doubles Format" : "Singles Format"}
+                          </span>
                         </div>
-                        <p className="text-xs text-white/60 mt-0.5">
-                          {category.type} • {category.currentParticipants} / {category.maxParticipants} participants
-                          {isDoubles && (
-                            <span className="ml-2 font-semibold text-[#4AEEFF]">
-                              (Doubles team - partner invite required)
-                            </span>
+
+                        {/* Status detail line */}
+                        <div className="mt-1 text-xs">
+                          {isAlreadyRegistered && isDoubles ? (
+                            <div className="flex items-center gap-2 text-white/80 flex-wrap">
+                              <span className="text-emerald-400 font-semibold">Confirmed Doubles Pair:</span>
+                              <span className="font-bold text-white flex items-center gap-1">
+                                <span>🤝</span> {partnerName}
+                              </span>
+                            </div>
+                          ) : (
+                            <p className="text-white/60">
+                              {category.currentParticipants} / {category.maxParticipants} participants
+                              {isDoubles && (
+                                <span className="ml-2 text-cyan-300 font-medium">
+                                  • Invite partner required
+                                </span>
+                              )}
+                            </p>
                           )}
-                        </p>
+                        </div>
                       </div>
                     </div>
 
                     {/* Action Area */}
                     <div className="flex items-center gap-2 self-end sm:self-auto flex-shrink-0">
                       {isAlreadyRegistered ? (
-                        <div className="flex flex-col items-end gap-1">
-                          <div className="flex items-center gap-1.5 px-3 py-1 text-[11px] font-black uppercase tracking-wider rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-sm">
-                            <span>✓</span> Enrolled
-                            {categoryRegistration.status && (
-                              <span className="text-[10px] opacity-80 font-mono">
-                                ({categoryRegistration.status})
-                              </span>
-                            )}
-                          </div>
-                          {categoryRegistration.team?.members && categoryRegistration.team.members.length > 0 && (
-                            <span className="text-[11px] text-cyan-300 font-medium">
-                              Partner:{" "}
-                              {categoryRegistration.team.members
-                                .filter((m) => m.playerId !== user?.id)
-                                .map((m) => `${m.player?.firstName || ""} ${m.player?.lastName || ""}`.trim())
-                                .filter(Boolean)
-                                .join(", ") || (categoryRegistration.playerId !== user?.id ? `${categoryRegistration.player?.firstName || ""} ${categoryRegistration.player?.lastName || ""}`.trim() : "Confirmed Partner")}
+                        <div className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-black uppercase tracking-wider rounded-xl bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-sm">
+                          <span>✓</span> Enrolled
+                          {categoryRegistration.status && (
+                            <span className="text-[10px] opacity-80 font-mono ml-0.5">
+                              ({categoryRegistration.status})
                             </span>
                           )}
                         </div>
                       ) : isFull ? (
-                        <span className="text-xs font-black uppercase tracking-wider text-red-400 bg-red-500/15 border border-red-500/30 px-2 py-0.5 rounded">
-                          Full
+                        <span className="text-xs font-black uppercase tracking-wider text-red-400 bg-red-500/15 border border-red-500/30 px-3 py-1 rounded-xl">
+                          Division Full
                         </span>
                       ) : isDoubles ? (
                         pendingReceivedInvite ? (
@@ -1678,13 +1717,25 @@ const TournamentDetails: React.FC = () => {
                                 name: category.name,
                               })
                             }
-                            className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-cyan-500 to-teal-500 hover:from-cyan-400 hover:to-teal-400 text-slate-950 font-black text-xs uppercase tracking-wider shadow-[0_4px_12px_rgba(74,238,255,0.25)] transition-all active:scale-95 flex items-center gap-1.5"
+                            className="px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-teal-500 hover:from-cyan-400 hover:to-teal-400 text-slate-950 font-black text-xs uppercase tracking-wider shadow-[0_4px_14px_rgba(74,238,255,0.25)] transition-all active:scale-95 flex items-center gap-1.5"
                           >
                             <span>🤝</span>
                             <span>Invite Partner</span>
                           </button>
                         )
-                      ) : null}
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => toggleCategory(category.id)}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider border transition-all ${
+                            isSelected
+                              ? "bg-[#4AEEFF] text-[#061D23] border-[#4AEEFF]"
+                              : "bg-white/5 text-white/70 border-white/10 hover:border-white/20"
+                          }`}
+                        >
+                          {isSelected ? "Selected" : "Select"}
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1692,78 +1743,77 @@ const TournamentDetails: React.FC = () => {
             })}
           </div>
 
-          {/* Show ineligible categories (disabled) */}
+          {/* Clean Collapsible Ineligible Categories */}
           {ineligibleCategories.length > 0 && (
             <div className="mt-4 pt-3 border-t border-white/10">
-              <p className="text-xs text-white/50 mb-2 uppercase tracking-wider">
-                Ineligible for these categories:
-              </p>
-              {ineligibleCategories.map((category) => {
-                const eligibility = isPlayerEligibleForCategory(
-                  category,
-                  playerAge,
-                  playerGender,
-                );
-                return (
-                  <div
-                    key={category.id}
-                    className="flex items-center justify-between p-3 border border-white/10 rounded-xl bg-white/5 opacity-50 mb-2 text-xs"
-                  >
-                    <div className="flex items-center gap-3">
-                      <input
-                        type="checkbox"
-                        disabled
-                        className="w-4 h-4 rounded text-gray-500"
-                      />
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <p className="font-medium text-white/70">{category.name}</p>
-                          {category.gender && category.gender !== "MIXED" && (
-                            <span className="px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider rounded bg-white/10 text-white/50 border border-white/10">
-                              {category.gender === "MALE" ? "Men's" : "Women's"}
-                            </span>
-                          )}
+              <button
+                type="button"
+                onClick={() => setShowIneligible(!showIneligible)}
+                className="flex items-center justify-between w-full py-1 text-xs font-bold uppercase tracking-wider text-white/40 hover:text-white/70 transition-colors"
+              >
+                <span>Ineligible Divisions ({ineligibleCategories.length})</span>
+                <span className="font-mono text-xs">{showIneligible ? "▲ Collapse" : "▼ Expand to view reasons"}</span>
+              </button>
+
+              {showIneligible && (
+                <div className="mt-3 space-y-2">
+                  {ineligibleCategories.map((category) => {
+                    const eligibility = isPlayerEligibleForCategory(
+                      category,
+                      playerAge,
+                      playerGender,
+                    );
+                    return (
+                      <div
+                        key={category.id}
+                        className="flex items-center justify-between p-3 border border-white/5 rounded-xl bg-white/[0.02] text-xs"
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <span className="w-1.5 h-1.5 rounded-full bg-red-400/60"></span>
+                          <span className="font-medium text-white/60">{category.name}</span>
+                          <span className="text-[10px] text-white/30 uppercase font-mono">
+                            {category.type}
+                          </span>
                         </div>
-                        <p className="text-[11px] text-white/40">{category.type}</p>
+                        <span className="text-xs text-red-400/80 font-mono font-bold">
+                          {eligibility.reason}
+                        </span>
                       </div>
-                    </div>
-                    <span className="text-xs text-red-400 font-mono font-bold">
-                      {eligibility.reason}
-                    </span>
-                  </div>
-                );
-              })}
+                    );
+                  })}
+                </div>
+              )}
             </div>
           )}
 
-          {selectedCategories.length > 0 && (
-            <div className="rounded-xl border border-[#4AEEFF]/30 bg-[#4AEEFF]/10 p-3 mb-4 text-xs font-mono text-[#4AEEFF]">
-              Selected {selectedCategories.length} category(s)
-            </div>
-          )}
-
-          <div className="flex gap-3 mt-4">
+          {/* Context-Aware Bottom Action Bar */}
+          <div className="mt-5 pt-4 border-t border-white/10 flex items-center justify-between gap-4 flex-wrap">
             {allEligibleRegistered ? (
-              <div className="flex-1 rounded-xl bg-emerald-500/15 border border-emerald-500/40 py-3 px-4 text-xs font-black uppercase tracking-wider text-emerald-300 text-center flex items-center justify-center gap-2 shadow-sm">
-                <span className="text-sm">✓</span> You Are Registered for This Tournament
+              <div className="w-full rounded-xl bg-emerald-500/15 border border-emerald-500/40 py-3.5 px-4 text-xs font-black uppercase tracking-wider text-emerald-300 text-center flex items-center justify-center gap-2 shadow-sm">
+                <span className="text-base">✓</span> You Are Officially Registered For All Eligible Divisions!
+              </div>
+            ) : eligibleSinglesCategories.length > 0 ? (
+              <div className="flex items-center justify-between w-full gap-4 flex-wrap">
+                <span className="text-xs text-white/60">
+                  {selectedCategories.length > 0
+                    ? `Selected ${selectedCategories.length} singles category(s)`
+                    : "Check one or more singles categories above to submit"}
+                </span>
+                <button
+                  onClick={handleRegister}
+                  disabled={registering || selectedCategories.length === 0}
+                  className="px-6 py-3 rounded-xl bg-[#4AEEFF] text-xs font-black uppercase tracking-wider text-[#061D23] hover:bg-white transition-all disabled:opacity-40 shadow-md shadow-[#4AEEFF]/20 active:scale-95"
+                >
+                  {registering
+                    ? "Registering..."
+                    : `Submit Registration (${selectedCategories.length})`}
+                </button>
               </div>
             ) : (
-              <button
-                onClick={handleRegister}
-                disabled={registering || selectedCategories.length === 0}
-                className="flex-1 rounded-xl bg-[#4AEEFF] py-3 text-xs font-black uppercase tracking-wider text-[#061D23] hover:bg-white transition-all disabled:opacity-50 shadow-md shadow-[#4AEEFF]/20"
-              >
-                {registering
-                  ? "Registering..."
-                  : `Register for ${selectedCategories.length} Category(s)`}
-              </button>
+              <div className="w-full text-center py-2 text-xs text-cyan-300/80 font-medium">
+                💡 To enter remaining divisions, click <strong>"Invite Partner"</strong> on any doubles division card above.
+              </div>
             )}
-            <button
-              onClick={() => setShowGuestModal(true)}
-              className="rounded-xl border border-white/20 bg-white/5 px-5 py-3 text-xs font-black uppercase tracking-wider text-white hover:bg-white/10 transition-all"
-            >
-              Register as Guest
-            </button>
           </div>
         </div>
       )}

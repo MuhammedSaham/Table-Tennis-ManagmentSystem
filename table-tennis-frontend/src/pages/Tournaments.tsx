@@ -20,6 +20,7 @@ interface Tournament {
 
 const Tournaments: React.FC = () => {
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
+  const [pendingTournamentIds, setPendingTournamentIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
   const location = useLocation();
@@ -30,6 +31,16 @@ const Tournaments: React.FC = () => {
       try {
         const response = await api.get("/tournaments");
         setTournaments(response.data.data);
+
+        if (user?.role === "PLAYER") {
+          try {
+            const invitesRes = await api.get("/teams/invites/my-invites");
+            const ids = new Set<string>((invitesRes.data.data || []).map((i: any) => i.tournamentId || i.tournament?.id).filter(Boolean));
+            setPendingTournamentIds(ids);
+          } catch {
+            // Ignored
+          }
+        }
       } catch {
         toast.error("Failed to fetch tournaments");
       } finally {
@@ -38,7 +49,7 @@ const Tournaments: React.FC = () => {
     };
 
     fetchTournaments();
-  }, []);
+  }, [user]);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -124,13 +135,20 @@ const Tournaments: React.FC = () => {
                 <h3 className="text-xl font-bold text-white group-hover:text-[#4AEEFF] transition-colors line-clamp-1">
                   {tournament.name}
                 </h3>
-                <span
-                  className={`px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-md border ${getStatusBadge(
-                    tournament.status
-                  )}`}
-                >
-                  {tournament.status}
-                </span>
+                <div className="flex flex-col items-end gap-1.5">
+                  <span
+                    className={`px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-md border ${getStatusBadge(
+                      tournament.status
+                    )}`}
+                  >
+                    {tournament.status}
+                  </span>
+                  {pendingTournamentIds.has(tournament.id) && (
+                    <span className="px-2 py-0.5 text-[9px] font-black uppercase tracking-wider rounded-md bg-cyan-400/20 text-[#4AEEFF] border border-cyan-400/40 shadow-[0_0_10px_rgba(74,238,255,0.3)] animate-pulse flex items-center gap-1">
+                      <span>⚡</span> Partner Request
+                    </span>
+                  )}
+                </div>
               </div>
 
               <p className="text-white/70 text-sm mb-4 line-clamp-2 leading-relaxed">

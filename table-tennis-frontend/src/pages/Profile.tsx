@@ -11,6 +11,7 @@ import {
   PhoneIcon,
   AcademicCapIcon,
   IdentificationIcon,
+  UserGroupIcon,
 } from "@heroicons/react/24/outline";
 
 interface PlayerStats {
@@ -82,6 +83,10 @@ const Profile: React.FC = () => {
   const [uploading, setUploading] = useState(false);
   const [playerStats, setPlayerStats] = useState<PlayerStats | null>(null);
   const [_statsLoading, setStatsLoading] = useState(false);
+  const [doublesRegistrations, setDoublesRegistrations] = useState<any[]>([]);
+  const [profileReceivedInvites, setProfileReceivedInvites] = useState<any[]>([]);
+  const [profileSentInvites, setProfileSentInvites] = useState<any[]>([]);
+  const [activeDoublesTab, setActiveDoublesTab] = useState<"ACTIVE" | "RECEIVED" | "SENT">("ACTIVE");
 
   useEffect(() => {
     fetchProfile();
@@ -90,8 +95,65 @@ const Profile: React.FC = () => {
   useEffect(() => {
     if (user?.role === "PLAYER") {
       fetchPlayerStats();
+      fetchDoublesData();
     }
   }, [user]);
+
+  const fetchDoublesData = async () => {
+    if (user?.role !== "PLAYER") return;
+    try {
+      const [regsRes, receivedRes, sentRes] = await Promise.all([
+        api.get("/registrations/my-registrations"),
+        api.get("/teams/invites/my-invites"),
+        api.get("/teams/invites/sent-invites"),
+      ]);
+      const allRegs = regsRes.data.data || [];
+      const doublesOnly = allRegs.filter(
+        (r: any) =>
+          r.teamId ||
+          r.team ||
+          (r.category?.type &&
+            (r.category.type === "DOUBLES" ||
+              r.category.type.includes("DOUBLES") ||
+              r.category.type === "MIXED"))
+      );
+      setDoublesRegistrations(doublesOnly);
+      setProfileReceivedInvites(receivedRes.data.data || []);
+      setProfileSentInvites(sentRes.data.data || []);
+    } catch (err) {
+      console.error("Failed to fetch profile doubles data", err);
+    }
+  };
+
+  const handleProfileAcceptInvite = async (inviteId: string) => {
+    try {
+      await api.post(`/teams/invites/${inviteId}/accept`);
+      toast.success("Doubles partner invite accepted! Team confirmed 🎉");
+      fetchDoublesData();
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Failed to accept invite");
+    }
+  };
+
+  const handleProfileDeclineInvite = async (inviteId: string) => {
+    try {
+      await api.post(`/teams/invites/${inviteId}/decline`);
+      toast.success("Invite declined");
+      fetchDoublesData();
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Failed to decline invite");
+    }
+  };
+
+  const handleProfileCancelInvite = async (inviteId: string) => {
+    try {
+      await api.delete(`/teams/invites/${inviteId}/cancel`);
+      toast.success("Invite cancelled");
+      fetchDoublesData();
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Failed to cancel invite");
+    }
+  };
 
   const fetchPlayerStats = async () => {
     if (user?.role !== "PLAYER") return;
@@ -534,6 +596,208 @@ const Profile: React.FC = () => {
                     <p className="text-sm font-semibold text-white/80">No competitive log entries</p>
                   </div>
                 )
+              )}
+            </section>
+          )}
+
+          {/* Doubles Teams & Partnerships Section (International Standard) */}
+          {profile.role === "PLAYER" && (
+            <section className="rounded-[16px] border border-white/20 bg-[#061D23]/5 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-white/10">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-xl bg-[#4AEEFF]/15 border border-[#4AEEFF]/30 text-[#4AEEFF]">
+                    <UserGroupIcon className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-black uppercase tracking-wider text-white text-base">
+                      Doubles Partnerships & Teams
+                    </h3>
+                    <p className="text-xs text-white/60">
+                      Manage your tournament pairings, sent requests, and received invitations
+                    </p>
+                  </div>
+                </div>
+
+                {/* Sub-tabs */}
+                <div className="flex items-center gap-1.5 p-1 rounded-xl bg-black/40 border border-white/10 self-start sm:self-auto">
+                  <button
+                    onClick={() => setActiveDoublesTab("ACTIVE")}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all ${
+                      activeDoublesTab === "ACTIVE"
+                        ? "bg-[#4AEEFF] text-[#061D23] shadow-md shadow-[#4AEEFF]/20"
+                        : "text-white/60 hover:text-white"
+                    }`}
+                  >
+                    Active Pairs ({doublesRegistrations.length})
+                  </button>
+                  <button
+                    onClick={() => setActiveDoublesTab("RECEIVED")}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all relative ${
+                      activeDoublesTab === "RECEIVED"
+                        ? "bg-[#4AEEFF] text-[#061D23] shadow-md shadow-[#4AEEFF]/20"
+                        : "text-white/60 hover:text-white"
+                    }`}
+                  >
+                    Received ({profileReceivedInvites.length})
+                    {profileReceivedInvites.length > 0 && (
+                      <span className="ml-1 px-1.5 py-0.2 rounded-full bg-cyan-400 text-black text-[9px] font-bold">
+                        {profileReceivedInvites.length}
+                      </span>
+                    )}
+                  </button>
+                  <button
+                    onClick={() => setActiveDoublesTab("SENT")}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all ${
+                      activeDoublesTab === "SENT"
+                        ? "bg-[#4AEEFF] text-[#061D23] shadow-md shadow-[#4AEEFF]/20"
+                        : "text-white/60 hover:text-white"
+                    }`}
+                  >
+                    Sent ({profileSentInvites.length})
+                  </button>
+                </div>
+              </div>
+
+              {/* ACTIVE DOUBLES TAB */}
+              {activeDoublesTab === "ACTIVE" && (
+                <div>
+                  {doublesRegistrations.length === 0 ? (
+                    <div className="text-center py-8 rounded-[12px] bg-[#061D23]/30 border border-white/5">
+                      <UserGroupIcon className="h-10 w-10 text-white/20 mx-auto mb-2" />
+                      <p className="text-sm font-semibold text-white/80">No active doubles teams yet</p>
+                      <p className="text-xs text-white/50 mt-1">Register for a doubles tournament and invite a partner to form a pair.</p>
+                    </div>
+                  ) : (
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      {doublesRegistrations.map((reg) => {
+                        const partnerMember = reg.team?.members?.find((m: any) => m.playerId !== user?.id);
+                        const partnerName = partnerMember
+                          ? `${partnerMember.player?.firstName || ""} ${partnerMember.player?.lastName || ""}`.trim()
+                          : (reg.playerId !== user?.id ? `${reg.player?.firstName || ""} ${reg.player?.lastName || ""}`.trim() : "Team Partner");
+
+                        return (
+                          <div
+                            key={reg.id}
+                            className="rounded-xl border border-white/10 bg-[#061D23]/40 p-4 hover:border-[#4AEEFF]/40 transition-all"
+                          >
+                            <div className="flex items-start justify-between gap-2 mb-2">
+                              <div>
+                                <span className="px-2 py-0.5 rounded bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 text-[10px] font-bold uppercase">
+                                  {reg.category?.name || "Doubles Division"}
+                                </span>
+                                <h4 className="font-bold text-white text-base mt-1.5">
+                                  {reg.tournament?.name || "Tournament Event"}
+                                </h4>
+                              </div>
+                              <span className="px-2 py-0.5 text-[10px] font-black uppercase tracking-wider rounded border border-emerald-500/40 bg-emerald-500/20 text-emerald-300">
+                                {reg.status || "CONFIRMED"}
+                              </span>
+                            </div>
+                            <div className="pt-3 border-t border-white/5 flex items-center justify-between text-xs">
+                              <span className="text-white/60">Partner:</span>
+                              <span className="font-bold text-[#4AEEFF] flex items-center gap-1">
+                                <span>🤝</span> {partnerName}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* RECEIVED INVITES TAB */}
+              {activeDoublesTab === "RECEIVED" && (
+                <div>
+                  {profileReceivedInvites.length === 0 ? (
+                    <div className="text-center py-8 rounded-[12px] bg-[#061D23]/30 border border-white/5">
+                      <p className="text-sm font-semibold text-white/80">No pending partner invitations</p>
+                      <p className="text-xs text-white/50 mt-1">When someone invites you to play doubles, it will show up here.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {profileReceivedInvites.map((inv) => (
+                        <div
+                          key={inv.id}
+                          className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl bg-black/40 border border-cyan-500/30 hover:border-cyan-400/50 transition-all"
+                        >
+                          <div>
+                            <p className="font-bold text-white text-sm">
+                              <span className="text-[#4AEEFF] font-black">{inv.inviter?.firstName} {inv.inviter?.lastName}</span> invited you to partner!
+                            </p>
+                            <p className="text-xs text-white/60 mt-1">
+                              Tournament: <span className="text-white font-semibold">{inv.tournament?.name}</span> • Division: <span className="text-cyan-300 font-semibold">{inv.category?.name}</span>
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2 self-end sm:self-auto flex-shrink-0">
+                            <button
+                              onClick={() => handleProfileAcceptInvite(inv.id)}
+                              className="px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-cyan-400 to-teal-400 text-slate-950 text-xs font-black uppercase tracking-wider shadow-sm hover:brightness-110 active:scale-95 transition-all"
+                            >
+                              ✓ Accept
+                            </button>
+                            <button
+                              onClick={() => handleProfileDeclineInvite(inv.id)}
+                              className="px-3 py-1.5 rounded-lg border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-red-300 text-xs font-bold transition-all"
+                            >
+                              ✕ Decline
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* SENT INVITES TAB */}
+              {activeDoublesTab === "SENT" && (
+                <div>
+                  {profileSentInvites.length === 0 ? (
+                    <div className="text-center py-8 rounded-[12px] bg-[#061D23]/30 border border-white/5">
+                      <p className="text-sm font-semibold text-white/80">No sent partner invitations</p>
+                      <p className="text-xs text-white/50 mt-1">Invites you send to other players will be listed here.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {profileSentInvites.map((inv) => (
+                        <div
+                          key={inv.id}
+                          className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl bg-black/40 border border-white/10 hover:border-white/20 transition-all"
+                        >
+                          <div>
+                            <p className="font-bold text-white text-sm">
+                              Invited: <span className="text-cyan-300 font-bold">{inv.invitee?.firstName} {inv.invitee?.lastName}</span>
+                            </p>
+                            <p className="text-xs text-white/60 mt-1">
+                              Tournament: <span className="text-white font-semibold">{inv.tournament?.name}</span> • Division: <span className="text-white font-semibold">{inv.category?.name}</span>
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-3 self-end sm:self-auto flex-shrink-0">
+                            <span className={`px-2.5 py-1 text-[10px] font-black uppercase tracking-wider rounded-md border ${
+                              inv.status === "PENDING"
+                                ? "bg-amber-500/15 text-amber-300 border-amber-500/30"
+                                : inv.status === "ACCEPTED"
+                                ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/30"
+                                : "bg-red-500/15 text-red-300 border-red-500/30"
+                            }`}>
+                              {inv.status}
+                            </span>
+                            {inv.status === "PENDING" && (
+                              <button
+                                onClick={() => handleProfileCancelInvite(inv.id)}
+                                className="px-3 py-1 rounded-lg border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-red-300 text-xs font-bold transition-all"
+                              >
+                                Cancel
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               )}
             </section>
           )}

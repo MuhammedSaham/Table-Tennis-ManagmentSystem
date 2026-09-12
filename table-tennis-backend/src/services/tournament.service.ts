@@ -680,7 +680,12 @@ async registerForTournament(playerId: string, data: {
   // Get my registrations (Player)
   async getMyRegistrations(playerId: string) {
     const registrations = await prisma.tournamentRegistration.findMany({
-      where: { playerId },
+      where: {
+        OR: [
+          { playerId },
+          { team: { members: { some: { playerId } } } },
+        ],
+      },
       include: {
         tournament: true,
         category: true,
