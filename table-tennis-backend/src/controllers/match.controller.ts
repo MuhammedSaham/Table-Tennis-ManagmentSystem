@@ -175,7 +175,7 @@ export const updateMatch = catchAsync(async (req: Request, res: Response) => {
 
         if (nextMatch) {
           const isSlot1 = matchIndex % 2 === 0;
-          const isDoubles = match.matchType === 'DOUBLES';
+          const isDoubles = match.matchType === 'DOUBLES' || Boolean(match.team1Id || match.team2Id);
 
           // Advance winner into the correct slot of the next match
           if (isDoubles) {

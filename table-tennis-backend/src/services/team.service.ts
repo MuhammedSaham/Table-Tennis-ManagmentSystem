@@ -213,6 +213,40 @@ export class TeamService {
 
   // ─── DOUBLES INVITE METHODS ─────────────────────────────────────────────────
 
+  // Helper to determine category division
+  private getCategoryDivision(category: { type: string; gender?: string | null; name: string }): 'MIXED' | 'MEN' | 'WOMEN' | 'OPEN' {
+    const nameLower = category.name.toLowerCase();
+
+    // Mixed doubles check
+    if (
+      category.type === 'MIXED_DOUBLES' ||
+      category.gender === 'MIXED' ||
+      nameLower.includes('mix')
+    ) {
+      return 'MIXED';
+    }
+
+    // Women's doubles check
+    if (
+      category.gender === 'FEMALE' ||
+      nameLower.includes('women') ||
+      nameLower.includes('girl') ||
+      nameLower.includes('female')
+    ) {
+      return 'WOMEN';
+    }
+
+    // Men's doubles check
+    if (
+      category.gender === 'MALE' ||
+      ((nameLower.includes('men') || nameLower.includes('boy') || nameLower.includes('male')) && !nameLower.includes('women'))
+    ) {
+      return 'MEN';
+    }
+
+    return 'OPEN';
+  }
+
   // Search all PLAYER accounts by name or email (for partner selection)
   async searchPartners(query: string, excludeUserId: string, categoryId?: string) {
     const excludeIds = [excludeUserId];
@@ -240,18 +274,37 @@ export class TeamService {
           }
         }
 
-        // Gender constraints
-        if (category.type === 'MIXED_DOUBLES') {
-          const inviterProfile = await prisma.playerProfile.findUnique({
-            where: { userId: excludeUserId },
-            select: { gender: true },
-          });
+        const inviterProfile = await prisma.playerProfile.findUnique({
+          where: { userId: excludeUserId },
+          select: { gender: true },
+        });
+
+        const division = this.getCategoryDivision(category);
+
+        if (division === 'MIXED') {
+          // In Mixed Doubles:
+          // A male player can ONLY search and see female players
+          // A female player can ONLY search and see male players
           if (inviterProfile?.gender === 'MALE') {
             genderFilter = 'FEMALE';
           } else if (inviterProfile?.gender === 'FEMALE') {
             genderFilter = 'MALE';
+          } else {
+            return []; // Cannot determine opposite gender if gender not set
           }
-        } else if (category.type === 'DOUBLES' && category.gender && category.gender !== 'MIXED') {
+        } else if (division === 'MEN') {
+          // In Men's Doubles: only male players can participate, and only search males
+          if (inviterProfile?.gender !== 'MALE') {
+            return [];
+          }
+          genderFilter = 'MALE';
+        } else if (division === 'WOMEN') {
+          // In Women's Doubles: only female players can participate, and only search females
+          if (inviterProfile?.gender !== 'FEMALE') {
+            return [];
+          }
+          genderFilter = 'FEMALE';
+        } else if (category.gender && category.gender !== 'MIXED') {
           genderFilter = category.gender;
         }
       }
@@ -298,21 +351,55 @@ export class TeamService {
   // Send a doubles partner invite
   async sendInvite(inviterId: string, tournamentId: string, categoryId: string, inviteeId: string) {
     // Verify inviter is a player
-    const inviter = await prisma.user.findFirst({ where: { id: inviterId, role: 'PLAYER' } });
+    const inviter = await prisma.user.findFirst({
+      where: { id: inviterId, role: 'PLAYER' },
+      include: { playerProfile: { select: { gender: true } } },
+    });
     if (!inviter) throw new AppError('Only players can send doubles invites', 403);
 
     // Verify invitee exists and is a player
-    const invitee = await prisma.user.findFirst({ where: { id: inviteeId, role: 'PLAYER' } });
+    const invitee = await prisma.user.findFirst({
+      where: { id: inviteeId, role: 'PLAYER' },
+      include: { playerProfile: { select: { gender: true } } },
+    });
     if (!invitee) throw new AppError('Invited partner must be a registered player', 404);
 
-    // Verify tournament + category exist and category is DOUBLES/MIXED
+    // Verify tournament + category exist
     const category = await prisma.category.findFirst({
-      where: { id: categoryId, tournamentId, type: { in: ['DOUBLES', 'MIXED_DOUBLES'] } },
+      where: { id: categoryId, tournamentId },
     });
     if (!category) throw new AppError('Category not found or is not a doubles category', 404);
 
     // Prevent inviting yourself
     if (inviterId === inviteeId) throw new AppError('You cannot invite yourself', 400);
+
+    // Enforce gender constraints
+    const inviterGender = inviter.playerProfile?.gender;
+    const inviteeGender = invitee.playerProfile?.gender;
+    const division = this.getCategoryDivision(category);
+
+    if (division === 'MIXED') {
+      if (!inviterGender || !inviteeGender) {
+        throw new AppError('Both players must have a gender specified in their profile for mixed doubles', 400);
+      }
+      if (inviterGender === inviteeGender) {
+        throw new AppError('Mixed doubles requires one male and one female player', 400);
+      }
+    } else if (division === 'MEN') {
+      if (inviterGender !== 'MALE') {
+        throw new AppError("Only male players can participate in Men's doubles", 400);
+      }
+      if (inviteeGender !== 'MALE') {
+        throw new AppError("Men's doubles partner must be a male player", 400);
+      }
+    } else if (division === 'WOMEN') {
+      if (inviterGender !== 'FEMALE') {
+        throw new AppError("Only female players can participate in Women's doubles", 400);
+      }
+      if (inviteeGender !== 'FEMALE') {
+        throw new AppError("Women's doubles partner must be a female player", 400);
+      }
+    }
 
     // Check if invitee already has a confirmed team in this category
     const inviteeExistingTeam = await prisma.tournamentRegistration.findFirst({
@@ -352,10 +439,24 @@ export class TeamService {
     const invite = await prisma.doublesInvite.findUnique({
       where: { id: inviteId },
       include: {
-        inviter: { select: { id: true, firstName: true, lastName: true } },
-        invitee: { select: { id: true, firstName: true, lastName: true } },
+        inviter: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            playerProfile: { select: { gender: true } },
+          },
+        },
+        invitee: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            playerProfile: { select: { gender: true } },
+          },
+        },
         tournament: { select: { name: true } },
-        category: { select: { name: true,type: true } },
+        category: { select: { name: true, type: true, gender: true } },
       },
     });
 
@@ -385,48 +486,33 @@ export class TeamService {
       return { status: 'DECLINED' };
     }
     
-    if (invite.category.type === 'MIXED_DOUBLES') {
-  const players = await prisma.user.findMany({
-    where: {
-      id: {
-        in: [invite.inviterId, invite.inviteeId],
-      },
-    },
-    include: {
-      playerProfile: {
-        select: {
-          gender: true,
-        },
-      },
-    },
-  });
+    // Gender validation on acceptance
+    const inviterGender = invite.inviter.playerProfile?.gender;
+    const inviteeGender = invite.invitee.playerProfile?.gender;
+    const division = this.getCategoryDivision(invite.category);
 
-  const inviter = players.find(
-    player => player.id === invite.inviterId
-  );
-
-  const invitee = players.find(
-    player => player.id === invite.inviteeId
-  );
-
-  if (!inviter || !invitee) {
-    throw new AppError('Both players must exist', 404);
-  }
-
-  const inviterGender = inviter.playerProfile?.gender;
-  const inviteeGender = invitee.playerProfile?.gender;
-
-  if (
-    !inviterGender ||
-    !inviteeGender ||
-    inviterGender === inviteeGender
-  ) {
-    throw new AppError(
-      'Mixed doubles requires one male and one female player',
-      400
-    );
-  }
-}
+    if (division === 'MIXED') {
+      if (!inviterGender || !inviteeGender || inviterGender === inviteeGender) {
+        throw new AppError(
+          'Mixed doubles requires one male and one female player',
+          400
+        );
+      }
+    } else if (division === 'MEN') {
+      if (inviterGender !== 'MALE' || inviteeGender !== 'MALE') {
+        throw new AppError(
+          "Men's doubles only allows male players",
+          400
+        );
+      }
+    } else if (division === 'WOMEN') {
+      if (inviterGender !== 'FEMALE' || inviteeGender !== 'FEMALE') {
+        throw new AppError(
+          "Women's doubles only allows female players",
+          400
+        );
+      }
+    }
 
     // ACCEPT — create team + 2 members + registration
     const teamName = `${invite.inviter.firstName} & ${invite.invitee.firstName}`;

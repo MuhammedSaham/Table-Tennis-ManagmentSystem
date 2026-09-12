@@ -137,6 +137,7 @@ const TournamentDetails: React.FC = () => {
   const [showKnockoutModal, setShowKnockoutModal] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [showIneligible, setShowIneligible] = useState(false);
+  const [confirmDrawCategory, setConfirmDrawCategory] = useState<Category | null>(null);
 
   const fetchInvites = async () => {
     if (!user || user.role !== "PLAYER" || !id) return;
@@ -465,16 +466,13 @@ const TournamentDetails: React.FC = () => {
   };
 
   const handleGenerateBracket = async (categoryId: string) => {
-    if (
-      !window.confirm("This will create matches for this category. Continue?")
-    )
-      return;
     setGenerating(categoryId);
     try {
       await api.post(
         `/brackets/tournaments/${id}/categories/${categoryId}/generate`,
       );
       toast.success("Bracket generated successfully!");
+      setConfirmDrawCategory(null);
       setRefreshKnockout((prev) => prev + 1);
       fetchTournamentDetails();
     } catch (error) {
@@ -1386,7 +1384,7 @@ const TournamentDetails: React.FC = () => {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleGenerateBracket(category.id);
+                          setConfirmDrawCategory(category);
                         }}
                         disabled={generating === category.id}
                         className="w-full rounded-xl border border-[#4AEEFF]/40 bg-[#4AEEFF]/15 hover:bg-[#4AEEFF] text-[#4AEEFF] hover:text-[#061D23] px-3.5 py-2 text-xs font-black uppercase tracking-wider transition-all duration-200 flex items-center justify-center gap-2 shadow-sm disabled:opacity-50 active:scale-[0.98]"
@@ -2109,6 +2107,235 @@ const TournamentDetails: React.FC = () => {
         </div>,
         document.body
       )}
+
+      {/* Custom Glassmorphic Modal for Generate / Update Bracket Confirmation */}
+      {confirmDrawCategory &&
+        createPortal(
+          <div
+            style={{
+              position: "fixed",
+              inset: 0,
+              background: "rgba(0, 0, 0, 0.78)",
+              backdropFilter: "blur(10px)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              zIndex: 99999,
+              padding: 16,
+            }}
+            onClick={() => !generating && setConfirmDrawCategory(null)}
+          >
+            <div
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                background: "#082229",
+                border: "1px solid rgba(74, 238, 255, 0.35)",
+                borderRadius: 20,
+                maxWidth: 440,
+                width: "100%",
+                overflow: "hidden",
+                boxShadow: "0 25px 60px rgba(0, 0, 0, 0.75), 0 0 35px rgba(74, 238, 255, 0.15)",
+                fontFamily: "'Segoe UI',system-ui,sans-serif",
+                color: "#ffffff",
+              }}
+            >
+              {/* Header */}
+              <div
+                style={{
+                  background: "linear-gradient(135deg, rgba(74, 238, 255, 0.15), rgba(6, 29, 35, 0.8))",
+                  padding: "20px 24px",
+                  borderBottom: "1px solid rgba(74, 238, 255, 0.2)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <div
+                    style={{
+                      width: 44,
+                      height: 44,
+                      borderRadius: "50%",
+                      background: "rgba(74, 238, 255, 0.15)",
+                      border: "1px solid rgba(74, 238, 255, 0.4)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: 22,
+                    }}
+                  >
+                    🎲
+                  </div>
+                  <div>
+                    <h3
+                      style={{
+                        margin: 0,
+                        fontWeight: 900,
+                        color: "#ffffff",
+                        fontSize: 16,
+                        textTransform: "uppercase",
+                        letterSpacing: 0.5,
+                      }}
+                    >
+                      Generate Knockout Draw
+                    </h3>
+                    <div style={{ fontSize: 12, color: "#4AEEFF", fontWeight: 700, marginTop: 2 }}>
+                      Official Bracket Generation
+                    </div>
+                  </div>
+                </div>
+                <button
+                  onClick={() => !generating && setConfirmDrawCategory(null)}
+                  style={{
+                    background: "rgba(255, 255, 255, 0.08)",
+                    border: "none",
+                    color: "rgba(255, 255, 255, 0.7)",
+                    width: 32,
+                    height: 32,
+                    borderRadius: "50%",
+                    cursor: "pointer",
+                    fontSize: 18,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  ×
+                </button>
+              </div>
+
+              {/* Body */}
+              <div style={{ padding: "22px 24px" }}>
+                {/* Category preview pill */}
+                <div
+                  style={{
+                    background: "rgba(0, 0, 0, 0.35)",
+                    border: "1px solid rgba(255, 255, 255, 0.1)",
+                    borderRadius: 14,
+                    padding: "14px 16px",
+                    marginBottom: 16,
+                  }}
+                >
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                    <span style={{ fontSize: 11, color: "rgba(255, 255, 255, 0.5)", textTransform: "uppercase", fontWeight: 700 }}>
+                      Division / Category
+                    </span>
+                    <span
+                      style={{
+                        fontSize: 10,
+                        padding: "2px 8px",
+                        borderRadius: 8,
+                        fontWeight: 800,
+                        background: "rgba(74, 238, 255, 0.15)",
+                        color: "#4AEEFF",
+                        border: "1px solid rgba(74, 238, 255, 0.3)",
+                        textTransform: "uppercase",
+                      }}
+                    >
+                      {isDoublesCategory(confirmDrawCategory) ? "Doubles" : "Singles"}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: 16, fontWeight: 800, color: "#ffffff" }}>
+                    {confirmDrawCategory.name}
+                  </div>
+                  <div style={{ fontSize: 12, color: "rgba(255, 255, 255, 0.7)", marginTop: 4 }}>
+                    {confirmDrawCategory.currentParticipants ?? 0} approved entries ready to seed
+                  </div>
+                </div>
+
+                <p
+                  style={{
+                    margin: "0 0 12px",
+                    color: "rgba(255, 255, 255, 0.8)",
+                    fontSize: 13,
+                    lineHeight: 1.5,
+                  }}
+                >
+                  This will seed approved participants, calculate any necessary BYEs according to tournament rules, and generate official fixtures.
+                </p>
+
+                <div
+                  style={{
+                    background: "rgba(74, 238, 255, 0.08)",
+                    border: "1px solid rgba(74, 238, 255, 0.25)",
+                    borderRadius: 10,
+                    padding: "10px 14px",
+                    fontSize: 12,
+                    color: "#a5f3fc",
+                  }}
+                >
+                  💡 Any unplayed or empty fixtures for this division will be updated to reflect the new draw.
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div
+                style={{
+                  padding: "14px 24px",
+                  borderTop: "1px solid rgba(255, 255, 255, 0.1)",
+                  display: "flex",
+                  gap: 12,
+                  background: "rgba(6, 29, 35, 0.8)",
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => setConfirmDrawCategory(null)}
+                  disabled={generating === confirmDrawCategory.id}
+                  style={{
+                    flex: 1,
+                    padding: "11px 0",
+                    border: "1px solid rgba(255, 255, 255, 0.15)",
+                    borderRadius: 12,
+                    background: "rgba(255, 255, 255, 0.05)",
+                    color: "#fff",
+                    fontWeight: 700,
+                    fontSize: 13,
+                    cursor: "pointer",
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleGenerateBracket(confirmDrawCategory.id)}
+                  disabled={generating === confirmDrawCategory.id}
+                  style={{
+                    flex: 1.4,
+                    padding: "11px 0",
+                    border: "none",
+                    borderRadius: 12,
+                    background: "linear-gradient(135deg, #4AEEFF, #0284c7)",
+                    color: "#061D23",
+                    fontWeight: 900,
+                    fontSize: 13,
+                    cursor: generating === confirmDrawCategory.id ? "default" : "pointer",
+                    textTransform: "uppercase",
+                    letterSpacing: 0.5,
+                    boxShadow: "0 4px 14px rgba(74, 238, 255, 0.35)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 8,
+                  }}
+                >
+                  {generating === confirmDrawCategory.id ? (
+                    <>
+                      <span className="animate-spin text-sm">⏳</span>
+                      <span>Generating...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>✓</span>
+                      <span>Confirm & Generate</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
     </>
   );
 };

@@ -465,18 +465,32 @@ async registerForTournament(playerId: string, data: {
         throw new AppError('Partner profile not found', 404);
       }
 
-      // Same-gender doubles: partner must also match category gender
-      if (category.type === 'DOUBLES' && category.gender && category.gender !== 'MIXED') {
-        if (!partner.gender) {
-          throw new AppError(
-            'Your partner must have a gender specified in their profile',
-            400
-          );
+      const nameLower = category.name.toLowerCase();
+      const isMixed =
+        category.type === 'MIXED_DOUBLES' ||
+        category.gender === 'MIXED' ||
+        nameLower.includes('mix');
+
+      const isWomen =
+        category.gender === 'FEMALE' ||
+        nameLower.includes('women') ||
+        nameLower.includes('girl') ||
+        nameLower.includes('female');
+
+      const isMen =
+        category.gender === 'MALE' ||
+        ((nameLower.includes('men') || nameLower.includes('boy') || nameLower.includes('male')) && !nameLower.includes('women'));
+
+      // Same-gender doubles: player and partner must match category gender
+      if (!isMixed && (isMen || isWomen)) {
+        const requiredGender = isMen ? 'MALE' : 'FEMALE';
+        const requiredLabel = isMen ? "men's" : "women's";
+        if (player.gender !== requiredGender) {
+          throw new AppError(`This category is restricted to ${requiredLabel} players only`, 400);
         }
-        if (partner.gender !== category.gender) {
-          const required = category.gender === 'MALE' ? "men's" : "women's";
+        if (!partner.gender || partner.gender !== requiredGender) {
           throw new AppError(
-            `Your partner must also be eligible for this ${required} category`,
+            `Your partner must also be eligible for this ${requiredLabel} category`,
             400
           );
         }
@@ -485,7 +499,7 @@ async registerForTournament(playerId: string, data: {
       // ------------------------------------------------------------
       // Mixed Doubles: players must have different genders
       // ------------------------------------------------------------
-      if (category.type === 'MIXED_DOUBLES') {
+      if (isMixed) {
         if (!player.gender || !partner.gender) {
           throw new AppError(
             'Both players must have a gender specified for mixed doubles',
