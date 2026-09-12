@@ -83,7 +83,6 @@ export const getTournamentById = catchAsync(async (req: Request, res: Response) 
         },
       },
       registrations: {
-        where: { status: 'APPROVED' },
         include: {
           player: {
             select: {
@@ -94,6 +93,22 @@ export const getTournamentById = catchAsync(async (req: Request, res: Response) 
             },
           },
           category: true,
+          team: {
+            include: {
+              members: {
+                include: {
+                  player: {
+                    select: {
+                      id: true,
+                      firstName: true,
+                      lastName: true,
+                      email: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
         },
       },
       matches: {

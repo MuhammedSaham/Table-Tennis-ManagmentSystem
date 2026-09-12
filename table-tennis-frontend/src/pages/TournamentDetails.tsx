@@ -704,7 +704,7 @@ const TournamentDetails: React.FC = () => {
     tournament.registrations?.filter(
       (r) =>
         r.playerId === user?.id ||
-        r.team?.members?.some((m) => m.playerId === user?.id),
+        r.team?.members?.some((m) => m.playerId === user?.id || m.player?.id === user?.id),
     ) || [];
   const hasRegistration = userRegistrations.length > 0;
   const canRegister = isPlayer && isRegistrationOpen;
