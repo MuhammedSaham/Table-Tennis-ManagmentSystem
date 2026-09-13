@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import api from "../services/api";
 import toast from "react-hot-toast";
+import { useAuth } from "../context/AuthContext";
 import {
   BellIcon,
   CheckCircleIcon,
@@ -19,6 +20,7 @@ interface Notification {
 }
 
 const NotificationBell: React.FC = () => {
+  const { user } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [pendingInvites, setPendingInvites] = useState<any[]>([]);
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
@@ -31,7 +33,7 @@ const NotificationBell: React.FC = () => {
     // Poll for new notifications every 10 seconds
     const interval = setInterval(fetchNotifications, 10000);
     return () => clearInterval(interval);
-  }, []);
+  }, [user]);
 
   const fetchNotifications = async () => {
     try {
@@ -41,12 +43,16 @@ const NotificationBell: React.FC = () => {
       const unread = data.filter((n: Notification) => !n.isRead).length;
       setUnreadCount(unread);
 
-      // Fetch pending doubles invites to enable quick actions
-      try {
-        const invitesRes = await api.get("/teams/invites/my-invites");
-        setPendingInvites(invitesRes.data.data || []);
-      } catch {
-        // Ignored if user not player
+      // Fetch pending doubles invites to enable quick actions (players only)
+      if (user?.role === "PLAYER") {
+        try {
+          const invitesRes = await api.get("/teams/invites/my-invites");
+          setPendingInvites(invitesRes.data.data || []);
+        } catch {
+          // Ignored if user not player
+        }
+      } else {
+        setPendingInvites([]);
       }
     } catch (error) {
       console.error("Failed to fetch notifications:", error);

@@ -38,4 +38,4 @@ router.post('/invites/:inviteId/accept', isPlayer, acceptInvite);
 router.post('/invites/:inviteId/decline', isPlayer, declineInvite);
 router.delete('/invites/:inviteId/cancel', isPlayer, cancelInvite);
 
-export default router;
+export default router;
