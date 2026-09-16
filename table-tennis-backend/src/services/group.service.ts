@@ -523,8 +523,9 @@ async recordGroupScore(
     // ── 4b. CASE: bracketSize >= 8 (e.g. 5-8 players with QF, or 9-16 with R16) ──
     else {
       const firstRoundMatchCount = bracketSize / 2;
-      const byePlayers = seededPlayers.slice(0, byes);
-      const playingPlayers = this.shuffleArray(seededPlayers.slice(byes));
+      const randomized = this.shuffleArray([...seededPlayers]);
+      const byePlayers = randomized.slice(0, byes);
+      const playingPlayers = randomized.slice(byes);
 
       const matchOrder = this.getSeededMatchOrder(firstRoundMatchCount);
       const firstRoundPairs = Array.from({ length: firstRoundMatchCount }, () => ({
@@ -1330,8 +1331,9 @@ async updateGroupMembers(
       allMatches.push(thirdPlaceMatch);
     } else {
       const firstRoundMatchCount = bracketSize / 2;
-      const byeTeams = seededTeams.slice(0, byes);
-      const playingTeams = this.shuffleArray(seededTeams.slice(byes));
+      const randomized = this.shuffleArray([...seededTeams]);
+      const byeTeams = randomized.slice(0, byes);
+      const playingTeams = randomized.slice(byes);
 
       const matchOrder = this.getSeededMatchOrder(firstRoundMatchCount);
       const firstRoundPairs = Array.from({ length: firstRoundMatchCount }, () => ({
