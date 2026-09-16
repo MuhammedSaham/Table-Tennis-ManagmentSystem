@@ -679,6 +679,10 @@ export const UmpireSheet: React.FC<UmpireSheetProps> = ({
               <span style={{ color: "#0f172a", fontWeight: 700 }}>
                 {match.referee?.user
                   ? `${match.referee.user.firstName} ${match.referee.user.lastName}`
+                  : user?.role === "ADMIN"
+                  ? `${user.firstName} ${user.lastName} (Admin)`
+                  : isCompleted
+                  ? "Tournament Official"
                   : "…………………………"}
               </span>
             </div>
