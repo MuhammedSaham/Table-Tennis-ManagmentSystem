@@ -8,6 +8,7 @@ import { UserIcon, EnvelopeIcon, TrophyIcon } from "@heroicons/react/24/outline"
 interface Category {
   name: string;
   type: "SINGLES" | "DOUBLES" | "TEAM";
+  stageFormat: "KNOCKOUT" | "GROUP_KNOCKOUT";
   minAge?: number;
   maxAge?: number;
   gender?: "MALE" | "FEMALE" | "MIXED";
@@ -22,6 +23,7 @@ const CreateTournament: React.FC = () => {
     {
       name: "",
       type: "SINGLES",
+      stageFormat: "KNOCKOUT",
       minAge: undefined,
       maxAge: undefined,
       gender: undefined,
@@ -72,6 +74,7 @@ const CreateTournament: React.FC = () => {
       {
         name: "",
         type: "SINGLES",
+        stageFormat: (tournamentType as "KNOCKOUT" | "GROUP_KNOCKOUT") || "KNOCKOUT",
         minAge: undefined,
         maxAge: undefined,
         gender: undefined,
@@ -164,6 +167,7 @@ const CreateTournament: React.FC = () => {
         await api.post(`/tournaments/${tournamentId}/categories`, {
           name: category.name,
           type: category.type,
+          stageFormat: category.stageFormat || "KNOCKOUT",
           minAge: category.minAge,
           maxAge: category.maxAge,
           gender: category.gender,
@@ -328,10 +332,19 @@ const CreateTournament: React.FC = () => {
             </div>
 
             <div>
-              <label className={labelStyles}>Tournament Format *</label>
+              <label className={labelStyles}>Default Tournament Format *</label>
               <select
                 value={tournamentType}
-                onChange={(e) => setTournamentType(e.target.value)}
+                onChange={(e) => {
+                  const newType = e.target.value;
+                  setTournamentType(newType);
+                  setCategories((prev) =>
+                    prev.map((c) => ({
+                      ...c,
+                      stageFormat: newType as "KNOCKOUT" | "GROUP_KNOCKOUT",
+                    })),
+                  );
+                }}
                 className={inputStyles}
               >
                 <option value="KNOCKOUT">
@@ -342,9 +355,7 @@ const CreateTournament: React.FC = () => {
                 </option>
               </select>
               <p className="text-xs text-white/50 mt-1.5">
-                {tournamentType === "KNOCKOUT"
-                  ? "Players are directly placed in elimination bracket"
-                  : "Players first play in groups, then top players advance to knockout"}
+                Default for new categories. You can also customize each category individually below.
               </p>
             </div>
           </div>
@@ -368,7 +379,7 @@ const CreateTournament: React.FC = () => {
             </button>
           </div>
           <p className="text-xs text-white/50 mb-5">
-            Define age groups and match types for this tournament
+            Define age groups, match types, and draw formats for this tournament
           </p>
 
           <div className="space-y-4">
@@ -392,7 +403,7 @@ const CreateTournament: React.FC = () => {
                   )}
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
                     <label className={labelStyles}>Category Name *</label>
                     <input
@@ -423,6 +434,24 @@ const CreateTournament: React.FC = () => {
                       <option value="SINGLES">Singles</option>
                       <option value="DOUBLES">Doubles</option>
                       <option value="TEAM">Team</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className={labelStyles}>Draw Format *</label>
+                    <select
+                      value={category.stageFormat || "KNOCKOUT"}
+                      onChange={(e) =>
+                        handleCategoryChange(
+                          index,
+                          "stageFormat",
+                          e.target.value as "KNOCKOUT" | "GROUP_KNOCKOUT",
+                        )
+                      }
+                      className={inputStyles}
+                    >
+                      <option value="KNOCKOUT">🏆 Knockout</option>
+                      <option value="GROUP_KNOCKOUT">🏅 Group + Knockout</option>
                     </select>
                   </div>
                 </div>

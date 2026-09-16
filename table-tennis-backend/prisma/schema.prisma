@@ -145,6 +145,7 @@ model Category {
   tournament          Tournament   @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
   name                String
   type                CategoryType
+  stageFormat         TournamentType @default(KNOCKOUT)
   minAge              Int?
   maxAge              Int?
   gender              Gender?
@@ -191,6 +192,8 @@ model Team {
   winnerMatches          Match[]                  @relation("winnerTeam")
   TournamentRegistration TournamentRegistration[]
   doublesInvites         DoublesInvite[]
+  groupWinnerMatches     GroupMatch[]             @relation("groupWinnerTeam")
+  groupTeams             GroupTeam[]
 }
 
 model TeamMember {
@@ -403,6 +406,7 @@ model Group {
   category     Category   @relation(fields: [categoryId], references: [id])
 
   players   GroupPlayer[]
+  teams     GroupTeam[]
   matches   GroupMatch[]
   createdAt DateTime      @default(now())
 }
@@ -426,14 +430,33 @@ model GroupPlayer {
   @@unique([groupId, playerId])
 }
 
+model GroupTeam {
+  id       String @id @default(cuid())
+  groupId  String
+  group    Group  @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  teamId   String
+  team     Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  matchesPlayed  Int @default(0)
+  wins           Int @default(0)
+  losses         Int @default(0)
+  points         Int @default(0)
+  gamesWon       Int @default(0)
+  gamesLost      Int @default(0)
+  pointsScored   Int @default(0)
+  pointsConceded Int @default(0)
+
+  @@unique([groupId, teamId])
+}
+
 model GroupMatch {
   id        String @id @default(cuid())
   groupId   String
   group     Group  @relation(fields: [groupId], references: [id])
-  player1Id String
-  player1   User   @relation("groupMatch_player1", fields: [player1Id], references: [id])
-  player2Id String
-  player2   User   @relation("groupMatch_player2", fields: [player2Id], references: [id])
+  player1Id String?
+  player1   User?  @relation("groupMatch_player1", fields: [player1Id], references: [id])
+  player2Id String?
+  player2   User?  @relation("groupMatch_player2", fields: [player2Id], references: [id])
 
   //Doubles
   team1Id String?
@@ -445,6 +468,7 @@ model GroupMatch {
   player2Score Int?
   winnerId     String?
   winnerTeamId String?
+  winnerTeam   Team?       @relation("groupWinnerTeam", fields: [winnerTeamId], references: [id])
   status       MatchStatus     @default(SCHEDULED)
   refereeId    String?
   referee      RefereeProfile? @relation(fields: [refereeId], references: [id])

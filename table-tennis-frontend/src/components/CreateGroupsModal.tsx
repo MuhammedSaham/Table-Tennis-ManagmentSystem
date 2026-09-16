@@ -10,7 +10,7 @@ interface Props {
   onSuccess: () => void;
 }
 
-interface FormatOption {
+export interface FormatOption {
   groups: number;
   label: string;
   description: string;

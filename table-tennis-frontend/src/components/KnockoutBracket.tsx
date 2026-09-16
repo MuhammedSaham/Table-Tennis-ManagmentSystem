@@ -96,7 +96,7 @@ export const UmpireSheet: React.FC<{
   onSave: (id: string, games: GameScore[], bestOf: 3 | 5) => Promise<void>;
   isAdminOrReferee: boolean;
 }> = ({ match, onClose, onSave, isAdminOrReferee }) => {
-  const { user } = useAuth();
+  const { user: _user } = useAuth();
   const today = new Date().toLocaleDateString("en-GB");
   const done = match.status === "COMPLETED";
 
@@ -755,7 +755,6 @@ const MatchCard: React.FC<{
     (isDoubles
       ? match.winnerId === match.team2?.id
       : match.winnerId === match.player2?.id);
-  const border = accent ?? (done ? "#22c55e" : "#e2e8f0");
 
   const gameParts =
     match.score && match.score !== "BYE"

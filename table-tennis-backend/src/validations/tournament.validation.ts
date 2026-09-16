@@ -124,6 +124,8 @@ export const addCategorySchema = z.object({
     type: z.enum(['SINGLES', 'DOUBLES', 'TEAM'], {
       errorMap: () => ({ message: 'Type must be SINGLES, DOUBLES, or TEAM' }),
     }),
+
+    stageFormat: z.enum(['KNOCKOUT', 'GROUP_KNOCKOUT']).default('KNOCKOUT').optional(),
     
     minAge: z.number()
       .int('Minimum age must be a whole number')
@@ -180,6 +182,8 @@ export const updateCategorySchema = z.object({
     type: z.enum(['SINGLES', 'DOUBLES', 'TEAM'], {
       errorMap: () => ({ message: 'Type must be SINGLES, DOUBLES, or TEAM' }),
     }).optional(),
+
+    stageFormat: z.enum(['KNOCKOUT', 'GROUP_KNOCKOUT']).optional(),
     
     minAge: z.number()
       .int('Minimum age must be a whole number')

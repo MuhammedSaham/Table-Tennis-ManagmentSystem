@@ -22,6 +22,7 @@ interface Category {
   minAge?: number;
   maxAge?: number;
   gender?: "MALE" | "FEMALE" | "MIXED";
+  stageFormat?: "KNOCKOUT" | "GROUP_KNOCKOUT";
   _count?: {
     registrations: number;
   };
@@ -98,6 +99,8 @@ const TournamentDetails: React.FC = () => {
   const [registering, setRegistering] = useState(false);
   const [generating, setGenerating] = useState<string | null>(null);
   const [tournamentType, setTournamentType] = useState("KNOCKOUT");
+  const activeCategory = tournament?.categories?.find((c) => c.id === activeCategoryId);
+  const activeCategoryFormat = activeCategory?.stageFormat || tournamentType || "KNOCKOUT";
   const [showGroupsModal, setShowGroupsModal] = useState(false);
   const [showScoreModal, setShowScoreModal] = useState(false);
   const [refreshGroups, setRefreshGroups] = useState(0);
@@ -408,13 +411,13 @@ const TournamentDetails: React.FC = () => {
     }
   };*/
 
-  const handleRecordScores = () => {
+  /* const handleRecordScores = () => {
     if (!activeCategoryId) {
       toast.error("Please select a category first");
       return;
     }
     setShowScoreModal(true);
-  };
+  }; */
 
   const handleGenerateGroupMatches = async () => {
     if (!activeCategoryId) {
@@ -512,6 +515,34 @@ const TournamentDetails: React.FC = () => {
     }
   };
 
+  const getMatchParticipantDetails = (match: any, slot: 1 | 2) => {
+    const isDoubles = !!(match.team1 || match.team2 || match.team1Id || match.team2Id);
+    if (isDoubles) {
+      const team = slot === 1 ? match.team1 : match.team2;
+      if (!team) return { name: "TBD", firstName: "TBD", lastName: "" };
+      const memberNames = team.members?.map(
+        (m: any) => `${m.player?.firstName || ""} ${m.player?.lastName || ""}`.trim()
+      ).filter(Boolean);
+      const displayName = memberNames && memberNames.length > 0 ? memberNames.join(" / ") : (team.name || "TBD");
+      return {
+        ...team,
+        name: displayName,
+        firstName: displayName,
+        lastName: "",
+      };
+    } else {
+      const player = slot === 1 ? match.player1 : match.player2;
+      if (!player) return { name: "TBD", firstName: "TBD", lastName: "" };
+      const displayName = `${player.firstName || ""} ${player.lastName || ""}`.trim() || "TBD";
+      return {
+        ...player,
+        name: displayName,
+        firstName: player.firstName || displayName,
+        lastName: player.lastName || "",
+      };
+    }
+  };
+
   const fetchWinners = async () => {
     if (!activeCategoryId) {
       toast.error("Please select a category first.");
@@ -531,18 +562,50 @@ const TournamentDetails: React.FC = () => {
       let champion = null,
         runnerUp = null,
         thirdPlace = null;
-      if (finalMatch && finalMatch.winnerId) {
-        const isPlayer1Winner = finalMatch.winnerId === finalMatch.player1Id;
-        champion = isPlayer1Winner ? finalMatch.player1 : finalMatch.player2;
-        runnerUp = isPlayer1Winner ? finalMatch.player2 : finalMatch.player1;
+
+      const resolveMatchWinners = (match: any) => {
+        if (!match) return { winner: null, loser: null };
+        const winnerId = match.winnerTeamId || match.winnerId;
+        const isDoubles = !!(match.team1 || match.team2 || match.team1Id || match.team2Id);
+        let isSlot1Winner = false;
+
+        if (winnerId) {
+          isSlot1Winner = isDoubles
+            ? (winnerId === match.team1Id || winnerId === match.team1?.id)
+            : (winnerId === match.player1Id || winnerId === match.player1?.id);
+        } else if (match.status === "COMPLETED" && match.score) {
+          const parts = match.score.split(",").map((s: string) => s.trim());
+          let p1Wins = 0;
+          let p2Wins = 0;
+          for (const part of parts) {
+            const [s1, s2] = part.split("-").map(Number);
+            if (!isNaN(s1) && !isNaN(s2)) {
+              if (s1 > s2) p1Wins++;
+              else if (s2 > s1) p2Wins++;
+            }
+          }
+          isSlot1Winner = p1Wins >= p2Wins;
+        } else {
+          return { winner: null, loser: null };
+        }
+
+        return {
+          winner: getMatchParticipantDetails(match, isSlot1Winner ? 1 : 2),
+          loser: getMatchParticipantDetails(match, isSlot1Winner ? 2 : 1),
+        };
+      };
+
+      if (finalMatch) {
+        const { winner, loser } = resolveMatchWinners(finalMatch);
+        champion = winner;
+        runnerUp = loser;
       }
-      if (thirdPlaceMatch && thirdPlaceMatch.winnerId) {
-        const isPlayer1Winner =
-          thirdPlaceMatch.winnerId === thirdPlaceMatch.player1Id;
-        thirdPlace = isPlayer1Winner
-          ? thirdPlaceMatch.player1
-          : thirdPlaceMatch.player2;
+
+      if (thirdPlaceMatch) {
+        const { winner } = resolveMatchWinners(thirdPlaceMatch);
+        thirdPlace = winner;
       }
+
       setWinners({ first: champion, second: runnerUp, third: thirdPlace });
       setShowWinners(true);
       setTimeout(() => {
@@ -562,6 +625,7 @@ const TournamentDetails: React.FC = () => {
         type: "SINGLES",
         maxParticipants: 32,
         currentParticipants: 0,
+        stageFormat: (tournament?.tournamentType as any) || "KNOCKOUT",
         minAge: undefined,
         maxAge: undefined,
       },
@@ -612,6 +676,7 @@ const TournamentDetails: React.FC = () => {
           await api.post(`/tournaments/${id}/categories`, {
             name: category.name,
             type: category.type,
+            stageFormat: category.stageFormat || "KNOCKOUT",
             minAge: category.minAge,
             maxAge: category.maxAge,
             gender: category.gender,
@@ -622,6 +687,7 @@ const TournamentDetails: React.FC = () => {
           await api.patch(`/tournaments/categories/${category.id}`, {
             name: category.name,
             type: category.type,
+            stageFormat: category.stageFormat || "KNOCKOUT",
             minAge: category.minAge,
             maxAge: category.maxAge,
             gender: category.gender,
@@ -1105,6 +1171,25 @@ const TournamentDetails: React.FC = () => {
                         </div>
                         <div>
                           <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">
+                            Draw Format
+                          </label>
+                          <select
+                            value={category.stageFormat || "KNOCKOUT"}
+                            onChange={(e) =>
+                              updateEditCategory(
+                                index,
+                                "stageFormat",
+                                e.target.value as "KNOCKOUT" | "GROUP_KNOCKOUT",
+                              )
+                            }
+                            className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-white/20 text-white text-xs focus:outline-none focus:border-[#4AEEFF]"
+                          >
+                            <option value="KNOCKOUT">Knockout</option>
+                            <option value="GROUP_KNOCKOUT">Group + Knockout</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">
                             Gender Division
                           </label>
                           <select
@@ -1329,7 +1414,7 @@ const TournamentDetails: React.FC = () => {
                         )}
                         <span>•</span>
                         <span>
-                          {tournamentType === "GROUP_KNOCKOUT"
+                          {(category.stageFormat || tournamentType) === "GROUP_KNOCKOUT"
                             ? "Group & Knockout"
                             : "Knockout"}
                         </span>
@@ -1379,7 +1464,7 @@ const TournamentDetails: React.FC = () => {
                   </div>
 
                   {/* Dedicated Action Button Area */}
-                  {isAdmin && tournamentType === "KNOCKOUT" && (
+                  {isAdmin && (category.stageFormat || tournamentType) === "KNOCKOUT" && (
                     <div className="p-3.5 bg-black/25 border-t border-white/10 mt-auto">
                       <button
                         onClick={(e) => {
@@ -1411,7 +1496,7 @@ const TournamentDetails: React.FC = () => {
       </div>
 
       {/* Group Stage UI */}
-      {tournamentType === "GROUP_KNOCKOUT" && activeCategoryId && (
+      {activeCategoryFormat === "GROUP_KNOCKOUT" && activeCategoryId && (
         <div className="rounded-[16px] border border-white/20 bg-[#061D23]/25 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl mb-6">
           <h2 className="text-xl font-bold uppercase tracking-wider text-white mb-4">
             Group Stage Management —{" "}
@@ -1465,7 +1550,7 @@ const TournamentDetails: React.FC = () => {
       {/* Knockout Bracket Section */}
       {activeCategoryId && (
         <div className="w-full mb-8 pt-2" style={{ minHeight: 200 }}>
-          {isAdmin && tournamentType === "KNOCKOUT" && (
+          {isAdmin && activeCategoryFormat === "KNOCKOUT" && (
             <div className="flex justify-end mb-4">
               <button
                 onClick={() => setShowResetConfirm(true)}
@@ -1496,14 +1581,14 @@ const TournamentDetails: React.FC = () => {
               <div className="text-5xl mb-2">🥇</div>
               <h3 className="font-black text-xs uppercase tracking-wider text-yellow-300">Champion</h3>
               <p className="text-xl font-bold text-white mt-1">
-                {winners.first?.firstName} {winners.first?.lastName}
+                {winners.first?.name || `${winners.first?.firstName || ""} ${winners.first?.lastName || ""}`.trim() || "TBD"}
               </p>
             </div>
             <div className="rounded-2xl border border-slate-300/40 bg-slate-300/10 p-6 backdrop-blur-md">
               <div className="text-5xl mb-2">🥈</div>
               <h3 className="font-black text-xs uppercase tracking-wider text-slate-300">Runner-up</h3>
               <p className="text-xl font-bold text-white mt-1">
-                {winners.second?.firstName} {winners.second?.lastName}
+                {winners.second?.name || `${winners.second?.firstName || ""} ${winners.second?.lastName || ""}`.trim() || "TBD"}
               </p>
             </div>
             <div className="rounded-2xl border border-amber-600/40 bg-amber-600/10 p-6 backdrop-blur-md">
@@ -1512,7 +1597,7 @@ const TournamentDetails: React.FC = () => {
                 Second Runner-up
               </h3>
               <p className="text-xl font-bold text-white mt-1">
-                {winners.third?.firstName} {winners.third?.lastName || "TBD"}
+                {winners.third?.name || `${winners.third?.firstName || ""} ${winners.third?.lastName || ""}`.trim() || "TBD"}
               </p>
             </div>
           </div>
@@ -2232,7 +2317,7 @@ const TournamentDetails: React.FC = () => {
                         textTransform: "uppercase",
                       }}
                     >
-                      {isDoublesCategory(confirmDrawCategory) ? "Doubles" : "Singles"}
+                      {isDoublesCategory(confirmDrawCategory.type) ? "Doubles" : "Singles"}
                     </span>
                   </div>
                   <div style={{ fontSize: 16, fontWeight: 800, color: "#ffffff" }}>

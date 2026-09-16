@@ -639,6 +639,7 @@ export class MatchService {
     } 
     if (match.matchType !== 'SINGLES') {
       winnerTeamId = team1Id && team2Id ? (player1Wins > player2Wins ? team1Id : team2Id) : null;
+      winnerId = winnerTeamId;
     }
 
     const scoreString = games.map(g => `${g.player1Score}-${g.player2Score}`).join(', ');

@@ -13,6 +13,15 @@ export class GroupService {
       throw new AppError('Only admins can create groups', 403);
     }
 
+    const category = await prisma.category.findUnique({
+      where: { id: categoryId },
+      select: { type: true },
+    });
+
+    if (category?.type === 'DOUBLES' || category?.type === 'MIXED_DOUBLES') {
+      return this.createDoublesGroups(adminId, tournamentId, categoryId, numberOfGroups);
+    }
+
     const registrations = await prisma.tournamentRegistration.findMany({
       where: { tournamentId, categoryId, status: 'APPROVED' },
       include: { player: true },
@@ -83,6 +92,15 @@ export class GroupService {
       throw new AppError('Only admins can generate group matches', 403);
     }
 
+    const category = await prisma.category.findUnique({
+      where: { id: categoryId },
+      select: { type: true },
+    });
+
+    if (category?.type === 'DOUBLES' || category?.type === 'MIXED_DOUBLES') {
+      return this.generateDoublesGroupMatches(adminId, tournamentId, categoryId);
+    }
+
     const groups = await prisma.group.findMany({
       where: { tournamentId, categoryId },
       include: { players: { include: { player: true } } },
@@ -148,6 +166,10 @@ async recordGroupScore(
   }) as any;
 
   if (!existingMatch) throw new AppError('Match not found', 404);
+
+  if (existingMatch.team1Id && existingMatch.team2Id) {
+    return this.recordDoublesGroupScore(matchId, games, adminId, bestOf, userRole);
+  }
 
   if (userRole === 'REFEREE') {
     if (!existingMatch.referee || existingMatch.referee.userId !== adminId) {
@@ -275,10 +297,42 @@ async recordGroupScore(
           },
           orderBy: { points: 'desc' },
         },
+        teams: {
+          include: {
+            team: {
+              include: {
+                members: {
+                  include: {
+                    player: { select: { id: true, firstName: true, lastName: true } },
+                  },
+                },
+              },
+            },
+          },
+          orderBy: { points: 'desc' },
+        },
         matches: {
           include: {
             player1: { select: { id: true, firstName: true, lastName: true } },
             player2: { select: { id: true, firstName: true, lastName: true } },
+            team1: {
+              include: {
+                members: {
+                  include: {
+                    player: { select: { id: true, firstName: true, lastName: true } },
+                  },
+                },
+              },
+            },
+            team2: {
+              include: {
+                members: {
+                  include: {
+                    player: { select: { id: true, firstName: true, lastName: true } },
+                  },
+                },
+              },
+            },
             referee: { include: { user: { select: { id: true, firstName: true, lastName: true } } } },
           },
         },
@@ -308,6 +362,15 @@ async recordGroupScore(
 
     if (!admin) {
       throw new AppError('Only admins can generate knockout stage', 403);
+    }
+
+    const category = await prisma.category.findUnique({
+      where: { id: categoryId },
+      select: { type: true },
+    });
+
+    if (category?.type === 'DOUBLES' || category?.type === 'MIXED_DOUBLES') {
+      return this.generateDoublesKnockoutStage(adminId, tournamentId, categoryId, topFromEachGroup);
     }
 
     // ── 1. Fetch groups and collect qualified players ────────────────────────
@@ -727,10 +790,667 @@ async updateGroupMembers(
       include: {
         player1: { select: { id: true, firstName: true, lastName: true } },
         player2: { select: { id: true, firstName: true, lastName: true } },
+        team1: {
+          include: {
+            members: {
+              include: { player: { select: { id: true, firstName: true, lastName: true } } },
+            },
+          },
+        },
+        team2: {
+          include: {
+            members: {
+              include: { player: { select: { id: true, firstName: true, lastName: true } } },
+            },
+          },
+        },
         referee: { include: { user: true } },
       },
     });
 
     return updatedMatch;
   }
+
+  // ═════════════════════════════════════════════════════════════════════════════
+  // DEDICATED DOUBLES GROUP + KNOCKOUT PIPELINE
+  // ═════════════════════════════════════════════════════════════════════════════
+
+  // Create groups and assign doubles teams
+  async createDoublesGroups(
+    adminId: string,
+    tournamentId: string,
+    categoryId: string,
+    numberOfGroups: number
+  ) {
+    const admin = await prisma.adminProfile.findUnique({
+      where: { userId: adminId },
+    });
+
+    if (!admin) {
+      throw new AppError('Only admins can create groups', 403);
+    }
+
+    // Fetch all APPROVED team registrations for this doubles category
+    const teamRegistrations = await prisma.tournamentRegistration.findMany({
+      where: {
+        tournamentId,
+        categoryId,
+        status: 'APPROVED',
+        teamId: { not: null },
+      },
+      include: {
+        team: {
+          include: {
+            members: {
+              include: {
+                player: { select: { id: true, firstName: true, lastName: true } },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    const teams = teamRegistrations
+      .map(r => r.team)
+      .filter((t): t is NonNullable<typeof t> => t !== null);
+
+    if (teams.length < 2) {
+      throw new AppError('Need at least 2 teams to create groups', 400);
+    }
+
+    // Delete existing groups, matches, and knockout matches for this category
+    const existingGroups = await prisma.group.findMany({
+      where: { tournamentId, categoryId },
+      select: { id: true },
+    });
+
+    if (existingGroups.length > 0) {
+      const groupIds = existingGroups.map(g => g.id);
+      await prisma.groupTeam.deleteMany({ where: { groupId: { in: groupIds } } });
+      await prisma.groupPlayer.deleteMany({ where: { groupId: { in: groupIds } } });
+      await prisma.groupMatch.deleteMany({ where: { groupId: { in: groupIds } } });
+      await prisma.group.deleteMany({ where: { tournamentId, categoryId } });
+      await prisma.match.deleteMany({
+        where: {
+          tournamentId,
+          categoryId,
+          round: { in: ['Quarter-Finals', 'Semi-Finals', 'Final', '3rd Place Playoff'] },
+        },
+      });
+    }
+
+    const shuffledTeams = this.shuffleArray([...teams]);
+    const teamsPerGroup = Math.ceil(teams.length / numberOfGroups);
+
+    const groups = [];
+    for (let i = 0; i < numberOfGroups; i++) {
+      const groupName = String.fromCharCode(65 + i);
+      const startIdx = i * teamsPerGroup;
+      const endIdx = Math.min(startIdx + teamsPerGroup, teams.length);
+      const groupTeams = shuffledTeams.slice(startIdx, endIdx);
+
+      if (groupTeams.length === 0) continue;
+
+      const group = await prisma.group.create({
+        data: {
+          name: `Group ${groupName}`,
+          tournamentId,
+          categoryId,
+          teams: {
+            create: groupTeams.map((team: { id: string }) => ({ teamId: team.id })),
+          },
+        },
+        include: {
+          teams: {
+            include: {
+              team: {
+                include: {
+                  members: {
+                    include: {
+                      player: { select: { id: true, firstName: true, lastName: true } },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      });
+      groups.push(group);
+    }
+
+    return groups;
+  }
+
+  // Generate league matches for doubles groups
+  async generateDoublesGroupMatches(adminId: string, tournamentId: string, categoryId: string) {
+    const admin = await prisma.adminProfile.findUnique({
+      where: { userId: adminId },
+    });
+
+    if (!admin) {
+      throw new AppError('Only admins can generate group matches', 403);
+    }
+
+    const groups = await prisma.group.findMany({
+      where: { tournamentId, categoryId },
+      include: {
+        teams: {
+          include: {
+            team: {
+              include: {
+                members: {
+                  include: {
+                    player: { select: { id: true, firstName: true, lastName: true } },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (groups.length === 0) {
+      throw new AppError('No groups found. Create groups first.', 400);
+    }
+
+    const existingMatches = await prisma.groupMatch.findMany({
+      where: { group: { tournamentId, categoryId } },
+      select: { id: true },
+    });
+
+    if (existingMatches.length > 0) {
+      await prisma.groupMatch.deleteMany({
+        where: { id: { in: existingMatches.map(m => m.id) } },
+      });
+    }
+
+    const allMatches = [];
+
+    for (const group of groups) {
+      const teams = group.teams.map(gt => gt.team);
+
+      for (let i = 0; i < teams.length; i++) {
+        for (let j = i + 1; j < teams.length; j++) {
+          const match = await prisma.groupMatch.create({
+            data: {
+              groupId: group.id,
+              team1Id: teams[i].id,
+              team2Id: teams[j].id,
+              scheduledTime: new Date(),
+              status: 'SCHEDULED',
+              round: 1,
+            },
+          });
+          allMatches.push(match);
+        }
+      }
+    }
+
+    return {
+      message: `Generated ${allMatches.length} doubles group matches`,
+      totalMatches: allMatches.length,
+      groups: groups.length,
+    };
+  }
+
+  // Record score for doubles group match
+  async recordDoublesGroupScore(
+    matchId: string,
+    games: { p1: number | null; p2: number | null }[],
+    adminId: string,
+    bestOf: 3 | 5 = 5,
+    userRole?: string
+  ) {
+    const existingMatch = await prisma.groupMatch.findUnique({
+      where: { id: matchId },
+      include: {
+        group: { include: { teams: true } },
+        referee: true,
+        team1: { include: { members: { include: { player: true } } } },
+        team2: { include: { members: { include: { player: true } } } },
+      },
+    }) as any;
+
+    if (!existingMatch) throw new AppError('Match not found', 404);
+
+    if (userRole === 'REFEREE') {
+      if (!existingMatch.referee || existingMatch.referee.userId !== adminId) {
+        throw new AppError('You can only record scores for matches assigned to you', 403);
+      }
+    }
+
+    const winsToWin = Math.ceil(bestOf / 2);
+    let team1GamesWon = 0;
+    let team2GamesWon = 0;
+
+    for (const g of games) {
+      if (g.p1 === null || g.p2 === null) continue;
+      if (g.p1 > g.p2) team1GamesWon++;
+      else if (g.p2 > g.p1) team2GamesWon++;
+    }
+
+    if (team1GamesWon < winsToWin && team2GamesWon < winsToWin) {
+      throw new AppError(
+        `Match not complete. Need ${winsToWin} game wins to win the match.`,
+        400
+      );
+    }
+
+    const player1Score = team1GamesWon;
+    const player2Score = team2GamesWon;
+    const winnerTeamId =
+      team1GamesWon > team2GamesWon ? existingMatch.team1Id : existingMatch.team2Id;
+
+    // Revert old stats if updating
+    const isUpdate =
+      existingMatch.player1Score !== null && existingMatch.player2Score !== null;
+    if (isUpdate) {
+      await this.revertGroupTeamStats(
+        existingMatch.groupId,
+        existingMatch.team1Id,
+        existingMatch.team2Id,
+        existingMatch.player1Score,
+        existingMatch.player2Score
+      );
+    }
+
+    const updatedMatch = await prisma.groupMatch.update({
+      where: { id: matchId },
+      data: {
+        player1Score,
+        player2Score,
+        winnerTeamId,
+        bestOf,
+        status: 'COMPLETED',
+        completedAt: new Date(),
+        game1player1: games[0]?.p1 ?? null,
+        game1player2: games[0]?.p2 ?? null,
+        game2player1: games[1]?.p1 ?? null,
+        game2player2: games[1]?.p2 ?? null,
+        game3player1: games[2]?.p1 ?? null,
+        game3player2: games[2]?.p2 ?? null,
+        game4player1: games[3]?.p1 ?? null,
+        game4player2: games[3]?.p2 ?? null,
+        game5player1: games[4]?.p1 ?? null,
+        game5player2: games[4]?.p2 ?? null,
+      },
+    });
+
+    await this.updateGroupTeamStats(
+      existingMatch.groupId,
+      existingMatch.team1Id,
+      existingMatch.team2Id,
+      player1Score,
+      player2Score
+    );
+
+    return updatedMatch;
+  }
+
+  // Update team stats in doubles group
+  private async updateGroupTeamStats(
+    groupId: string,
+    team1Id: string,
+    team2Id: string,
+    team1Score: number,
+    team2Score: number
+  ) {
+    const isTeam1Winner = team1Score > team2Score;
+
+    await prisma.groupTeam.update({
+      where: { groupId_teamId: { groupId, teamId: team1Id } },
+      data: {
+        matchesPlayed: { increment: 1 },
+        wins: { increment: isTeam1Winner ? 1 : 0 },
+        losses: { increment: isTeam1Winner ? 0 : 1 },
+        points: { increment: isTeam1Winner ? 3 : 0 },
+        pointsScored: { increment: team1Score },
+        pointsConceded: { increment: team2Score },
+        gamesWon: { increment: team1Score },
+        gamesLost: { increment: team2Score },
+      },
+    });
+
+    await prisma.groupTeam.update({
+      where: { groupId_teamId: { groupId, teamId: team2Id } },
+      data: {
+        matchesPlayed: { increment: 1 },
+        wins: { increment: isTeam1Winner ? 0 : 1 },
+        losses: { increment: isTeam1Winner ? 1 : 0 },
+        points: { increment: isTeam1Winner ? 0 : 3 },
+        pointsScored: { increment: team2Score },
+        pointsConceded: { increment: team1Score },
+        gamesWon: { increment: team2Score },
+        gamesLost: { increment: team1Score },
+      },
+    });
+  }
+
+  // Revert team stats in doubles group
+  private async revertGroupTeamStats(
+    groupId: string,
+    team1Id: string,
+    team2Id: string,
+    oldTeam1Score: number,
+    oldTeam2Score: number
+  ) {
+    const wasTeam1Winner = oldTeam1Score > oldTeam2Score;
+
+    await prisma.groupTeam.update({
+      where: { groupId_teamId: { groupId, teamId: team1Id } },
+      data: {
+        matchesPlayed: { decrement: 1 },
+        wins: { decrement: wasTeam1Winner ? 1 : 0 },
+        losses: { decrement: wasTeam1Winner ? 0 : 1 },
+        points: { decrement: wasTeam1Winner ? 3 : 0 },
+        pointsScored: { decrement: oldTeam1Score },
+        pointsConceded: { decrement: oldTeam2Score },
+        gamesWon: { decrement: oldTeam1Score },
+        gamesLost: { decrement: oldTeam2Score },
+      },
+    });
+
+    await prisma.groupTeam.update({
+      where: { groupId_teamId: { groupId, teamId: team2Id } },
+      data: {
+        matchesPlayed: { decrement: 1 },
+        wins: { decrement: wasTeam1Winner ? 0 : 1 },
+        losses: { decrement: wasTeam1Winner ? 1 : 0 },
+        points: { decrement: wasTeam1Winner ? 0 : 3 },
+        pointsScored: { decrement: oldTeam2Score },
+        pointsConceded: { decrement: oldTeam1Score },
+        gamesWon: { decrement: oldTeam2Score },
+        gamesLost: { decrement: oldTeam1Score },
+      },
+    });
+  }
+
+  // Generate knockout stage for doubles from group results
+  async generateDoublesKnockoutStage(
+    adminId: string,
+    tournamentId: string,
+    categoryId: string,
+    topFromEachGroup: number = 2
+  ) {
+    const admin = await prisma.adminProfile.findUnique({
+      where: { userId: adminId },
+    });
+
+    if (!admin) {
+      throw new AppError('Only admins can generate knockout stage', 403);
+    }
+
+    const groups = await prisma.group.findMany({
+      where: { tournamentId, categoryId },
+      include: {
+        teams: {
+          include: {
+            team: {
+              include: {
+                members: {
+                  include: {
+                    player: { select: { id: true, firstName: true, lastName: true } },
+                  },
+                },
+              },
+            },
+          },
+          orderBy: [
+            { points: 'desc' },
+            { gamesWon: 'desc' },
+            { pointsScored: 'desc' },
+          ],
+        },
+      },
+    });
+
+    if (groups.length === 0) {
+      throw new AppError('No groups found. Create groups first.', 400);
+    }
+
+    const qualifiedTeams: Array<{
+      id: string;
+      points: number;
+      gamesWon: number;
+      pointsScored: number;
+      groupRank: number;
+    }> = [];
+
+    for (const group of groups) {
+      const topTeams = group.teams.slice(0, topFromEachGroup);
+      topTeams.forEach((gt, rank) => {
+        qualifiedTeams.push({
+          id: gt.teamId,
+          points: gt.points,
+          gamesWon: gt.gamesWon,
+          pointsScored: gt.pointsScored,
+          groupRank: rank + 1,
+        });
+      });
+    }
+
+    const totalTeams = qualifiedTeams.length;
+    if (totalTeams < 2) {
+      throw new AppError('Not enough teams qualified for knockout stage', 400);
+    }
+
+    // Delete existing knockout matches for this category
+    await prisma.match.deleteMany({
+      where: {
+        tournamentId,
+        categoryId,
+        round: { in: ['Quarter-Finals', 'Semi-Finals', 'Final', '3rd Place Playoff'] },
+      },
+    });
+
+    const bracketSize = this.nextPowerOfTwo(totalTeams);
+    const byes = bracketSize - totalTeams;
+
+    const groupWinners = qualifiedTeams
+      .filter(t => t.groupRank === 1)
+      .sort((a, b) => b.points - a.points || b.gamesWon - a.gamesWon || b.pointsScored - a.pointsScored);
+
+    const groupRunnerUps = qualifiedTeams
+      .filter(t => t.groupRank === 2)
+      .sort((a, b) => b.points - a.points || b.gamesWon - a.gamesWon || b.pointsScored - a.pointsScored);
+
+    const otherQualified = qualifiedTeams
+      .filter(t => t.groupRank > 2)
+      .sort((a, b) => b.points - a.points || b.gamesWon - a.gamesWon || b.pointsScored - a.pointsScored);
+
+    const seededTeams = [...groupWinners, ...groupRunnerUps, ...otherQualified];
+    const allMatches = [];
+    let matchNumber = 1;
+
+    if (bracketSize === 4 && byes === 0) {
+      const [winner1, winner2] = groupWinners;
+      const [runnerUp1, runnerUp2] = groupRunnerUps;
+
+      const sf1 = await prisma.match.create({
+        data: {
+          tournamentId,
+          categoryId,
+          matchType: 'DOUBLES',
+          team1Id: winner1?.id ?? null,
+          team2Id: runnerUp2?.id ?? runnerUp1?.id ?? null,
+          round: 'Semi-Finals',
+          matchNumber: matchNumber++,
+          scheduledTime: new Date(),
+          status: 'SCHEDULED',
+        },
+      });
+      allMatches.push(sf1);
+
+      const sf2 = await prisma.match.create({
+        data: {
+          tournamentId,
+          categoryId,
+          matchType: 'DOUBLES',
+          team1Id: winner2?.id ?? null,
+          team2Id: runnerUp1?.id ?? runnerUp2?.id ?? null,
+          round: 'Semi-Finals',
+          matchNumber: matchNumber++,
+          scheduledTime: new Date(),
+          status: 'SCHEDULED',
+        },
+      });
+      allMatches.push(sf2);
+
+      const finalMatch = await prisma.match.create({
+        data: {
+          tournamentId,
+          categoryId,
+          matchType: 'DOUBLES',
+          team1Id: null,
+          team2Id: null,
+          round: 'Final',
+          matchNumber: matchNumber++,
+          scheduledTime: new Date(),
+          status: 'SCHEDULED',
+        },
+      });
+      allMatches.push(finalMatch);
+
+      const thirdPlaceMatch = await prisma.match.create({
+        data: {
+          tournamentId,
+          categoryId,
+          matchType: 'DOUBLES',
+          team1Id: null,
+          team2Id: null,
+          round: '3rd Place Playoff',
+          matchNumber: matchNumber++,
+          scheduledTime: new Date(),
+          status: 'SCHEDULED',
+        },
+      });
+      allMatches.push(thirdPlaceMatch);
+    } else {
+      const firstRoundMatchCount = bracketSize / 2;
+      const byeTeams = seededTeams.slice(0, byes);
+      const playingTeams = this.shuffleArray(seededTeams.slice(byes));
+
+      const matchOrder = this.getSeededMatchOrder(firstRoundMatchCount);
+      const firstRoundPairs = Array.from({ length: firstRoundMatchCount }, () => ({
+        t1: null as string | null,
+        t2: null as string | null,
+        isBye: false,
+      }));
+
+      for (let i = 0; i < byes; i++) {
+        const matchIndex = matchOrder[i];
+        firstRoundPairs[matchIndex].isBye = true;
+        firstRoundPairs[matchIndex].t1 = byeTeams[i].id;
+      }
+
+      let playingIndex = 0;
+      for (let i = 0; i < firstRoundMatchCount; i++) {
+        if (!firstRoundPairs[i].isBye) {
+          firstRoundPairs[i].t1 = playingTeams[playingIndex++]?.id || null;
+          firstRoundPairs[i].t2 = playingTeams[playingIndex++]?.id || null;
+        }
+      }
+
+      let currentRoundMatches: any[] = [];
+      const round1Name = this.getKnockoutRoundName(firstRoundMatchCount);
+
+      for (let i = 0; i < firstRoundMatchCount; i++) {
+        const pair = firstRoundPairs[i];
+        const match = await prisma.match.create({
+          data: {
+            tournamentId,
+            categoryId,
+            matchType: 'DOUBLES',
+            team1Id: pair.t1,
+            team2Id: pair.t2,
+            round: round1Name,
+            matchNumber: matchNumber++,
+            scheduledTime: new Date(),
+            status: pair.isBye ? 'COMPLETED' : 'SCHEDULED',
+            winnerTeamId: pair.isBye ? pair.t1 : null,
+            score: pair.isBye ? 'BYE' : null,
+          },
+        });
+        currentRoundMatches.push(match);
+        allMatches.push(match);
+      }
+
+      let matchesInNextRound = Math.floor(firstRoundMatchCount / 2);
+      while (matchesInNextRound >= 1) {
+        const nextRoundName = this.getKnockoutRoundName(matchesInNextRound);
+        const nextRoundMatches: any[] = [];
+
+        for (let i = 0; i < matchesInNextRound; i++) {
+          const prev1 = currentRoundMatches[i * 2];
+          const prev2 = currentRoundMatches[i * 2 + 1];
+
+          const t1Id = prev1?.winnerTeamId || null;
+          const t2Id = prev2?.winnerTeamId || null;
+
+          const match = await prisma.match.create({
+            data: {
+              tournamentId,
+              categoryId,
+              matchType: 'DOUBLES',
+              team1Id: t1Id,
+              team2Id: t2Id,
+              round: nextRoundName,
+              matchNumber: matchNumber++,
+              scheduledTime: new Date(),
+              status: 'SCHEDULED',
+            },
+          });
+          nextRoundMatches.push(match);
+          allMatches.push(match);
+        }
+        currentRoundMatches = nextRoundMatches;
+        matchesInNextRound = Math.floor(matchesInNextRound / 2);
+      }
+
+      if (bracketSize >= 4) {
+        const thirdPlaceMatch = await prisma.match.create({
+          data: {
+            tournamentId,
+            categoryId,
+            matchType: 'DOUBLES',
+            team1Id: null,
+            team2Id: null,
+            round: '3rd Place Playoff',
+            matchNumber: matchNumber++,
+            scheduledTime: new Date(),
+            status: 'SCHEDULED',
+          },
+        });
+        allMatches.push(thirdPlaceMatch);
+      }
+    }
+
+    const qfCount = allMatches.filter(
+      m => m.round === 'Quarter-Finals' || m.round === 'Quarter-final'
+    ).length;
+    const sfCount = allMatches.filter(
+      m => m.round === 'Semi-Finals' || m.round === 'Semi-final'
+    ).length;
+    const fCount = allMatches.filter(m => m.round === 'Final').length;
+
+    return {
+      message: `Generated ${allMatches.length} doubles knockout matches`,
+      totalTeams,
+      bracketSize,
+      totalMatches: allMatches.length,
+      breakdown: { quarterFinals: qfCount, semiFinals: sfCount, final: fCount },
+      matches: allMatches.map(m => ({
+        id: m.id,
+        round: m.round,
+        matchNumber: m.matchNumber,
+        team1Id: m.team1Id,
+        team2Id: m.team2Id,
+        status: m.status,
+      })),
+    };
+  }
 }
+

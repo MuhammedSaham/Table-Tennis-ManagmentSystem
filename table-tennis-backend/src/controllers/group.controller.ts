@@ -63,6 +63,20 @@ export const getGroupMatches = catchAsync(async (req: Request, res: Response) =>
         include: {
           player1: { select: { firstName: true, lastName: true, id: true } },
           player2: { select: { firstName: true, lastName: true, id: true } },
+          team1: {
+            include: {
+              members: {
+                include: { player: { select: { id: true, firstName: true, lastName: true } } },
+              },
+            },
+          },
+          team2: {
+            include: {
+              members: {
+                include: { player: { select: { id: true, firstName: true, lastName: true } } },
+              },
+            },
+          },
         },
       },
     },
