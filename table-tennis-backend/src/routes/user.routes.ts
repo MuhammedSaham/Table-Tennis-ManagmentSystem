@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authenticate } from '../middleware/auth.middleware';
+import { authenticate, optionalAuthenticate } from '../middleware/auth.middleware';
 import { isAdmin, isSuperAdminForAdmins, restrictTo } from '../middleware/role.middleware';
 import { validate } from '../middleware/validation.middleware';
 import {
@@ -11,6 +11,7 @@ import {
     getPublicProfile,
     getPublicPlayers,
     deleteUser,
+    togglePlayerFavorite,
 } from '../controllers/user.controller';
 import { updateProfileSchema, updateUserRoleSchema } from '../validations/user.validation';
 import { upload } from '../middleware/upload.middleware';
@@ -22,7 +23,7 @@ import { updatePlayerRanking } from '../controllers/user.controller';
 const router = Router();
 
 router.get('/public/players' , getPublicPlayers);
-router.get('/public/:id' , getPublicProfile);
+router.get('/public/:id', optionalAuthenticate, getPublicProfile);
 
 // All routes require authentication
 router.use(authenticate);
@@ -45,5 +46,6 @@ router.patch('/:id/role',authenticate, isAdmin, isSuperAdminForAdmins, updateUse
 router.delete('/:id',authenticate, isAdmin,isSuperAdminForAdmins, deleteUser);
 router.patch('/:id/ranking',authenticate,isAdmin,updatePlayerRanking);
 router.post('/:userId/profile-view', authenticate, recordProfileView);
+router.post('/:id/favorite', togglePlayerFavorite);
 
 export default router;

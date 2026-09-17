@@ -627,6 +627,12 @@ export const UmpireSheet: React.FC<{
               <span style={{ color: "#0f172a", fontWeight: 700 }}>
                 {match.referee?.user
                   ? `${match.referee.user.firstName} ${match.referee.user.lastName}`
+                  : match.resultDetails?.umpireName
+                  ? match.resultDetails.umpireName
+                  : user?.role === "ADMIN"
+                  ? `${user.firstName} ${user.lastName} (Admin)`
+                  : done
+                  ? "Tournament Official"
                   : "…………………………"}
               </span>
             </div>
@@ -755,7 +761,6 @@ const MatchCard: React.FC<{
     (isDoubles
       ? match.winnerId === match.team2?.id
       : match.winnerId === match.player2?.id);
-  const border = accent ?? (done ? "#22c55e" : "#e2e8f0");
 
   const gameParts =
     match.score && match.score !== "BYE"
@@ -1417,13 +1422,19 @@ const KnockoutBracket: React.FC<KnockoutBracketProps> = ({
       : undefined;
 
     try {
+      const umpireName = match?.referee?.user
+        ? `${match.referee.user.firstName} ${match.referee.user.lastName}`
+        : user
+        ? `${user.firstName} ${user.lastName} (Admin)`
+        : undefined;
+
       await api.patch(`/matches/${matchId}`, {
         score: parts.join(", "),
         winnerId,
         winnerTeamId,
         status: "COMPLETED",
         endTime: new Date().toISOString(),
-        resultDetails: { bestOf },
+        resultDetails: { bestOf, umpireName },
       });
 
       toast.success("Score saved!");

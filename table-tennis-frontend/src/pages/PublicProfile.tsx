@@ -13,6 +13,8 @@ interface PublicPlayerProfile {
   role: string;
   profileImage?: string;
   createdAt: string;
+  totalFavorites?: number;
+  isFavorited?: boolean;
   playerProfile?: {
     skillLevel: string | null;
     clubAffiliation: string | null;
@@ -47,6 +49,21 @@ const calculateAge = (dob: string) => {
   const m = today.getMonth() - birth.getMonth();
   if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
   return age;
+};
+
+const formatDateOfBirth = (dob: string) => {
+  try {
+    const d = new Date(dob);
+    if (isNaN(d.getTime())) return dob;
+    return d.toLocaleDateString("en-GB", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+      timeZone: "UTC",
+    });
+  } catch {
+    return dob;
+  }
 };
 
 const getAgeCategory = (age: number) => {
@@ -129,6 +146,9 @@ const PublicProfile: React.FC = () => {
   const [activeTab, setActiveTab] = useState<"overview" | "matches">(
     "overview",
   );
+  const [isFavorited, setIsFavorited] = useState<boolean>(false);
+  const [totalFavorites, setTotalFavorites] = useState<number>(0);
+  const [isFavoriteLoading, setIsFavoriteLoading] = useState<boolean>(false);
 
   useEffect(() => {
     fetchProfile();
@@ -139,6 +159,8 @@ const PublicProfile: React.FC = () => {
       // Use the new public endpoint — no auth required
       const res = await api.get(`/users/public/${userId}`);
       setProfile(res.data.data);
+      setIsFavorited(Boolean(res.data.data.isFavorited));
+      setTotalFavorites(Number(res.data.data.totalFavorites) || 0);
 
       // Fetch stats (match performance endpoint)
       try {
@@ -163,6 +185,36 @@ const PublicProfile: React.FC = () => {
       navigate("/tournaments");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleToggleFavorite = async () => {
+    if (!user) {
+      toast.error("Please log in to add this player to your favorites!", {
+        icon: "❤️",
+      });
+      return;
+    }
+
+    if (isFavoriteLoading) return;
+    setIsFavoriteLoading(true);
+
+    try {
+      const res = await api.post(`/users/${userId}/favorite`);
+      const { favorited, totalFavorites: newTotal } = res.data.data;
+      setIsFavorited(favorited);
+      setTotalFavorites(newTotal);
+      if (favorited) {
+        toast.success(`Added ${profile?.firstName} to your favorites!`, {
+          icon: "❤️",
+        });
+      } else {
+        toast.success(`Removed from favorites`);
+      }
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Failed to update favorite");
+    } finally {
+      setIsFavoriteLoading(false);
     }
   };
 
@@ -210,349 +262,429 @@ const PublicProfile: React.FC = () => {
   return wrapInBaseLayout(
     <>
       {/* ── Breadcrumb ── */}
-      <div className="text-xs text-white/50">
+      <div className="text-xs text-white/50 flex items-center gap-2">
         <Link to="/tournaments" className="hover:text-[#4AEEFF] transition-colors">
           Tournaments
         </Link>
-        <span className="mx-2">/</span>
-        <span className="text-white/80">
+        <span>/</span>
+        <span className="text-white/80 font-medium">
           {profile.firstName} {profile.lastName}
         </span>
       </div>
 
-      {/* ── Hero Card (matches Users.tsx <header> treatment exactly) ── */}
-      <header className={`relative overflow-hidden ${CARD.replace("bg-[#061D23]/10", "bg-[#061D23]/15")} p-6`}>
-        <div className="absolute inset-y-0 left-0 w-[5px] bg-gradient-to-b from-[#4AEEFF] to-[#12679E]" />
+      {/* ── Option 3: Minimalist Frosted Glass Hero Banner ── */}
+      <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-[#061D23]/60 p-6 sm:p-8 backdrop-blur-xl shadow-2xl">
+        {/* Subtle top edge frosted light */}
+        <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-white/20 to-transparent" />
 
-        <div className="flex flex-wrap items-center gap-7 pl-2 sm:pl-4">
-          {/* Avatar */}
-          {profile.profileImage ? (
-            <img
-              src={getProfileImageUrl(profile.profileImage)}
-              alt={profile.firstName}
-              className="h-24 w-24 flex-shrink-0 rounded-full border-2 border-[#4AEEFF] object-cover"
-            />
-          ) : (
-            <div className="flex h-24 w-24 flex-shrink-0 items-center justify-center rounded-full border-2 border-[#4AEEFF] bg-gradient-to-br from-[#12679E] to-[#061D23] text-3xl font-black tracking-tight text-white">
-              {initials}
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+          {/* Left: Avatar + Identity */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5">
+            {/* Avatar */}
+            <div className="relative">
+              {profile.profileImage ? (
+                <img
+                  src={getProfileImageUrl(profile.profileImage)}
+                  alt={profile.firstName}
+                  className="h-20 w-20 sm:h-24 sm:w-24 rounded-2xl border border-white/20 object-cover shadow-lg"
+                />
+              ) : (
+                <div className="flex h-20 w-20 sm:h-24 sm:w-24 items-center justify-center rounded-2xl border border-white/20 bg-gradient-to-br from-[#12679E]/40 to-white/5 text-2xl sm:text-3xl font-black text-white shadow-lg">
+                  {initials}
+                </div>
+              )}
             </div>
-          )}
 
-          {/* Name & badges */}
-          <div className="min-w-[200px] flex-1">
-            <div className="mb-2 flex flex-wrap items-center gap-2">
-              <span className="rounded-full bg-[#4AEEFF] px-3 py-1 text-[10px] font-black uppercase tracking-widest text-[#061D23]">
-                Player
-              </span>
-              {ageCategory && (
-                <span className="rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-white/70">
-                  {ageCategory}
+            {/* Name, Badges & Metadata */}
+            <div className="space-y-2">
+              {/* Badges */}
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="rounded-md bg-white/10 border border-white/15 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">
+                  Player
                 </span>
-              )}
-            </div>
+                {ageCategory && (
+                  <span className="rounded-md bg-white/5 border border-white/10 px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-wider text-white/70">
+                    {ageCategory}
+                  </span>
+                )}
+                {profile.playerProfile?.ranking && (
+                  <span className="rounded-md bg-amber-400/10 border border-amber-400/30 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider text-amber-300">
+                    🏆 #{profile.playerProfile.ranking}
+                  </span>
+                )}
+                {profile.playerProfile?.skillLevel && (
+                  <span className={`rounded-md px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${skillBadge}`}>
+                    {profile.playerProfile.skillLevel}
+                  </span>
+                )}
+              </div>
 
-            <h1 className="text-2xl font-black uppercase tracking-[0.2em] text-white sm:text-4xl">
-              {profile.firstName}{" "}
-              <span className="text-[#4AEEFF]">{profile.lastName}</span>
-            </h1>
+              {/* Player Name */}
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight text-white">
+                {profile.firstName}{" "}
+                <span className="text-[#4AEEFF]">{profile.lastName}</span>
+              </h1>
 
-            <div className="mt-3 flex flex-wrap gap-5">
-              {profile.playerProfile?.clubAffiliation && (
-                <div className="flex items-center gap-2 text-sm text-white/70">
-                  <span>🏓</span>
-                  <span>{profile.playerProfile.clubAffiliation}</span>
+              {/* Clean Metadata Info */}
+              <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-xs text-white/60 pt-1">
+                {profile.playerProfile?.dateOfBirth && (
+                  <div className="flex items-center gap-1.5">
+                    <span>🎂</span>
+                    <span>
+                      {formatDateOfBirth(profile.playerProfile.dateOfBirth)}
+                      {age !== null && ` (${age} yrs)`}
+                    </span>
+                  </div>
+                )}
+                {profile.playerProfile?.clubAffiliation && (
+                  <div className="flex items-center gap-1.5">
+                    <span>🏓</span>
+                    <span>{profile.playerProfile.clubAffiliation}</span>
+                  </div>
+                )}
+                <div className="flex items-center gap-1.5">
+                  <span>📅</span>
+                  <span>Joined {new Date(profile.createdAt).getFullYear()}</span>
                 </div>
-              )}
-              {age !== null && (
-                <div className="flex items-center gap-2 text-sm text-white/70">
-                  <span>🎂</span>
-                  <span>{age} years old</span>
-                </div>
-              )}
-              <div className="flex items-center gap-2 text-sm text-white/70">
-                <span>📅</span>
-                <span>Since {new Date(profile.createdAt).getFullYear()}</span>
               </div>
             </div>
           </div>
 
-          {/* Win Rate Circle */}
-          {stats && (
-            <div className="flex-shrink-0 text-center">
-              <svg width="92" height="92" viewBox="0 0 88 88">
-                <circle
-                  cx="44"
-                  cy="44"
-                  r="36"
-                  fill="none"
-                  stroke="rgba(255,255,255,0.1)"
-                  strokeWidth="8"
-                />
-                <circle
-                  cx="44"
-                  cy="44"
-                  r="36"
-                  fill="none"
-                  stroke="#4AEEFF"
-                  strokeWidth="8"
-                  strokeLinecap="round"
-                  strokeDasharray={`${(winRateNum / 100) * 226} 226`}
-                  transform="rotate(-90 44 44)"
-                />
-                <text
-                  x="44"
-                  y="41"
-                  textAnchor="middle"
-                  fill="#fff"
-                  fontSize="16"
-                  fontWeight="800"
-                >
-                  {stats.winRate}
-                </text>
-                <text
-                  x="44"
-                  y="55"
-                  textAnchor="middle"
-                  fill="#4AEEFF"
-                  fontSize="9"
-                  fontWeight="700"
-                  letterSpacing="0.5"
-                >
-                  WIN RATE
-                </text>
-              </svg>
-            </div>
-          )}
-        </div>
-      </header>
+          {/* Right: Actions & Circular Metric */}
+          <div className="flex items-center gap-5 self-stretch md:self-auto justify-between md:justify-end border-t md:border-t-0 border-white/10 pt-4 md:pt-0">
+            {/* Win Rate Radial Gauge */}
+            {stats && (
+              <div className="flex items-center gap-3">
+                <div className="relative flex items-center justify-center">
+                  <svg width="68" height="68" viewBox="0 0 68 68">
+                    <circle
+                      cx="34"
+                      cy="34"
+                      r="28"
+                      fill="none"
+                      stroke="rgba(255,255,255,0.08)"
+                      strokeWidth="6"
+                    />
+                    <circle
+                      cx="34"
+                      cy="34"
+                      r="28"
+                      fill="none"
+                      stroke="#4AEEFF"
+                      strokeWidth="6"
+                      strokeLinecap="round"
+                      strokeDasharray={`${(winRateNum / 100) * 175.9} 175.9`}
+                      transform="rotate(-90 34 34)"
+                    />
+                  </svg>
+                  <div className="absolute text-center">
+                    <span className="text-xs font-black text-white">
+                      {stats.winRate}
+                    </span>
+                  </div>
+                </div>
+                <div className="text-left hidden sm:block">
+                  <div className="text-[10px] font-black uppercase tracking-wider text-white/40">
+                    Rating
+                  </div>
+                  <div className="text-xs font-bold text-[#4AEEFF]">
+                    Win Ratio
+                  </div>
+                </div>
+              </div>
+            )}
 
-      {/* ── Stats Row ── */}
+            {/* Fan Favorite Button */}
+            <button
+              type="button"
+              onClick={handleToggleFavorite}
+              disabled={isFavoriteLoading}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border transition-all duration-200 text-xs font-bold backdrop-blur-md select-none ${
+                isFavorited
+                  ? "bg-[#FF4B72]/20 border-[#FF4B72]/70 text-[#FF4B72] shadow-[0_0_15px_rgba(255,75,114,0.3)]"
+                  : "bg-white/[0.05] border-white/15 text-white/80 hover:border-[#FF4B72]/50 hover:bg-[#FF4B72]/10 hover:text-[#FF4B72]"
+              } ${isFavoriteLoading ? "opacity-60 cursor-not-allowed" : "active:scale-95"}`}
+              title={isFavorited ? "Remove from favorites" : "Add to favorites"}
+            >
+              <span className={`text-base transition-transform duration-200 ${isFavorited ? "scale-110" : ""}`}>
+                {isFavorited ? "❤️" : "🤍"}
+              </span>
+              <span>
+                {totalFavorites} {totalFavorites === 1 ? "Fan" : "Fans"}
+              </span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Minimalist Glass Stat Cards ── */}
       {stats && (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-          <StatCard value={stats.totalMatches} label="Matches" />
-          <StatCard value={stats.wins} label="Wins" />
-          <StatCard value={stats.losses} label="Losses" />
-          <StatCard value={stats.gamesStats.total} label="Games Played" />
-          <StatCard value={stats.pointsStats.scored} label="Points Scored" />
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+          {/* Win Rate */}
+          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 backdrop-blur-md hover:bg-white/[0.05] hover:border-white/20 transition-all text-center group">
+            <div className="text-2xl sm:text-3xl font-black text-[#4AEEFF] tracking-tight">
+              {stats.winRate}
+            </div>
+            <div className="mt-1 text-[10px] font-black uppercase tracking-wider text-[#4AEEFF]/70">
+              Win Rate
+            </div>
+          </div>
+
+          {/* Matches */}
+          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 backdrop-blur-md hover:bg-white/[0.05] hover:border-white/20 transition-all text-center group">
+            <div className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+              {stats.totalMatches}
+            </div>
+            <div className="mt-1 text-[10px] font-black uppercase tracking-wider text-white/40">
+              Total Matches
+            </div>
+          </div>
+
+          {/* Wins */}
+          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 backdrop-blur-md hover:bg-white/[0.05] hover:border-white/20 transition-all text-center group">
+            <div className="text-2xl sm:text-3xl font-black text-emerald-400 tracking-tight">
+              {stats.wins}
+            </div>
+            <div className="mt-1 text-[10px] font-black uppercase tracking-wider text-emerald-400/80 flex items-center justify-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" /> Wins
+            </div>
+          </div>
+
+          {/* Losses */}
+          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 backdrop-blur-md hover:bg-white/[0.05] hover:border-white/20 transition-all text-center group">
+            <div className="text-2xl sm:text-3xl font-black text-rose-400 tracking-tight">
+              {stats.losses}
+            </div>
+            <div className="mt-1 text-[10px] font-black uppercase tracking-wider text-rose-400/80 flex items-center justify-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-rose-400" /> Losses
+            </div>
+          </div>
+
+          {/* Games Won / Total */}
+          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 backdrop-blur-md hover:bg-white/[0.05] hover:border-white/20 transition-all text-center group col-span-2 sm:col-span-1">
+            <div className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+              {stats.gamesStats.won}
+              <span className="text-base text-white/40 font-normal"> / {stats.gamesStats.total}</span>
+            </div>
+            <div className="mt-1 text-[10px] font-black uppercase tracking-wider text-white/40">
+              Games Won
+            </div>
+          </div>
         </div>
       )}
 
-      {/* ── Tabs (wrapped in the same card surface as the table header row in Users.tsx) ── */}
-      <div className={`${CARD} overflow-hidden`}>
-        <div className="flex gap-1 border-b border-white/10 bg-[#061D23]/30 px-2">
-          {(["overview", "matches"] as const).map((tab) => (
+      {/* ── Minimalist Segmented Tabs Container ── */}
+      <div className="rounded-2xl border border-white/10 bg-[#061D23]/60 backdrop-blur-xl shadow-xl p-6">
+        {/* Segmented Controller Header */}
+        <div className="flex items-center justify-between flex-wrap gap-4 border-b border-white/10 pb-4 mb-6">
+          <div className="inline-flex p-1 rounded-xl bg-white/[0.04] border border-white/10 backdrop-blur-md">
             <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`-mb-px border-b-2 px-6 py-4 text-xs font-black uppercase tracking-widest transition-colors ${
-                activeTab === tab
-                  ? "border-[#4AEEFF] text-[#4AEEFF]"
-                  : "border-transparent text-white/50 hover:text-white/80"
+              onClick={() => setActiveTab("overview")}
+              className={`px-5 py-2 rounded-lg text-xs font-bold transition-all ${
+                activeTab === "overview"
+                  ? "bg-white/10 text-white border border-white/15 shadow-sm"
+                  : "text-white/50 hover:text-white/80"
               }`}
             >
-              {tab === "overview"
-                ? "Overview"
-                : `Recent Matches ${stats ? `(${stats.recentMatches.length})` : ""}`}
+              Performance Overview
             </button>
-          ))}
+            <button
+              onClick={() => setActiveTab("matches")}
+              className={`px-5 py-2 rounded-lg text-xs font-bold transition-all ${
+                activeTab === "matches"
+                  ? "bg-white/10 text-white border border-white/15 shadow-sm"
+                  : "text-white/50 hover:text-white/80"
+              }`}
+            >
+              Recent Matches {stats ? `(${stats.recentMatches.length})` : ""}
+            </button>
+          </div>
+
+          {/* Small Skill Level Summary */}
+          {profile.playerProfile?.skillLevel && (
+            <div className="hidden sm:flex items-center gap-2 text-xs text-white/60">
+              <span className="text-white/40">Skill Progression:</span>
+              <span className="font-bold text-white">
+                {profile.playerProfile.skillLevel}
+              </span>
+              <div className="w-20 h-1.5 bg-white/10 rounded-full overflow-hidden ml-1">
+                <div
+                  className="h-full bg-[#4AEEFF] rounded-full"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+            </div>
+          )}
         </div>
 
-        <div className="p-6">
-          {/* ── Overview Tab ── */}
-          {activeTab === "overview" && (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              {/* Skill Level */}
-              {profile.playerProfile?.skillLevel && (
-                <div className={`${CARD} p-6`}>
-                  <p className="mb-3 text-[11px] font-black uppercase tracking-widest text-white/50">
-                    Skill Level
-                  </p>
-                  <div className="mb-3 flex items-center gap-3">
-                    <span className={`rounded-full px-4 py-1.5 text-sm font-bold ${skillBadge}`}>
-                      {profile.playerProfile.skillLevel}
+        {/* ── Overview Content ── */}
+        {activeTab === "overview" && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Games Breakdown */}
+            {stats && (
+              <div className="rounded-xl border border-white/10 bg-white/[0.02] p-5 backdrop-blur-md">
+                <div className="flex items-center justify-between mb-4">
+                  <span className="text-[11px] font-black uppercase tracking-wider text-white/50">
+                    Games Ratio
+                  </span>
+                  <span className="text-xs text-white/40 font-mono">
+                    {stats.gamesStats.won}W - {stats.gamesStats.lost}L
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-3 gap-3 text-center py-2">
+                  <div className="rounded-lg bg-emerald-500/10 border border-emerald-500/20 p-3">
+                    <div className="text-2xl font-black text-emerald-400">
+                      {stats.gamesStats.won}
+                    </div>
+                    <div className="text-[10px] font-bold text-emerald-300/70 mt-0.5">WON</div>
+                  </div>
+                  <div className="rounded-lg bg-rose-500/10 border border-rose-500/20 p-3">
+                    <div className="text-2xl font-black text-rose-400">
+                      {stats.gamesStats.lost}
+                    </div>
+                    <div className="text-[10px] font-bold text-rose-300/70 mt-0.5">LOST</div>
+                  </div>
+                  <div className="rounded-lg bg-white/5 border border-white/10 p-3">
+                    <div className="text-2xl font-black text-[#4AEEFF]">
+                      {stats.gamesStats.total}
+                    </div>
+                    <div className="text-[10px] font-bold text-white/50 mt-0.5">TOTAL</div>
+                  </div>
+                </div>
+
+                <div className="mt-4 flex h-2 overflow-hidden rounded-full bg-white/10">
+                  <div
+                    className="bg-emerald-400 transition-all duration-700"
+                    style={{
+                      width: `${stats.gamesStats.total ? (stats.gamesStats.won / stats.gamesStats.total) * 100 : 0}%`,
+                    }}
+                  />
+                  <div
+                    className="bg-rose-400 transition-all duration-700"
+                    style={{
+                      width: `${stats.gamesStats.total ? (stats.gamesStats.lost / stats.gamesStats.total) * 100 : 0}%`,
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Points Stats */}
+            {stats && (
+              <div className="rounded-xl border border-white/10 bg-white/[0.02] p-5 backdrop-blur-md flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="text-[11px] font-black uppercase tracking-wider text-white/50">
+                      Points Overview
+                    </span>
+                    <span className="text-xs text-white/40">
+                      Avg: <strong className="text-[#4AEEFF]">{stats.pointsStats.averagePerGame}</strong> / game
                     </span>
                   </div>
-                  <div className="h-2 overflow-hidden rounded-full bg-white/10">
-                    <div
-                      className="h-full rounded-full bg-[#4AEEFF] transition-all duration-700"
-                      style={{ width: `${progress}%` }}
-                    />
-                  </div>
-                  <div className="mt-2 flex justify-between text-[10px] text-white/40">
-                    <span>Beginner</span>
-                    <span>Intermediate</span>
-                    <span>Advanced</span>
-                    <span>Pro</span>
-                  </div>
-                </div>
-              )}
 
-              {/* Club */}
-              {profile.playerProfile?.clubAffiliation && (
-                <div className={`${CARD} p-6`}>
-                  <p className="mb-3 text-[11px] font-black uppercase tracking-widest text-white/50">
-                    Club Affiliation
-                  </p>
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-11 w-11 items-center justify-center rounded-lg border border-white/10 bg-[#4AEEFF]/10 text-xl">
-                      🏓
-                    </div>
-                    <div>
-                      <p className="font-bold text-white">
-                        {profile.playerProfile.clubAffiliation}
-                      </p>
-                      <p className="text-xs text-white/50">Active Member</p>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Games breakdown */}
-              {stats && (
-                <div className={`${CARD} p-6`}>
-                  <p className="mb-4 text-[11px] font-black uppercase tracking-widest text-white/50">
-                    Games Breakdown
-                  </p>
-                  <div className="flex gap-4">
-                    <div className="flex-1 text-center">
-                      <div className="text-2xl font-black text-emerald-400">
-                        {stats.gamesStats.won}
-                      </div>
-                      <div className="text-[11px] font-bold text-white/50">WON</div>
-                    </div>
-                    <div className="w-px bg-white/10" />
-                    <div className="flex-1 text-center">
-                      <div className="text-2xl font-black text-red-400">
-                        {stats.gamesStats.lost}
-                      </div>
-                      <div className="text-[11px] font-bold text-white/50">LOST</div>
-                    </div>
-                    <div className="w-px bg-white/10" />
-                    <div className="flex-1 text-center">
-                      <div className="text-2xl font-black text-[#4AEEFF]">
-                        {stats.gamesStats.total}
-                      </div>
-                      <div className="text-[11px] font-bold text-white/50">TOTAL</div>
-                    </div>
-                  </div>
-                  <div className="mt-4 flex h-2 overflow-hidden rounded-full bg-white/10">
-                    <div
-                      className="bg-emerald-400 transition-all duration-700"
-                      style={{
-                        width: `${stats.gamesStats.total ? (stats.gamesStats.won / stats.gamesStats.total) * 100 : 0}%`,
-                      }}
-                    />
-                    <div
-                      className="bg-red-400 transition-all duration-700"
-                      style={{
-                        width: `${stats.gamesStats.total ? (stats.gamesStats.lost / stats.gamesStats.total) * 100 : 0}%`,
-                      }}
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* Points */}
-              {stats && (
-                <div className={`${CARD} p-6`}>
-                  <p className="mb-4 text-[11px] font-black uppercase tracking-widest text-white/50">
-                    Points Stats
-                  </p>
-                  <div className="flex flex-col gap-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-white/60">Points Scored</span>
-                      <span className="text-base font-bold text-emerald-400">
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-white/60 flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-emerald-400" /> Points Scored
+                      </span>
+                      <span className="text-sm font-bold text-emerald-400">
                         {stats.pointsStats.scored}
                       </span>
                     </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-white/60">Points Conceded</span>
-                      <span className="text-base font-bold text-red-400">
-                        {stats.pointsStats.conceded}
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-white/60 flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-rose-400" /> Points Conceded
                       </span>
-                    </div>
-                    <div className="flex items-center justify-between border-t border-white/10 pt-3">
-                      <span className="text-sm text-white/60">Avg / Game</span>
-                      <span className="text-lg font-black text-[#4AEEFF]">
-                        {stats.pointsStats.averagePerGame}
+                      <span className="text-sm font-bold text-rose-400">
+                        {stats.pointsStats.conceded}
                       </span>
                     </div>
                   </div>
                 </div>
-              )}
 
-              {/* No stats fallback */}
-              {!stats && (
-                <div className="rounded-[16px] border border-dashed border-white/20 bg-[#061D23]/20 p-10 text-center sm:col-span-2">
-                  <div className="mb-3 text-4xl">🏓</div>
-                  <p className="text-sm text-white/50">No match statistics yet.</p>
+                <div className="mt-4 pt-3 border-t border-white/10 flex items-center justify-between text-xs text-white/50">
+                  <span>Scored / Conceded Differential</span>
+                  <span className={`font-bold ${stats.pointsStats.scored >= stats.pointsStats.conceded ? "text-emerald-400" : "text-rose-400"}`}>
+                    {stats.pointsStats.scored - stats.pointsStats.conceded >= 0 ? "+" : ""}
+                    {stats.pointsStats.scored - stats.pointsStats.conceded}
+                  </span>
                 </div>
-              )}
-            </div>
-          )}
+              </div>
+            )}
 
-          {/* ── Recent Matches Tab ── */}
-          {activeTab === "matches" && (
-            <div>
-              {stats && stats.recentMatches.length > 0 ? (
-                <div className="flex flex-col gap-3">
-                  {stats.recentMatches.map((match) => {
-                    const isWin = match.result === "Win";
-                    return (
-                      <div
-                        key={match.id}
-                        className={`flex items-center gap-4 ${CARD} p-4`}
-                        style={{
-                          borderLeft: `4px solid ${isWin ? "#34d399" : "#f87171"}`,
-                        }}
-                      >
+            {!stats && (
+              <div className="rounded-xl border border-dashed border-white/20 bg-white/[0.02] p-10 text-center sm:col-span-2">
+                <div className="mb-3 text-4xl">🏓</div>
+                <p className="text-sm text-white/50">No match statistics available yet.</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── Recent Matches Content ── */}
+        {activeTab === "matches" && (
+          <div>
+            {stats && stats.recentMatches.length > 0 ? (
+              <div className="flex flex-col gap-2.5">
+                {stats.recentMatches.map((match) => {
+                  const isWin = match.result === "Win";
+                  return (
+                    <div
+                      key={match.id}
+                      className="flex items-center justify-between gap-4 rounded-xl border border-white/10 bg-white/[0.02] p-4 backdrop-blur-md hover:bg-white/[0.05] hover:border-white/20 transition-all"
+                      style={{
+                        borderLeft: `3px solid ${isWin ? "#34d399" : "#f87171"}`,
+                      }}
+                    >
+                      <div className="flex items-center gap-3.5 min-w-0">
                         <div
-                          className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-base ${
+                          className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg text-xs font-bold ${
                             isWin
-                              ? "bg-emerald-500/20 text-emerald-300"
-                              : "bg-red-500/20 text-red-300"
+                              ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
+                              : "bg-rose-500/20 text-rose-300 border border-rose-500/30"
                           }`}
                         >
-                          {isWin ? "✓" : "✗"}
+                          {isWin ? "W" : "L"}
                         </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate font-bold text-white">
+                        <div className="min-w-0">
+                          <p className="truncate font-bold text-white text-sm">
                             {match.tournamentName}
                           </p>
-                          <p className="mt-0.5 text-xs text-white/60">
-                            vs <strong className="text-white/80">{match.opponent}</strong> ·{" "}
-                            {match.categoryName}
-                          </p>
-                        </div>
-                        <div className="flex-shrink-0 text-right">
-                          <p
-                            className={`text-base font-black ${
-                              isWin ? "text-emerald-400" : "text-red-400"
-                            }`}
-                          >
-                            {match.score}
-                          </p>
-                          <p className="mt-0.5 text-[11px] text-white/40">
-                            {new Date(match.date).toLocaleDateString("en-GB", {
-                              day: "numeric",
-                              month: "short",
-                              year: "numeric",
-                            })}
+                          <p className="text-xs text-white/50 truncate">
+                            vs <strong className="text-white/80">{match.opponent}</strong> · {match.categoryName}
                           </p>
                         </div>
                       </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="rounded-[16px] border border-dashed border-white/20 bg-[#061D23]/20 p-16 text-center">
-                  <div className="mb-3 text-5xl">🏓</div>
-                  <p className="text-sm text-white/50">No matches played yet.</p>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
+
+                      <div className="flex-shrink-0 text-right">
+                        <div
+                          className={`text-base font-black font-mono ${
+                            isWin ? "text-emerald-400" : "text-rose-400"
+                          }`}
+                        >
+                          {match.score}
+                        </div>
+                        <div className="text-[10px] text-white/40">
+                          {new Date(match.date).toLocaleDateString("en-GB", {
+                            day: "numeric",
+                            month: "short",
+                            year: "numeric",
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="rounded-xl border border-dashed border-white/20 bg-white/[0.02] p-16 text-center">
+                <div className="mb-3 text-5xl">🏓</div>
+                <p className="text-sm text-white/50">No matches played yet.</p>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </>,
   );

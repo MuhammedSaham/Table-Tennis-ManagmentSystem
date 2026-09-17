@@ -313,14 +313,15 @@ export class BracketService {
     const byes = bracketSize - totalPlayers;
     const firstRoundMatchCount = bracketSize / 2;
 
-    const byePlayers = seededPlayers.slice(0, byes);
-    const playingPlayers = seededPlayers.slice(byes);
-    
-    // We can shuffle playing players to randomize the unseeded matchups
-    for (let i = playingPlayers.length - 1; i > 0; i--) {
+    // Randomize all players so BYE distribution and matchups are completely fair and random
+    const randomizedPlayers = [...seededPlayers];
+    for (let i = randomizedPlayers.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
-      [playingPlayers[i], playingPlayers[j]] = [playingPlayers[j], playingPlayers[i]];
+      [randomizedPlayers[i], randomizedPlayers[j]] = [randomizedPlayers[j], randomizedPlayers[i]];
     }
+
+    const byePlayers = randomizedPlayers.slice(0, byes);
+    const playingPlayers = randomizedPlayers.slice(byes);
 
     const getRoundName = (numMatches: number) => {
       if (numMatches === 1) return 'Final';

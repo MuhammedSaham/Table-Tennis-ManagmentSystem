@@ -123,7 +123,30 @@ export const getPublicProfile = catchAsync(async (req: Request, res: Response) =
     throw new AppError('Player not found', 404);
   }
 
-  sendResponse(res, 200, 'Public profile retrieved successfully', user);
+  // Count total favorites
+  const totalFavorites = await prisma.playerFavorite.count({
+    where: { playerId: id },
+  });
+
+  // Check if requesting user has favorited this player
+  let isFavorited = false;
+  if (req.user?.id) {
+    const existingFav = await prisma.playerFavorite.findUnique({
+      where: {
+        userId_playerId: {
+          userId: req.user.id,
+          playerId: id,
+        },
+      },
+    });
+    isFavorited = !!existingFav;
+  }
+
+  sendResponse(res, 200, 'Public profile retrieved successfully', {
+    ...user,
+    totalFavorites,
+    isFavorited,
+  });
 });
 
 export const getPublicPlayers = catchAsync(async (req: Request, res: Response) => {
@@ -144,18 +167,85 @@ export const getPublicPlayers = catchAsync(async (req: Request, res: Response) =
           isClubMember: true,
         },
       },
+      _count: {
+        select: {
+          favoritesReceived: true,
+        },
+      },
     },
     orderBy: { firstName: 'asc' },
   });
 
-  // Flatten isClubMember and ranking to root level
+  // Flatten isClubMember, ranking, and totalFavorites to root level
   const result = players.map(p => ({
     ...p,
     ranking: p.playerProfile?.ranking ?? null,
     isClubMember: p.playerProfile?.isClubMember ?? false,
+    totalFavorites: p._count?.favoritesReceived ?? 0,
   }));
 
   sendResponse(res, 200, 'Players retrieved successfully', result);
+});
+
+export const togglePlayerFavorite = catchAsync(async (req: Request, res: Response) => {
+  const { id: playerId } = req.params;
+  const userId = req.user!.id;
+
+  const player = await prisma.user.findUnique({
+    where: { id: playerId },
+  });
+
+  if (!player || player.role !== 'PLAYER') {
+    throw new AppError('Player not found', 404);
+  }
+
+  const existing = await prisma.playerFavorite.findUnique({
+    where: {
+      userId_playerId: {
+        userId,
+        playerId,
+      },
+    },
+  });
+
+  let favorited = false;
+  if (existing) {
+    await prisma.playerFavorite.delete({
+      where: { id: existing.id },
+    });
+    favorited = false;
+  } else {
+    await prisma.playerFavorite.create({
+      data: {
+        userId,
+        playerId,
+      },
+    });
+    favorited = true;
+
+    // Send in-app notification to player if someone else favorited them
+    if (userId !== playerId) {
+      const fanName = `${req.user!.firstName} ${req.user!.lastName}`.trim();
+      await prisma.notification.create({
+        data: {
+          userId: playerId,
+          type: 'PLAYER_FAVORITED' as any,
+          title: '❤️ New Fan Favorite!',
+          message: `${fanName} added you to their favorites!`,
+          isRead: false,
+        },
+      });
+    }
+  }
+
+  const totalFavorites = await prisma.playerFavorite.count({
+    where: { playerId },
+  });
+
+  sendResponse(res, 200, favorited ? 'Player favorited successfully' : 'Player unfavorited successfully', {
+    favorited,
+    totalFavorites,
+  });
 });
 export const updatePlayerRanking = catchAsync(async (req: Request, res: Response) => {
   const { id } = req.params;                        // player userId

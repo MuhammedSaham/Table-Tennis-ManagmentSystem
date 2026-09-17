@@ -54,6 +54,7 @@ export const getAllTournaments = catchAsync(async (req: Request, res: Response) 
           id: true,
           name: true,
           type: true,
+          stageFormat: true,
           maxParticipants: true,
           currentParticipants: true,
         },
@@ -222,7 +223,7 @@ export const addCategory = catchAsync(async (req: Request, res: Response) => {
     throw new AppError('Tournament not found', 404);
   }
 
-  const { name, type, minAge, maxAge, gender, maxParticipants } = req.body;
+  const { name, type, minAge, maxAge, gender, maxParticipants, stageFormat } = req.body;
 
   const existingCategory = await prisma.category.findFirst({
   where: {
@@ -246,6 +247,7 @@ if (existingCategory) {
       tournamentId,
       name,
       type,
+      stageFormat: stageFormat === 'GROUP_KNOCKOUT' ? 'GROUP_KNOCKOUT' : 'KNOCKOUT',
       minAge,
       maxAge,
       gender,
@@ -294,13 +296,14 @@ export const updateCategory = catchAsync(async (req: Request, res: Response) => 
     throw new AppError('Category not found', 404);
   }
 
-  const { name, type, minAge, maxAge, gender, maxParticipants } = req.body;
+  const { name, type, minAge, maxAge, gender, maxParticipants, stageFormat } = req.body;
 
   const updatedCategory = await prisma.category.update({
     where: { id: categoryId },
     data: {
       name: name || undefined,
       type: type || undefined,
+      stageFormat: stageFormat || undefined,
       minAge: minAge !== undefined ? (minAge !== null && minAge !== '' ? Number(minAge) : null) : undefined,
       maxAge: maxAge !== undefined ? (maxAge !== null && maxAge !== '' ? Number(maxAge) : null) : undefined,
       gender: gender !== undefined ? (gender ? gender : null) : undefined,

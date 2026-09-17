@@ -18,12 +18,43 @@ interface GroupPlayer {
   pointsConceded: number;
 }
 
+export interface GroupTeam {
+  teamId?: string;
+  team: {
+    id: string;
+    name: string;
+    members?: Array<{
+      player?: { id: string; firstName: string; lastName: string };
+    }>;
+  };
+  matchesPlayed: number;
+  wins: number;
+  losses: number;
+  points: number;
+  gamesWon: number;
+  gamesLost: number;
+  pointsScored: number;
+  pointsConceded: number;
+}
+
 export interface GroupMatch {
   id: string;
-  player1Id: string;
-  player2Id: string;
-  player1: { id: string; firstName: string; lastName: string };
-  player2: { id: string; firstName: string; lastName: string };
+  player1Id?: string | null;
+  player2Id?: string | null;
+  player1?: { id: string; firstName: string; lastName: string } | null;
+  player2?: { id: string; firstName: string; lastName: string } | null;
+  team1Id?: string | null;
+  team2Id?: string | null;
+  team1?: {
+    id: string;
+    name: string;
+    members?: Array<{ player?: { id: string; firstName: string; lastName: string } }>;
+  } | null;
+  team2?: {
+    id: string;
+    name: string;
+    members?: Array<{ player?: { id: string; firstName: string; lastName: string } }>;
+  } | null;
   player1Score: number | null;
   player2Score: number | null;
   status: string;
@@ -38,15 +69,27 @@ export interface GroupMatch {
   game4player2?: number | null;
   game5player1?: number | null;
   game5player2?: number | null;
-  referee?: { id: string; user: { firstName: string; lastName: string; } } | null;
+  referee?: { id: string; user: { id?: string; firstName: string; lastName: string; } } | null;
 }
 
 interface Group {
   id: string;
   name: string;
   players: GroupPlayer[];
+  teams?: GroupTeam[];
   matches: GroupMatch[];
 }
+
+export const getParticipantName = (team?: any, player?: any) => {
+  if (team?.members && team.members.length >= 2) {
+    const m1 = team.members[0]?.player;
+    const m2 = team.members[1]?.player;
+    if (m1 && m2) return `${m1.firstName} ${m1.lastName} & ${m2.firstName} ${m2.lastName}`;
+  }
+  if (team?.name) return team.name;
+  if (player) return `${player.firstName} ${player.lastName}`;
+  return "TBD";
+};
 
 interface Props {
   tournamentId: string;
@@ -194,8 +237,8 @@ export const UmpireSheet: React.FC<UmpireSheetProps> = ({
     setSaving(false);
   };
 
-  const p1Name = `${match.player1.firstName} ${match.player1.lastName}`;
-  const p2Name = `${match.player2.firstName} ${match.player2.lastName}`;
+  const p1Name = getParticipantName(match.team1, match.player1);
+  const p2Name = getParticipantName(match.team2, match.player2);
 
   return createPortal(
     <div
@@ -636,6 +679,10 @@ export const UmpireSheet: React.FC<UmpireSheetProps> = ({
               <span style={{ color: "#0f172a", fontWeight: 700 }}>
                 {match.referee?.user
                   ? `${match.referee.user.firstName} ${match.referee.user.lastName}`
+                  : user?.role === "ADMIN"
+                  ? `${user.firstName} ${user.lastName} (Admin)`
+                  : isCompleted
+                  ? "Tournament Official"
                   : "…………………………"}
               </span>
             </div>
@@ -739,7 +786,7 @@ import { AssignRefereeModal } from "./AssignRefereeModal";
 const GroupStandings: React.FC<Props> = ({
   tournamentId,
   categoryId,
-  isAdminOrReferee = false,
+  isAdminOrReferee: _isAdminOrReferee = false,
   onScoreUpdate,
 }) => {
   const { user } = useAuth();
@@ -790,25 +837,27 @@ const GroupStandings: React.FC<Props> = ({
 
   const findMatch = (
     group: Group,
-    p1Id: string,
-    p2Id: string,
+    id1: string,
+    id2: string,
   ): GroupMatch | undefined =>
     group.matches?.find(
       (m) =>
-        (m.player1Id === p1Id && m.player2Id === p2Id) ||
-        (m.player1Id === p2Id && m.player2Id === p1Id),
+        (m.player1Id === id1 && m.player2Id === id2) ||
+        (m.player1Id === id2 && m.player2Id === id1) ||
+        (m.team1Id === id1 && m.team2Id === id2) ||
+        (m.team1Id === id2 && m.team2Id === id1),
     );
 
   const cellContent = (
     group: Group,
-    rowPlayerId: string,
-    colPlayerId: string,
+    rowId: string,
+    colId: string,
   ) => {
-    const match = findMatch(group, rowPlayerId, colPlayerId);
+    const match = findMatch(group, rowId, colId);
     if (!match) return null;
-    const isPlayer1 = match.player1Id === rowPlayerId;
-    const myScore = isPlayer1 ? match.player1Score : match.player2Score;
-    const oppScore = isPlayer1 ? match.player2Score : match.player1Score;
+    const isFirst = match.player1Id === rowId || match.team1Id === rowId;
+    const myScore = isFirst ? match.player1Score : match.player2Score;
+    const oppScore = isFirst ? match.player2Score : match.player1Score;
     if (myScore === null || oppScore === null) return null;
     return `${myScore}/${oppScore}`;
   };
@@ -880,7 +929,29 @@ const GroupStandings: React.FC<Props> = ({
       }}
     >
       {groups.map((group) => {
-        const players = group.players;
+        const isDoubles = Boolean(group.teams && group.teams.length > 0);
+        const entries = isDoubles
+          ? (group.teams || []).map((t) => {
+              const p1 = t.team?.members?.[0]?.player;
+              const p2 = t.team?.members?.[1]?.player;
+              const name =
+                p1 && p2
+                  ? `${p1.firstName} ${p1.lastName} & ${p2.firstName} ${p2.lastName}`
+                  : t.team?.name || "Team";
+              return {
+                id: t.teamId || t.team?.id,
+                name,
+                points: t.points,
+                matchesPlayed: t.matchesPlayed,
+              };
+            })
+          : (group.players || []).map((p) => ({
+              id: p.player.id,
+              name: `${p.player.firstName} ${p.player.lastName}`,
+              points: p.points,
+              matchesPlayed: p.matchesPlayed,
+            }));
+
         return (
           <div
             key={group.id}
@@ -923,7 +994,7 @@ const GroupStandings: React.FC<Props> = ({
                   fontWeight: 600,
                 }}
               >
-                {players.length} players
+                {entries.length} {isDoubles ? "teams" : "players"}
               </span>
             </div>
 
@@ -945,9 +1016,9 @@ const GroupStandings: React.FC<Props> = ({
                         background: "#f8fafc",
                       }}
                     />
-                    {players.map((p) => (
+                    {entries.map((entry) => (
                       <th
-                        key={p.player.id}
+                        key={entry.id}
                         style={{
                           border: "1px solid #e2e8f0",
                           padding: "12px 8px",
@@ -965,7 +1036,7 @@ const GroupStandings: React.FC<Props> = ({
                             whiteSpace: "nowrap",
                           }}
                         >
-                          {p.player.firstName} {p.player.lastName}
+                          {entry.name}
                         </div>
                       </th>
                     ))}
@@ -998,9 +1069,9 @@ const GroupStandings: React.FC<Props> = ({
                   </tr>
                 </thead>
                 <tbody>
-                  {players.map((rowPlayer, rowIdx) => (
+                  {entries.map((rowEntry, rowIdx) => (
                     <tr
-                      key={rowPlayer.player.id}
+                      key={rowEntry.id}
                       style={{
                         background: rowIdx % 2 === 0 ? "#fffdf0" : "#fff",
                       }}
@@ -1016,16 +1087,15 @@ const GroupStandings: React.FC<Props> = ({
                           whiteSpace: "nowrap",
                         }}
                       >
-                        {rowPlayer.player.firstName} {rowPlayer.player.lastName}
+                        {rowEntry.name}
                       </td>
 
-                      {players.map((colPlayer) => {
-                        const isSelf =
-                          rowPlayer.player.id === colPlayer.player.id;
+                      {entries.map((colEntry) => {
+                        const isSelf = rowEntry.id === colEntry.id;
                         if (isSelf) {
                           return (
                             <td
-                              key={colPlayer.player.id}
+                              key={colEntry.id}
                               style={{
                                 border: "1px solid #e2e8f0",
                                 background: "#1e293b",
@@ -1040,13 +1110,13 @@ const GroupStandings: React.FC<Props> = ({
                         }
                         const score = cellContent(
                           group,
-                          rowPlayer.player.id,
-                          colPlayer.player.id,
+                          rowEntry.id,
+                          colEntry.id,
                         );
                         const match = findMatch(
                           group,
-                          rowPlayer.player.id,
-                          colPlayer.player.id,
+                          rowEntry.id,
+                          colEntry.id,
                         );
                         const isWin =
                           score !== null &&
@@ -1055,13 +1125,13 @@ const GroupStandings: React.FC<Props> = ({
 
                         return (
                           <td
-                            key={colPlayer.player.id}
+                            key={colEntry.id}
                             onClick={() =>
                               match &&
                               handleCellClick(
                                 group,
-                                rowPlayer.player.id,
-                                colPlayer.player.id,
+                                rowEntry.id,
+                                colEntry.id,
                               )
                             }
                             style={{
@@ -1118,7 +1188,7 @@ const GroupStandings: React.FC<Props> = ({
                           background: "#f0f9ff",
                         }}
                       >
-                        {rowPlayer.points}
+                        {rowEntry.points}
                       </td>
                       <td
                         style={{

@@ -4,7 +4,6 @@ import toast from "react-hot-toast";
 import { UmpireSheet } from "../components/GroupStandings";
 import type { GroupMatch, GameScore } from "../components/GroupStandings";
 import { UmpireSheet as KnockoutUmpireSheet } from "../components/KnockoutBracket";
-import { TrophyIcon } from "@heroicons/react/24/outline";
 
 interface Player {
   id: string;
