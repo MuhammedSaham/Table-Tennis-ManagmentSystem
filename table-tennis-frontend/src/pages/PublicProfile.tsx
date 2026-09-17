@@ -13,6 +13,8 @@ interface PublicPlayerProfile {
   role: string;
   profileImage?: string;
   createdAt: string;
+  totalFavorites?: number;
+  isFavorited?: boolean;
   playerProfile?: {
     skillLevel: string | null;
     clubAffiliation: string | null;
@@ -47,6 +49,21 @@ const calculateAge = (dob: string) => {
   const m = today.getMonth() - birth.getMonth();
   if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
   return age;
+};
+
+const formatDateOfBirth = (dob: string) => {
+  try {
+    const d = new Date(dob);
+    if (isNaN(d.getTime())) return dob;
+    return d.toLocaleDateString("en-GB", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+      timeZone: "UTC",
+    });
+  } catch {
+    return dob;
+  }
 };
 
 const getAgeCategory = (age: number) => {
@@ -129,6 +146,9 @@ const PublicProfile: React.FC = () => {
   const [activeTab, setActiveTab] = useState<"overview" | "matches">(
     "overview",
   );
+  const [isFavorited, setIsFavorited] = useState<boolean>(false);
+  const [totalFavorites, setTotalFavorites] = useState<number>(0);
+  const [isFavoriteLoading, setIsFavoriteLoading] = useState<boolean>(false);
 
   useEffect(() => {
     fetchProfile();
@@ -139,6 +159,8 @@ const PublicProfile: React.FC = () => {
       // Use the new public endpoint — no auth required
       const res = await api.get(`/users/public/${userId}`);
       setProfile(res.data.data);
+      setIsFavorited(Boolean(res.data.data.isFavorited));
+      setTotalFavorites(Number(res.data.data.totalFavorites) || 0);
 
       // Fetch stats (match performance endpoint)
       try {
@@ -163,6 +185,36 @@ const PublicProfile: React.FC = () => {
       navigate("/tournaments");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleToggleFavorite = async () => {
+    if (!user) {
+      toast.error("Please log in to add this player to your favorites!", {
+        icon: "❤️",
+      });
+      return;
+    }
+
+    if (isFavoriteLoading) return;
+    setIsFavoriteLoading(true);
+
+    try {
+      const res = await api.post(`/users/${userId}/favorite`);
+      const { favorited, totalFavorites: newTotal } = res.data.data;
+      setIsFavorited(favorited);
+      setTotalFavorites(newTotal);
+      if (favorited) {
+        toast.success(`Added ${profile?.firstName} to your favorites!`, {
+          icon: "❤️",
+        });
+      } else {
+        toast.success(`Removed from favorites`);
+      }
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Failed to update favorite");
+    } finally {
+      setIsFavoriteLoading(false);
     }
   };
 
@@ -251,10 +303,32 @@ const PublicProfile: React.FC = () => {
               )}
             </div>
 
-            <h1 className="text-2xl font-black uppercase tracking-[0.2em] text-white sm:text-4xl">
-              {profile.firstName}{" "}
-              <span className="text-[#4AEEFF]">{profile.lastName}</span>
-            </h1>
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <h1 className="text-2xl font-black uppercase tracking-[0.2em] text-white sm:text-4xl">
+                {profile.firstName}{" "}
+                <span className="text-[#4AEEFF]">{profile.lastName}</span>
+              </h1>
+
+              {/* Favorite / Fan Like Button */}
+              <button
+                type="button"
+                onClick={handleToggleFavorite}
+                disabled={isFavoriteLoading}
+                className={`group flex items-center gap-2.5 px-4 py-2 rounded-full border transition-all duration-300 text-sm font-bold shadow-lg select-none ${
+                  isFavorited
+                    ? "bg-[#FF4B72]/25 border-[#FF4B72] text-[#FF4B72] shadow-[#FF4B72]/30 scale-105"
+                    : "bg-[#061D23]/80 border-white/20 text-white/80 hover:border-[#FF4B72]/70 hover:text-[#FF4B72] hover:bg-[#FF4B72]/10"
+                } ${isFavoriteLoading ? "opacity-60 cursor-not-allowed" : "active:scale-95"}`}
+                title={isFavorited ? "Remove from favorites" : "Add to favorites"}
+              >
+                <span className={`text-lg transition-transform duration-300 ${isFavorited ? "scale-125" : "group-hover:scale-125"}`}>
+                  {isFavorited ? "❤️" : "🤍"}
+                </span>
+                <span>
+                  {totalFavorites} {totalFavorites === 1 ? "Fan" : "Fans"}
+                </span>
+              </button>
+            </div>
 
             <div className="mt-3 flex flex-wrap gap-5">
               {profile.playerProfile?.clubAffiliation && (
@@ -263,10 +337,10 @@ const PublicProfile: React.FC = () => {
                   <span>{profile.playerProfile.clubAffiliation}</span>
                 </div>
               )}
-              {age !== null && (
+              {profile.playerProfile?.dateOfBirth && (
                 <div className="flex items-center gap-2 text-sm text-white/70">
                   <span>🎂</span>
-                  <span>{age} years old</span>
+                  <span>{formatDateOfBirth(profile.playerProfile.dateOfBirth)}</span>
                 </div>
               )}
               <div className="flex items-center gap-2 text-sm text-white/70">

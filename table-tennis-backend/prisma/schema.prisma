@@ -51,6 +51,10 @@ model User {
   // DOUBLES INVITE RELATIONS
   doublesInvitesSent     DoublesInvite[] @relation("doubles_inviter")
   doublesInvitesReceived DoublesInvite[] @relation("doubles_invitee")
+
+  // FAVORITES RELATIONS
+  favoritesSent     PlayerFavorite[] @relation("user_favorites")
+  favoritesReceived PlayerFavorite[] @relation("player_favorited_by")
 }
 
 enum UserRole {
@@ -367,6 +371,7 @@ enum NotificationType {
   DOUBLES_INVITE
   DOUBLES_INVITE_ACCEPTED
   DOUBLES_INVITE_DECLINED
+  PLAYER_FAVORITED
 }
 
 // Doubles Partner Invitations
@@ -490,4 +495,19 @@ model GroupMatch {
   completedAt   DateTime?
 
   createdAt DateTime @default(now())
+}
+
+// Player Favorites / Likes
+model PlayerFavorite {
+  id        String   @id @default(cuid())
+  userId    String
+  playerId  String
+  createdAt DateTime @default(now())
+
+  user   User @relation("user_favorites", fields: [userId], references: [id], onDelete: Cascade)
+  player User @relation("player_favorited_by", fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, playerId])
+  @@index([playerId])
+  @@index([userId])
 }

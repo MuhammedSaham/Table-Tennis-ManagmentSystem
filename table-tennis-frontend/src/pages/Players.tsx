@@ -10,6 +10,7 @@ interface Player {
   isClubMember?: boolean;
   profileImage?: string;
   createdAt: string;
+  totalFavorites?: number;
   playerProfile?: {
     skillLevel: string | null;
     clubAffiliation: string | null;
@@ -31,6 +32,21 @@ const calculateAge = (dob: string) => {
   const m = today.getMonth() - birth.getMonth();
   if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
   return age;
+};
+
+const formatDateOfBirth = (dob: string) => {
+  try {
+    const d = new Date(dob);
+    if (isNaN(d.getTime())) return dob;
+    return d.toLocaleDateString("en-GB", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+      timeZone: "UTC",
+    });
+  } catch {
+    return dob;
+  }
 };
 
 type TabType = "CLUB" | "GUEST";
@@ -258,6 +274,14 @@ const Players: React.FC = () => {
                   {/* Corner light blur */}
                   <div className="absolute -top-10 -right-10 w-28 h-28 bg-[#4AEEFF]/5 rounded-full blur-2xl group-hover:bg-[#4AEEFF]/10 transition-all pointer-events-none" />
 
+                  {/* Favorites badge (top-left corner) */}
+                  {(player.totalFavorites ?? 0) > 0 && (
+                    <span className="absolute top-4 left-4 z-10 flex items-center gap-1 px-2 py-0.5 text-[11px] font-bold rounded-full bg-[#FF4B72]/15 text-[#FF4B72] border border-[#FF4B72]/30 backdrop-blur-md">
+                      <span>❤️</span>
+                      <span>{player.totalFavorites}</span>
+                    </span>
+                  )}
+
                   {/* Club member / Guest badge (top-right corner) */}
                   {isClubMember ? (
                     <span className="absolute top-4 right-4 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-md bg-[#4AEEFF]/20 text-[#4AEEFF] border border-[#4AEEFF]/40">
@@ -308,8 +332,10 @@ const Players: React.FC = () => {
                           </span>
                         </div>
                       )}
-                      {age !== null && (
-                        <p className="text-white/50 text-xs mt-1">{age} years old</p>
+                      {player.playerProfile?.dateOfBirth && (
+                        <p className="text-white/50 text-xs mt-1">
+                          DOB: {formatDateOfBirth(player.playerProfile.dateOfBirth)}
+                        </p>
                       )}
                     </div>
 
