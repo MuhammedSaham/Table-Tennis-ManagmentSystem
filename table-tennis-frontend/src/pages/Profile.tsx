@@ -5,10 +5,8 @@ import toast from "react-hot-toast";
 import {
   TrophyIcon,
   ChartBarIcon,
-  CalendarIcon,
   UserIcon,
   EnvelopeIcon,
-  PhoneIcon,
   AcademicCapIcon,
   IdentificationIcon,
   UserGroupIcon,
@@ -45,6 +43,7 @@ interface UserProfile {
   email: string;
   firstName: string;
   lastName: string;
+  createdAt?: string;
   phone: string | null;
   role: string;
   profileImage?: string;
@@ -87,6 +86,7 @@ const Profile: React.FC = () => {
   const [profileReceivedInvites, setProfileReceivedInvites] = useState<any[]>([]);
   const [profileSentInvites, setProfileSentInvites] = useState<any[]>([]);
   const [activeDoublesTab, setActiveDoublesTab] = useState<"ACTIVE" | "RECEIVED" | "SENT">("ACTIVE");
+  const [activePerformanceTab, setActivePerformanceTab] = useState<"OVERVIEW" | "MATCHES">("OVERVIEW");
 
   useEffect(() => {
     fetchProfile();
@@ -354,20 +354,22 @@ const Profile: React.FC = () => {
   return wrapInBaseLayout(
     <>
       {/* ─── HEADER ─── */}
-      <header className="flex flex-col justify-between gap-4 rounded-[16px] border border-white/20 bg-[#061D23]/8 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl sm:flex-row sm:items-center sm:p-8">
+      <header className="flex flex-col justify-between gap-5 border-b border-white/10 pb-6 sm:flex-row sm:items-end">
         <div>
-          <div className="mb-4 h-[3px] w-16 bg-[#4AEEFF]" />
-          <h1 className="mb-2 text-2xl font-black uppercase tracking-[0.2em] text-[#FFFFFF] sm:text-4xl">
-            My Profile
+          <p className="mb-2 text-xs font-bold uppercase tracking-[0.3em] text-[#4AEEFF]/90">
+            Account overview
+          </p>
+          <h1 className="text-3xl font-black tracking-tight text-[#FFFFFF] sm:text-4xl">
+            Profile
           </h1>
-          <p className="text-xs uppercase tracking-[0.3em] text-[#4AEEFF]/90">
-            Manage personal credentials and overview stats
+          <p className="mt-2 text-sm text-white/55">
+            View your profile details and player information here.
           </p>
         </div>
         {!editing && (
           <button
             onClick={() => setEditing(true)}
-            className="inline-flex h-11 items-center justify-center rounded-lg bg-[#4AEEFF] px-6 text-xs font-black uppercase tracking-wider text-[#061D23] transition-all duration-200 hover:bg-[#FFFFFF]"
+            className="inline-flex h-11 items-center justify-center rounded-lg border border-[#4AEEFF]/40 bg-[#4AEEFF]/10 px-6 text-xs font-black uppercase tracking-wider text-[#4AEEFF] transition-all duration-200 hover:bg-[#4AEEFF] hover:text-[#061D23]"
           >
             Edit Profile
           </button>
@@ -377,120 +379,190 @@ const Profile: React.FC = () => {
       {!editing ? (
         <div className="space-y-6">
           {/* ─── PRIMARY DETAILED OVERVIEW ─── */}
-          <section className="rounded-[16px] border border-white/20 bg-[#061D23]/5 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl sm:p-8">
-            <div className="flex flex-col items-start gap-5 pb-6 border-b border-white/10 sm:flex-row sm:items-center">
-              {profile.profileImage ? (
-                <img
-                  src={getProfileImageUrl(profile.profileImage)}
-                  alt="Profile"
-                  className="h-24 w-24 rounded-full object-cover border-2 border-[#4AEEFF] shadow-[0_0_20px_rgba(74,238,255,0.3)]"
-                />
-              ) : (
-                <div className="flex h-24 w-24 items-center justify-center rounded-full border-2 border-[#4AEEFF]/40 bg-[#061D23]/60 shadow-inner">
-                  <span className="text-3xl font-black tracking-tighter text-[#4AEEFF]">
-                    {(profile.firstName?.[0] || "").toUpperCase()}
-                    {(profile.lastName?.[0] || "").toUpperCase()}
-                  </span>
-                </div>
-              )}
-              <div>
-                <h2 className="text-2xl font-black text-white uppercase tracking-wide">
-                  {profile.firstName} {profile.lastName}
-                </h2>
-                <div className="mt-2 inline-flex items-center rounded bg-[#4AEEFF]/20 px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider text-[#4AEEFF]">
+          <section className="grid gap-5 xl:grid-cols-[minmax(280px,0.82fr)_minmax(0,1.8fr)]">
+            <div className="flex min-h-[390px] flex-col items-center justify-center rounded-[16px] border border-white/20 bg-[#061D23]/10 p-6 text-center shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl sm:p-8">
+              <div className="mb-6 rounded-full border-[10px] border-[#061D23]/70 bg-[#061D23]/50 p-2 shadow-[0_0_0_1px_rgba(74,238,255,0.18),0_0_35px_rgba(74,238,255,0.12)]">
+                {profile.profileImage ? (
+                  <img
+                    src={getProfileImageUrl(profile.profileImage)}
+                    alt="Profile"
+                    className="h-48 w-48 rounded-full object-cover sm:h-56 sm:w-56"
+                  />
+                ) : (
+                  <div className="flex h-48 w-48 items-center justify-center rounded-full bg-[#061D23]/70 sm:h-56 sm:w-56">
+                    <span className="text-6xl font-black tracking-tighter text-[#4AEEFF]">
+                      {(profile.firstName?.[0] || "").toUpperCase()}
+                      {(profile.lastName?.[0] || "").toUpperCase()}
+                    </span>
+                  </div>
+                )}
+              </div>
+              <div className="mb-3 flex flex-wrap justify-center gap-2">
+                <span className="rounded-md border border-white/15 bg-white/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-white">
                   {profile.role}
-                </div>
+                </span>
+                {profile.playerProfile && (
+                  <>
+                    <span className="rounded-md border border-white/10 bg-white/5 px-2.5 py-1 text-[10px] font-medium uppercase tracking-wider text-white/70">
+                      {profile.playerProfile.dateOfBirth
+                        ? getPlayerAgeCategory(new Date(profile.playerProfile.dateOfBirth)).category
+                        : "Player"}
+                    </span>
+                    <span className="rounded-md border border-amber-400/30 bg-amber-400/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-amber-300">
+                      {profile.playerProfile.skillLevel}
+                    </span>
+                  </>
+                )}
+              </div>
+              <h2 className="text-2xl font-black tracking-tight text-white">
+                {profile.firstName} {profile.lastName}
+              </h2>
+              <div className="mt-3 flex flex-wrap justify-center gap-x-4 gap-y-1 text-xs text-white/55">
+                {profile.playerProfile?.dateOfBirth && (
+                  <span>
+                    {new Date(profile.playerProfile.dateOfBirth).toLocaleDateString("en-GB", {
+                      day: "numeric",
+                      month: "short",
+                      year: "numeric",
+                    })}
+                  </span>
+                )}
+                {profile.createdAt && <span>Joined {new Date(profile.createdAt).getFullYear()}</span>}
               </div>
             </div>
 
-            {/* Core credentials info cards */}
-            <div className="grid gap-4 mt-6 sm:grid-cols-2">
-              <div className="rounded-[12px] border border-white/10 bg-[#061D23]/40 p-5">
-                <p className="text-xs font-bold uppercase tracking-wider text-[#4AEEFF]/80 mb-1 flex items-center gap-2">
-                  <EnvelopeIcon className="h-4 w-4" /> Email Address
-                </p>
-                <p className="font-semibold text-white break-all">{profile.email}</p>
+            <div className="rounded-[16px] border border-white/20 bg-[#061D23]/10 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl sm:p-8">
+              <div className="mb-5 flex items-center justify-between border-b border-white/10 pb-4">
+                <div>
+                  <h2 className="text-xl font-bold text-white">Bio &amp; other details</h2>
+                  <p className="mt-1 text-xs text-white/45">Your account and playing profile</p>
+                </div>
+                <span className="h-2.5 w-2.5 rounded-full bg-[#4AEEFF] shadow-[0_0_12px_rgba(74,238,255,0.8)]" />
               </div>
-              <div className="rounded-[12px] border border-white/10 bg-[#061D23]/40 p-5">
-                <p className="text-xs font-bold uppercase tracking-wider text-[#4AEEFF]/80 mb-1 flex items-center gap-2">
-                  <PhoneIcon className="h-4 w-4" /> Contact Number
-                </p>
-                <p className="font-semibold text-white">{profile.phone || "Not provided"}</p>
+              <div className="grid gap-x-8 sm:grid-cols-2">
+                {[
+                  ["Email address", profile.email],
+                  ["Phone number", profile.phone || "Not provided"],
+                  ["Role", profile.role],
+                  ...(profile.role === "PLAYER" && profile.playerProfile
+                    ? [
+                        ["Skill level", profile.playerProfile.skillLevel],
+                        [
+                          "Gender",
+                          profile.playerProfile.gender === "MALE"
+                            ? "Male"
+                            : profile.playerProfile.gender === "FEMALE"
+                              ? "Female"
+                              : "Not provided",
+                        ],
+                        ["Club affiliation", profile.playerProfile.clubAffiliation || "None specified"],
+                        [
+                          "Age category",
+                          profile.playerProfile.dateOfBirth
+                            ? getPlayerAgeCategory(new Date(profile.playerProfile.dateOfBirth)).category
+                            : "Not provided",
+                        ],
+                      ]
+                    : []),
+                ].map(([label, value]) => (
+                  <div key={label} className="border-b border-white/10 py-4">
+                    <p className="text-xs text-white/45">{label}</p>
+                    <p className="mt-1 break-words text-sm font-semibold text-white">{value}</p>
+                  </div>
+                ))}
               </div>
             </div>
           </section>
 
-          {/* ─── ROLE-SPECIFIC PROFILES ─── */}
-          {profile.role === "PLAYER" && profile.playerProfile && (
-            <section className="rounded-[16px] border border-white/20 bg-[#061D23]/5 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl">
-              <div className="mb-5 flex items-center gap-3">
-                <div className="rounded-lg bg-[#4AEEFF]/20 p-2 text-[#4AEEFF]">
-                  <UserIcon className="h-5 w-5" />
+          {profile.role === "PLAYER" && (
+            <section className="relative z-10 grid grid-cols-2 gap-3 sm:grid-cols-5">
+              {[
+                ["Win rate", playerStats?.winRate ?? "—", "text-[#4AEEFF]"],
+                ["Total matches", playerStats?.totalMatches ?? "—", "text-white"],
+                ["Wins", playerStats?.wins ?? "—", "text-[#4AEEFF]"],
+                ["Losses", playerStats?.losses ?? "—", "text-red-400"],
+                ["Games won", playerStats?.gamesStats.won ?? "—", "text-[#4AEEFF]"],
+              ].map(([label, value, color]) => (
+                <div
+                  key={label}
+                  className="relative min-h-[92px] overflow-hidden rounded-[14px] border border-[#4AEEFF]/25 bg-[#061D23]/70 p-4 text-center shadow-[0_15px_35px_-15px_rgba(6,29,35,0.6)] backdrop-blur-xl"
+                >
+                  <div className="absolute inset-x-0 top-0 h-[2px] bg-[#4AEEFF]/70" />
+                  <p className={`text-2xl font-black ${color}`}>{value}</p>
+                  <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-white/55">{label}</p>
                 </div>
-                <h2 className="text-lg font-bold uppercase tracking-wider text-[#FFFFFF]">
-                  Player Affiliation & Bio
-                </h2>
+              ))}
+            </section>
+          )}
+
+          {/* ─── PERFORMANCE OVERVIEW & RECENT MATCHES ─── */}
+          {profile.role === "PLAYER" && !playerStats && (
+            <section className="relative z-10 rounded-[16px] border border-[#4AEEFF]/30 bg-[#061D23]/80 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.7)] backdrop-blur-xl sm:p-8">
+              <div className="flex flex-col justify-between gap-4 border-b border-white/10 pb-4 sm:flex-row sm:items-center">
+                <div className="flex items-center gap-3">
+                  <div className="rounded-lg bg-[#4AEEFF]/20 p-2 text-[#4AEEFF]">
+                    <ChartBarIcon className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-bold text-white">Performance overview</h2>
+                    <p className="mt-1 text-xs text-white/55">Track your results and recent match activity</p>
+                  </div>
+                </div>
+                <div className="flex rounded-xl border border-white/10 bg-black/30 p-1">
+                  <button type="button" onClick={() => setActivePerformanceTab("OVERVIEW")} className={`rounded-lg px-3 py-2 text-[10px] font-black uppercase tracking-wider ${activePerformanceTab === "OVERVIEW" ? "bg-[#4AEEFF] text-[#061D23]" : "text-white/60 hover:text-white"}`}>
+                    Performance Overview
+                  </button>
+                  <button type="button" onClick={() => setActivePerformanceTab("MATCHES")} className={`rounded-lg px-3 py-2 text-[10px] font-black uppercase tracking-wider ${activePerformanceTab === "MATCHES" ? "bg-[#4AEEFF] text-[#061D23]" : "text-white/60 hover:text-white"}`}>
+                    Recent Matches (0)
+                  </button>
+                </div>
               </div>
-              <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
-                <div className="rounded-[12px] border border-white/10 bg-[#061D23]/60 p-4">
-                  <p className="text-xs text-[#4AEEFF] font-semibold uppercase tracking-wider">Skill Level</p>
-                  <p className="mt-1 font-bold text-white">{profile.playerProfile.skillLevel}</p>
-                </div>
-                <div className="rounded-[12px] border border-white/10 bg-[#061D23]/60 p-4">
-                  <p className="text-xs text-[#4AEEFF] font-semibold uppercase tracking-wider">Age</p>
-                  <p className="mt-1 font-bold text-white">
-                    {profile.playerProfile.dateOfBirth
-                      ? `${getPlayerAgeCategory(new Date(profile.playerProfile.dateOfBirth)).age} years`
-                      : "Not provided"}
-                  </p>
-                </div>
-                <div className="rounded-[12px] border border-white/10 bg-[#061D23]/60 p-4">
-                  <p className="text-xs text-[#4AEEFF] font-semibold uppercase tracking-wider">Age Category</p>
-                  <p className="mt-1 font-bold text-white">
-                    {profile.playerProfile.dateOfBirth
-                      ? getPlayerAgeCategory(new Date(profile.playerProfile.dateOfBirth)).category
-                      : "N/A"}
-                  </p>
-                </div>
-                <div className="rounded-[12px] border border-white/10 bg-[#061D23]/60 p-4">
-                  <p className="text-xs text-[#4AEEFF] font-semibold uppercase tracking-wider">Gender</p>
-                  <p className="mt-1 font-bold text-white">
-                    {profile.playerProfile.gender === "MALE"
-                      ? "Male"
-                      : profile.playerProfile.gender === "FEMALE"
-                        ? "Female"
-                        : "Not provided"}
-                  </p>
-                </div>
-                <div className="rounded-[12px] border border-white/10 bg-[#061D23]/60 p-4">
-                  <p className="text-xs text-[#4AEEFF] font-semibold uppercase tracking-wider">Club Affiliation</p>
-                  <p className="mt-1 font-bold text-white">{profile.playerProfile.clubAffiliation || "None Specified"}</p>
-                </div>
-                <div className="rounded-[12px] border border-white/10 bg-[#061D23]/60 p-4">
-                  <p className="text-xs text-[#4AEEFF] font-semibold uppercase tracking-wider">Date of Birth</p>
-                  <p className="mt-1 font-bold text-white">
-                    {profile.playerProfile.dateOfBirth
-                      ? new Date(profile.playerProfile.dateOfBirth).toLocaleDateString()
-                      : "Not provided"}
-                  </p>
-                </div>
+              <div className="mt-6 rounded-xl border border-white/10 bg-black/20 py-10 text-center">
+                <p className="text-sm font-semibold text-white/80">
+                  {activePerformanceTab === "MATCHES" ? "No recent matches available" : "Performance data is loading"}
+                </p>
+                <p className="mt-1 text-xs text-white/50">
+                  {activePerformanceTab === "MATCHES" ? "Recent match results will appear here when available." : "Your performance overview will appear here shortly."}
+                </p>
               </div>
             </section>
           )}
 
-          {/* ─── PERFORMANCE PERFORMANCE GRAPH MATRIX ─── */}
-          {user?.role === "PLAYER" && playerStats && (
+          {profile.role === "PLAYER" && playerStats && (
             <section className="rounded-[16px] border border-white/20 bg-[#061D23]/5 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl">
-              <div className="mb-5 flex items-center gap-3">
-                <div className="rounded-lg bg-[#4AEEFF]/20 p-2 text-[#4AEEFF]">
-                  <ChartBarIcon className="h-5 w-5" />
+              <div className="mb-6 flex flex-col justify-between gap-4 border-b border-white/10 pb-4 sm:flex-row sm:items-center">
+                <div className="flex items-center gap-3">
+                  <div className="rounded-lg bg-[#4AEEFF]/20 p-2 text-[#4AEEFF]">
+                    <ChartBarIcon className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-bold text-white">Performance overview</h2>
+                    <p className="mt-1 text-xs text-white/45">Track your results and recent match activity</p>
+                  </div>
                 </div>
-                <h2 className="text-lg font-bold uppercase tracking-wider text-[#FFFFFF]">
-                  Performance Analysis
-                </h2>
+                <div className="flex rounded-xl border border-white/10 bg-black/20 p-1">
+                  {[
+                    ["OVERVIEW", "Performance Overview"],
+                    ["MATCHES", `Recent Matches (${playerStats.recentMatches.length})`],
+                  ].map(([tab, label]) => (
+                    <button
+                      key={tab}
+                      type="button"
+                      onClick={() => setActivePerformanceTab(tab as "OVERVIEW" | "MATCHES")}
+                      className={`rounded-lg px-3 py-2 text-[10px] font-black uppercase tracking-wider transition-all ${
+                        activePerformanceTab === tab
+                          ? "bg-[#4AEEFF] text-[#061D23] shadow-md shadow-[#4AEEFF]/20"
+                          : "text-white/55 hover:text-white"
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
               </div>
 
-              {/* Core numbers breakdown */}
+              {activePerformanceTab === "OVERVIEW" ? (
+                <>
               <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 mb-6">
                 <div className="rounded-[12px] border border-white/10 bg-[#061D23]/60 p-4 text-center">
                   <p className="text-3xl font-black text-[#4AEEFF]">{playerStats.totalMatches}</p>
@@ -555,48 +627,32 @@ const Profile: React.FC = () => {
                   </div>
                 </div>
               </div>
-
-              {/* Match log timeline */}
-              {playerStats.recentMatches.length > 0 ? (
-                <div>
-                  <h4 className="text-xs font-black uppercase tracking-widest text-[#4AEEFF] mb-3 flex items-center gap-2">
-                    <CalendarIcon className="h-4 w-4" /> History Timeline
-                  </h4>
-                  <div className="space-y-3">
-                    {playerStats.recentMatches.map((match) => (
-                      <div
-                        key={match.id}
-                        className="group flex justify-between items-center rounded-[12px] border border-white/5 bg-[#061D23]/40 p-4 transition-all duration-200 hover:border-[#4AEEFF]/40 hover:bg-[#12679E]/20"
-                      >
-                        <div>
-                          <p className="font-bold text-white group-hover:text-[#4AEEFF] transition-colors">{match.tournamentName}</p>
-                          <p className="text-xs text-white/70">Against: {match.opponent}</p>
-                          <p className="text-[10px] text-white/40 mt-1">{new Date(match.date).toLocaleDateString()}</p>
-                        </div>
-                        <div className="text-right">
-                          <span
-                            className={`inline-block px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-md ${
-                              match.result === "Win"
-                                ? "bg-[#4AEEFF]/20 text-[#4AEEFF]"
-                                : "bg-red-500/20 text-red-400"
-                            }`}
-                          >
-                            {match.result}
-                          </span>
-                          <p className="text-xs font-bold text-white mt-1.5">{match.score}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+                </>
               ) : (
-                playerStats.totalMatches === 0 && (
-                  <div className="text-center py-8 rounded-[12px] bg-[#061D23]/30 border border-white/5">
-                    <TrophyIcon className="h-10 w-10 text-white/20 mx-auto mb-2" />
-                    <p className="text-sm font-semibold text-white/80">No competitive log entries</p>
-                  </div>
-                )
+                <div className="space-y-3">
+                  {playerStats.recentMatches.length > 0 ? playerStats.recentMatches.map((match) => (
+                    <div key={match.id} className="flex items-center justify-between rounded-xl border border-white/10 bg-[#061D23]/50 p-4 transition-all hover:border-[#4AEEFF]/40 hover:bg-[#12679E]/20">
+                      <div>
+                        <p className="font-bold text-white">{match.tournamentName}</p>
+                        <p className="mt-1 text-xs text-white/65">Against: {match.opponent}</p>
+                        <p className="mt-1 text-[10px] text-white/40">{new Date(match.date).toLocaleDateString()}</p>
+                      </div>
+                      <div className="text-right">
+                        <span className={`rounded-md px-2.5 py-1 text-[10px] font-black uppercase tracking-wider ${match.result === "Win" ? "bg-[#4AEEFF]/20 text-[#4AEEFF]" : "bg-red-500/20 text-red-400"}`}>
+                          {match.result}
+                        </span>
+                        <p className="mt-2 text-xs font-bold text-white">{match.score}</p>
+                      </div>
+                    </div>
+                  )) : (
+                    <div className="rounded-xl border border-white/10 bg-[#061D23]/40 py-10 text-center">
+                      <TrophyIcon className="mx-auto mb-2 h-10 w-10 text-white/20" />
+                      <p className="text-sm font-semibold text-white/75">No recent matches</p>
+                    </div>
+                  )}
+                </div>
               )}
+
             </section>
           )}
 
