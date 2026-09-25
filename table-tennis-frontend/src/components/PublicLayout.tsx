@@ -15,6 +15,7 @@ const PublicLayout: React.FC = () => {
 
   const navigation = [
     { name: "Home", href: "/" },
+    { name: "About", href: "/about" },
     { name: "Tournaments", href: "/tournaments" },
     { name: "Players", href: "/players" },
     { name: "Leaderboard", href: "/leaderboard" },
