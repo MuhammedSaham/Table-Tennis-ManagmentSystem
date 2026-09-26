@@ -335,6 +335,7 @@ const Players: React.FC = () => {
                       {player.playerProfile?.dateOfBirth && (
                         <p className="text-white/50 text-xs mt-1">
                           DOB: {formatDateOfBirth(player.playerProfile.dateOfBirth)}
+                          {age !== null ? ` (${age} yrs)` : ""}
                         </p>
                       )}
                     </div>
