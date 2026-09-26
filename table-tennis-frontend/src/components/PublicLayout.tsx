@@ -98,98 +98,100 @@ const PublicLayout: React.FC = () => {
           </div>
         </div>
 
-        {/* Mobile Slide-in Side Drawer (LMS Style) */}
-        <>
-          {/* Backdrop Overlay */}
-          <div
-            className={`fixed inset-0 z-50 bg-black/70 backdrop-blur-sm transition-opacity duration-300 lg:hidden ${
-              mobileMenuOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
-            }`}
-            onClick={() => setMobileMenuOpen(false)}
-          />
+      </nav>
 
-          {/* Side Drawer Panel (Slides from Left) */}
-          <div
-            className={`fixed inset-y-0 left-0 z-50 w-72 sm:w-80 bg-[#061D23] border-r border-white/15 shadow-2xl flex flex-col justify-between transition-transform duration-300 ease-in-out lg:hidden ${
-              mobileMenuOpen ? "translate-x-0" : "-translate-x-full"
-            }`}
-          >
-            {/* Drawer Top Header with Close Button */}
-            <div className="flex flex-col">
-              <div className="flex items-center justify-between p-4 border-b border-white/10 bg-[#04151a]">
-                <div className="flex items-center gap-2">
-                  <img
-                    src={Logo}
-                    alt="Sam's College"
-                    className="w-8 h-8 object-contain rounded-md"
-                  />
-                  <span className="font-bold text-base text-white tracking-wide">
-                    SAM'S COLLEGE
-                  </span>
-                </div>
-                <button
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="p-2 rounded-xl border border-amber-400/70 bg-amber-400/10 text-[#4AEEFF] hover:bg-amber-400/20 active:scale-95 transition-all"
-                  title="Close drawer"
-                >
-                  <XMarkIcon className="w-5 h-5" />
-                </button>
-              </div>
+      {/* Mobile Slide-in Side Drawer (LMS Style) */}
+      <>
+        {/* Backdrop Overlay */}
+        <div
+          className={`fixed inset-0 z-[80] bg-black/80 backdrop-blur-md transition-opacity duration-300 lg:hidden ${
+            mobileMenuOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+          }`}
+          onClick={() => setMobileMenuOpen(false)}
+        />
 
-              {/* Navigation links (styled to match Screenshot 2) */}
-              <div className="p-3 space-y-1.5 overflow-y-auto max-h-[calc(100vh-16rem)]">
-                {navigation.map((item) => {
-                  const active = location.pathname === item.href;
-                  return (
-                    <Link
-                      key={item.name}
-                      to={item.href}
-                      onClick={() => setMobileMenuOpen(false)}
-                      className={`block px-4 py-3 rounded-2xl text-sm transition-all border ${
-                        active
-                          ? "bg-[#0a2f38] border-[#16515c] text-[#4AEEFF] font-bold shadow-inner"
-                          : "border-transparent text-white/80 hover:bg-white/5 hover:text-white font-medium"
-                      }`}
-                    >
-                      {item.name}
-                    </Link>
-                  );
-                })}
+        {/* Side Drawer Panel (Slides from Left - 100% Solid Opaque Background) */}
+        <div
+          style={{ backgroundColor: "#061D23" }}
+          className={`fixed inset-y-0 left-0 z-[90] w-72 sm:w-80 bg-[#061D23] border-r border-white/20 shadow-[0_0_50px_rgba(0,0,0,0.9)] flex flex-col justify-between transition-transform duration-300 ease-in-out lg:hidden ${
+            mobileMenuOpen ? "translate-x-0" : "-translate-x-full"
+          }`}
+        >
+          {/* Drawer Top Header with Close Button */}
+          <div className="flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b border-white/10 bg-[#04151a]">
+              <div className="flex items-center gap-2">
+                <img
+                  src={Logo}
+                  alt="Sam's College"
+                  className="w-8 h-8 object-contain rounded-md"
+                />
+                <span className="font-bold text-base text-white tracking-wide">
+                  SAM'S COLLEGE
+                </span>
               </div>
+              <button
+                onClick={() => setMobileMenuOpen(false)}
+                className="p-2 rounded-xl border border-amber-400/70 bg-amber-400/10 text-[#4AEEFF] hover:bg-amber-400/20 active:scale-95 transition-all"
+                title="Close drawer"
+              >
+                <XMarkIcon className="w-5 h-5" />
+              </button>
             </div>
 
-            {/* Bottom Actions (Sign In / Register or Dashboard matching Screenshot 2) */}
-            <div className="p-4 border-t border-white/10 bg-[#04151a]">
-              {user ? (
-                <Link
-                  to="/app/dashboard"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="block w-full rounded-2xl bg-[#4AEEFF] px-4 py-3 text-sm font-black text-[#061D23] text-center shadow-lg shadow-[#4AEEFF]/25 hover:bg-[#80ffff] transition-all"
-                >
-                  Go to Dashboard
-                </Link>
-              ) : (
-                <div className="flex flex-col gap-3">
+            {/* Navigation links (styled to match Screenshot 2) */}
+            <div className="p-3 space-y-1.5 overflow-y-auto max-h-[calc(100vh-16rem)]">
+              {navigation.map((item) => {
+                const active = location.pathname === item.href;
+                return (
                   <Link
-                    to="/login"
+                    key={item.name}
+                    to={item.href}
                     onClick={() => setMobileMenuOpen(false)}
-                    className="block rounded-2xl border border-white/20 bg-[#09252c] px-4 py-3 text-sm font-bold text-white text-center hover:bg-white/10 transition-all"
+                    className={`block px-4 py-3 rounded-2xl text-sm transition-all border ${
+                      active
+                        ? "bg-[#0a2f38] border-[#16515c] text-[#4AEEFF] font-bold shadow-inner"
+                        : "border-transparent text-white/80 hover:bg-white/5 hover:text-white font-medium"
+                    }`}
                   >
-                    Sign In
+                    {item.name}
                   </Link>
-                  <Link
-                    to="/register"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="block rounded-2xl bg-[#4AEEFF] px-4 py-3 text-sm font-black text-[#061D23] text-center shadow-lg shadow-[#4AEEFF]/25 hover:bg-[#80ffff] transition-all"
-                  >
-                    Get Started
-                  </Link>
-                </div>
-              )}
+                );
+              })}
             </div>
           </div>
-        </>
-      </nav>
+
+          {/* Bottom Actions (Sign In / Register or Dashboard matching Screenshot 2) */}
+          <div className="p-4 border-t border-white/10 bg-[#04151a]">
+            {user ? (
+              <Link
+                to="/app/dashboard"
+                onClick={() => setMobileMenuOpen(false)}
+                className="block w-full rounded-2xl bg-[#4AEEFF] px-4 py-3 text-sm font-black text-[#061D23] text-center shadow-lg shadow-[#4AEEFF]/25 hover:bg-[#80ffff] transition-all"
+              >
+                Go to Dashboard
+              </Link>
+            ) : (
+              <div className="flex flex-col gap-3">
+                <Link
+                  to="/login"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="block rounded-2xl border border-white/20 bg-[#09252c] px-4 py-3 text-sm font-bold text-white text-center hover:bg-white/10 transition-all"
+                >
+                  Sign In
+                </Link>
+                <Link
+                  to="/register"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="block rounded-2xl bg-[#4AEEFF] px-4 py-3 text-sm font-black text-[#061D23] text-center shadow-lg shadow-[#4AEEFF]/25 hover:bg-[#80ffff] transition-all"
+                >
+                  Get Started
+                </Link>
+              </div>
+            )}
+          </div>
+        </div>
+      </>
 
       {/* Main content */}
       <main className={`flex-1 ${isTournamentRoute ? "bg-gradient-to-r from-[#061D23] via-[#12679E] to-[#4AEEFF]" : "bg-transparent"}`}>

@@ -239,7 +239,7 @@ const Dashboard: React.FC = () => {
                   )}
                 </p>
                 <span className="mt-3 inline-block rounded-lg bg-[#4AEEFF] px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-[#061D23] transition-all group-hover:bg-white">
-                  Register Now →
+                  {user?.role === "ADMIN" ? "Manage Tournament →" : user?.role === "REFEREE" ? "View Tournament →" : "Register Now →"}
                 </span>
               </Link>
             ))}
