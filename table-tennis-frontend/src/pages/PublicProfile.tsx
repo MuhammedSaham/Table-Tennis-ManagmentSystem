@@ -19,6 +19,8 @@ interface PublicPlayerProfile {
     skillLevel: string | null;
     clubAffiliation: string | null;
     dateOfBirth: string | null;
+    ranking?: number | null;
+    rankingNote?: string | null;
   };
 }
 
@@ -109,29 +111,7 @@ const skillProgress = (level: string | null) => {
   }
 };
 
-// ─── Shared card surface (matches Users.tsx <main> treatment exactly) ─────────
-const CARD =
-  "rounded-[16px] border border-white/20 bg-[#061D23]/10 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl";
 
-// ─── Stat Card ────────────────────────────────────────────────────────────────
-
-const StatCard = ({
-  value,
-  label,
-}: {
-  value: string | number;
-  label: string;
-}) => (
-  <div className={`relative overflow-hidden ${CARD} p-5 text-center`}>
-    <div className="absolute inset-x-0 top-0 h-[3px] bg-[#4AEEFF]" />
-    <div className="font-black text-3xl leading-none text-[#4AEEFF] tracking-wide">
-      {value}
-    </div>
-    <div className="mt-2 text-[11px] font-bold uppercase tracking-widest text-white/60">
-      {label}
-    </div>
-  </div>
-);
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
