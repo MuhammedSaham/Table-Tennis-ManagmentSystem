@@ -81,7 +81,7 @@ const Tournaments: React.FC = () => {
       <div className="fixed inset-0 bg-[#061D23]/25" />
       <div className="fixed inset-0 bg-gradient-to-b from-[#061D23]/20 via-transparent to-[#061D23]/35" />
 
-      <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-7xl flex-col space-y-6 p-4 sm:p-6 lg:p-8">
+      <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-7xl flex-col space-y-5 sm:space-y-6 p-3.5 sm:p-6 lg:p-8">
         {children}
       </div>
     </div>
@@ -101,16 +101,16 @@ const Tournaments: React.FC = () => {
   return wrapInBaseLayout(
     <>
       {/* HEADER MODULE */}
-      <header className="flex flex-col justify-between gap-4 rounded-[16px] border border-white/20 bg-[#061D23]/15 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl sm:flex-row sm:items-center">
+      <header className="flex flex-col justify-between gap-4 rounded-2xl border border-white/20 bg-[#061D23]/15 p-4 sm:p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl sm:flex-row sm:items-center">
         <div>
-          <div className="mb-3 h-[3px] w-16 bg-[#4AEEFF]" />
+          <div className="mb-2.5 h-[3px] w-12 sm:w-16 bg-[#4AEEFF]" />
           <span className="inline-block px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-md bg-[#4AEEFF]/20 text-[#4AEEFF] border border-[#4AEEFF]/40 align-middle mb-2">
             Competition Portal
           </span>
-          <h1 className="text-2xl font-black uppercase tracking-[0.2em] text-white sm:text-4xl">
+          <h1 className="text-xl sm:text-3xl lg:text-4xl font-black uppercase tracking-[0.12em] sm:tracking-[0.2em] text-white">
             Tournaments
           </h1>
-          <p className="mt-1 text-xs uppercase tracking-[0.3em] text-[#4AEEFF]/90">
+          <p className="mt-1 text-[10px] sm:text-xs uppercase tracking-[0.2em] sm:tracking-[0.3em] text-[#4AEEFF]/90">
             Browse upcoming, active, and completed tournaments
           </p>
         </div>
@@ -118,7 +118,7 @@ const Tournaments: React.FC = () => {
         {user?.role === "ADMIN" && (
           <Link
             to="/app/create-tournament"
-            className="flex items-center justify-center gap-2 rounded-xl bg-[#4AEEFF] px-5 py-3 text-xs font-black uppercase tracking-wider text-[#061D23] shadow-md shadow-[#4AEEFF]/20 transition-all hover:bg-white hover:shadow-white/20 active:scale-95"
+            className="flex items-center justify-center gap-2 rounded-xl bg-[#4AEEFF] px-5 py-3 text-xs font-black uppercase tracking-wider text-[#061D23] shadow-md shadow-[#4AEEFF]/20 transition-all hover:bg-white hover:shadow-white/20 active:scale-95 w-full sm:w-auto"
           >
             <PlusIcon className="w-4 h-4 stroke-[3]" />
             Create Tournament
@@ -127,19 +127,19 @@ const Tournaments: React.FC = () => {
       </header>
 
       {/* TOURNAMENTS GRID */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
         {tournaments.map((tournament) => (
           <Link
             key={tournament.id}
             to={isAppScope ? `/app/tournaments/${tournament.id}` : `/tournaments/${tournament.id}`}
-            className="group flex flex-col justify-between rounded-[16px] border border-white/20 bg-[#061D23]/20 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl transition-all duration-200 hover:border-[#4AEEFF]/60 hover:-translate-y-1"
+            className="group flex flex-col justify-between rounded-2xl border border-white/20 bg-[#061D23]/20 p-5 sm:p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl transition-all duration-200 hover:border-[#4AEEFF]/60 hover:-translate-y-1"
           >
             <div>
               <div className="flex justify-between items-start mb-3 gap-2">
-                <h3 className="text-xl font-bold text-white group-hover:text-[#4AEEFF] transition-colors line-clamp-1">
+                <h3 className="text-lg sm:text-xl font-bold text-white group-hover:text-[#4AEEFF] transition-colors line-clamp-2 leading-snug">
                   {tournament.name}
                 </h3>
-                <div className="flex flex-col items-end gap-1.5">
+                <div className="flex flex-col items-end gap-1.5 shrink-0">
                   <span
                     className={`px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-md border ${getStatusBadge(
                       tournament.status
@@ -155,7 +155,7 @@ const Tournaments: React.FC = () => {
                 </div>
               </div>
 
-              <p className="text-white/70 text-sm mb-4 line-clamp-2 leading-relaxed">
+              <p className="text-white/70 text-xs sm:text-sm mb-4 line-clamp-2 leading-relaxed">
                 {tournament.description || "No description provided"}
               </p>
             </div>
@@ -182,7 +182,7 @@ const Tournaments: React.FC = () => {
                 </span>
               </div>
 
-              <div className="pt-2 flex items-center justify-end text-[10px] font-black uppercase tracking-wider text-[#4AEEFF] group-hover:translate-x-1 transition-transform">
+              <div className="pt-2 flex items-center justify-end text-xs font-black uppercase tracking-wider text-[#4AEEFF] group-hover:translate-x-1 transition-transform">
                 View Tournament →
               </div>
             </div>

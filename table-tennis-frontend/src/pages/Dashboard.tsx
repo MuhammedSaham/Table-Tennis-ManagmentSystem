@@ -117,7 +117,7 @@ const Dashboard: React.FC = () => {
       <div className="fixed inset-0 bg-[#061D23]/25" />
       <div className="fixed inset-0 bg-gradient-to-b from-[#061D23]/20 via-transparent to-[#061D23]/35" />
 
-      <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-7xl flex-col space-y-6 p-4 sm:p-6 lg:p-8">
+      <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-7xl flex-col space-y-5 p-3.5 sm:p-6 lg:p-8">
         {children}
       </div>
     </div>
@@ -126,31 +126,31 @@ const Dashboard: React.FC = () => {
   return wrapInBaseLayout(
     <>
       {/* PREMIUM HEADER CONTROLS MODULE */}
-      <header className="rounded-[16px] border border-white/20 bg-[#061D23]/15 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl">
-        <div className="mb-3 h-[3px] w-16 bg-[#4AEEFF]" />
-        <h1 className="text-2xl font-black uppercase tracking-[0.2em] text-white sm:text-4xl">
+      <header className="rounded-2xl border border-white/20 bg-[#061D23]/15 p-4 sm:p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl">
+        <div className="mb-2.5 h-[3px] w-12 sm:w-16 bg-[#4AEEFF]" />
+        <h1 className="text-xl sm:text-3xl lg:text-4xl font-black uppercase tracking-[0.12em] sm:tracking-[0.2em] text-white leading-tight">
           Welcome back, {user?.firstName}! 👋
         </h1>
-        <p className="text-xs uppercase tracking-[0.3em] text-[#4AEEFF]/90 mt-1">
+        <p className="text-[10px] sm:text-xs uppercase tracking-[0.2em] sm:tracking-[0.3em] text-[#4AEEFF]/90 mt-1">
           Your tournament hub
         </p>
       </header>
 
       {/* PENDING DOUBLES INVITATIONS ACTION BANNER */}
       {doublesInvites.length > 0 && (
-        <section className="rounded-[18px] border border-cyan-400/40 bg-gradient-to-r from-[#072d36]/90 via-[#062027]/95 to-[#04151a] p-6 shadow-[0_20px_50px_-10px_rgba(74,238,255,0.25)] backdrop-blur-xl animate-in fade-in">
-          <div className="flex items-center justify-between gap-4 mb-4 pb-3 border-b border-cyan-500/20 flex-wrap">
-            <div className="flex items-center gap-2.5">
-              <span className="flex h-3 w-3 relative">
+        <section className="rounded-2xl border border-cyan-400/40 bg-gradient-to-r from-[#072d36]/90 via-[#062027]/95 to-[#04151a] p-4 sm:p-6 shadow-[0_20px_50px_-10px_rgba(74,238,255,0.25)] backdrop-blur-xl animate-in fade-in">
+          <div className="flex items-center justify-between gap-3 mb-4 pb-3 border-b border-cyan-500/20 flex-wrap">
+            <div className="flex items-center gap-2">
+              <span className="flex h-3 w-3 relative shrink-0">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#4AEEFF] opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-3 w-3 bg-[#4AEEFF]"></span>
               </span>
-              <h2 className="text-xs font-black uppercase tracking-[0.2em] text-[#4AEEFF]">
+              <h2 className="text-[11px] sm:text-xs font-black uppercase tracking-[0.15em] sm:tracking-[0.2em] text-[#4AEEFF]">
                 Action Required • Doubles Partner Invitations ({doublesInvites.length})
               </h2>
             </div>
-            <span className="text-[11px] font-mono text-cyan-200/70">
-              ⚡ International Partnership Request
+            <span className="text-[10px] sm:text-[11px] font-mono text-cyan-200/70">
+              ⚡ Partnership Request
             </span>
           </div>
 
@@ -158,47 +158,47 @@ const Dashboard: React.FC = () => {
             {doublesInvites.map((inv) => (
               <div
                 key={inv.id}
-                className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 rounded-xl bg-black/40 border border-cyan-500/25 transition-all hover:border-cyan-400/50"
+                className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 p-4 rounded-xl bg-black/40 border border-cyan-500/25 transition-all hover:border-cyan-400/50"
               >
-                <div className="flex items-start sm:items-center gap-3.5">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-400 to-teal-500 text-slate-950 font-black text-sm flex items-center justify-center shadow-md shadow-cyan-500/20 flex-shrink-0">
+                <div className="flex items-start sm:items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-400 to-teal-500 text-slate-950 font-black text-sm flex items-center justify-center shadow-md shadow-cyan-500/20 shrink-0">
                     {inv.inviter?.firstName?.[0]?.toUpperCase() || "P"}
                   </div>
-                  <div>
-                    <p className="text-sm font-bold text-white flex items-center gap-2 flex-wrap">
-                      <span className="text-[#4AEEFF] font-black text-base">
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold text-white flex items-center gap-1.5 flex-wrap">
+                      <span className="text-[#4AEEFF] font-black">
                         {inv.inviter?.firstName} {inv.inviter?.lastName}
                       </span>
                       <span className="text-white/80 text-xs">
-                        invited you to partner with them for this tournament!
+                        invited you to partner with them!
                       </span>
                     </p>
                     <div className="flex items-center gap-2 mt-1 text-xs text-white/60 flex-wrap">
-                      <span>Event: <strong className="text-white">{inv.tournament?.name}</strong></span>
+                      <span className="truncate">Event: <strong className="text-white">{inv.tournament?.name}</strong></span>
                       <span>•</span>
                       <span>Division: <span className="px-2 py-0.5 rounded bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 text-[10px] font-bold uppercase">{inv.category?.name}</span></span>
                     </div>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2.5 self-end md:self-auto flex-shrink-0">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full lg:w-auto shrink-0 pt-2 lg:pt-0 border-t border-white/5 lg:border-t-0">
                   <Link
                     to={`/app/tournaments/${inv.tournament?.id || inv.tournamentId}`}
-                    className="px-3 py-2 rounded-xl border border-white/20 bg-white/5 hover:bg-white/10 text-white text-xs font-bold transition-all"
+                    className="px-3 py-2 rounded-xl border border-white/20 bg-white/5 hover:bg-white/10 text-white text-xs font-bold text-center transition-all"
                   >
                     View Event
                   </Link>
                   <button
                     onClick={() => handleAcceptInvite(inv.id)}
                     disabled={respondingInviteId === inv.id}
-                    className="px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-400 to-teal-400 text-slate-950 text-xs font-black uppercase tracking-wider shadow-[0_4px_14px_rgba(74,238,255,0.3)] hover:brightness-110 active:scale-95 disabled:opacity-50 transition-all flex items-center gap-1.5"
+                    className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-cyan-400 to-teal-400 text-slate-950 text-xs font-black uppercase tracking-wider shadow-[0_4px_14px_rgba(74,238,255,0.3)] hover:brightness-110 active:scale-95 disabled:opacity-50 transition-all flex items-center justify-center gap-1.5"
                   >
                     {respondingInviteId === inv.id ? "Confirming..." : "✓ Accept & Confirm Team"}
                   </button>
                   <button
                     onClick={() => handleDeclineInvite(inv.id)}
                     disabled={respondingInviteId === inv.id}
-                    className="px-3 py-2 rounded-xl border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-red-300 text-xs font-bold transition-all disabled:opacity-50"
+                    className="px-3 py-2 rounded-xl border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-red-300 text-xs font-bold text-center transition-all disabled:opacity-50"
                   >
                     ✕ Decline
                   </button>
@@ -211,36 +211,40 @@ const Dashboard: React.FC = () => {
 
       {/* NEW TOURNAMENTS MODULE */}
       {newTournaments.length > 0 && (
-        <section className="rounded-[16px] border border-white/20 bg-[#061D23]/10 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl">
+        <section className="rounded-2xl border border-white/20 bg-[#061D23]/10 p-4 sm:p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl">
           <div className="mb-4 flex items-center gap-2">
-            <TrophyIcon className="h-5 w-5 text-[#4AEEFF]" />
+            <TrophyIcon className="h-5 w-5 text-[#4AEEFF] shrink-0" />
             <h2 className="text-xs font-black uppercase tracking-widest text-[#4AEEFF]">
               New Tournaments Available!
             </h2>
           </div>
-          <div className="grid gap-4 md:grid-cols-3">
+          <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
             {newTournaments.map((tournament) => (
               <Link
                 key={tournament.id}
                 to={`/app/tournaments/${tournament.id}`}
-                className="group rounded-lg border border-white/10 bg-[#061D23]/40 p-4 transition-all hover:border-[#4AEEFF] hover:text-[#4AEEFF]"
+                className="group flex flex-col justify-between rounded-xl border border-white/10 bg-[#061D23]/40 p-4 sm:p-5 transition-all hover:border-[#4AEEFF]/60 hover:bg-[#061D23]/70 shadow-lg"
               >
-                <h3 className="font-bold text-white group-hover:text-[#4AEEFF] transition-colors">
-                  {tournament.name}
-                </h3>
-                <p className="mt-2 text-xs text-white/70 font-mono">
-                  📍 {tournament.venue}
-                </p>
-                <p className="mt-2 text-xs text-white/50 font-mono">
-                  Register by:{" "}
-                  {new Date(tournament.registrationDeadline).toLocaleDateString(
-                    undefined,
-                    { year: "numeric", month: "short", day: "numeric" },
-                  )}
-                </p>
-                <span className="mt-3 inline-block rounded-lg bg-[#4AEEFF] px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-[#061D23] transition-all group-hover:bg-white">
-                  {user?.role === "ADMIN" ? "Manage Tournament →" : user?.role === "REFEREE" ? "View Tournament →" : "Register Now →"}
-                </span>
+                <div>
+                  <h3 className="font-bold text-base sm:text-lg text-white group-hover:text-[#4AEEFF] transition-colors line-clamp-2 leading-snug">
+                    {tournament.name}
+                  </h3>
+                  <p className="mt-2 text-xs text-white/70 font-mono flex items-center gap-1.5 truncate">
+                    <span>📍</span> <span className="truncate">{tournament.venue}</span>
+                  </p>
+                  <p className="mt-1.5 text-xs text-white/50 font-mono">
+                    Register by:{" "}
+                    {new Date(tournament.registrationDeadline).toLocaleDateString(
+                      undefined,
+                      { year: "numeric", month: "short", day: "numeric" },
+                    )}
+                  </p>
+                </div>
+                <div className="mt-4 pt-3 border-t border-white/10 flex items-center justify-between">
+                  <span className="w-full sm:w-auto text-center rounded-xl bg-[#4AEEFF] px-4 py-2 text-xs font-black uppercase tracking-wider text-[#061D23] transition-all group-hover:bg-white shadow-md shadow-[#4AEEFF]/20">
+                    {user?.role === "ADMIN" ? "Manage Tournament →" : user?.role === "REFEREE" ? "View Tournament →" : "Register Now →"}
+                  </span>
+                </div>
               </Link>
             ))}
           </div>
@@ -248,7 +252,7 @@ const Dashboard: React.FC = () => {
       )}
 
       {/* ACCOUNT STATUS MODULE */}
-      <section className="rounded-[16px] border border-white/20 bg-[#061D23]/10 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl">
+      <section className="rounded-2xl border border-white/20 bg-[#061D23]/10 p-4 sm:p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl">
         <p className="text-sm text-white/80">
           You are logged in as{" "}
           <span className="inline-block px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-md bg-[#4AEEFF]/20 text-[#4AEEFF] border border-[#4AEEFF]/40 align-middle">
