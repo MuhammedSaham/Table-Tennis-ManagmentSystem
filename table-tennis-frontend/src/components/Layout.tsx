@@ -164,102 +164,104 @@ const Layout: React.FC = () => {
           </div>
         </div>
 
-        {/* Mobile Slide-in Side Drawer (LMS Style) */}
-        {user && (
-          <>
-            {/* Backdrop Overlay */}
-            <div
-              className={`fixed inset-0 z-50 bg-black/70 backdrop-blur-sm transition-opacity duration-300 lg:hidden ${
-                mobileMenuOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
-              }`}
-              onClick={() => setMobileMenuOpen(false)}
-            />
+      </nav>
 
-            {/* Side Drawer Panel (Slides from Left) */}
-            <div
-              className={`fixed inset-y-0 left-0 z-50 w-72 sm:w-80 bg-[#061D23] border-r border-white/15 shadow-2xl flex flex-col justify-between transition-transform duration-300 ease-in-out lg:hidden ${
-                mobileMenuOpen ? "translate-x-0" : "-translate-x-full"
-              }`}
-            >
-              {/* Drawer Top Header with Close Button */}
-              <div className="flex flex-col">
-                <div className="flex items-center justify-between p-4 border-b border-white/10 bg-[#04151a]">
-                  <div className="flex items-center gap-2">
-                    <img
-                      src={Logo}
-                      alt="Sam's College"
-                      className="w-8 h-8 object-contain rounded-md"
-                    />
-                    <span className="font-bold text-base text-white tracking-wide">
-                      SAM'S COLLEGE
-                    </span>
-                  </div>
-                  <button
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="p-2 rounded-xl border border-amber-400/70 bg-amber-400/10 text-[#4AEEFF] hover:bg-amber-400/20 active:scale-95 transition-all"
-                    title="Close drawer"
-                  >
-                    <XMarkIcon className="w-5 h-5" />
-                  </button>
+      {/* Mobile Slide-in Side Drawer (LMS Style) */}
+      {user && (
+        <>
+          {/* Backdrop Overlay */}
+          <div
+            className={`fixed inset-0 z-[80] bg-black/80 backdrop-blur-md transition-opacity duration-300 lg:hidden ${
+              mobileMenuOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+            }`}
+            onClick={() => setMobileMenuOpen(false)}
+          />
+
+          {/* Side Drawer Panel (Slides from Left - 100% Solid Opaque Background) */}
+          <div
+            style={{ backgroundColor: "#061D23" }}
+            className={`fixed inset-y-0 left-0 z-[90] w-72 sm:w-80 bg-[#061D23] border-r border-white/20 shadow-[0_0_50px_rgba(0,0,0,0.9)] flex flex-col justify-between transition-transform duration-300 ease-in-out lg:hidden ${
+              mobileMenuOpen ? "translate-x-0" : "-translate-x-full"
+            }`}
+          >
+            {/* Drawer Top Header with Close Button */}
+            <div className="flex flex-col">
+              <div className="flex items-center justify-between p-4 border-b border-white/10 bg-[#04151a]">
+                <div className="flex items-center gap-2">
+                  <img
+                    src={Logo}
+                    alt="Sam's College"
+                    className="w-8 h-8 object-contain rounded-md"
+                  />
+                  <span className="font-bold text-base text-white tracking-wide">
+                    SAM'S COLLEGE
+                  </span>
                 </div>
-
-                {/* User Info Header inside drawer */}
-                <div className="p-4 border-b border-white/10 bg-white/[0.02]">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-[#4AEEFF]/20 border border-[#4AEEFF]/40 flex items-center justify-center font-black text-white text-sm">
-                      {user.firstName ? user.firstName[0].toUpperCase() : "U"}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-bold text-white truncate">
-                        {user.firstName} {user.lastName}
-                      </p>
-                      <span className="inline-block px-2 py-0.5 mt-0.5 text-[9px] font-black uppercase tracking-wider rounded bg-[#4AEEFF]/20 text-[#4AEEFF] border border-[#4AEEFF]/30">
-                        {user.role}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Navigation links (styled to match Screenshot 2) */}
-                <div className="p-3 space-y-1.5 overflow-y-auto max-h-[calc(100vh-16rem)]">
-                  {navigation.map((item) => {
-                    const active = isItemActive(item.href);
-                    return (
-                      <Link
-                        key={item.name}
-                        to={item.href}
-                        onClick={() => setMobileMenuOpen(false)}
-                        className={`flex items-center gap-3 px-4 py-3 rounded-2xl text-sm transition-all border ${
-                          active
-                            ? "bg-[#0a2f38] border-[#16515c] text-[#4AEEFF] font-bold shadow-inner"
-                            : "border-transparent text-white/80 hover:bg-white/5 hover:text-white font-medium"
-                        }`}
-                      >
-                        <item.icon className={`w-5 h-5 ${active ? "text-[#4AEEFF]" : "text-white/60"}`} />
-                        <span>{item.name}</span>
-                      </Link>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Bottom Sign Out */}
-              <div className="p-4 border-t border-white/10 bg-[#04151a]">
                 <button
-                  onClick={() => {
-                    handleLogout();
-                    setMobileMenuOpen(false);
-                  }}
-                  className="flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-bold text-rose-400 hover:bg-rose-500/10 rounded-xl border border-rose-500/20 w-full transition-all active:scale-95"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="p-2 rounded-xl border border-amber-400/70 bg-amber-400/10 text-[#4AEEFF] hover:bg-amber-400/20 active:scale-95 transition-all"
+                  title="Close drawer"
                 >
-                  <ArrowRightOnRectangleIcon className="w-4 h-4" />
-                  Sign Out
+                  <XMarkIcon className="w-5 h-5" />
                 </button>
               </div>
+
+              {/* User Info Header inside drawer */}
+              <div className="p-4 border-b border-white/10 bg-white/[0.02]">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-[#4AEEFF]/20 border border-[#4AEEFF]/40 flex items-center justify-center font-black text-white text-sm">
+                    {user.firstName ? user.firstName[0].toUpperCase() : "U"}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-bold text-white truncate">
+                      {user.firstName} {user.lastName}
+                    </p>
+                    <span className="inline-block px-2 py-0.5 mt-0.5 text-[9px] font-black uppercase tracking-wider rounded bg-[#4AEEFF]/20 text-[#4AEEFF] border border-[#4AEEFF]/30">
+                      {user.role}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Navigation links (styled to match LMS side menu) */}
+              <div className="p-3 space-y-1.5 overflow-y-auto max-h-[calc(100vh-16rem)]">
+                {navigation.map((item) => {
+                  const active = isItemActive(item.href);
+                  return (
+                    <Link
+                      key={item.name}
+                      to={item.href}
+                      onClick={() => setMobileMenuOpen(false)}
+                      className={`flex items-center gap-3 px-4 py-3 rounded-2xl text-sm transition-all border ${
+                        active
+                          ? "bg-[#0a2f38] border-[#16515c] text-[#4AEEFF] font-bold shadow-inner"
+                          : "border-transparent text-white/80 hover:bg-white/5 hover:text-white font-medium"
+                      }`}
+                    >
+                      <item.icon className={`w-5 h-5 ${active ? "text-[#4AEEFF]" : "text-white/60"}`} />
+                      <span>{item.name}</span>
+                    </Link>
+                  );
+                })}
+              </div>
             </div>
-          </>
-        )}
-      </nav>
+
+            {/* Bottom Sign Out */}
+            <div className="p-4 border-t border-white/10 bg-[#04151a]">
+              <button
+                onClick={() => {
+                  handleLogout();
+                  setMobileMenuOpen(false);
+                }}
+                className="flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-bold text-rose-400 hover:bg-rose-500/10 rounded-xl border border-rose-500/20 w-full transition-all active:scale-95"
+              >
+                <ArrowRightOnRectangleIcon className="w-4 h-4" />
+                Sign Out
+              </button>
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Main content */}
       <main>

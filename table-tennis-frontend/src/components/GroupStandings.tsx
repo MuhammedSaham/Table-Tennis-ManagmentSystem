@@ -955,50 +955,28 @@ const GroupStandings: React.FC<Props> = ({
         return (
           <div
             key={group.id}
-            style={{
-              background: "#fff",
-              border: "1.5px solid #e2e8f0",
-              borderRadius: 18,
-              overflow: "hidden",
-              boxShadow: "0 2px 12px rgba(0,0,0,0.05)",
-            }}
+            className="rounded-2xl border border-white/20 bg-[#061D23]/60 shadow-[0_15px_40px_-10px_rgba(0,0,0,0.5)] backdrop-blur-xl overflow-hidden mb-6"
           >
             {/* Group header */}
-            <div
-              style={{
-                background: "#0f172a",
-                padding: "14px 24px",
-                display: "flex",
-                alignItems: "center",
-                gap: 10,
-              }}
-            >
-              <span style={{ fontSize: 18 }}>🏆</span>
-              <h3
-                style={{
-                  margin: 0,
-                  color: "#fff",
-                  fontWeight: 900,
-                  fontSize: 18,
-                  letterSpacing: -0.5,
-                  textTransform: "uppercase",
-                }}
-              >
-                {group.name}
-              </h3>
-              <span
-                style={{
-                  marginLeft: "auto",
-                  fontSize: 12,
-                  color: "#64748b",
-                  fontWeight: 600,
-                }}
-              >
+            <div className="bg-[#04151a] border-b border-white/10 px-4 py-3 sm:px-6 sm:py-4 flex items-center justify-between gap-3 flex-wrap">
+              <div className="flex items-center gap-2.5">
+                <span className="text-xl">🏆</span>
+                <h3 className="m-0 text-white font-black text-base sm:text-lg uppercase tracking-wider">
+                  {group.name}
+                </h3>
+              </div>
+              <span className="text-xs text-[#4AEEFF] font-mono font-bold px-2.5 py-0.5 rounded-full bg-[#4AEEFF]/15 border border-[#4AEEFF]/30">
                 {entries.length} {isDoubles ? "teams" : "players"}
               </span>
             </div>
 
-            <div style={{ overflowX: "auto" }}>
+            {/* Mobile swipe hint */}
+            <div className="sm:hidden px-3.5 py-2 bg-[#4AEEFF]/10 border-b border-white/10 text-xs text-[#4AEEFF] flex items-center justify-between font-mono">
+              <span>↔ Swipe table for matches & rank</span>
+              <span className="text-[10px] text-white/60">Tap cell to score</span>
+            </div>
+
+            <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
               <table
                 style={{
                   width: "100%",
@@ -1214,72 +1192,21 @@ const GroupStandings: React.FC<Props> = ({
             </div>
 
             {/* Legend */}
-            <div
-              style={{
-                padding: "10px 20px",
-                borderTop: "1px solid #e2e8f0",
-                display: "flex",
-                gap: 20,
-                flexWrap: "wrap",
-                alignItems: "center",
-                fontSize: 12,
-                color: "#64748b",
-                background: "#f8fafc",
-              }}
-            >
-              <span>
-                <span
-                  style={{
-                    display: "inline-block",
-                    width: 12,
-                    height: 12,
-                    background: "#dcfce7",
-                    borderRadius: 3,
-                    marginRight: 4,
-                  }}
-                />
-                Win
+            <div className="p-3 sm:p-4 border-t border-white/10 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-300 bg-[#04151a] font-mono">
+              <div className="flex items-center gap-3 sm:gap-4 flex-wrap">
+                <span className="flex items-center gap-1.5">
+                  <span className="inline-block w-3 h-3 rounded bg-[#dcfce7] border border-[#166534]/30" />
+                  <span className="text-slate-200">Win</span>
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="inline-block w-3 h-3 rounded bg-[#fee2e2] border border-[#991b1b]/30" />
+                  <span className="text-slate-200">Loss</span>
+                </span>
+                <span className="text-slate-400">MP = Match Points · R = Rank</span>
+              </div>
+              <span className="text-xs text-amber-300 font-bold flex items-center gap-1">
+                <span>🏆</span> Top 2 advance to knockout
               </span>
-              <span>
-                <span
-                  style={{
-                    display: "inline-block",
-                    width: 12,
-                    height: 12,
-                    background: "#fee2e2",
-                    borderRadius: 3,
-                    marginRight: 4,
-                  }}
-                />
-                Loss
-              </span>
-              <span>MP = Match Points · R = Rank</span>
-              {isAdmin ? (
-                <span
-                  style={{
-                    marginLeft: "auto",
-                    color: "#3b82f6",
-                    fontWeight: 600,
-                  }}
-                >
-                  💡 Click any cell to open umpire sheet
-                </span>
-              ) : isReferee ? (
-                <span
-                  style={{
-                    marginLeft: "auto",
-                    color: "#3b82f6",
-                    fontWeight: 600,
-                  }}
-                >
-                  💡 Click your assigned match to record score
-                </span>
-              ) : (
-                <span style={{ marginLeft: "auto", color: "#94a3b8" }}>
-                  Click any cell to view match details
-                </span>
-              )}
-              <span>🏆 Top 2 advance to knockout</span>
             </div>
           </div>
         );

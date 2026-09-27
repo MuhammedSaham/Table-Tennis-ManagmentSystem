@@ -176,11 +176,11 @@ const NotificationBell: React.FC = () => {
       {showDropdown && (
         <>
           <div
-            className="fixed inset-0 z-40"
+            className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm sm:bg-transparent"
             onClick={() => setShowDropdown(false)}
           />
 
-          <div className="absolute right-0 mt-2 w-88 sm:w-96 bg-[#082229] rounded-2xl shadow-2xl border border-cyan-500/30 z-50 overflow-hidden backdrop-blur-xl text-white">
+          <div className="fixed sm:absolute inset-x-3 sm:inset-x-auto right-auto sm:right-0 top-20 sm:top-auto mt-2 w-auto sm:w-96 max-w-md bg-[#082229] rounded-2xl shadow-2xl border border-cyan-500/30 z-50 overflow-hidden backdrop-blur-xl text-white">
             <div className="flex justify-between items-center p-3.5 border-b border-white/10 bg-[#061D23]/80">
               <div className="flex items-center gap-2">
                 <span className="h-2 w-2 rounded-full bg-[#4AEEFF]"></span>
