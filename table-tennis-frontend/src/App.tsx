@@ -28,6 +28,7 @@ import PublicProfile from "./pages/PublicProfile";
 import GlobalLeaderboard from "./pages/GlobalLeaderboard";
 import Players from "./pages/Players";
 import RefereeMatches from "./pages/RefereeMatches";
+import About from "./pages/About";
 import ErrorBoundary from "./components/ErrorBoundary";
 //import VerifyEmail from "./pages/VerifyEmail";
 
@@ -106,6 +107,7 @@ function AppRoutes() {
       {/* Public routes - no login required */}
       <Route path="/" element={<PublicLayout />}>
         <Route index element={<Home />} />
+        <Route path="about" element={<About />} />
         <Route path="tournaments" element={<PublicTournamentsRoute />} />
         <Route path="tournaments/:id" element={<PublicTournamentDetailsRoute />} />
         <Route path="leaderboard" element={<PublicLeaderboardRoute />} />
