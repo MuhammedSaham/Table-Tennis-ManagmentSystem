@@ -998,7 +998,7 @@ const GroupStandings: React.FC<Props> = ({
               </span>
             </div>
 
-            <div style={{ overflowX: "auto" }}>
+            <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
               <table
                 style={{
                   width: "100%",

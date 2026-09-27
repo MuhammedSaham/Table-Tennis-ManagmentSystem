@@ -1685,10 +1685,17 @@ const KnockoutBracket: React.FC<KnockoutBracketProps> = ({
         </button>
       </div>
 
+      {/* Mobile Swipe Hint */}
+      <div className="sm:hidden px-3.5 py-2 mb-3 rounded-xl bg-[#4AEEFF]/10 border border-[#4AEEFF]/25 text-xs text-[#4AEEFF] flex items-center justify-between font-mono">
+        <span>↔ Swipe across bracket</span>
+        <span className="text-[10px] text-white/60">Use Jump pills above</span>
+      </div>
+
       {/* Bracket */}
       <div
         style={{
           overflowX: "auto",
+          WebkitOverflowScrolling: "touch",
           paddingBottom: 16,
           scrollbarWidth: "thin",
           scrollbarColor: "rgba(74, 238, 255, 0.4) transparent",

@@ -725,7 +725,7 @@ const TournamentDetails: React.FC = () => {
       <div className="fixed inset-0 bg-[#061D23]/25" />
       <div className="fixed inset-0 bg-gradient-to-b from-[#061D23]/20 via-transparent to-[#061D23]/35" />
 
-      <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-7xl flex-col space-y-6 px-4 py-8 sm:px-6 lg:px-8">
+      <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-7xl flex-col space-y-5 sm:space-y-6 px-3.5 py-4 sm:px-6 sm:py-8 lg:px-8">
         {children}
       </div>
     </div>
@@ -803,7 +803,7 @@ const TournamentDetails: React.FC = () => {
   return wrapInBaseLayout(
     <>
       {/* Tournament Hero Header */}
-      <header className="rounded-[16px] border border-white/20 bg-[#061D23]/25 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl">
+      <header className="rounded-2xl border border-white/20 bg-[#061D23]/25 p-4 sm:p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl">
         <div className="flex flex-col md:flex-row justify-between items-start gap-4">
           <div>
             <div className="mb-3 h-[3px] w-16 bg-[#4AEEFF]" />
@@ -815,7 +815,7 @@ const TournamentDetails: React.FC = () => {
                 {tournament.status}
               </span>
             </div>
-            <h1 className="text-2xl sm:text-4xl font-black uppercase tracking-[0.15em] text-white">
+            <h1 className="text-xl sm:text-3xl lg:text-4xl font-black uppercase tracking-[0.12em] sm:tracking-[0.15em] text-white leading-tight">
               {tournament.name}
             </h1>
             <p className="text-white/70 text-sm mt-2 max-w-2xl leading-relaxed">
@@ -1298,7 +1298,7 @@ const TournamentDetails: React.FC = () => {
       )}
 
       {/* Categories & Bracket Draw Section */}
-      <div className="rounded-[20px] border border-white/20 bg-[#061D23]/35 p-6 sm:p-7 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.6)] backdrop-blur-xl mb-6">
+      <div className="rounded-2xl border border-white/20 bg-[#061D23]/35 p-4 sm:p-7 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.6)] backdrop-blur-xl mb-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 pb-5 border-b border-white/10">
           <div>
             <div className="flex items-center gap-2.5 mb-1.5">
@@ -1497,7 +1497,7 @@ const TournamentDetails: React.FC = () => {
 
       {/* Group Stage UI */}
       {activeCategoryFormat === "GROUP_KNOCKOUT" && activeCategoryId && (
-        <div className="rounded-[16px] border border-white/20 bg-[#061D23]/25 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl mb-6">
+        <div className="rounded-2xl border border-white/20 bg-[#061D23]/25 p-4 sm:p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl mb-6">
           <h2 className="text-xl font-bold uppercase tracking-wider text-white mb-4">
             Group Stage Management —{" "}
             <span className="text-[#4AEEFF]">
@@ -1917,11 +1917,11 @@ const TournamentDetails: React.FC = () => {
 
       {/* Registrations Section */}
       {(isAdmin || isReferee) && tournament.registrations?.length > 0 && (
-        <div className="rounded-[16px] border border-white/20 bg-[#061D23]/25 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl mb-6">
+        <div className="rounded-2xl border border-white/20 bg-[#061D23]/25 p-4 sm:p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl mb-6">
           <h2 className="text-xl font-black uppercase tracking-wider text-white mb-4">
             Registrations ({tournament.registrations.length})
           </h2>
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto" style={{ WebkitOverflowScrolling: "touch" }}>
             <table className="min-w-full divide-y divide-white/10">
               <thead>
                 <tr className="border-b border-white/10">
