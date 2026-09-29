@@ -38,7 +38,7 @@ const Hero: React.FC = () => {
   const matchesCount = useCounter(1000);
 
   return (
-    <div className="relative min-h-[520px] sm:min-h-[580px] lg:min-h-[640px] bg-[#061D23] overflow-hidden flex items-center w-full">
+    <div className="relative h-[calc(100vh-5rem)] min-h-[560px] bg-[#061D23] overflow-hidden flex items-center w-full">
       {/* 1. Background Image with Racket on the right */}
       <div style={{ position: "absolute", inset: 0, zIndex: 0 }}>
         <div
@@ -88,7 +88,7 @@ const Hero: React.FC = () => {
       </div>
 
       {/* 2. Left-Aligned Content Container (Fully Responsive) */}
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 md:py-24 w-full">
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10 md:py-12 lg:py-14 w-full">
         <div className="max-w-xl text-left">
           {/* Top Badge with College Name, live radar dot, and continuous gentle float */}
           <div className="animate-fade-up-1 inline-flex items-center gap-2 bg-[#12679E]/30 border border-[#4AEEFF]/40 backdrop-blur-md rounded-full px-3 py-1 sm:px-3.5 sm:py-1 mb-4 sm:mb-5 shadow-[0_0_15px_rgba(74,238,255,0.15)] animate-gentle-float">
@@ -149,7 +149,7 @@ const Hero: React.FC = () => {
             )}
           </div>
 
-          {/* Clean Responsive Stats Row (Live Count-Up Numbers) */}
+          {/* Clean Responsive Stats Row (Live Count-Up Numbers - Screenshot 2 style) */}
           <div className="animate-fade-up-5 grid grid-cols-3 gap-2 sm:flex sm:items-center sm:gap-8 pt-4 sm:pt-5 border-t border-white/10 text-center sm:text-left">
             <div>
               <div className="text-lg sm:text-2xl font-black text-white tabular-nums">{tournamentsCount}+</div>
@@ -169,7 +169,20 @@ const Hero: React.FC = () => {
         </div>
       </div>
 
-      {/* 3. Smooth blend to following dark section */}
+      {/* 3. Interactive See More Button (Mobile Only) */}
+      <div className="sm:hidden absolute bottom-3 inset-x-0 flex justify-center z-20">
+        <button
+          onClick={() => {
+            window.scrollBy({ top: window.innerHeight - 80, behavior: "smooth" });
+          }}
+          className="inline-flex items-center gap-1.5 bg-[#061D23]/80 hover:bg-[#12679E]/40 border border-[#4AEEFF]/40 text-[#4AEEFF] backdrop-blur-md px-3.5 py-1.5 rounded-full text-[11px] font-bold tracking-wider uppercase shadow-[0_0_15px_rgba(74,238,255,0.2)] active:scale-95 transition-all animate-pulse"
+        >
+          <span>See More</span>
+          <span className="text-xs font-black animate-bounce">↓</span>
+        </button>
+      </div>
+
+      {/* 4. Smooth blend to following dark section */}
       <div
         className="absolute bottom-0 inset-x-0 h-16 pointer-events-none"
         style={{

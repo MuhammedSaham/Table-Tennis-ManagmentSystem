@@ -3,7 +3,17 @@ import { Outlet, Link, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import Logo from "../assets/LOGO.png";
 import FooterImage from "../assets/footerimg.png";
-import { Bars3Icon, XMarkIcon } from "@heroicons/react/24/outline";
+import {
+  Bars3Icon,
+  XMarkIcon,
+  HomeIcon,
+  InformationCircleIcon,
+  TrophyIcon,
+  UserGroupIcon,
+  ChartBarIcon,
+  GlobeAltIcon,
+  ChevronRightIcon,
+} from "@heroicons/react/24/outline";
 
 const PublicLayout: React.FC = () => {
   const { user } = useAuth();
@@ -14,12 +24,12 @@ const PublicLayout: React.FC = () => {
   const wrapperBgClass = isTournamentRoute ? "bg-gradient-to-r from-[#061D23] via-[#12679E] to-[#4AEEFF]" : "bg-transparent";
 
   const navigation = [
-    { name: "Home", href: "/" },
-    { name: "About", href: "/about" },
-    { name: "Tournaments", href: "/tournaments" },
-    { name: "Players", href: "/players" },
-    { name: "Leaderboard", href: "/leaderboard" },
-    { name: "Global Rankings", href: "/global-leaderboard" },
+    { name: "Home", href: "/", icon: HomeIcon },
+    { name: "About", href: "/about", icon: InformationCircleIcon },
+    { name: "Tournaments", href: "/tournaments", icon: TrophyIcon },
+    { name: "Players", href: "/players", icon: UserGroupIcon },
+    { name: "Leaderboard", href: "/leaderboard", icon: ChartBarIcon },
+    { name: "Global Rankings", href: "/global-leaderboard", icon: GlobeAltIcon },
   ];
 
   const isItemActive = (href: string) => {
@@ -146,29 +156,38 @@ const PublicLayout: React.FC = () => {
               </div>
               <button
                 onClick={() => setMobileMenuOpen(false)}
-                className="p-2 rounded-xl border border-amber-400/70 bg-amber-400/10 text-[#4AEEFF] hover:bg-amber-400/20 active:scale-95 transition-all"
+                className="p-2 rounded-xl border border-white/15 bg-white/5 text-white/80 hover:text-[#4AEEFF] hover:border-[#4AEEFF]/40 hover:bg-[#4AEEFF]/10 active:scale-95 transition-all"
                 title="Close drawer"
               >
                 <XMarkIcon className="w-5 h-5" />
               </button>
             </div>
 
-            {/* Navigation links (styled to match Screenshot 2) */}
+            {/* Navigation links with icons & active indicators */}
             <div className="p-3 space-y-1.5 overflow-y-auto max-h-[calc(100vh-16rem)]">
               {navigation.map((item) => {
                 const active = isItemActive(item.href);
+                const Icon = item.icon;
                 return (
                   <Link
                     key={item.name}
                     to={item.href}
                     onClick={() => setMobileMenuOpen(false)}
-                    className={`block px-4 py-3 rounded-2xl text-sm transition-all border ${
+                    className={`group flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-sm transition-all border ${
                       active
-                        ? "bg-[#0a2f38] border-[#16515c] text-[#4AEEFF] font-bold shadow-inner"
-                        : "border-transparent text-white/80 hover:bg-white/5 hover:text-white font-medium"
+                        ? "bg-[#4AEEFF]/15 border-[#4AEEFF]/40 text-[#4AEEFF] font-bold shadow-[0_0_15px_rgba(74,238,255,0.15)]"
+                        : "border-transparent text-white/80 hover:bg-white/5 hover:text-white hover:border-white/10 font-medium"
                     }`}
                   >
-                    {item.name}
+                    <div className="flex items-center gap-3">
+                      <Icon className={`w-5 h-5 transition-colors ${active ? "text-[#4AEEFF]" : "text-white/60 group-hover:text-white"}`} />
+                      <span>{item.name}</span>
+                    </div>
+                    {active ? (
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#4AEEFF] shadow-[0_0_8px_#4AEEFF]" />
+                    ) : (
+                      <ChevronRightIcon className="w-4 h-4 text-white/20 group-hover:text-white/60 transition-transform group-hover:translate-x-0.5" />
+                    )}
                   </Link>
                 );
               })}
@@ -209,7 +228,7 @@ const PublicLayout: React.FC = () => {
 
       {/* Main content */}
       <main className={`flex-1 ${isTournamentRoute ? "bg-gradient-to-r from-[#061D23] via-[#12679E] to-[#4AEEFF]" : "bg-transparent"} w-full overflow-x-hidden`}>
-        <div className="pt-16">
+        <div className="pt-20">
           <Outlet />
         </div>
       </main>
