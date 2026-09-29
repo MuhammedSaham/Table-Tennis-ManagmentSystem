@@ -38,7 +38,7 @@ const Hero: React.FC = () => {
   const matchesCount = useCounter(1000);
 
   return (
-    <div className="relative h-[calc(100vh-5rem)] min-h-[560px] bg-[#061D23] overflow-hidden flex items-center w-full">
+    <div className="relative h-[calc(100dvh-5rem)] sm:h-[calc(100vh-5rem)] sm:min-h-[560px] bg-[#061D23] overflow-hidden flex items-center w-full">
       {/* 1. Background Image with Racket on the right */}
       <div style={{ position: "absolute", inset: 0, zIndex: 0 }}>
         <div
@@ -88,10 +88,10 @@ const Hero: React.FC = () => {
       </div>
 
       {/* 2. Left-Aligned Content Container (Fully Responsive) */}
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10 md:py-12 lg:py-14 w-full">
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-10 md:py-12 lg:py-14 w-full">
         <div className="max-w-xl text-left">
           {/* Top Badge with College Name, live radar dot, and continuous gentle float */}
-          <div className="animate-fade-up-1 inline-flex items-center gap-2 bg-[#12679E]/30 border border-[#4AEEFF]/40 backdrop-blur-md rounded-full px-3 py-1 sm:px-3.5 sm:py-1 mb-4 sm:mb-5 shadow-[0_0_15px_rgba(74,238,255,0.15)] animate-gentle-float">
+          <div className="animate-fade-up-1 inline-flex items-center gap-2 bg-[#12679E]/30 border border-[#4AEEFF]/40 backdrop-blur-md rounded-full px-3 py-0.5 sm:px-3.5 sm:py-1 mb-2.5 sm:mb-5 shadow-[0_0_15px_rgba(74,238,255,0.15)] animate-gentle-float">
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#4AEEFF] opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-[#4AEEFF]"></span>
@@ -102,38 +102,38 @@ const Hero: React.FC = () => {
           </div>
 
           {/* Solid Headline with Continuous Metallic Light Sweep & Neon Glow */}
-          <h1 className="animate-fade-up-2 text-3xl sm:text-5xl lg:text-6xl font-black text-white tracking-tight leading-[1.08] mb-3 sm:mb-4 font-display">
+          <h1 className="animate-fade-up-2 text-[26px] sm:text-5xl lg:text-6xl font-black text-white tracking-tight leading-[1.08] mb-2 sm:mb-4 font-display">
             <span className="block animate-light-sweep font-black">
               RULE THE ARENA.
             </span>
             <div className="relative inline-block w-full">
-              <span className="block text-xl sm:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-[#4AEEFF] via-cyan-100 to-white bg-clip-text text-transparent mt-1.5 sm:mt-2 animate-gradient-flow animate-neon-breathe">
+              <span className="block text-lg sm:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-[#4AEEFF] via-cyan-100 to-white bg-clip-text text-transparent mt-1 sm:mt-2 animate-gradient-flow animate-neon-breathe">
                 Table Tennis Championship
               </span>
               {/* Continuous Flowing Laser Underline */}
-              <div className="h-[2px] sm:h-[2.5px] w-36 sm:w-52 bg-gradient-to-r from-[#4AEEFF] via-cyan-300 to-transparent rounded-full mt-2 shadow-[0_0_12px_rgba(74,238,255,0.7)] animate-laser-flow" />
+              <div className="h-[2px] sm:h-[2.5px] w-28 sm:w-52 bg-gradient-to-r from-[#4AEEFF] via-cyan-300 to-transparent rounded-full mt-1.5 sm:mt-2 shadow-[0_0_12px_rgba(74,238,255,0.7)] animate-laser-flow" />
             </div>
           </h1>
 
           {/* Crisp 1-line Subtitle */}
-          <p className="animate-fade-up-3 text-sm sm:text-base lg:text-lg text-gray-300 font-normal leading-relaxed mb-6 sm:mb-8 max-w-md">
+          <p className="animate-fade-up-3 text-xs sm:text-base lg:text-lg text-gray-300 font-normal leading-relaxed mb-3.5 sm:mb-8 max-w-md">
             Live tournament brackets, instant match scores, and official rankings.
           </p>
 
           {/* Action Buttons (Compact, elegant side-by-side pills with continuous aura & arrow micro-interaction) */}
-          <div className="animate-fade-up-4 flex flex-row items-center gap-2.5 sm:gap-3.5 mb-7 sm:mb-9">
+          <div className="animate-fade-up-4 flex flex-row items-center gap-2.5 sm:gap-3.5 mb-4 sm:mb-9">
             {!user ? (
               <>
                 <Link
                   to="/register"
-                  className="group inline-flex items-center gap-1.5 bg-gradient-to-r from-[#4AEEFF] to-[#12679E] text-[#061D23] hover:brightness-110 font-extrabold text-xs sm:text-sm px-4 py-2.5 sm:px-5 sm:py-3 rounded-full animate-button-aura transition-all duration-300 transform active:scale-95 sm:hover:scale-105 whitespace-nowrap"
+                  className="group inline-flex items-center gap-1.5 bg-gradient-to-r from-[#4AEEFF] to-[#12679E] text-[#061D23] hover:brightness-110 font-extrabold text-xs sm:text-sm px-4 py-2 sm:px-5 sm:py-3 rounded-full animate-button-aura transition-all duration-300 transform active:scale-95 sm:hover:scale-105 whitespace-nowrap"
                 >
                   <span>Get Started</span>
                   <span className="text-xs transition-transform duration-200 group-hover:translate-x-1">→</span>
                 </Link>
                 <Link
                   to="/login"
-                  className="inline-flex items-center justify-center bg-[#061D23]/60 hover:bg-[#12679E]/30 border border-white/20 hover:border-[#4AEEFF]/40 text-white font-semibold text-xs sm:text-sm px-4 py-2.5 sm:px-5 sm:py-3 rounded-full backdrop-blur-md transition-all duration-300 active:scale-95 whitespace-nowrap"
+                  className="inline-flex items-center justify-center bg-[#061D23]/60 hover:bg-[#12679E]/30 border border-white/20 hover:border-[#4AEEFF]/40 text-white font-semibold text-xs sm:text-sm px-4 py-2 sm:px-5 sm:py-3 rounded-full backdrop-blur-md transition-all duration-300 active:scale-95 whitespace-nowrap"
                 >
                   Sign In
                 </Link>
@@ -141,7 +141,7 @@ const Hero: React.FC = () => {
             ) : (
               <Link
                 to="/tournaments"
-                className="group inline-flex items-center gap-1.5 bg-gradient-to-r from-[#4AEEFF] to-[#12679E] text-[#061D23] hover:brightness-110 font-extrabold text-xs sm:text-sm px-4 py-2.5 sm:px-5 sm:py-3 rounded-full animate-button-aura transition-all duration-300 transform active:scale-95 sm:hover:scale-105 whitespace-nowrap"
+                className="group inline-flex items-center gap-1.5 bg-gradient-to-r from-[#4AEEFF] to-[#12679E] text-[#061D23] hover:brightness-110 font-extrabold text-xs sm:text-sm px-4 py-2 sm:px-5 sm:py-3 rounded-full animate-button-aura transition-all duration-300 transform active:scale-95 sm:hover:scale-105 whitespace-nowrap"
               >
                 <span>Browse Tournaments</span>
                 <span className="text-xs transition-transform duration-200 group-hover:translate-x-1">→</span>
@@ -150,19 +150,19 @@ const Hero: React.FC = () => {
           </div>
 
           {/* Clean Responsive Stats Row (Live Count-Up Numbers - Screenshot 2 style) */}
-          <div className="animate-fade-up-5 grid grid-cols-3 gap-2 sm:flex sm:items-center sm:gap-8 pt-4 sm:pt-5 border-t border-white/10 text-center sm:text-left">
+          <div className="animate-fade-up-5 grid grid-cols-3 gap-2 sm:flex sm:items-center sm:gap-8 pt-2.5 sm:pt-5 border-t border-white/10 text-center sm:text-left">
             <div>
-              <div className="text-lg sm:text-2xl font-black text-white tabular-nums">{tournamentsCount}+</div>
+              <div className="text-base sm:text-2xl font-black text-white tabular-nums">{tournamentsCount}+</div>
               <div className="text-[10px] sm:text-[11px] uppercase tracking-wider text-[#4AEEFF]/80 font-medium">Tournaments</div>
             </div>
             <div className="hidden sm:block w-px h-8 bg-white/10" />
             <div>
-              <div className="text-lg sm:text-2xl font-black text-white tabular-nums">{playersCount}+</div>
+              <div className="text-base sm:text-2xl font-black text-white tabular-nums">{playersCount}+</div>
               <div className="text-[10px] sm:text-[11px] uppercase tracking-wider text-[#4AEEFF]/80 font-medium">Players</div>
             </div>
             <div className="hidden sm:block w-px h-8 bg-white/10" />
             <div>
-              <div className="text-lg sm:text-2xl font-black text-white tabular-nums">{matchesCount.toLocaleString()}+</div>
+              <div className="text-base sm:text-2xl font-black text-white tabular-nums">{matchesCount.toLocaleString()}+</div>
               <div className="text-[10px] sm:text-[11px] uppercase tracking-wider text-[#4AEEFF]/80 font-medium">Matches</div>
             </div>
           </div>
@@ -170,12 +170,12 @@ const Hero: React.FC = () => {
       </div>
 
       {/* 3. Interactive See More Button (Mobile Only) */}
-      <div className="sm:hidden absolute bottom-3 inset-x-0 flex justify-center z-20">
+      <div className="sm:hidden absolute bottom-2.5 inset-x-0 flex justify-center z-20">
         <button
           onClick={() => {
             window.scrollBy({ top: window.innerHeight - 80, behavior: "smooth" });
           }}
-          className="inline-flex items-center gap-1.5 bg-[#061D23]/80 hover:bg-[#12679E]/40 border border-[#4AEEFF]/40 text-[#4AEEFF] backdrop-blur-md px-3.5 py-1.5 rounded-full text-[11px] font-bold tracking-wider uppercase shadow-[0_0_15px_rgba(74,238,255,0.2)] active:scale-95 transition-all animate-pulse"
+          className="inline-flex items-center gap-1.5 bg-[#061D23]/85 hover:bg-[#12679E]/40 border border-[#4AEEFF]/40 text-[#4AEEFF] backdrop-blur-md px-3.5 py-1.5 rounded-full text-[11px] font-bold tracking-wider uppercase shadow-[0_0_15px_rgba(74,238,255,0.25)] active:scale-95 transition-all animate-pulse"
         >
           <span>See More</span>
           <span className="text-xs font-black animate-bounce">↓</span>
