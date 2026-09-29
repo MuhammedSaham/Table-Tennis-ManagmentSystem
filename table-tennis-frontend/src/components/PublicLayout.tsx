@@ -22,10 +22,20 @@ const PublicLayout: React.FC = () => {
     { name: "Global Rankings", href: "/global-leaderboard" },
   ];
 
+  const isItemActive = (href: string) => {
+    if (href === "/") {
+      return location.pathname === "/";
+    }
+    return (
+      location.pathname === href ||
+      location.pathname.startsWith(href + "/")
+    );
+  };
+
   return (
-    <div className={`min-h-screen flex flex-col ${wrapperBgClass}`}>
+    <div className={`min-h-screen flex flex-col ${wrapperBgClass} w-full overflow-x-hidden max-w-full`}>
       {/* Navbar */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-[#061D23] shadow-lg transition-all duration-300">
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-[#061D23] shadow-lg transition-all duration-300 w-full">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-20">
             {/* Logo */}
@@ -42,19 +52,22 @@ const PublicLayout: React.FC = () => {
 
             {/* Desktop Navigation */}
             <div className="hidden lg:flex items-center gap-2">
-              {navigation.map((item) => (
-                <Link
-                  key={item.name}
-                  to={item.href}
-                  className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 border ${
-                    location.pathname === item.href
-                      ? "bg-[#4AEEFF]/15 text-[#4AEEFF] border-[#4AEEFF]/40 font-bold shadow-[0_0_15px_rgba(74,238,255,0.15)]"
-                      : "text-white/80 hover:bg-white/10 hover:text-white border-transparent"
-                  }`}
-                >
-                  {item.name}
-                </Link>
-              ))}
+              {navigation.map((item) => {
+                const isActive = isItemActive(item.href);
+                return (
+                  <Link
+                    key={item.name}
+                    to={item.href}
+                    className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 border ${
+                      isActive
+                        ? "bg-[#4AEEFF]/15 text-[#4AEEFF] border-[#4AEEFF]/40 font-bold shadow-[0_0_15px_rgba(74,238,255,0.15)]"
+                        : "text-white/80 hover:bg-white/10 hover:text-white border-transparent"
+                    }`}
+                  >
+                    {item.name}
+                  </Link>
+                );
+              })}
             </div>
 
             {/* Right section */}
@@ -143,7 +156,7 @@ const PublicLayout: React.FC = () => {
             {/* Navigation links (styled to match Screenshot 2) */}
             <div className="p-3 space-y-1.5 overflow-y-auto max-h-[calc(100vh-16rem)]">
               {navigation.map((item) => {
-                const active = location.pathname === item.href;
+                const active = isItemActive(item.href);
                 return (
                   <Link
                     key={item.name}
@@ -195,7 +208,7 @@ const PublicLayout: React.FC = () => {
       </>
 
       {/* Main content */}
-      <main className={`flex-1 ${isTournamentRoute ? "bg-gradient-to-r from-[#061D23] via-[#12679E] to-[#4AEEFF]" : "bg-transparent"}`}>
+      <main className={`flex-1 ${isTournamentRoute ? "bg-gradient-to-r from-[#061D23] via-[#12679E] to-[#4AEEFF]" : "bg-transparent"} w-full overflow-x-hidden`}>
         <div className="pt-16">
           <Outlet />
         </div>
