@@ -30,6 +30,7 @@ import Players from "./pages/Players";
 import RefereeMatches from "./pages/RefereeMatches";
 import About from "./pages/About";
 import ErrorBoundary from "./components/ErrorBoundary";
+import ScrollToTop from "./components/ScrollToTop";
 //import VerifyEmail from "./pages/VerifyEmail";
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({
@@ -152,6 +153,7 @@ function AppRoutes() {
 function App() {
   return (
     <Router>
+      <ScrollToTop />
       <AuthProvider>
         <Toaster
           position="top-right"

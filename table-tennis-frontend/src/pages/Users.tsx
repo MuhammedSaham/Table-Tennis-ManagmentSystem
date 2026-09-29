@@ -278,51 +278,62 @@ const Users: React.FC = () => {
       </header>
 
       {/* TABS */}
-      <div className="flex gap-3">
-        <button
-          id="tab-club-members-admin"
-          onClick={() => setActiveTab("CLUB")}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-black text-xs uppercase tracking-wider transition-all duration-200 focus:outline-none ${
-            activeTab === "CLUB"
-              ? "bg-[#4AEEFF] text-[#061D23] shadow-lg"
-              : "bg-white/5 text-white/70 border border-white/10 hover:bg-white/10"
-          }`}
-        >
-          🏅 Club Members
-          <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-black ${
-            activeTab === "CLUB" ? "bg-[#061D23]/30 text-[#061D23]" : "bg-[#4AEEFF]/20 text-[#4AEEFF]"
-          }`}>
-            {clubMembers.filter(u => u.role === "PLAYER").length}
-          </span>
-        </button>
+      <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 sm:gap-4">
+        <div className="flex items-center gap-2">
+          <button
+            id="tab-club-members-admin"
+            onClick={() => setActiveTab("CLUB")}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider transition-all duration-200 focus:outline-none ${
+              activeTab === "CLUB"
+                ? "bg-[#4AEEFF] text-[#061D23] shadow-lg shadow-[#4AEEFF]/20"
+                : "bg-white/5 text-white/70 border border-white/10 hover:bg-white/10"
+            }`}
+          >
+            <span>🏅 Club Members</span>
+            <span
+              className={`px-1.5 py-0.5 rounded-full text-[10px] font-black ${
+                activeTab === "CLUB"
+                  ? "bg-[#061D23]/30 text-[#061D23]"
+                  : "bg-[#4AEEFF]/20 text-[#4AEEFF]"
+              }`}
+            >
+              {clubMembers.filter((u) => u.role === "PLAYER").length}
+            </span>
+          </button>
 
-        <button
-          id="tab-guest-players-admin"
-          onClick={() => setActiveTab("GUEST")}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-black text-xs uppercase tracking-wider transition-all duration-200 focus:outline-none ${
-            activeTab === "GUEST"
-              ? "bg-[#4AEEFF] text-[#061D23] shadow-lg"
-              : "bg-white/5 text-white/70 border border-white/10 hover:bg-white/10"
-          }`}
-        >
-          👤 Guest Players
-          <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-black ${
-            activeTab === "GUEST" ? "bg-[#061D23]/30 text-[#061D23]" : "bg-[#4AEEFF]/20 text-[#4AEEFF]"
-          }`}>
-            {guestPlayers.length}
-          </span>
-        </button>
+          <button
+            id="tab-guest-players-admin"
+            onClick={() => setActiveTab("GUEST")}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider transition-all duration-200 focus:outline-none ${
+              activeTab === "GUEST"
+                ? "bg-[#4AEEFF] text-[#061D23] shadow-lg shadow-[#4AEEFF]/20"
+                : "bg-white/5 text-white/70 border border-white/10 hover:bg-white/10"
+            }`}
+          >
+            <span>👤 Guest Players</span>
+            <span
+              className={`px-1.5 py-0.5 rounded-full text-[10px] font-black ${
+                activeTab === "GUEST"
+                  ? "bg-[#061D23]/30 text-[#061D23]"
+                  : "bg-[#4AEEFF]/20 text-[#4AEEFF]"
+              }`}
+            >
+              {guestPlayers.length}
+            </span>
+          </button>
+        </div>
 
-        <p className="ml-2 self-center text-xs text-white/40">
+        <p className="text-xs text-white/50">
           {activeTab === "CLUB"
-            ? "🏅 Ranked club players + admins & referees"
-            : "👤 Self-registered players without a club ranking"}
+            ? "Ranked club players + admins & referees"
+            : "Self-registered players without a club ranking"}
         </p>
       </div>
 
-      {/* CORE INDUSTRIAL DATA TABLE LAYER */}
+      {/* CORE INDUSTRIAL DATA LAYER */}
       <main className="rounded-[16px] border border-white/20 bg-[#061D23]/10 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl overflow-hidden">
-        <div className="overflow-x-auto">
+        {/* DESKTOP TABLE VIEW (Visible on tablet and desktop screens) */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-white/10 bg-[#061D23]/30 text-xs font-black uppercase tracking-widest text-[#4AEEFF]">
@@ -523,6 +534,201 @@ const Users: React.FC = () => {
               ))}
             </tbody>
           </table>
+        </div>
+
+        {/* MOBILE CARDS VIEW (Visible exclusively on mobile screens) */}
+        <div className="block md:hidden divide-y divide-white/10">
+          {displayedUsers.map((userItem) => (
+            <div
+              key={userItem.id}
+              className="p-4 bg-[#061D23]/30 hover:bg-[#12679E]/10 transition-colors space-y-3"
+            >
+              {/* Top: Avatar, Name & Role Badge */}
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#4AEEFF]/30 bg-[#061D23] font-bold text-white shadow-sm text-sm">
+                    {userItem.firstName[0].toUpperCase()}
+                    {userItem.lastName[0].toUpperCase()}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-bold text-white text-base leading-tight truncate">
+                      {userItem.firstName} {userItem.lastName}
+                    </p>
+                    {userItem.phone && (
+                      <p className="text-xs text-gray-400 font-mono mt-0.5">
+                        📞 {userItem.phone}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <span
+                    className={`inline-block px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-md ${getRoleBadgeStyles(
+                      userItem.role,
+                    )}`}
+                  >
+                    {userItem.role}
+                  </span>
+                  {userItem.isSuperAdmin && (
+                    <span className="px-2 py-0.5 text-[9px] font-black uppercase tracking-wider rounded-md bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                      ⭐ Main
+                    </span>
+                  )}
+                  {userItem.id === user?.id && (
+                    <span className="px-2 py-0.5 text-[9px] font-black uppercase tracking-wider rounded-md bg-white/10 text-white/60 border border-white/10">
+                      You
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Info Details Box */}
+              <div className="rounded-xl bg-[#061D23]/60 border border-white/5 p-3 space-y-2 text-xs">
+                <div className="flex items-center gap-2 text-gray-300">
+                  <EnvelopeIcon className="w-3.5 h-3.5 text-[#4AEEFF] shrink-0" />
+                  <span className="font-mono text-gray-200 truncate select-all">
+                    {userItem.email}
+                  </span>
+                </div>
+
+                {userItem.role === "PLAYER" && (
+                  <div className="flex items-center justify-between pt-2 border-t border-white/5">
+                    <span className="text-gray-400 font-medium">Rank:</span>
+                    {userItem.ranking ? (
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-black text-[#4AEEFF]">
+                          #{userItem.ranking}
+                        </span>
+                        {userItem.rankingNote && (
+                          <span className="text-[10px] text-white/60 bg-white/5 px-1.5 py-0.5 rounded border border-white/10">
+                            {userItem.rankingNote}
+                          </span>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-gray-500 italic">Unranked</span>
+                    )}
+                  </div>
+                )}
+
+                <div className="flex items-center justify-between pt-1 border-t border-white/5 text-[11px] text-gray-400">
+                  <span>Joined Date:</span>
+                  <span className="font-mono text-gray-300">
+                    {new Date(userItem.createdAt).toLocaleDateString(undefined, {
+                      year: "numeric",
+                      month: "short",
+                      day: "numeric",
+                    })}
+                  </span>
+                </div>
+              </div>
+
+              {/* Inline Rank Edit Form on Mobile (if currently editing) */}
+              {userItem.role === "PLAYER" && editingRankId === userItem.id && (
+                <div className="flex items-center gap-2 bg-[#061D23] border border-[#4AEEFF]/40 rounded-xl p-2 animate-fadeIn">
+                  <input
+                    type="number"
+                    min="1"
+                    max="999"
+                    placeholder="Rank"
+                    value={rankingInput}
+                    onChange={(e) => setRankingInput(e.target.value)}
+                    className="w-20 px-2 py-1.5 text-xs border border-white/10 rounded-lg bg-[#082229] text-white focus:outline-none focus:border-[#4AEEFF]"
+                    autoFocus
+                  />
+                  <input
+                    type="text"
+                    placeholder="Note"
+                    value={rankingNote}
+                    onChange={(e) => setRankingNote(e.target.value)}
+                    className="flex-1 px-2 py-1.5 text-xs border border-white/10 rounded-lg bg-[#082229] text-white focus:outline-none focus:border-[#4AEEFF]"
+                  />
+                  <button
+                    onClick={() => handleUpdateRanking(userItem.id)}
+                    className="px-2.5 py-1.5 rounded-lg bg-emerald-500/20 text-emerald-300 text-xs font-black border border-emerald-500/30"
+                  >
+                    Save
+                  </button>
+                  <button
+                    onClick={() => {
+                      setEditingRankId(null);
+                      setRankingInput("");
+                      setRankingNote("");
+                    }}
+                    className="px-2 py-1.5 text-white/50 text-xs font-black"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              )}
+
+              {/* Mobile Actions Toolbar */}
+              <div className="flex items-center justify-between gap-2 pt-1">
+                <Link
+                  to={`/profile/${userItem.id}`}
+                  className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-white/80 border border-white/10 bg-[#061D23]/60 hover:border-[#4AEEFF] hover:text-[#4AEEFF]"
+                >
+                  <EyeIcon className="w-3.5 h-3.5" />
+                  <span>Profile</span>
+                </Link>
+
+                <div className="flex items-center gap-2">
+                  {/* Rank Edit Toggle for Players */}
+                  {userItem.role === "PLAYER" && editingRankId !== userItem.id && (
+                    <button
+                      onClick={() => {
+                        setEditingRankId(userItem.id);
+                        setRankingInput(userItem.ranking?.toString() || "");
+                        setRankingNote(userItem.rankingNote || "");
+                      }}
+                      className="rounded-lg px-2.5 py-1.5 text-xs font-bold text-white/80 border border-white/10 bg-[#061D23]/60 hover:border-[#4AEEFF] hover:text-[#4AEEFF]"
+                      title="Set / Edit Rank"
+                    >
+                      🏆 Rank
+                    </button>
+                  )}
+
+                  {/* Role Change Dropdown */}
+                  {userItem.id !== user?.id &&
+                    !userItem.isSuperAdmin &&
+                    (() => {
+                      const currentIsSuperAdmin =
+                        (user as any)?.isSuperAdmin ?? false;
+                      const canChangeRole =
+                        currentIsSuperAdmin || userItem.role !== "ADMIN";
+
+                      return canChangeRole ? (
+                        <select
+                          value={userItem.role}
+                          onChange={(e) =>
+                            handleRoleChange(userItem.id, e.target.value)
+                          }
+                          className="text-xs border border-white/10 rounded-lg bg-[#061D23] text-white py-1.5 px-2 focus:outline-none focus:border-[#4AEEFF] cursor-pointer"
+                        >
+                          <option value="PLAYER">Player</option>
+                          <option value="REFEREE">Referee</option>
+                          {currentIsSuperAdmin && (
+                            <option value="ADMIN">Admin</option>
+                          )}
+                        </select>
+                      ) : null;
+                    })()}
+
+                  {/* Delete Button */}
+                  {userItem.id !== user?.id && !userItem.isSuperAdmin && (
+                    <button
+                      onClick={() => handleDeleteUser(userItem.id)}
+                      className="rounded-lg p-1.5 text-red-400 border border-red-500/20 bg-[#061D23]/60 hover:bg-red-500/20"
+                      title="Delete User"
+                    >
+                      <TrashIcon className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       </main>
 
