@@ -919,12 +919,26 @@ const GroupStandings: React.FC<Props> = ({
     );
   }
 
+  // Dynamically switch layout: side-by-side for compact groups (<=4 members), full-width stacked for larger groups (>=5 members)
+  const maxEntries = Math.max(
+    ...groups.map((g) => {
+      const isDoubles = Boolean(g.teams && g.teams.length > 0);
+      return isDoubles ? (g.teams?.length || 0) : (g.players?.length || 0);
+    }),
+    0,
+  );
+  const isLargeGroups = maxEntries >= 5;
+
   return (
     <div
       style={{
-        display: "flex",
-        flexDirection: "column",
-        gap: 32,
+        display: isLargeGroups ? "flex" : "grid",
+        flexDirection: isLargeGroups ? "column" : undefined,
+        gridTemplateColumns: isLargeGroups
+          ? undefined
+          : "repeat(auto-fit, minmax(min(100%, 540px), 1fr))",
+        gap: 24,
+        alignItems: "start",
         fontFamily: "'Segoe UI', system-ui, sans-serif",
       }}
     >
@@ -955,7 +969,7 @@ const GroupStandings: React.FC<Props> = ({
         return (
           <div
             key={group.id}
-            className="rounded-2xl border border-white/20 bg-[#061D23]/60 shadow-[0_15px_40px_-10px_rgba(0,0,0,0.5)] backdrop-blur-xl overflow-hidden mb-6"
+            className="rounded-xl border border-white/10 bg-[#061D23]/50 shadow-md backdrop-blur-md overflow-hidden"
           >
             {/* Group header */}
             <div className="bg-[#04151a] border-b border-white/10 px-4 py-3 sm:px-6 sm:py-4 flex items-center justify-between gap-3 flex-wrap">
@@ -989,35 +1003,104 @@ const GroupStandings: React.FC<Props> = ({
                     <th
                       style={{
                         border: "1px solid #e2e8f0",
-                        padding: "10px 14px",
+                        padding: "8px 12px",
                         minWidth: 140,
                         background: "#f8fafc",
+                        verticalAlign: "bottom",
                       }}
-                    />
-                    {entries.map((entry) => (
-                      <th
-                        key={entry.id}
+                    >
+                      <span
                         style={{
-                          border: "1px solid #e2e8f0",
-                          padding: "12px 8px",
-                          width: 68,
-                          background: "#fef9c3",
+                          fontSize: 10,
+                          fontWeight: 800,
+                          color: "#64748b",
+                          textTransform: "uppercase",
+                          letterSpacing: 0.5,
                         }}
                       >
-                        <div
+                        TEAM / OPPONENT
+                      </span>
+                    </th>
+                    {entries.map((entry) => {
+                      const name = entry.name.trim();
+                      const hasAmp = name.includes("&");
+                      const hasSlash = name.includes("/");
+                      let p1 = "";
+                      let p2 = "";
+
+                      if (hasAmp) {
+                        const parts = name.split("&");
+                        p1 = parts[0].trim() + " &";
+                        p2 = parts.slice(1).join("&").trim();
+                      } else if (hasSlash) {
+                        const parts = name.split("/");
+                        p1 = parts[0].trim() + " /";
+                        p2 = parts.slice(1).join("/").trim();
+                      } else {
+                        const words = name.split(" ");
+                        if (words.length > 1) {
+                          const mid = Math.ceil(words.length / 2);
+                          p1 = words.slice(0, mid).join(" ");
+                          p2 = words.slice(mid).join(" ");
+                        } else {
+                          p1 = name;
+                        }
+                      }
+
+                      return (
+                        <th
+                          key={entry.id}
+                          title={entry.name}
                           style={{
-                            writingMode: "vertical-rl",
-                            transform: "rotate(180deg)",
-                            fontSize: 12,
-                            fontWeight: 700,
-                            color: "#1e293b",
-                            whiteSpace: "nowrap",
+                            border: "1px solid #e2e8f0",
+                            padding: "6px 4px",
+                            width: p2 ? 74 : 64,
+                            background: "#fef9c3",
+                            verticalAlign: "bottom",
                           }}
                         >
-                          {entry.name}
-                        </div>
-                      </th>
-                    ))}
+                          <div
+                            style={{
+                              writingMode: "vertical-rl",
+                              transform: "rotate(180deg)",
+                              fontSize: 11,
+                              fontWeight: 700,
+                              color: "#1e293b",
+                              margin: "0 auto",
+                              maxHeight: 88,
+                              display: "flex",
+                              flexDirection: "row",
+                              gap: 3,
+                              alignItems: "center",
+                              justifyContent: "center",
+                            }}
+                          >
+                            <span
+                              style={{
+                                whiteSpace: "nowrap",
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                maxWidth: 88,
+                              }}
+                            >
+                              {p1}
+                            </span>
+                            {p2 && (
+                              <span
+                                style={{
+                                  whiteSpace: "nowrap",
+                                  overflow: "hidden",
+                                  textOverflow: "ellipsis",
+                                  maxWidth: 88,
+                                }}
+                              >
+                                {p2}
+                              </span>
+                            )}
+                          </div>
+                        </th>
+                      );
+                    })}
                     <th
                       style={{
                         border: "1px solid #e2e8f0",
