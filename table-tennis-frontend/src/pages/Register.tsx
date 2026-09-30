@@ -401,15 +401,12 @@ const Register: React.FC = () => {
             >
               <option value="PLAYER">🏓 Player - Compete in tournaments</option>
               <option value="REFEREE">👨‍⚖️ Referee - Officiate matches</option>
-              <option value="ADMIN">👑 Admin - Manage tournaments</option>
             </select>
             <p className="mt-1 text-sm font-semibold text-[#0d4a75]">
               {formData.role === "PLAYER" &&
                 "Join tournaments, track your progress, and compete with others!"}
               {formData.role === "REFEREE" &&
                 "Officiate matches, record scores, and manage games."}
-              {formData.role === "ADMIN" &&
-                "Create tournaments, manage players, and oversee everything."}
             </p>
           </div>
 
@@ -493,7 +490,6 @@ const Register: React.FC = () => {
                   className="w-full rounded-lg border border-white/60 bg-white/40 px-4 py-3 text-base text-[#061D23] placeholder:text-[#061D23]/40 focus:border-[#4AEEFF] focus:outline-none focus:ring-1 focus:ring-[#4AEEFF]"
                 />
               </div>
-
             </>
           )}
 

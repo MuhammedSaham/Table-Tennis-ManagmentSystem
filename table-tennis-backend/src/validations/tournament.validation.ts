@@ -121,8 +121,8 @@ export const addCategorySchema = z.object({
       .min(2, 'Category name must be at least 2 characters')
       .max(100, 'Category name must not exceed 100 characters'),
     
-    type: z.enum(['SINGLES', 'DOUBLES', 'TEAM'], {
-      errorMap: () => ({ message: 'Type must be SINGLES, DOUBLES, or TEAM' }),
+    type: z.enum(['SINGLES', 'DOUBLES','MIXED_DOUBLES', 'TEAM'], {
+      errorMap: () => ({ message: 'Type must be SINGLES, DOUBLES, MIXED_DOUBLES, or TEAM' }),
     }),
 
     stageFormat: z.enum(['KNOCKOUT', 'GROUP_KNOCKOUT']).default('KNOCKOUT').optional(),
@@ -179,8 +179,8 @@ export const updateCategorySchema = z.object({
       .max(100, 'Category name must not exceed 100 characters')
       .optional(),
     
-    type: z.enum(['SINGLES', 'DOUBLES', 'TEAM'], {
-      errorMap: () => ({ message: 'Type must be SINGLES, DOUBLES, or TEAM' }),
+    type: z.enum(['SINGLES', 'DOUBLES','MIXED_DOUBLES', 'TEAM'], {
+      errorMap: () => ({ message: 'Type must be SINGLES, DOUBLES, MIXED_DOUBLES, or TEAM' }),
     }).optional(),
 
     stageFormat: z.enum(['KNOCKOUT', 'GROUP_KNOCKOUT']).optional(),

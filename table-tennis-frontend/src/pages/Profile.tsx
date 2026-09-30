@@ -83,10 +83,19 @@ const Profile: React.FC = () => {
   const [uploading, setUploading] = useState(false);
   const [playerStats, setPlayerStats] = useState<PlayerStats | null>(null);
   const [_statsLoading, setStatsLoading] = useState(false);
+
+  const [membershipStatus, setMembershipStatus] = useState<any>(null);
+  const [membershipLoading, setMembershipLoading] = useState(false);
+  const [membershipRequesting, setMembershipRequesting] = useState(false);
+
   const [doublesRegistrations, setDoublesRegistrations] = useState<any[]>([]);
-  const [profileReceivedInvites, setProfileReceivedInvites] = useState<any[]>([]);
+  const [profileReceivedInvites, setProfileReceivedInvites] = useState<any[]>(
+    [],
+  );
   const [profileSentInvites, setProfileSentInvites] = useState<any[]>([]);
-  const [activeDoublesTab, setActiveDoublesTab] = useState<"ACTIVE" | "RECEIVED" | "SENT">("ACTIVE");
+  const [activeDoublesTab, setActiveDoublesTab] = useState<
+    "ACTIVE" | "RECEIVED" | "SENT"
+  >("ACTIVE");
 
   useEffect(() => {
     fetchProfile();
@@ -96,6 +105,7 @@ const Profile: React.FC = () => {
     if (user?.role === "PLAYER") {
       fetchPlayerStats();
       fetchDoublesData();
+      fetchMembershipStatus();
     }
   }, [user]);
 
@@ -115,7 +125,7 @@ const Profile: React.FC = () => {
           (r.category?.type &&
             (r.category.type === "DOUBLES" ||
               r.category.type.includes("DOUBLES") ||
-              r.category.type === "MIXED"))
+              r.category.type === "MIXED")),
       );
       setDoublesRegistrations(doublesOnly);
       setProfileReceivedInvites(receivedRes.data.data || []);
@@ -152,6 +162,45 @@ const Profile: React.FC = () => {
       fetchDoublesData();
     } catch (err: any) {
       toast.error(err.response?.data?.message || "Failed to cancel invite");
+    }
+  };
+
+  const fetchMembershipStatus = async () => {
+    if (user?.role !== "PLAYER") return;
+
+    setMembershipLoading(true);
+
+    try {
+      const response = await api.get("/club-membership/status");
+      setMembershipStatus(response.data.data);
+    } catch (error) {
+      console.error("Failed to fetch membership status", error);
+    } finally {
+      setMembershipLoading(false);
+    }
+  };
+  const handleRequestMembership = async () => {
+    if (membershipRequesting) return;
+
+    setMembershipRequesting(true);
+
+    try {
+      const response = await api.post("/club-membership/request");
+
+      toast.success(
+        response.data.message ||
+          "Club membership request submitted successfully!",
+      );
+
+      await fetchMembershipStatus();
+    } catch (error: any) {
+      console.error("Failed to request club membership", error);
+
+      toast.error(
+        error?.response?.data?.message || "Failed to submit membership request",
+      );
+    } finally {
+      setMembershipRequesting(false);
     }
   };
 
@@ -339,15 +388,17 @@ const Profile: React.FC = () => {
     return wrapInBaseLayout(
       <div className="flex h-[50vh] items-center justify-center text-xl font-black uppercase tracking-[0.2em] text-[#4AEEFF]">
         Loading profile...
-      </div>
+      </div>,
     );
   }
 
   if (!profile) {
     return wrapInBaseLayout(
       <div className="mx-auto max-w-md rounded-[16px] border border-white/20 bg-[#061D23]/8 p-8 text-center backdrop-blur-xl">
-        <p className="text-lg font-bold uppercase tracking-wider text-white">Profile not found</p>
-      </div>
+        <p className="text-lg font-bold uppercase tracking-wider text-white">
+          Profile not found
+        </p>
+      </div>,
     );
   }
 
@@ -409,13 +460,17 @@ const Profile: React.FC = () => {
                 <p className="text-xs font-bold uppercase tracking-wider text-[#4AEEFF]/80 mb-1 flex items-center gap-2">
                   <EnvelopeIcon className="h-4 w-4" /> Email Address
                 </p>
-                <p className="font-semibold text-white break-all">{profile.email}</p>
+                <p className="font-semibold text-white break-all">
+                  {profile.email}
+                </p>
               </div>
               <div className="rounded-[12px] border border-white/10 bg-[#061D23]/40 p-5">
                 <p className="text-xs font-bold uppercase tracking-wider text-[#4AEEFF]/80 mb-1 flex items-center gap-2">
                   <PhoneIcon className="h-4 w-4" /> Contact Number
                 </p>
-                <p className="font-semibold text-white">{profile.phone || "Not provided"}</p>
+                <p className="font-semibold text-white">
+                  {profile.phone || "Not provided"}
+                </p>
               </div>
             </div>
           </section>
@@ -433,11 +488,17 @@ const Profile: React.FC = () => {
               </div>
               <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
                 <div className="rounded-[12px] border border-white/10 bg-[#061D23]/60 p-4">
-                  <p className="text-xs text-[#4AEEFF] font-semibold uppercase tracking-wider">Skill Level</p>
-                  <p className="mt-1 font-bold text-white">{profile.playerProfile.skillLevel}</p>
+                  <p className="text-xs text-[#4AEEFF] font-semibold uppercase tracking-wider">
+                    Skill Level
+                  </p>
+                  <p className="mt-1 font-bold text-white">
+                    {profile.playerProfile.skillLevel}
+                  </p>
                 </div>
                 <div className="rounded-[12px] border border-white/10 bg-[#061D23]/60 p-4">
-                  <p className="text-xs text-[#4AEEFF] font-semibold uppercase tracking-wider">Age</p>
+                  <p className="text-xs text-[#4AEEFF] font-semibold uppercase tracking-wider">
+                    Age
+                  </p>
                   <p className="mt-1 font-bold text-white">
                     {profile.playerProfile.dateOfBirth
                       ? `${getPlayerAgeCategory(new Date(profile.playerProfile.dateOfBirth)).age} years`
@@ -445,15 +506,21 @@ const Profile: React.FC = () => {
                   </p>
                 </div>
                 <div className="rounded-[12px] border border-white/10 bg-[#061D23]/60 p-4">
-                  <p className="text-xs text-[#4AEEFF] font-semibold uppercase tracking-wider">Age Category</p>
+                  <p className="text-xs text-[#4AEEFF] font-semibold uppercase tracking-wider">
+                    Age Category
+                  </p>
                   <p className="mt-1 font-bold text-white">
                     {profile.playerProfile.dateOfBirth
-                      ? getPlayerAgeCategory(new Date(profile.playerProfile.dateOfBirth)).category
+                      ? getPlayerAgeCategory(
+                          new Date(profile.playerProfile.dateOfBirth),
+                        ).category
                       : "N/A"}
                   </p>
                 </div>
                 <div className="rounded-[12px] border border-white/10 bg-[#061D23]/60 p-4">
-                  <p className="text-xs text-[#4AEEFF] font-semibold uppercase tracking-wider">Gender</p>
+                  <p className="text-xs text-[#4AEEFF] font-semibold uppercase tracking-wider">
+                    Gender
+                  </p>
                   <p className="mt-1 font-bold text-white">
                     {profile.playerProfile.gender === "MALE"
                       ? "Male"
@@ -463,18 +530,168 @@ const Profile: React.FC = () => {
                   </p>
                 </div>
                 <div className="rounded-[12px] border border-white/10 bg-[#061D23]/60 p-4">
-                  <p className="text-xs text-[#4AEEFF] font-semibold uppercase tracking-wider">Club Affiliation</p>
-                  <p className="mt-1 font-bold text-white">{profile.playerProfile.clubAffiliation || "None Specified"}</p>
+                  <p className="text-xs text-[#4AEEFF] font-semibold uppercase tracking-wider">
+                    Club Affiliation
+                  </p>
+                  <p className="mt-1 font-bold text-white">
+                    {profile.playerProfile.clubAffiliation || "None Specified"}
+                  </p>
                 </div>
                 <div className="rounded-[12px] border border-white/10 bg-[#061D23]/60 p-4">
-                  <p className="text-xs text-[#4AEEFF] font-semibold uppercase tracking-wider">Date of Birth</p>
+                  <p className="text-xs text-[#4AEEFF] font-semibold uppercase tracking-wider">
+                    Date of Birth
+                  </p>
                   <p className="mt-1 font-bold text-white">
                     {profile.playerProfile.dateOfBirth
-                      ? new Date(profile.playerProfile.dateOfBirth).toLocaleDateString()
+                      ? new Date(
+                          profile.playerProfile.dateOfBirth,
+                        ).toLocaleDateString()
                       : "Not provided"}
                   </p>
                 </div>
               </div>
+            </section>
+          )}
+
+          {/* ─── CLUB MEMBERSHIP ─── */}
+          {profile.role === "PLAYER" && (
+            <section className="rounded-[16px] border border-white/20 bg-[#061D23]/5 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl">
+              <div className="mb-5 flex items-center gap-3">
+                <div className="rounded-lg bg-[#4AEEFF]/20 p-2 text-[#4AEEFF]">
+                  <UserGroupIcon className="h-5 w-5" />
+                </div>
+
+                <div>
+                  <h2 className="text-lg font-bold uppercase tracking-wider text-white">
+                    Club Membership
+                  </h2>
+                  <p className="text-xs text-white/60">
+                    Manage your table tennis club membership
+                  </p>
+                </div>
+              </div>
+
+              {membershipLoading ? (
+                <div className="rounded-[12px] border border-white/10 bg-[#061D23]/60 p-5">
+                  <p className="text-sm text-white/70">
+                    Checking membership status...
+                  </p>
+                </div>
+              ) : membershipStatus?.isClubMember ? (
+                /* APPROVED / MEMBER */
+                <div className="rounded-[12px] border border-emerald-500/30 bg-emerald-500/10 p-5">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="text-xs font-black uppercase tracking-wider text-emerald-300">
+                        Membership Status
+                      </p>
+                      <p className="mt-1 text-lg font-bold text-white">
+                        You are a Club Member
+                      </p>
+                      <p className="mt-1 text-xs text-white/60">
+                        Your club membership has been approved by an
+                        administrator.
+                      </p>
+                    </div>
+
+                    <span className="inline-flex w-fit rounded-lg border border-emerald-500/40 bg-emerald-500/20 px-4 py-2 text-xs font-black uppercase tracking-wider text-emerald-300">
+                      ✓ Approved
+                    </span>
+                  </div>
+                </div>
+              ) : membershipStatus?.request?.status === "PENDING" ? (
+                /* PENDING */
+                <div className="rounded-[12px] border border-amber-500/30 bg-amber-500/10 p-5">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="text-xs font-black uppercase tracking-wider text-amber-300">
+                        Membership Status
+                      </p>
+                      <p className="mt-1 text-lg font-bold text-white">
+                        Membership Request Pending
+                      </p>
+                      <p className="mt-1 text-xs text-white/60">
+                        Your request has been submitted and is waiting for
+                        administrator approval.
+                      </p>
+                    </div>
+
+                    <span className="inline-flex w-fit rounded-lg border border-amber-500/40 bg-amber-500/20 px-4 py-2 text-xs font-black uppercase tracking-wider text-amber-300">
+                      ⏳ Pending
+                    </span>
+                  </div>
+                </div>
+              ) : membershipStatus?.request?.status === "REJECTED" ? (
+                /* REJECTED */
+                <div className="rounded-[12px] border border-red-500/30 bg-red-500/10 p-5">
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="text-xs font-black uppercase tracking-wider text-red-300">
+                        Membership Status
+                      </p>
+
+                      <p className="mt-1 text-lg font-bold text-white">
+                        Membership Request Rejected
+                      </p>
+
+                      <p className="mt-1 text-xs text-white/60">
+                        Reason:{" "}
+                        <span className="text-red-200">
+                          {membershipStatus.request.rejectionReason ||
+                            "No reason provided"}
+                        </span>
+                      </p>
+                    </div>
+
+                    {membershipStatus.request.rejectionCount < 3 ? (
+                      <button
+                        type="button"
+                        onClick={handleRequestMembership}
+                        disabled={membershipRequesting}
+                        className="inline-flex h-10 items-center justify-center rounded-lg bg-[#4AEEFF] px-5 text-xs font-black uppercase tracking-wider text-[#061D23] transition-all hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {membershipRequesting
+                          ? "Submitting..."
+                          : "Request Again"}
+                      </button>
+                    ) : (
+                      <span className="inline-flex w-fit rounded-lg border border-red-500/40 bg-red-500/20 px-4 py-2 text-xs font-black uppercase tracking-wider text-red-300">
+                        Permanently Rejected
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                /* NO REQUEST */
+                <div className="rounded-[12px] border border-white/10 bg-[#061D23]/60 p-5">
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="text-xs font-black uppercase tracking-wider text-[#4AEEFF]">
+                        Membership Status
+                      </p>
+
+                      <p className="mt-1 text-lg font-bold text-white">
+                        You are not a club member
+                      </p>
+
+                      <p className="mt-1 text-xs text-white/60">
+                        Submit a request to become a member of the club.
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleRequestMembership}
+                      disabled={membershipRequesting}
+                      className="inline-flex h-10 items-center justify-center rounded-lg bg-[#4AEEFF] px-5 text-xs font-black uppercase tracking-wider text-[#061D23] transition-all hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {membershipRequesting
+                        ? "Submitting..."
+                        : "Request Club Membership"}
+                    </button>
+                  </div>
+                </div>
+              )}
             </section>
           )}
 
@@ -493,36 +710,60 @@ const Profile: React.FC = () => {
               {/* Core numbers breakdown */}
               <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 mb-6">
                 <div className="rounded-[12px] border border-white/10 bg-[#061D23]/60 p-4 text-center">
-                  <p className="text-3xl font-black text-[#4AEEFF]">{playerStats.totalMatches}</p>
-                  <p className="text-xs uppercase font-bold tracking-wider text-white/70 mt-1">Total Matches</p>
+                  <p className="text-3xl font-black text-[#4AEEFF]">
+                    {playerStats.totalMatches}
+                  </p>
+                  <p className="text-xs uppercase font-bold tracking-wider text-white/70 mt-1">
+                    Total Matches
+                  </p>
                 </div>
                 <div className="rounded-[12px] border border-white/10 bg-[#061D23]/60 p-4 text-center">
-                  <p className="text-3xl font-black text-[#4AEEFF]">{playerStats.wins}</p>
-                  <p className="text-xs uppercase font-bold tracking-wider text-white/70 mt-1">Wins</p>
+                  <p className="text-3xl font-black text-[#4AEEFF]">
+                    {playerStats.wins}
+                  </p>
+                  <p className="text-xs uppercase font-bold tracking-wider text-white/70 mt-1">
+                    Wins
+                  </p>
                 </div>
                 <div className="rounded-[12px] border border-white/10 bg-[#061D23]/60 p-4 text-center">
-                  <p className="text-3xl font-black text-red-400">{playerStats.losses}</p>
-                  <p className="text-xs uppercase font-bold tracking-wider text-white/70 mt-1">Losses</p>
+                  <p className="text-3xl font-black text-red-400">
+                    {playerStats.losses}
+                  </p>
+                  <p className="text-xs uppercase font-bold tracking-wider text-white/70 mt-1">
+                    Losses
+                  </p>
                 </div>
                 <div className="rounded-[12px] border border-white/10 bg-[#061D23]/60 p-4 text-center">
-                  <p className="text-3xl font-black text-[#4AEEFF]">{playerStats.winRate}</p>
-                  <p className="text-xs uppercase font-bold tracking-wider text-white/70 mt-1">Win Rate</p>
+                  <p className="text-3xl font-black text-[#4AEEFF]">
+                    {playerStats.winRate}
+                  </p>
+                  <p className="text-xs uppercase font-bold tracking-wider text-white/70 mt-1">
+                    Win Rate
+                  </p>
                 </div>
               </div>
 
               <div className="grid gap-6 md:grid-cols-2 mb-6">
                 {/* Games Slider stats */}
                 <div className="rounded-[12px] border border-white/10 bg-[#061D23]/40 p-5">
-                  <h4 className="text-xs font-black uppercase tracking-wider text-white/90 mb-3">Games Progress Bar</h4>
+                  <h4 className="text-xs font-black uppercase tracking-wider text-white/90 mb-3">
+                    Games Progress Bar
+                  </h4>
                   <div className="flex justify-between items-center text-sm mb-2">
                     <div>
                       <span className="text-xs text-white/60 block">Won</span>
-                      <strong className="text-lg text-[#4AEEFF]">{playerStats.gamesStats.won}</strong>
+                      <strong className="text-lg text-[#4AEEFF]">
+                        {playerStats.gamesStats.won}
+                      </strong>
                     </div>
-                    <div className="text-xs font-black text-white/30 uppercase">VS</div>
+                    <div className="text-xs font-black text-white/30 uppercase">
+                      VS
+                    </div>
                     <div className="text-right">
                       <span className="text-xs text-white/60 block">Lost</span>
-                      <strong className="text-lg text-red-400">{playerStats.gamesStats.lost}</strong>
+                      <strong className="text-lg text-red-400">
+                        {playerStats.gamesStats.lost}
+                      </strong>
                     </div>
                   </div>
                   <div className="w-full bg-white/10 rounded-full h-2.5 overflow-hidden">
@@ -533,24 +774,34 @@ const Profile: React.FC = () => {
                       }}
                     />
                   </div>
-                  <p className="mt-2 text-right text-xs text-white/60">Total sets: {playerStats.gamesStats.total}</p>
+                  <p className="mt-2 text-right text-xs text-white/60">
+                    Total sets: {playerStats.gamesStats.total}
+                  </p>
                 </div>
 
                 {/* Points mini block */}
                 <div className="rounded-[12px] border border-white/10 bg-[#061D23]/40 p-5 flex flex-col justify-between">
-                  <h4 className="text-xs font-black uppercase tracking-wider text-white/90 mb-2">Points Metrics</h4>
+                  <h4 className="text-xs font-black uppercase tracking-wider text-white/90 mb-2">
+                    Points Metrics
+                  </h4>
                   <div className="grid grid-cols-3 gap-2 text-center">
                     <div>
                       <p className="text-xs text-white/60">Scored</p>
-                      <p className="text-base font-bold text-[#4AEEFF]">{playerStats.pointsStats.scored}</p>
+                      <p className="text-base font-bold text-[#4AEEFF]">
+                        {playerStats.pointsStats.scored}
+                      </p>
                     </div>
                     <div>
                       <p className="text-xs text-white/60">Conceded</p>
-                      <p className="text-base font-bold text-red-400">{playerStats.pointsStats.conceded}</p>
+                      <p className="text-base font-bold text-red-400">
+                        {playerStats.pointsStats.conceded}
+                      </p>
                     </div>
                     <div>
                       <p className="text-xs text-white/60">Avg/Game</p>
-                      <p className="text-base font-bold text-white">{playerStats.pointsStats.averagePerGame}</p>
+                      <p className="text-base font-bold text-white">
+                        {playerStats.pointsStats.averagePerGame}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -569,9 +820,15 @@ const Profile: React.FC = () => {
                         className="group flex justify-between items-center rounded-[12px] border border-white/5 bg-[#061D23]/40 p-4 transition-all duration-200 hover:border-[#4AEEFF]/40 hover:bg-[#12679E]/20"
                       >
                         <div>
-                          <p className="font-bold text-white group-hover:text-[#4AEEFF] transition-colors">{match.tournamentName}</p>
-                          <p className="text-xs text-white/70">Against: {match.opponent}</p>
-                          <p className="text-[10px] text-white/40 mt-1">{new Date(match.date).toLocaleDateString()}</p>
+                          <p className="font-bold text-white group-hover:text-[#4AEEFF] transition-colors">
+                            {match.tournamentName}
+                          </p>
+                          <p className="text-xs text-white/70">
+                            Against: {match.opponent}
+                          </p>
+                          <p className="text-[10px] text-white/40 mt-1">
+                            {new Date(match.date).toLocaleDateString()}
+                          </p>
                         </div>
                         <div className="text-right">
                           <span
@@ -583,7 +840,9 @@ const Profile: React.FC = () => {
                           >
                             {match.result}
                           </span>
-                          <p className="text-xs font-bold text-white mt-1.5">{match.score}</p>
+                          <p className="text-xs font-bold text-white mt-1.5">
+                            {match.score}
+                          </p>
                         </div>
                       </div>
                     ))}
@@ -593,7 +852,9 @@ const Profile: React.FC = () => {
                 playerStats.totalMatches === 0 && (
                   <div className="text-center py-8 rounded-[12px] bg-[#061D23]/30 border border-white/5">
                     <TrophyIcon className="h-10 w-10 text-white/20 mx-auto mb-2" />
-                    <p className="text-sm font-semibold text-white/80">No competitive log entries</p>
+                    <p className="text-sm font-semibold text-white/80">
+                      No competitive log entries
+                    </p>
                   </div>
                 )
               )}
@@ -613,7 +874,8 @@ const Profile: React.FC = () => {
                       Doubles Partnerships & Teams
                     </h3>
                     <p className="text-xs text-white/60">
-                      Manage your tournament pairings, sent requests, and received invitations
+                      Manage your tournament pairings, sent requests, and
+                      received invitations
                     </p>
                   </div>
                 </div>
@@ -664,16 +926,25 @@ const Profile: React.FC = () => {
                   {doublesRegistrations.length === 0 ? (
                     <div className="text-center py-8 rounded-[12px] bg-[#061D23]/30 border border-white/5">
                       <UserGroupIcon className="h-10 w-10 text-white/20 mx-auto mb-2" />
-                      <p className="text-sm font-semibold text-white/80">No active doubles teams yet</p>
-                      <p className="text-xs text-white/50 mt-1">Register for a doubles tournament and invite a partner to form a pair.</p>
+                      <p className="text-sm font-semibold text-white/80">
+                        No active doubles teams yet
+                      </p>
+                      <p className="text-xs text-white/50 mt-1">
+                        Register for a doubles tournament and invite a partner
+                        to form a pair.
+                      </p>
                     </div>
                   ) : (
                     <div className="grid gap-3 sm:grid-cols-2">
                       {doublesRegistrations.map((reg) => {
-                        const partnerMember = reg.team?.members?.find((m: any) => m.playerId !== user?.id);
+                        const partnerMember = reg.team?.members?.find(
+                          (m: any) => m.playerId !== user?.id,
+                        );
                         const partnerName = partnerMember
                           ? `${partnerMember.player?.firstName || ""} ${partnerMember.player?.lastName || ""}`.trim()
-                          : (reg.playerId !== user?.id ? `${reg.player?.firstName || ""} ${reg.player?.lastName || ""}`.trim() : "Team Partner");
+                          : reg.playerId !== user?.id
+                            ? `${reg.player?.firstName || ""} ${reg.player?.lastName || ""}`.trim()
+                            : "Team Partner";
 
                         return (
                           <div
@@ -712,8 +983,13 @@ const Profile: React.FC = () => {
                 <div>
                   {profileReceivedInvites.length === 0 ? (
                     <div className="text-center py-8 rounded-[12px] bg-[#061D23]/30 border border-white/5">
-                      <p className="text-sm font-semibold text-white/80">No pending partner invitations</p>
-                      <p className="text-xs text-white/50 mt-1">When someone invites you to play doubles, it will show up here.</p>
+                      <p className="text-sm font-semibold text-white/80">
+                        No pending partner invitations
+                      </p>
+                      <p className="text-xs text-white/50 mt-1">
+                        When someone invites you to play doubles, it will show
+                        up here.
+                      </p>
                     </div>
                   ) : (
                     <div className="space-y-3">
@@ -724,10 +1000,20 @@ const Profile: React.FC = () => {
                         >
                           <div>
                             <p className="font-bold text-white text-sm">
-                              <span className="text-[#4AEEFF] font-black">{inv.inviter?.firstName} {inv.inviter?.lastName}</span> invited you to partner!
+                              <span className="text-[#4AEEFF] font-black">
+                                {inv.inviter?.firstName} {inv.inviter?.lastName}
+                              </span>{" "}
+                              invited you to partner!
                             </p>
                             <p className="text-xs text-white/60 mt-1">
-                              Tournament: <span className="text-white font-semibold">{inv.tournament?.name}</span> • Division: <span className="text-cyan-300 font-semibold">{inv.category?.name}</span>
+                              Tournament:{" "}
+                              <span className="text-white font-semibold">
+                                {inv.tournament?.name}
+                              </span>{" "}
+                              • Division:{" "}
+                              <span className="text-cyan-300 font-semibold">
+                                {inv.category?.name}
+                              </span>
                             </p>
                           </div>
                           <div className="flex items-center gap-2 self-end sm:self-auto flex-shrink-0">
@@ -756,8 +1042,12 @@ const Profile: React.FC = () => {
                 <div>
                   {profileSentInvites.length === 0 ? (
                     <div className="text-center py-8 rounded-[12px] bg-[#061D23]/30 border border-white/5">
-                      <p className="text-sm font-semibold text-white/80">No sent partner invitations</p>
-                      <p className="text-xs text-white/50 mt-1">Invites you send to other players will be listed here.</p>
+                      <p className="text-sm font-semibold text-white/80">
+                        No sent partner invitations
+                      </p>
+                      <p className="text-xs text-white/50 mt-1">
+                        Invites you send to other players will be listed here.
+                      </p>
                     </div>
                   ) : (
                     <div className="space-y-3">
@@ -768,25 +1058,39 @@ const Profile: React.FC = () => {
                         >
                           <div>
                             <p className="font-bold text-white text-sm">
-                              Invited: <span className="text-cyan-300 font-bold">{inv.invitee?.firstName} {inv.invitee?.lastName}</span>
+                              Invited:{" "}
+                              <span className="text-cyan-300 font-bold">
+                                {inv.invitee?.firstName} {inv.invitee?.lastName}
+                              </span>
                             </p>
                             <p className="text-xs text-white/60 mt-1">
-                              Tournament: <span className="text-white font-semibold">{inv.tournament?.name}</span> • Division: <span className="text-white font-semibold">{inv.category?.name}</span>
+                              Tournament:{" "}
+                              <span className="text-white font-semibold">
+                                {inv.tournament?.name}
+                              </span>{" "}
+                              • Division:{" "}
+                              <span className="text-white font-semibold">
+                                {inv.category?.name}
+                              </span>
                             </p>
                           </div>
                           <div className="flex items-center gap-3 self-end sm:self-auto flex-shrink-0">
-                            <span className={`px-2.5 py-1 text-[10px] font-black uppercase tracking-wider rounded-md border ${
-                              inv.status === "PENDING"
-                                ? "bg-amber-500/15 text-amber-300 border-amber-500/30"
-                                : inv.status === "ACCEPTED"
-                                ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/30"
-                                : "bg-red-500/15 text-red-300 border-red-500/30"
-                            }`}>
+                            <span
+                              className={`px-2.5 py-1 text-[10px] font-black uppercase tracking-wider rounded-md border ${
+                                inv.status === "PENDING"
+                                  ? "bg-amber-500/15 text-amber-300 border-amber-500/30"
+                                  : inv.status === "ACCEPTED"
+                                    ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/30"
+                                    : "bg-red-500/15 text-red-300 border-red-500/30"
+                              }`}
+                            >
                               {inv.status}
                             </span>
                             {inv.status === "PENDING" && (
                               <button
-                                onClick={() => handleProfileCancelInvite(inv.id)}
+                                onClick={() =>
+                                  handleProfileCancelInvite(inv.id)
+                                }
                                 className="px-3 py-1 rounded-lg border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-red-300 text-xs font-bold transition-all"
                               >
                                 Cancel
@@ -807,16 +1111,27 @@ const Profile: React.FC = () => {
             <section className="rounded-[16px] border border-white/20 bg-[#061D23]/5 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl">
               <div className="mb-4 flex items-center gap-3">
                 <AcademicCapIcon className="h-5 w-5 text-[#4AEEFF]" />
-                <h3 className="font-bold uppercase tracking-wider text-white">Referee Credentials</h3>
+                <h3 className="font-bold uppercase tracking-wider text-white">
+                  Referee Credentials
+                </h3>
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="rounded-[12px] bg-[#061D23]/60 p-4 border border-white/5">
-                  <p className="text-xs text-[#4AEEFF]/80 uppercase font-bold tracking-wider">Certification Awarded</p>
-                  <p className="font-semibold text-white mt-1">{profile.refereeProfile.certification || "Not Specified"}</p>
+                  <p className="text-xs text-[#4AEEFF]/80 uppercase font-bold tracking-wider">
+                    Certification Awarded
+                  </p>
+                  <p className="font-semibold text-white mt-1">
+                    {profile.refereeProfile.certification || "Not Specified"}
+                  </p>
                 </div>
                 <div className="rounded-[12px] bg-[#061D23]/60 p-4 border border-white/5">
-                  <p className="text-xs text-[#4AEEFF]/80 uppercase font-bold tracking-wider">Experience Level</p>
-                  <p className="font-semibold text-white mt-1">{profile.refereeProfile.experienceYears || 0} Professional Years</p>
+                  <p className="text-xs text-[#4AEEFF]/80 uppercase font-bold tracking-wider">
+                    Experience Level
+                  </p>
+                  <p className="font-semibold text-white mt-1">
+                    {profile.refereeProfile.experienceYears || 0} Professional
+                    Years
+                  </p>
                 </div>
               </div>
             </section>
@@ -827,11 +1142,17 @@ const Profile: React.FC = () => {
             <section className="rounded-[16px] border border-white/20 bg-[#061D23]/5 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl">
               <div className="mb-4 flex items-center gap-3">
                 <IdentificationIcon className="h-5 w-5 text-[#4AEEFF]" />
-                <h3 className="font-bold uppercase tracking-wider text-white">Management Details</h3>
+                <h3 className="font-bold uppercase tracking-wider text-white">
+                  Management Details
+                </h3>
               </div>
               <div className="rounded-[12px] bg-[#061D23]/60 p-4 border border-white/5">
-                <p className="text-xs text-[#4AEEFF]/80 uppercase font-bold tracking-wider">Department Domain</p>
-                <p className="font-semibold text-white mt-1">{profile.adminProfile.department || "General Administration"}</p>
+                <p className="text-xs text-[#4AEEFF]/80 uppercase font-bold tracking-wider">
+                  Department Domain
+                </p>
+                <p className="font-semibold text-white mt-1">
+                  {profile.adminProfile.department || "General Administration"}
+                </p>
               </div>
             </section>
           )}
@@ -844,7 +1165,9 @@ const Profile: React.FC = () => {
         >
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <label className="block text-xs font-black uppercase tracking-widest text-[#4AEEFF] mb-2">First Name</label>
+              <label className="block text-xs font-black uppercase tracking-widest text-[#4AEEFF] mb-2">
+                First Name
+              </label>
               <input
                 type="text"
                 name="firstName"
@@ -855,7 +1178,9 @@ const Profile: React.FC = () => {
               />
             </div>
             <div>
-              <label className="block text-xs font-black uppercase tracking-widest text-[#4AEEFF] mb-2">Last Name</label>
+              <label className="block text-xs font-black uppercase tracking-widest text-[#4AEEFF] mb-2">
+                Last Name
+              </label>
               <input
                 type="text"
                 name="lastName"
@@ -868,7 +1193,9 @@ const Profile: React.FC = () => {
           </div>
 
           <div>
-            <label className="block text-xs font-black uppercase tracking-widest text-[#4AEEFF] mb-2">Phone Info</label>
+            <label className="block text-xs font-black uppercase tracking-widest text-[#4AEEFF] mb-2">
+              Phone Info
+            </label>
             <input
               type="tel"
               name="phone"
@@ -881,18 +1208,28 @@ const Profile: React.FC = () => {
 
           {/* Media management layout */}
           <div className="border-t border-white/10 pt-5">
-            <h3 className="text-xs font-black uppercase tracking-widest text-[#4AEEFF] mb-3">Avatar Settings</h3>
+            <h3 className="text-xs font-black uppercase tracking-widest text-[#4AEEFF] mb-3">
+              Avatar Settings
+            </h3>
 
             <div className="flex flex-wrap items-center gap-5">
               {profile.profileImage && (
                 <div className="relative h-16 w-16 rounded-full overflow-hidden border-2 border-white/20 bg-[#061D23]">
-                  <img src={getProfileImageUrl(profile.profileImage)} alt="Current profile" className="h-full w-full object-cover" />
+                  <img
+                    src={getProfileImageUrl(profile.profileImage)}
+                    alt="Current profile"
+                    className="h-full w-full object-cover"
+                  />
                 </div>
               )}
 
               {imagePreview && (
                 <div className="relative h-16 w-16 rounded-full border-2 border-[#4AEEFF] p-0.5">
-                  <img src={imagePreview} alt="Preview" className="h-full w-full rounded-full object-cover" />
+                  <img
+                    src={imagePreview}
+                    alt="Preview"
+                    className="h-full w-full rounded-full object-cover"
+                  />
                   <button
                     type="button"
                     onClick={() => {
@@ -908,7 +1245,12 @@ const Profile: React.FC = () => {
 
               <label className="inline-flex h-10 cursor-pointer items-center justify-center rounded-lg border border-white/10 bg-[#061D23]/40 px-4 text-xs font-bold uppercase tracking-wider text-[#4AEEFF] hover:bg-[#12679E]/40 transition-all">
                 {imagePreview ? "Change Photo Selection" : "Select Avatar File"}
-                <input type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageChange}
+                  className="hidden"
+                />
               </label>
 
               {imagePreview && (
@@ -922,39 +1264,62 @@ const Profile: React.FC = () => {
                 </button>
               )}
             </div>
-            <p className="mt-2 text-[10px] text-white/50 uppercase tracking-wider">Accepted file weights: JPG, PNG, GIF up to 5MB.</p>
+            <p className="mt-2 text-[10px] text-white/50 uppercase tracking-wider">
+              Accepted file weights: JPG, PNG, GIF up to 5MB.
+            </p>
           </div>
 
           {user?.role === "PLAYER" && (
             <div className="grid gap-4 border-t border-white/10 pt-5 sm:grid-cols-2">
               <div>
-                <label className="block text-xs font-black uppercase tracking-widest text-[#4AEEFF] mb-2">Skill Rating Tier</label>
+                <label className="block text-xs font-black uppercase tracking-widest text-[#4AEEFF] mb-2">
+                  Skill Rating Tier
+                </label>
                 <select
                   name="skillLevel"
                   value={formData.playerProfile.skillLevel}
                   onChange={handleChange}
                   className="w-full rounded-lg border border-white/10 bg-[#061D23]/60 px-4 py-3 text-sm text-white focus:border-[#4AEEFF] focus:outline-none focus:ring-1 focus:ring-[#4AEEFF]"
                 >
-                  <option value="Beginner" className="bg-[#061D23] text-white">Beginner</option>
-                  <option value="Intermediate" className="bg-[#061D23] text-white">Intermediate</option>
-                  <option value="Advanced" className="bg-[#061D23] text-white">Advanced</option>
+                  <option value="Beginner" className="bg-[#061D23] text-white">
+                    Beginner
+                  </option>
+                  <option
+                    value="Intermediate"
+                    className="bg-[#061D23] text-white"
+                  >
+                    Intermediate
+                  </option>
+                  <option value="Advanced" className="bg-[#061D23] text-white">
+                    Advanced
+                  </option>
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-black uppercase tracking-widest text-[#4AEEFF] mb-2">Gender</label>
+                <label className="block text-xs font-black uppercase tracking-widest text-[#4AEEFF] mb-2">
+                  Gender
+                </label>
                 <select
                   name="gender"
                   value={formData.playerProfile.gender}
                   onChange={handleChange}
                   className="w-full rounded-lg border border-white/10 bg-[#061D23]/60 px-4 py-3 text-sm text-white focus:border-[#4AEEFF] focus:outline-none focus:ring-1 focus:ring-[#4AEEFF]"
                 >
-                  <option value="" className="bg-[#061D23] text-white">Select Gender</option>
-                  <option value="MALE" className="bg-[#061D23] text-white">Male</option>
-                  <option value="FEMALE" className="bg-[#061D23] text-white">Female</option>
+                  <option value="" className="bg-[#061D23] text-white">
+                    Select Gender
+                  </option>
+                  <option value="MALE" className="bg-[#061D23] text-white">
+                    Male
+                  </option>
+                  <option value="FEMALE" className="bg-[#061D23] text-white">
+                    Female
+                  </option>
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-black uppercase tracking-widest text-[#4AEEFF] mb-2">League / Club Name</label>
+                <label className="block text-xs font-black uppercase tracking-widest text-[#4AEEFF] mb-2">
+                  League / Club Name
+                </label>
                 <input
                   type="text"
                   name="clubAffiliation"
@@ -1005,7 +1370,7 @@ const Profile: React.FC = () => {
           )}
         </div>
       </footer>
-    </>
+    </>,
   );
 };
 

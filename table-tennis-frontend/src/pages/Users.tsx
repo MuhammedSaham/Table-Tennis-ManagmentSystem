@@ -4,11 +4,12 @@ import { useAuth } from "../context/AuthContext";
 import api from "../services/api";
 import toast from "react-hot-toast";
 import {
-  EyeIcon,
   PlusCircleIcon,
   UserIcon,
   EnvelopeIcon,
   TrashIcon,
+  MagnifyingGlassIcon,
+  XMarkIcon,
 } from "@heroicons/react/24/outline";
 
 interface User {
@@ -29,6 +30,7 @@ const Users: React.FC = () => {
   const { user } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
   const [showAddPlayerModal, setShowAddPlayerModal] = useState(false);
   const [createdPlayerData, setCreatedPlayerData] = useState<{
     email: string;
@@ -50,7 +52,11 @@ const Users: React.FC = () => {
   const [editingRankId, setEditingRankId] = useState<string | null>(null);
   const [rankingInput, setRankingInput] = useState<string>("");
   const [rankingNote, setRankingNote] = useState<string>("");
-  const [activeTab, setActiveTab] = useState<"CLUB" | "GUEST">("CLUB");
+  const [activeTab, setActiveTab] = useState<
+    "CLUB" | "GUEST" | "REFEREE" | "ADMIN"
+  >("CLUB");
+  const [userToDelete, setUserToDelete] = useState<User | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     fetchUsers();
@@ -67,26 +73,54 @@ const Users: React.FC = () => {
     }
   };
 
-  // Split players for tabs
+  // Split players and roles for tabs
   const clubMembers = users.filter(
-    (u) => u.role !== "PLAYER" || u.isClubMember === true
+    (u) => u.role === "PLAYER" && u.isClubMember === true,
   );
   const guestPlayers = users.filter(
-    (u) => u.role === "PLAYER" && !u.isClubMember
+    (u) => u.role === "PLAYER" && !u.isClubMember,
   );
-  const displayedUsers = activeTab === "CLUB" ? clubMembers : guestPlayers;
+  const referees = users.filter((u) => u.role === "REFEREE");
+  const admins = users.filter((u) => u.role === "ADMIN");
 
-  const handleDeleteUser = async (id: string) => {
-    if (!window.confirm("Are you sure you want to delete this user?")) {
-      return;
+  useEffect(() => {
+    if (activeTab === "REFEREE" && referees.length === 0) {
+      setActiveTab("CLUB");
+    } else if (activeTab === "ADMIN" && admins.length === 0) {
+      setActiveTab("CLUB");
     }
+  }, [users, activeTab, referees.length, admins.length]);
+
+  let tabUsers: User[] = [];
+  if (activeTab === "CLUB") tabUsers = clubMembers;
+  else if (activeTab === "GUEST") tabUsers = guestPlayers;
+  else if (activeTab === "REFEREE") tabUsers = referees;
+  else if (activeTab === "ADMIN") tabUsers = admins;
+
+  // Filter displayed users by searchQuery (matches first name, last name, full name, or email)
+  const displayedUsers = tabUsers.filter((u) => {
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase().trim();
+    const fullName = `${u.firstName || ""} ${u.lastName || ""}`.toLowerCase();
+    const email = (u.email || "").toLowerCase();
+    return fullName.includes(q) || email.includes(q);
+  });
+
+  const confirmDeleteUser = async () => {
+    if (!userToDelete) return;
+    setDeleting(true);
 
     try {
-      await api.delete(`/users/${id}`);
-      toast.success("User deleted successfully");
+      await api.delete(`/users/${userToDelete.id}`);
+      toast.success(
+        `Player "${userToDelete.firstName} ${userToDelete.lastName}" deleted successfully`,
+      );
+      setUserToDelete(null);
       fetchUsers();
-    } catch (error) {
-      toast.error("Failed to delete user");
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Failed to delete user");
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -277,47 +311,129 @@ const Users: React.FC = () => {
         </button>
       </header>
 
-      {/* TABS */}
-      <div className="flex gap-3">
-        <button
-          id="tab-club-members-admin"
-          onClick={() => setActiveTab("CLUB")}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-black text-xs uppercase tracking-wider transition-all duration-200 focus:outline-none ${
-            activeTab === "CLUB"
-              ? "bg-[#4AEEFF] text-[#061D23] shadow-lg"
-              : "bg-white/5 text-white/70 border border-white/10 hover:bg-white/10"
-          }`}
-        >
-          🏅 Club Members
-          <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-black ${
-            activeTab === "CLUB" ? "bg-[#061D23]/30 text-[#061D23]" : "bg-[#4AEEFF]/20 text-[#4AEEFF]"
-          }`}>
-            {clubMembers.filter(u => u.role === "PLAYER").length}
-          </span>
-        </button>
+      {/* SEARCH AND TABS CONTROL BAR */}
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        {/* TABS */}
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            id="tab-club-members-admin"
+            onClick={() => setActiveTab("CLUB")}
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-black text-xs uppercase tracking-wider transition-all duration-200 focus:outline-none ${
+              activeTab === "CLUB"
+                ? "bg-[#4AEEFF] text-[#061D23] shadow-lg"
+                : "bg-white/5 text-white/70 border border-white/10 hover:bg-white/10"
+            }`}
+          >
+            🏅 Club Members
+            <span
+              className={`px-1.5 py-0.5 rounded-full text-[10px] font-black ${
+                activeTab === "CLUB"
+                  ? "bg-[#061D23]/30 text-[#061D23]"
+                  : "bg-[#4AEEFF]/20 text-[#4AEEFF]"
+              }`}
+            >
+              {clubMembers.length}
+            </span>
+          </button>
 
-        <button
-          id="tab-guest-players-admin"
-          onClick={() => setActiveTab("GUEST")}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-black text-xs uppercase tracking-wider transition-all duration-200 focus:outline-none ${
-            activeTab === "GUEST"
-              ? "bg-[#4AEEFF] text-[#061D23] shadow-lg"
-              : "bg-white/5 text-white/70 border border-white/10 hover:bg-white/10"
-          }`}
-        >
-          👤 Guest Players
-          <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-black ${
-            activeTab === "GUEST" ? "bg-[#061D23]/30 text-[#061D23]" : "bg-[#4AEEFF]/20 text-[#4AEEFF]"
-          }`}>
-            {guestPlayers.length}
-          </span>
-        </button>
+          <button
+            id="tab-guest-players-admin"
+            onClick={() => setActiveTab("GUEST")}
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-black text-xs uppercase tracking-wider transition-all duration-200 focus:outline-none ${
+              activeTab === "GUEST"
+                ? "bg-[#4AEEFF] text-[#061D23] shadow-lg"
+                : "bg-white/5 text-white/70 border border-white/10 hover:bg-white/10"
+            }`}
+          >
+            👤 Guest Players
+            <span
+              className={`px-1.5 py-0.5 rounded-full text-[10px] font-black ${
+                activeTab === "GUEST"
+                  ? "bg-[#061D23]/30 text-[#061D23]"
+                  : "bg-[#4AEEFF]/20 text-[#4AEEFF]"
+              }`}
+            >
+              {guestPlayers.length}
+            </span>
+          </button>
 
-        <p className="ml-2 self-center text-xs text-white/40">
-          {activeTab === "CLUB"
-            ? "🏅 Ranked club players + admins & referees"
-            : "👤 Self-registered players without a club ranking"}
-        </p>
+          {/* Referees Button - Only displays when there are Referees */}
+          {referees.length > 0 && (
+            <button
+              id="tab-referees-admin"
+              onClick={() => setActiveTab("REFEREE")}
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-black text-xs uppercase tracking-wider transition-all duration-200 focus:outline-none ${
+                activeTab === "REFEREE"
+                  ? "bg-[#4AEEFF] text-[#061D23] shadow-lg"
+                  : "bg-white/5 text-white/70 border border-white/10 hover:bg-white/10"
+              }`}
+            >
+              🛡️ Referees
+              <span
+                className={`px-1.5 py-0.5 rounded-full text-[10px] font-black ${
+                  activeTab === "REFEREE"
+                    ? "bg-[#061D23]/30 text-[#061D23]"
+                    : "bg-[#4AEEFF]/20 text-[#4AEEFF]"
+                }`}
+              >
+                {referees.length}
+              </span>
+            </button>
+          )}
+
+          {/* Admins Button - Only displays when there are Admins */}
+          {admins.length > 0 && (
+            <button
+              id="tab-admins-admin"
+              onClick={() => setActiveTab("ADMIN")}
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-black text-xs uppercase tracking-wider transition-all duration-200 focus:outline-none ${
+                activeTab === "ADMIN"
+                  ? "bg-[#4AEEFF] text-[#061D23] shadow-lg"
+                  : "bg-white/5 text-white/70 border border-white/10 hover:bg-white/10"
+              }`}
+            >
+              👑 Admins
+              <span
+                className={`px-1.5 py-0.5 rounded-full text-[10px] font-black ${
+                  activeTab === "ADMIN"
+                    ? "bg-[#061D23]/30 text-[#061D23]"
+                    : "bg-[#4AEEFF]/20 text-[#4AEEFF]"
+                }`}
+              >
+                {admins.length}
+              </span>
+            </button>
+          )}
+        </div>
+
+        {/* PLAYER SEARCH MODULE */}
+        <div className="flex items-center gap-2 w-full lg:w-96">
+          <div className="relative flex-1">
+            <MagnifyingGlassIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#4AEEFF]/80" />
+            <input
+              type="text"
+              placeholder="Search player by name or email..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-9 py-2.5 rounded-xl border border-white/20 bg-[#061D23]/60 text-xs text-white placeholder-white/40 focus:outline-none focus:border-[#4AEEFF] transition-all shadow-inner font-mono"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery("")}
+                className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 text-white/50 hover:text-white transition-colors"
+                title="Clear search"
+              >
+                <XMarkIcon className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+          <button
+            onClick={() => {}}
+            className="px-4 py-2.5 rounded-xl bg-[#4AEEFF] text-[#061D23] hover:bg-white text-xs font-black uppercase tracking-wider transition-all shadow-md shrink-0"
+          >
+            Search
+          </button>
+        </div>
       </div>
 
       {/* CORE INDUSTRIAL DATA TABLE LAYER */}
@@ -329,198 +445,237 @@ const Users: React.FC = () => {
                 <th className="px-6 py-4">User</th>
                 <th className="px-6 py-4">Email</th>
                 <th className="px-6 py-4">Role Matrix</th>
-                <th className="px-6 py-4">Leaderboard Rank</th>
+                {activeTab === "CLUB" && (
+                  <th className="px-6 py-4">Leaderboard Rank</th>
+                )}
                 <th className="px-6 py-4">Joined Date</th>
                 <th className="px-6 py-4 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5 text-base">
-              {displayedUsers.map((userItem) => (
-                <tr
-                  key={userItem.id}
-                  className="group hover:bg-[#12679E]/10 transition-colors duration-200"
-                >
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-[#061D23]/60 font-bold text-white tracking-tighter">
-                        {userItem.firstName[0].toUpperCase()}
-                        {userItem.lastName[0].toUpperCase()}
+              {displayedUsers.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={activeTab === "CLUB" ? 6 : 5}
+                    className="px-6 py-12 text-center"
+                  >
+                    <div className="flex flex-col items-center justify-center space-y-3">
+                      <div className="p-3 rounded-full bg-[#4AEEFF]/10 border border-[#4AEEFF]/30 text-[#4AEEFF]">
+                        <MagnifyingGlassIcon className="h-6 w-6" />
                       </div>
-                      <div>
-                        <p className="font-bold text-white group-hover:text-[#4AEEFF] transition-colors text-base">
-                          {userItem.firstName} {userItem.lastName}
-                        </p>
-                        {userItem.phone && (
-                          <p className="text-sm text-white/50 font-mono mt-0.5">
-                            {userItem.phone}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-white/80 font-mono text-sm break-all">
-                    {userItem.email}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span
-                      className={`inline-block px-2.5 py-0.5 text-xs font-black uppercase tracking-wider rounded-md ${getRoleBadgeStyles(userItem.role)}`}
-                    >
-                      {userItem.role}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    {userItem.role === "PLAYER" && (
-                      <div className="flex items-center gap-2">
-                        {userItem.ranking ? (
-                          <>
-                            <span className="font-black text-[#4AEEFF] text-lg">
-                              #{userItem.ranking}
-                            </span>
-                            {userItem.rankingNote && (
-                              <span className="text-sm text-white/60 bg-white/5 px-1.5 py-0.5 rounded border border-white/10">
-                                {userItem.rankingNote}
-                              </span>
-                            )}
-                          </>
-                        ) : (
-                          <span className="text-sm italic text-white/40">
-                            Unranked
-                          </span>
-                        )}
-                      </div>
-                    )}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-white/70 font-mono">
-                    {new Date(userItem.createdAt).toLocaleDateString(
-                      undefined,
-                      {
-                        year: "numeric",
-                        month: "short",
-                        day: "numeric",
-                      },
-                    )}
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center justify-end gap-2">
-                      <Link
-                        to={`/profile/${userItem.id}`}
-                        className="rounded-lg p-2 text-white/70 border border-white/10 bg-[#061D23]/40 hover:border-[#4AEEFF] hover:text-[#4AEEFF] transition-all"
-                        title="View Profile"
-                      >
-                        <EyeIcon className="w-4 h-4" />
-                      </Link>
-
-                      {/* Inline Ranking Control Config */}
-                      {userItem.role === "PLAYER" &&
-                        (editingRankId === userItem.id ? (
-                          <div className="flex items-center gap-1.5 bg-[#061D23]/90 border border-[#4AEEFF]/40 rounded-lg p-1 animate-fadeIn">
-                            <input
-                              type="number"
-                              min="1"
-                              max="999"
-                              placeholder="Rank"
-                              value={rankingInput}
-                              onChange={(e) => setRankingInput(e.target.value)}
-                              className="w-16 px-2 py-1 text-xs border border-white/10 rounded bg-[#061D23] text-white focus:outline-none focus:border-[#4AEEFF]"
-                              autoFocus
-                            />
-                            <input
-                              type="text"
-                              placeholder="Note"
-                              value={rankingNote}
-                              onChange={(e) => setRankingNote(e.target.value)}
-                              className="w-20 px-2 py-1 text-xs border border-white/10 rounded bg-[#061D23] text-white focus:outline-none focus:border-[#4AEEFF]"
-                            />
-                            <button
-                              onClick={() => handleUpdateRanking(userItem.id)}
-                              className="px-1 text-emerald-400 text-xs font-black hover:text-emerald-300"
-                              title="Save"
-                            >
-                              ✓
-                            </button>
-                            <button
-                              onClick={() => {
-                                setEditingRankId(null);
-                                setRankingInput("");
-                                setRankingNote("");
-                              }}
-                              className="px-1 text-white/40 text-xs font-black hover:text-white"
-                              title="Cancel"
-                            >
-                              ✕
-                            </button>
-                          </div>
-                        ) : (
-                          <button
-                            onClick={() => {
-                              setEditingRankId(userItem.id);
-                              setRankingInput(
-                                userItem.ranking?.toString() || "",
-                              );
-                              setRankingNote(userItem.rankingNote || "");
-                            }}
-                            className="rounded-lg p-2 text-white/70 border border-white/10 bg-[#061D23]/40 hover:border-[#4AEEFF] hover:text-[#4AEEFF] transition-all text-xs"
-                            title={
-                              userItem.ranking ? "Edit Ranking" : "Set Ranking"
-                            }
-                          >
-                            🏆
-                          </button>
-                        ))}
-
-                      {/* Interactive Role Selector Dropdown */}
-                      {userItem.id !== user?.id &&
-                        !userItem.isSuperAdmin &&
-                        (() => {
-                          const currentIsSuperAdmin =
-                            (user as any)?.isSuperAdmin ?? false;
-                          const canChangeRole =
-                            currentIsSuperAdmin || userItem.role !== "ADMIN";
-
-                          return canChangeRole ? (
-                            <select
-                              value={userItem.role}
-                              onChange={(e) =>
-                                handleRoleChange(userItem.id, e.target.value)
-                              }
-                              className="text-xs border border-white/10 rounded-md bg-[#061D23] text-white py-1.5 px-2 focus:outline-none focus:border-[#4AEEFF] cursor-pointer"
-                            >
-                              <option value="PLAYER">Player</option>
-                              <option value="REFEREE">Referee</option>
-                              {currentIsSuperAdmin && (
-                                <option value="ADMIN">Admin</option>
-                              )}
-                            </select>
-                          ) : null;
-                        })()}
-
-                      {/* Badges Stack */}
-                      {userItem.isSuperAdmin && (
-                        <span className="px-2.5 py-1 text-[10px] font-black uppercase tracking-wider rounded-md bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                          ⭐ Main Admin
-                        </span>
-                      )}
-
-                      {userItem.id === user?.id && (
-                        <span className="px-2.5 py-1 text-[10px] font-black uppercase tracking-wider rounded-md bg-white/10 text-white/60 border border-white/10">
-                          You
-                        </span>
-                      )}
-
-                      {/* Row Delete Option */}
-                      {userItem.id !== user?.id && !userItem.isSuperAdmin && (
+                      <p className="text-sm font-bold text-white/80">
+                        {searchQuery.trim()
+                          ? `No players found matching "${searchQuery}"`
+                          : "No player records found"}
+                      </p>
+                      {searchQuery.trim() && (
                         <button
-                          onClick={() => handleDeleteUser(userItem.id)}
-                          className="rounded-lg p-2 text-red-400 border border-red-500/10 bg-[#061D23]/40 hover:border-red-500 hover:bg-red-500/10 transition-all"
-                          title="Delete User"
+                          onClick={() => setSearchQuery("")}
+                          className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-xs text-[#4AEEFF] font-mono transition-all"
                         >
-                          <TrashIcon className="w-4 h-4" />
+                          Reset Search Filter
                         </button>
                       )}
                     </div>
                   </td>
                 </tr>
-              ))}
+              ) : (
+                displayedUsers.map((userItem) => (
+                  <tr
+                    key={userItem.id}
+                    className="group hover:bg-[#12679E]/10 transition-colors duration-200"
+                  >
+                    <td className="px-6 py-4">
+                      <Link
+                        to={`/profile/${userItem.id}`}
+                        className="flex items-center gap-3 group/player cursor-pointer"
+                        title="Click to view player profile"
+                      >
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-[#061D23]/60 font-bold text-[#4AEEFF] group-hover/player:border-[#4AEEFF] transition-colors tracking-tighter">
+                          {userItem.firstName[0].toUpperCase()}
+                          {userItem.lastName[0].toUpperCase()}
+                        </div>
+                        <div>
+                          <p className="font-bold text-white group-hover/player:text-[#4AEEFF] transition-colors text-base flex items-center gap-1">
+                            <span>
+                              {userItem.firstName} {userItem.lastName}
+                            </span>
+                            <span className="text-xs text-[#4AEEFF] opacity-0 group-hover/player:opacity-100 transition-opacity">
+                              ↗
+                            </span>
+                          </p>
+                          {userItem.phone && (
+                            <p className="text-sm text-white/50 font-mono mt-0.5">
+                              {userItem.phone}
+                            </p>
+                          )}
+                        </div>
+                      </Link>
+                    </td>
+                    <td className="px-6 py-4 text-white/80 font-mono text-sm break-all">
+                      {userItem.email}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span
+                        className={`inline-block px-2.5 py-0.5 text-xs font-black uppercase tracking-wider rounded-md ${getRoleBadgeStyles(userItem.role)}`}
+                      >
+                        {userItem.role}
+                      </span>
+                    </td>
+                    {activeTab === "CLUB" && (
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-2">
+                          {userItem.ranking ? (
+                            <>
+                              <span className="font-black text-[#4AEEFF] text-lg">
+                                #{userItem.ranking}
+                              </span>
+                              {userItem.rankingNote && (
+                                <span className="text-sm text-white/60 bg-white/5 px-1.5 py-0.5 rounded border border-white/10">
+                                  {userItem.rankingNote}
+                                </span>
+                              )}
+                            </>
+                          ) : (
+                            <span className="text-sm italic text-white/40">
+                              Unranked
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                    )}
+                    <td className="px-6 py-4 text-sm text-white/70 font-mono">
+                      {new Date(userItem.createdAt).toLocaleDateString(
+                        undefined,
+                        {
+                          year: "numeric",
+                          month: "short",
+                          day: "numeric",
+                        },
+                      )}
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center justify-end gap-2">
+                        {/* Inline Ranking Control Config - Strictly for Club Members */}
+                        {userItem.role === "PLAYER" &&
+                          userItem.isClubMember &&
+                          (editingRankId === userItem.id ? (
+                            <div className="flex items-center gap-1.5 bg-[#061D23]/90 border border-[#4AEEFF]/40 rounded-lg p-1 animate-fadeIn">
+                              <input
+                                type="number"
+                                min="1"
+                                max="999"
+                                placeholder="Rank"
+                                value={rankingInput}
+                                onChange={(e) =>
+                                  setRankingInput(e.target.value)
+                                }
+                                className="w-16 px-2 py-1 text-xs border border-white/10 rounded bg-[#061D23] text-white focus:outline-none focus:border-[#4AEEFF]"
+                                autoFocus
+                              />
+                              <input
+                                type="text"
+                                placeholder="Note"
+                                value={rankingNote}
+                                onChange={(e) => setRankingNote(e.target.value)}
+                                className="w-20 px-2 py-1 text-xs border border-white/10 rounded bg-[#061D23] text-white focus:outline-none focus:border-[#4AEEFF]"
+                              />
+                              <button
+                                onClick={() => handleUpdateRanking(userItem.id)}
+                                className="px-1 text-emerald-400 text-xs font-black hover:text-emerald-300"
+                                title="Save"
+                              >
+                                ✓
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setEditingRankId(null);
+                                  setRankingInput("");
+                                  setRankingNote("");
+                                }}
+                                className="px-1 text-white/40 text-xs font-black hover:text-white"
+                                title="Cancel"
+                              >
+                                ✕
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => {
+                                setEditingRankId(userItem.id);
+                                setRankingInput(
+                                  userItem.ranking?.toString() || "",
+                                );
+                                setRankingNote(userItem.rankingNote || "");
+                              }}
+                              className="rounded-lg p-2 text-white/70 border border-white/10 bg-[#061D23]/40 hover:border-[#4AEEFF] hover:text-[#4AEEFF] transition-all text-xs"
+                              title={
+                                userItem.ranking
+                                  ? "Edit Ranking"
+                                  : "Set Ranking"
+                              }
+                            >
+                              🏆
+                            </button>
+                          ))}
+
+                        {/* Interactive Role Selector Dropdown */}
+                        {userItem.id !== user?.id &&
+                          !userItem.isSuperAdmin &&
+                          (() => {
+                            const currentIsSuperAdmin =
+                              (user as any)?.isSuperAdmin ?? false;
+                            const canChangeRole =
+                              currentIsSuperAdmin || userItem.role !== "ADMIN";
+
+                            // Guest players are users who are not club members
+                            const isGuestPlayer = !userItem.isClubMember;
+
+                            return canChangeRole ? (
+                              <select
+                                value={userItem.role}
+                                onChange={(e) =>
+                                  handleRoleChange(userItem.id, e.target.value)
+                                }
+                                className="text-xs border border-white/10 rounded-md bg-[#061D23] text-white py-1.5 px-2 focus:outline-none focus:border-[#4AEEFF] cursor-pointer"
+                              >
+                                <option value="PLAYER">Player</option>
+                                <option value="REFEREE">Referee</option>
+                                {!isGuestPlayer && currentIsSuperAdmin && (
+                                  <option value="ADMIN">Admin</option>
+                                )}
+                              </select>
+                            ) : null;
+                          })()}
+
+                        {/* Badges Stack */}
+                        {userItem.isSuperAdmin && (
+                          <span className="px-2.5 py-1 text-[10px] font-black uppercase tracking-wider rounded-md bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                            ⭐ Main Admin
+                          </span>
+                        )}
+
+                        {userItem.id === user?.id && (
+                          <span className="px-2.5 py-1 text-[10px] font-black uppercase tracking-wider rounded-md bg-white/10 text-white/60 border border-white/10">
+                            You
+                          </span>
+                        )}
+
+                        {/* Row Delete Option */}
+                        {userItem.id !== user?.id && !userItem.isSuperAdmin && (
+                          <button
+                            onClick={() => setUserToDelete(userItem)}
+                            className="rounded-lg p-2 text-red-400 border border-red-500/10 bg-[#061D23]/40 hover:border-red-500 hover:bg-red-500/10 transition-all"
+                            title="Delete User"
+                          >
+                            <TrashIcon className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
@@ -572,7 +727,9 @@ const Users: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => {
-                          navigator.clipboard.writeText(createdPlayerData.password);
+                          navigator.clipboard.writeText(
+                            createdPlayerData.password,
+                          );
                           toast.success("Password copied to clipboard!");
                         }}
                         className="px-4 py-2.5 rounded-lg bg-[#4AEEFF] text-sm font-black uppercase tracking-wider text-[#061D23] hover:bg-white transition-all shadow-md"
@@ -617,198 +774,253 @@ const Users: React.FC = () => {
                 </p>
 
                 <form onSubmit={handleAddPlayer} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-black uppercase tracking-wider text-white/70 mb-1.5">
-                    First Name *
-                  </label>
-                  <input
-                    type="text"
-                    value={newPlayer.firstName}
-                    onChange={(e) =>
-                      setNewPlayer({ ...newPlayer, firstName: e.target.value })
-                    }
-                    required
-                    className="w-full rounded-lg border border-white/10 bg-[#061D23]/60 p-2.5 text-sm text-white focus:border-[#4AEEFF] focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-black uppercase tracking-wider text-white/70 mb-1.5">
-                    Last Name *
-                  </label>
-                  <input
-                    type="text"
-                    value={newPlayer.lastName}
-                    onChange={(e) =>
-                      setNewPlayer({ ...newPlayer, lastName: e.target.value })
-                    }
-                    required
-                    className="w-full rounded-lg border border-white/10 bg-[#061D23]/60 p-2.5 text-sm text-white focus:border-[#4AEEFF] focus:outline-none"
-                  />
-                </div>
-              </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-black uppercase tracking-wider text-white/70 mb-1.5">
+                        First Name *
+                      </label>
+                      <input
+                        type="text"
+                        value={newPlayer.firstName}
+                        onChange={(e) =>
+                          setNewPlayer({
+                            ...newPlayer,
+                            firstName: e.target.value,
+                          })
+                        }
+                        required
+                        className="w-full rounded-lg border border-white/10 bg-[#061D23]/60 p-2.5 text-sm text-white focus:border-[#4AEEFF] focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-black uppercase tracking-wider text-white/70 mb-1.5">
+                        Last Name *
+                      </label>
+                      <input
+                        type="text"
+                        value={newPlayer.lastName}
+                        onChange={(e) =>
+                          setNewPlayer({
+                            ...newPlayer,
+                            lastName: e.target.value,
+                          })
+                        }
+                        required
+                        className="w-full rounded-lg border border-white/10 bg-[#061D23]/60 p-2.5 text-sm text-white focus:border-[#4AEEFF] focus:outline-none"
+                      />
+                    </div>
+                  </div>
 
-              <div>
-                <label className="block text-xs font-black uppercase tracking-wider text-white/70 mb-1.5">
-                  Email *
-                </label>
-                <input
-                  type="email"
-                  value={newPlayer.email}
-                  onChange={(e) =>
-                    setNewPlayer({ ...newPlayer, email: e.target.value })
-                  }
-                  required
-                  className="w-full rounded-lg border border-white/10 bg-[#061D23]/60 p-2.5 text-sm text-white focus:border-[#4AEEFF] focus:outline-none"
-                />
-              </div>
+                  <div>
+                    <label className="block text-xs font-black uppercase tracking-wider text-white/70 mb-1.5">
+                      Email *
+                    </label>
+                    <input
+                      type="email"
+                      value={newPlayer.email}
+                      onChange={(e) =>
+                        setNewPlayer({ ...newPlayer, email: e.target.value })
+                      }
+                      required
+                      className="w-full rounded-lg border border-white/10 bg-[#061D23]/60 p-2.5 text-sm text-white focus:border-[#4AEEFF] focus:outline-none"
+                    />
+                  </div>
 
-              <div>
-                <label className="block text-xs font-black uppercase tracking-wider text-white/70 mb-1.5">
-                  Automated Security Access Token
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={generatedPassword}
-                    readOnly
-                    className="flex-1 rounded-lg border border-white/10 bg-[#061D23] px-3 py-2 text-sm font-mono text-[#4AEEFF] tracking-wider"
-                  />
-                  <button
-                    type="button"
-                    onClick={copyPassword}
-                    className="rounded-lg border border-white/20 bg-transparent px-3 text-sm font-bold uppercase tracking-wider text-white hover:bg-white/5 transition-all"
-                  >
-                    Copy
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setGeneratedPassword(generateRandomPassword())
-                    }
-                    className="rounded-lg bg-[#4AEEFF] px-3 text-[#061D23] hover:bg-white transition-all"
-                    title="Regenerate string"
-                  >
-                    🔄
-                  </button>
-                </div>
-                <p className="text-xs font-bold text-amber-400 mt-1.5 uppercase tracking-wide">
-                  ⚠️ Save credential. Hidden past submission phase.
-                </p>
-              </div>
+                  <div>
+                    <label className="block text-xs font-black uppercase tracking-wider text-white/70 mb-1.5">
+                      Automated Security Access Token
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={generatedPassword}
+                        readOnly
+                        className="flex-1 rounded-lg border border-white/10 bg-[#061D23] px-3 py-2 text-sm font-mono text-[#4AEEFF] tracking-wider"
+                      />
+                      <button
+                        type="button"
+                        onClick={copyPassword}
+                        className="rounded-lg border border-white/20 bg-transparent px-3 text-sm font-bold uppercase tracking-wider text-white hover:bg-white/5 transition-all"
+                      >
+                        Copy
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setGeneratedPassword(generateRandomPassword())
+                        }
+                        className="rounded-lg bg-[#4AEEFF] px-3 text-[#061D23] hover:bg-white transition-all"
+                        title="Regenerate string"
+                      >
+                        🔄
+                      </button>
+                    </div>
+                    <p className="text-xs font-bold text-amber-400 mt-1.5 uppercase tracking-wide">
+                      ⚠️ Save credential. Hidden past submission phase.
+                    </p>
+                  </div>
 
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div>
-                  <label className="block text-xs font-black uppercase tracking-wider text-white/70 mb-1.5">
-                    Phone Number
-                  </label>
-                  <input
-                    type="tel"
-                    value={newPlayer.phone}
-                    onChange={(e) =>
-                      setNewPlayer({ ...newPlayer, phone: e.target.value })
-                    }
-                    className="w-full rounded-lg border border-white/10 bg-[#061D23]/60 p-2.5 text-sm text-white placeholder-white/20 focus:border-[#4AEEFF] focus:outline-none"
-                    placeholder="e.g., 071-1234567"
-                  />
-                </div>
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <div>
+                      <label className="block text-xs font-black uppercase tracking-wider text-white/70 mb-1.5">
+                        Phone Number
+                      </label>
+                      <input
+                        type="tel"
+                        value={newPlayer.phone}
+                        onChange={(e) =>
+                          setNewPlayer({ ...newPlayer, phone: e.target.value })
+                        }
+                        className="w-full rounded-lg border border-white/10 bg-[#061D23]/60 p-2.5 text-sm text-white placeholder-white/20 focus:border-[#4AEEFF] focus:outline-none"
+                        placeholder="e.g., 071-1234567"
+                      />
+                    </div>
 
-                <div>
-                  <label className="block text-xs font-black uppercase tracking-wider text-white/70 mb-1.5">
-                    Gender *
-                  </label>
+                    <div>
+                      <label className="block text-xs font-black uppercase tracking-wider text-white/70 mb-1.5">
+                        Gender *
+                      </label>
 
-                  <select
-                    value={newPlayer.gender}
-                    onChange={(e) =>
-                      setNewPlayer({ ...newPlayer, gender: e.target.value })
-                    }
-                    required
-                    className="w-full rounded-lg border border-white/10 bg-[#061D23] p-2.5 text-sm text-white focus:border-[#4AEEFF] focus:outline-none"
-                  >
-                    <option value="">Select Gender</option>
-                    <option value="MALE">Male</option>
-                    <option value="FEMALE">Female</option>
-                  </select>
-                </div>
+                      <select
+                        value={newPlayer.gender}
+                        onChange={(e) =>
+                          setNewPlayer({ ...newPlayer, gender: e.target.value })
+                        }
+                        required
+                        className="w-full rounded-lg border border-white/10 bg-[#061D23] p-2.5 text-sm text-white focus:border-[#4AEEFF] focus:outline-none"
+                      >
+                        <option value="">Select Gender</option>
+                        <option value="MALE">Male</option>
+                        <option value="FEMALE">Female</option>
+                      </select>
+                    </div>
 
-                <div>
-                  <label className="block text-xs font-black uppercase tracking-wider text-white/70 mb-1.5">
-                    Date of Birth
-                  </label>
-                  <input
-                    type="date"
-                    value={newPlayer.dateOfBirth}
-                    onChange={(e) =>
-                      setNewPlayer({
-                        ...newPlayer,
-                        dateOfBirth: e.target.value,
-                      })
-                    }
-                    className="w-full rounded-lg border border-white/10 bg-[#061D23]/60 p-2.5 text-sm text-white focus:border-[#4AEEFF] focus:outline-none [color-scheme:dark]"
-                  />
-                </div>
-              </div>
+                    <div>
+                      <label className="block text-xs font-black uppercase tracking-wider text-white/70 mb-1.5">
+                        Date of Birth
+                      </label>
+                      <input
+                        type="date"
+                        value={newPlayer.dateOfBirth}
+                        onChange={(e) =>
+                          setNewPlayer({
+                            ...newPlayer,
+                            dateOfBirth: e.target.value,
+                          })
+                        }
+                        className="w-full rounded-lg border border-white/10 bg-[#061D23]/60 p-2.5 text-sm text-white focus:border-[#4AEEFF] focus:outline-none [color-scheme:dark]"
+                      />
+                    </div>
+                  </div>
 
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div>
-                  <label className="block text-xs font-black uppercase tracking-wider text-white/70 mb-1.5">
-                    Skill Classification
-                  </label>
-                  <select
-                    value={newPlayer.skillLevel}
-                    onChange={(e) =>
-                      setNewPlayer({ ...newPlayer, skillLevel: e.target.value })
-                    }
-                    className="w-full rounded-lg border border-white/10 bg-[#061D23] p-2.5 text-sm text-white focus:border-[#4AEEFF] focus:outline-none"
-                  >
-                    <option value="Beginner">Beginner</option>
-                    <option value="Intermediate">Intermediate</option>
-                    <option value="Advanced">Advanced</option>
-                  </select>
-                </div>
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <div>
+                      <label className="block text-xs font-black uppercase tracking-wider text-white/70 mb-1.5">
+                        Skill Classification
+                      </label>
+                      <select
+                        value={newPlayer.skillLevel}
+                        onChange={(e) =>
+                          setNewPlayer({
+                            ...newPlayer,
+                            skillLevel: e.target.value,
+                          })
+                        }
+                        className="w-full rounded-lg border border-white/10 bg-[#061D23] p-2.5 text-sm text-white focus:border-[#4AEEFF] focus:outline-none"
+                      >
+                        <option value="Beginner">Beginner</option>
+                        <option value="Intermediate">Intermediate</option>
+                        <option value="Advanced">Advanced</option>
+                      </select>
+                    </div>
 
-                <div>
-                  <label className="block text-xs font-black uppercase tracking-wider text-white/70 mb-1.5">
-                    Club / Academy Branch
-                  </label>
-                  <input
-                    type="text"
-                    value={newPlayer.clubAffiliation}
-                    onChange={(e) =>
-                      setNewPlayer({
-                        ...newPlayer,
-                        clubAffiliation: e.target.value,
-                      })
-                    }
-                    className="w-full rounded-lg border border-white/10 bg-[#061D23]/60 p-2.5 text-sm text-white placeholder-white/20 focus:border-[#4AEEFF] focus:outline-none"
-                    placeholder="e.g., City Table Tennis Club"
-                  />
-                </div>
-              </div>
+                    <div>
+                      <label className="block text-xs font-black uppercase tracking-wider text-white/70 mb-1.5">
+                        Club / Academy Branch
+                      </label>
+                      <input
+                        type="text"
+                        value={newPlayer.clubAffiliation}
+                        onChange={(e) =>
+                          setNewPlayer({
+                            ...newPlayer,
+                            clubAffiliation: e.target.value,
+                          })
+                        }
+                        className="w-full rounded-lg border border-white/10 bg-[#061D23]/60 p-2.5 text-sm text-white placeholder-white/20 focus:border-[#4AEEFF] focus:outline-none"
+                        placeholder="e.g., City Table Tennis Club"
+                      />
+                    </div>
+                  </div>
 
-              <div className="flex gap-3 pt-4">
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="flex-1 rounded-lg bg-[#4AEEFF] py-3 text-sm font-black uppercase tracking-widest text-[#061D23] transition-all hover:bg-white disabled:opacity-50"
-                >
-                  {submitting ? "Processing..." : "Add Player"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowAddPlayerModal(false)}
-                  className="flex-1 rounded-lg border border-white/20 bg-transparent py-3 text-sm font-black uppercase tracking-widest text-[#4AEEFF] transition-all hover:bg-white/5"
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
-          </>
-        )}
-      </div>
-    </div>
-  )}
+                  <div className="flex gap-3 pt-4">
+                    <button
+                      type="submit"
+                      disabled={submitting}
+                      className="flex-1 rounded-lg bg-[#4AEEFF] py-3 text-sm font-black uppercase tracking-widest text-[#061D23] transition-all hover:bg-white disabled:opacity-50"
+                    >
+                      {submitting ? "Processing..." : "Add Player"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowAddPlayerModal(false)}
+                      className="flex-1 rounded-lg border border-white/20 bg-transparent py-3 text-sm font-black uppercase tracking-widest text-[#4AEEFF] transition-all hover:bg-white/5"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* DELETE CONFIRMATION MODAL */}
+      {userToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-md animate-fadeIn">
+          <div className="w-full max-w-md rounded-2xl border border-red-500/30 bg-[#061D23]/95 p-6 sm:p-8 shadow-[0_25px_60px_-15px_rgba(239,68,68,0.3)] backdrop-blur-2xl text-center space-y-5">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-red-500/20 border border-red-500/40 text-red-400">
+              <TrashIcon className="h-8 w-8 stroke-[2]" />
+            </div>
+
+            <div>
+              <h3 className="text-xl font-black uppercase tracking-widest text-white">
+                Delete Player
+              </h3>
+              <p className="text-sm text-white/70 mt-2 leading-relaxed">
+                Are you sure you want to delete{" "}
+                <span className="font-bold text-[#4AEEFF]">
+                  {userToDelete.firstName} {userToDelete.lastName}
+                </span>
+                ?
+              </p>
+              <p className="text-xs text-red-400 font-mono mt-1 font-semibold">
+                ⚠️ This operation is permanent and cannot be undone.
+              </p>
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setUserToDelete(null)}
+                disabled={deleting}
+                className="flex-1 rounded-xl border border-white/20 bg-white/5 py-3 text-xs font-black uppercase tracking-wider text-white transition-all hover:bg-white/10 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmDeleteUser}
+                disabled={deleting}
+                className="flex-1 rounded-xl bg-red-500 py-3 text-xs font-black uppercase tracking-wider text-white transition-all hover:bg-red-600 disabled:opacity-50 shadow-lg shadow-red-500/20"
+              >
+                {deleting ? "Deleting..." : "Yes, Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* SHADED BOTTOM FOOTER BRANDING MODULE */}
       <footer className="mt-auto rounded-[16px] border border-white/10 bg-[#061D23]/25 p-5 shadow-[0_15px_40px_rgba(0,0,0,0.3)] backdrop-blur-md">
