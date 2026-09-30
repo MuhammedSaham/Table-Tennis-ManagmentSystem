@@ -761,11 +761,14 @@ const Users: React.FC = () => {
                 <div className="flex items-center justify-between pt-1 border-t border-white/5 text-[11px] text-gray-400">
                   <span>Joined Date:</span>
                   <span className="font-mono text-gray-300">
-                    {new Date(userItem.createdAt).toLocaleDateString(undefined, {
-                      year: "numeric",
-                      month: "short",
-                      day: "numeric",
-                    })}
+                    {new Date(userItem.createdAt).toLocaleDateString(
+                      undefined,
+                      {
+                        year: "numeric",
+                        month: "short",
+                        day: "numeric",
+                      },
+                    )}
                   </span>
                 </div>
               </div>
@@ -821,19 +824,20 @@ const Users: React.FC = () => {
 
                 <div className="flex items-center gap-2">
                   {/* Rank Edit Toggle for Players */}
-                  {userItem.role === "PLAYER" && editingRankId !== userItem.id && (
-                    <button
-                      onClick={() => {
-                        setEditingRankId(userItem.id);
-                        setRankingInput(userItem.ranking?.toString() || "");
-                        setRankingNote(userItem.rankingNote || "");
-                      }}
-                      className="rounded-lg px-2.5 py-1.5 text-xs font-bold text-white/80 border border-white/10 bg-[#061D23]/60 hover:border-[#4AEEFF] hover:text-[#4AEEFF]"
-                      title="Set / Edit Rank"
-                    >
-                      🏆 Rank
-                    </button>
-                  )}
+                  {userItem.role === "PLAYER" &&
+                    editingRankId !== userItem.id && (
+                      <button
+                        onClick={() => {
+                          setEditingRankId(userItem.id);
+                          setRankingInput(userItem.ranking?.toString() || "");
+                          setRankingNote(userItem.rankingNote || "");
+                        }}
+                        className="rounded-lg px-2.5 py-1.5 text-xs font-bold text-white/80 border border-white/10 bg-[#061D23]/60 hover:border-[#4AEEFF] hover:text-[#4AEEFF]"
+                        title="Set / Edit Rank"
+                      >
+                        🏆 Rank
+                      </button>
+                    )}
 
                   {/* Role Change Dropdown */}
                   {userItem.id !== user?.id &&
@@ -955,7 +959,7 @@ const Users: React.FC = () => {
                       setShowAddPlayerModal(false);
                       setCreatedPlayerData(null);
                     }}
-                    className="flex-1 rounded-lg bg-[#4AEEFF] py-3 text-sm font-black uppercase tracking-widest text-[#061D23] hover:bg-white transition-all font-bold"
+                    className="flex-1 rounded-lg bg-[#4AEEFF] py-3 text-sm font-black uppercase tracking-widest text-[#061D23] hover:bg-white transition-all"
                   >
                     Done
                   </button>
