@@ -1549,7 +1549,10 @@ const TournamentDetails: React.FC = () => {
 
       {/* Knockout Bracket Section */}
       {activeCategoryId && (
-        <div className="w-full mb-8 pt-2" style={{ minHeight: 200 }}>
+        <div
+          className="relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] w-screen mb-8 pt-4 pb-8 bg-transparent px-4 sm:px-8 lg:px-12"
+          style={{ minHeight: 200 }}
+        >
           {isAdmin && activeCategoryFormat === "KNOCKOUT" && (
             <div className="flex justify-end mb-4">
               <button

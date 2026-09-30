@@ -83,11 +83,11 @@ const fmtTime = (t?: string) =>
       })
     : "";
 
-const CW = 280;
-const CH = 88;
-const VGAP = 40;
-const HG = 56;
-const LH = 44;
+const CW = 220;
+const CH = 72;
+const VGAP = 24;
+const HG = 36;
+const LH = 34;
 
 // ─── Umpire Sheet ─────────────────────────────────────────────────────────────
 export const UmpireSheet: React.FC<{
@@ -800,35 +800,32 @@ const MatchCard: React.FC<{
       <div
         style={{
           border: `1.5px solid ${isBye ? "#e2e8f0" : done ? "#22c55e" : "#cbd5e1"}`,
-          borderRadius: 12,
+          borderRadius: 8,
           overflow: "hidden",
           background: "#ffffff",
           boxShadow: isBye
-            ? "0 2px 8px rgba(0,0,0,0.05)"
+            ? "0 1px 4px rgba(0,0,0,0.05)"
             : done
-              ? "0 4px 16px rgba(34,197,94,0.18)"
-              : "0 4px 16px rgba(0,0,0,0.12)",
-          opacity: isBye ? 0.85 : 1,
-          transition: "all 0.2s ease",
+              ? "0 2px 10px rgba(34,197,94,0.16)"
+              : "0 2px 8px rgba(0,0,0,0.08)",
+          opacity: 1,
+          transition: "all 0.15s ease",
         }}
         onMouseEnter={(e) => {
           if (!isBye) {
             (e.currentTarget as HTMLElement).style.boxShadow =
-              "0 8px 24px rgba(74, 238, 255, 0.4)";
+              "0 4px 16px rgba(74, 238, 255, 0.4)";
             (e.currentTarget as HTMLElement).style.borderColor = "#0284c7";
-            (e.currentTarget as HTMLElement).style.transform =
-              "translateY(-2px)";
           }
         }}
         onMouseLeave={(e) => {
           if (!isBye) {
             (e.currentTarget as HTMLElement).style.boxShadow = done
-              ? "0 4px 16px rgba(34,197,94,0.18)"
-              : "0 4px 16px rgba(0,0,0,0.12)";
+              ? "0 2px 10px rgba(34,197,94,0.16)"
+              : "0 2px 8px rgba(0,0,0,0.08)";
             (e.currentTarget as HTMLElement).style.borderColor = done
               ? "#22c55e"
               : "#cbd5e1";
-            (e.currentTarget as HTMLElement).style.transform = "translateY(0)";
           }
         }}
       >
@@ -837,15 +834,17 @@ const MatchCard: React.FC<{
           style={{
             background: "#f8fafc",
             borderBottom: "1px solid #e2e8f0",
-            padding: "6px 12px",
+            padding: "2px 8px",
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
+            height: 20,
+            boxSizing: "border-box",
           }}
         >
           <span
             style={{
-              fontSize: 11,
+              fontSize: 9,
               fontWeight: 800,
               color: isBye ? "#94a3b8" : accent ? accent : "#0284c7",
               letterSpacing: 0.5,
@@ -857,13 +856,13 @@ const MatchCard: React.FC<{
           {isBye ? (
             <span
               style={{
-                fontSize: 10,
+                fontSize: 8,
                 fontWeight: 800,
                 color: "#64748b",
                 background: "#f1f5f9",
                 border: "1px solid #e2e8f0",
-                padding: "2px 8px",
-                borderRadius: 10,
+                padding: "1px 5px",
+                borderRadius: 6,
                 letterSpacing: 0.5,
                 textTransform: "uppercase",
               }}
@@ -873,21 +872,21 @@ const MatchCard: React.FC<{
           ) : (
             <>
               {match.scheduledTime && (
-                <span style={{ fontSize: 10, color: "#64748b", fontWeight: 600 }}>
+                <span style={{ fontSize: 9, color: "#64748b", fontWeight: 600 }}>
                   {fmtTime(match.scheduledTime)}
                 </span>
               )}
-              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
                 {done && (
                   <span
                     style={{
-                      fontSize: 10,
+                      fontSize: 8,
                       color: "#166534",
                       fontWeight: 800,
                       background: "#dcfce7",
                       border: "1px solid #86efac",
-                      padding: "2px 8px",
-                      borderRadius: 10,
+                      padding: "1px 5px",
+                      borderRadius: 6,
                     }}
                   >
                     ✓ Done
@@ -903,15 +902,15 @@ const MatchCard: React.FC<{
                       background: "#f0f9ff",
                       border: "1px solid #bae6fd",
                       cursor: "pointer",
-                      fontSize: 10,
+                      fontSize: 8,
                       color: "#0284c7",
-                      padding: "2px 8px",
-                      borderRadius: 6,
+                      padding: "1px 5px",
+                      borderRadius: 4,
                       fontWeight: 700,
                     }}
                     title="Assign a referee to this match"
                   >
-                    👨‍⚖️ Ref
+                    Ref
                   </button>
                 )}
                 {isAdmin && !done && (
@@ -924,15 +923,15 @@ const MatchCard: React.FC<{
                       background: "#f8fafc",
                       border: "1px solid #e2e8f0",
                       cursor: "pointer",
-                      fontSize: 10,
+                      fontSize: 8,
                       color: "#475569",
-                      padding: "2px 8px",
-                      borderRadius: 6,
+                      padding: "1px 5px",
+                      borderRadius: 4,
                       fontWeight: 700,
                     }}
                     title="Edit players in this match"
                   >
-                    ✏️ Edit
+                    Edit
                   </button>
                 )}
               </div>
@@ -944,24 +943,26 @@ const MatchCard: React.FC<{
         {isBye ? (
           <div
             style={{
-              padding: "10px 12px",
+              padding: "6px 8px",
               display: "flex",
               alignItems: "center",
-              gap: 10,
+              gap: 8,
               background: "#ffffff",
+              height: 50,
+              boxSizing: "border-box",
             }}
           >
             <div
               style={{
-                width: 22,
-                height: 22,
-                borderRadius: 6,
+                width: 18,
+                height: 18,
+                borderRadius: 4,
                 background: "#f1f5f9",
                 border: "1px solid #e2e8f0",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                fontSize: 10,
+                fontSize: 9,
                 fontWeight: 800,
                 color: "#64748b",
                 flexShrink: 0,
@@ -971,7 +972,7 @@ const MatchCard: React.FC<{
             </div>
             <span
               style={{
-                fontSize: 13,
+                fontSize: 11,
                 fontWeight: 700,
                 color: "#0f172a",
                 flex: 1,
@@ -984,7 +985,7 @@ const MatchCard: React.FC<{
             </span>
             <span
               style={{
-                fontSize: 11,
+                fontSize: 9,
                 fontWeight: 800,
                 color: "#0284c7",
                 whiteSpace: "nowrap",
@@ -1012,19 +1013,21 @@ const MatchCard: React.FC<{
               <div
                 key={idx}
                 style={{
-                  padding: "8px 12px",
+                  padding: "3px 8px",
                   display: "flex",
                   alignItems: "center",
-                  gap: 10,
+                  gap: 8,
+                  height: 25,
+                  boxSizing: "border-box",
                   borderBottom: idx === 0 ? "1px solid #f1f5f9" : "none",
                   background: won ? "#f0fdf4" : "#ffffff",
                 }}
               >
                 <div
                   style={{
-                    width: 22,
-                    height: 22,
-                    borderRadius: 6,
+                    width: 17,
+                    height: 17,
+                    borderRadius: 4,
                     background: won
                       ? "#22c55e"
                       : isFilled
@@ -1034,7 +1037,7 @@ const MatchCard: React.FC<{
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    fontSize: 10,
+                    fontSize: 8,
                     fontWeight: 800,
                     color: won ? "#ffffff" : isFilled ? "#0369a1" : "#94a3b8",
                     flexShrink: 0,
@@ -1044,7 +1047,7 @@ const MatchCard: React.FC<{
                 </div>
                 <span
                   style={{
-                    fontSize: 13,
+                    fontSize: 11,
                     fontWeight: won ? 800 : isFilled ? 600 : 400,
                     color: won ? "#15803d" : isFilled ? "#0f172a" : "#94a3b8",
                     flex: 1,
@@ -1058,16 +1061,16 @@ const MatchCard: React.FC<{
                 {done && (
                   <div
                     style={{
-                      minWidth: 28,
-                      padding: "0 6px",
-                      height: 24,
-                      borderRadius: 6,
+                      minWidth: 20,
+                      padding: "0 4px",
+                      height: 17,
+                      borderRadius: 4,
                       background: won ? "#22c55e" : "#f1f5f9",
                       border: won ? "none" : "1px solid #e2e8f0",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      fontSize: 13,
+                      fontSize: 10,
                       fontWeight: 800,
                       color: won ? "#ffffff" : "#64748b",
                       flexShrink: 0,
@@ -1079,14 +1082,14 @@ const MatchCard: React.FC<{
                 {!done && canRecordScore && slot === 1 && (
                   <span
                     style={{
-                      fontSize: 9,
+                      fontSize: 8,
                       color: "#0284c7",
                       fontWeight: 800,
                       whiteSpace: "nowrap",
                       textTransform: "uppercase",
                       letterSpacing: 0.5,
                       background: "#e0f2fe",
-                      padding: "2px 6px",
+                      padding: "1px 5px",
                       borderRadius: 4,
                     }}
                   >
@@ -1126,60 +1129,134 @@ const BracketCanvas: React.FC<{
   onEdit,
   onAssignReferee,
 }) => {
-  const maxN = Math.max(...cols.map((c) => c.entries.length));
-  const bodyH = maxN * CH + (maxN - 1) * VGAP;
+  // Separate main knockout bracket columns from 3rd Place Playoff
+  const mainCols = cols.filter((c) => c.label !== "3rd Place Playoff");
+  const tpCol = cols.find((c) => c.label === "3rd Place Playoff");
+
+  // Determine height from the first/largest round (Round of 32 or Round of 16)
+  const n0 = mainCols.length > 0 ? mainCols[0].entries.length : 1;
+  const bodyH = Math.max(n0 * CH + (n0 - 1) * VGAP, CH);
   const totalW = cols.length * CW + (cols.length - 1) * HG;
 
-  const top = (n: number) => (bodyH - (n * CH + (n - 1) * VGAP)) / 2;
-  const cy = (n: number, i: number) => top(n) + i * (CH + VGAP) + CH / 2;
+  // cyMap[ci][mi] stores the exact vertical center-Y of match mi in column ci
+  const cyMap: number[][] = [];
 
+  mainCols.forEach((col, ci) => {
+    cyMap[ci] = [];
+    if (ci === 0) {
+      col.entries.forEach((_, mi) => {
+        cyMap[ci][mi] = mi * (CH + VGAP) + CH / 2;
+      });
+    } else {
+      col.entries.forEach((_, mi) => {
+        const p1 = mi * 2;
+        const p2 = mi * 2 + 1;
+        const prevCY = cyMap[ci - 1] || [];
+        if (p1 < prevCY.length && p2 < prevCY.length) {
+          // Exactly halfway between its two parent matches
+          cyMap[ci][mi] = (prevCY[p1] + prevCY[p2]) / 2;
+        } else if (p1 < prevCY.length) {
+          cyMap[ci][mi] = prevCY[p1];
+        } else {
+          cyMap[ci][mi] = mi * (CH + VGAP) + CH / 2;
+        }
+      });
+    }
+  });
+
+  // Calculate 3rd Place Playoff center Y aligned with Final if present
+  let tpCY = bodyH / 2;
+  if (tpCol && tpCol.entries.length > 0) {
+    const finalColIdx = mainCols.findIndex((c) => c.label === "Final");
+    if (finalColIdx >= 0 && cyMap[finalColIdx]?.[0] !== undefined) {
+      tpCY = cyMap[finalColIdx][0];
+    }
+  }
+
+  // Draw connector lines between consecutive knockout rounds
   const lines: React.ReactElement[] = [];
-  for (let ci = 0; ci < cols.length - 1; ci++) {
-    const lc = cols[ci],
-      rc = cols[ci + 1];
+  for (let ci = 0; ci < mainCols.length - 1; ci++) {
+    const lc = mainCols[ci],
+      rc = mainCols[ci + 1];
     const lx = ci * (CW + HG) + CW;
     const rx = (ci + 1) * (CW + HG);
     const mx = lx + HG / 2;
 
-    rc.entries.forEach((_, ri) => {
-      const rY = cy(rc.entries.length, ri);
-      const pair = [ri * 2, ri * 2 + 1].filter((i) => i < lc.entries.length);
-      pair.forEach((li) => {
-        const lY = cy(lc.entries.length, li);
+    rc.entries.forEach((rEntry, ri) => {
+      const rY = cyMap[ci + 1]?.[ri] ?? (ri * (CH + VGAP) + CH / 2);
+      const p1 = ri * 2;
+      const p2 = ri * 2 + 1;
+      const prevCY = cyMap[ci] || [];
+
+      const p1Match = lc.entries[p1]?.match;
+      const p2Match = lc.entries[p2]?.match;
+
+      const p1Done = p1Match?.status === "COMPLETED";
+      const p2Done = p2Match?.status === "COMPLETED";
+
+      // Horizontal line from Parent 1 to midpoint X
+      if (p1 < prevCY.length) {
+        const lY1 = prevCY[p1];
         lines.push(
           <line
-            key={`lh${ci}${li}${ri}`}
+            key={`lh1_${ci}_${p1}_${ri}`}
             x1={lx}
-            y1={lY}
+            y1={lY1}
             x2={mx}
-            y2={lY}
-            stroke="rgba(74, 238, 255, 0.45)"
-            strokeWidth={2}
+            y2={lY1}
+            stroke={p1Done ? "#22c55e" : "rgba(74, 238, 255, 0.7)"}
+            strokeWidth={p1Done ? 2.5 : 2}
           />,
         );
-      });
-      if (pair.length === 2) {
+      }
+
+      // Horizontal line from Parent 2 to midpoint X
+      if (p2 < prevCY.length) {
+        const lY2 = prevCY[p2];
         lines.push(
           <line
-            key={`lv${ci}${ri}`}
-            x1={mx}
-            y1={cy(lc.entries.length, pair[0])}
+            key={`lh2_${ci}_${p2}_${ri}`}
+            x1={lx}
+            y1={lY2}
             x2={mx}
-            y2={cy(lc.entries.length, pair[1])}
-            stroke="rgba(74, 238, 255, 0.45)"
+            y2={lY2}
+            stroke={p2Done ? "#22c55e" : "rgba(74, 238, 255, 0.7)"}
+            strokeWidth={p2Done ? 2.5 : 2}
+          />,
+        );
+      }
+
+      // Vertical connector between the two parents
+      if (p1 < prevCY.length && p2 < prevCY.length) {
+        const lY1 = prevCY[p1];
+        const lY2 = prevCY[p2];
+        const topY = Math.min(lY1, lY2);
+        const botY = Math.max(lY1, lY2);
+
+        lines.push(
+          <line
+            key={`lv_${ci}_${ri}`}
+            x1={mx}
+            y1={topY}
+            x2={mx}
+            y2={botY}
+            stroke="rgba(74, 238, 255, 0.7)"
             strokeWidth={2}
           />,
         );
       }
+
+      // Horizontal line from midpoint X into child match
+      const childDone = rEntry.match.status === "COMPLETED";
       lines.push(
         <line
-          key={`rh${ci}${ri}`}
+          key={`rh_${ci}_${ri}`}
           x1={mx}
           y1={rY}
           x2={rx}
           y2={rY}
-          stroke="rgba(74, 238, 255, 0.45)"
-          strokeWidth={2}
+          stroke={childDone ? "#22c55e" : "rgba(74, 238, 255, 0.7)"}
+          strokeWidth={childDone ? 2.5 : 2}
         />,
       );
     });
@@ -1205,22 +1282,22 @@ const BracketCanvas: React.FC<{
         >
           <div
             style={{
-              padding: "6px 16px",
-              borderRadius: 20,
+              padding: "4px 12px",
+              borderRadius: 14,
               background: col.accent
                 ? `${col.accent}20`
-                : "rgba(255, 255, 255, 0.07)",
+                : "rgba(255, 255, 255, 0.08)",
               border: `1px solid ${
                 col.accent ? `${col.accent}60` : "rgba(255, 255, 255, 0.15)"
               }`,
               color: col.accent ?? "#4AEEFF",
-              fontWeight: 900,
-              fontSize: 12,
-              letterSpacing: 1.5,
+              fontWeight: 800,
+              fontSize: 10,
+              letterSpacing: 1,
               textTransform: "uppercase",
               display: "flex",
               alignItems: "center",
-              gap: 6,
+              gap: 5,
             }}
           >
             {col.label === "Final" && "🏆"}
@@ -1245,9 +1322,10 @@ const BracketCanvas: React.FC<{
         {lines}
       </svg>
 
-      {/* Cards — pass onEdit down */}
-      {cols.map((col, ci) =>
-        col.entries.map(({ match, tag }, mi) => {
+      {/* Cards */}
+      {cols.map((col, ci) => {
+        const isTP = col.label === "3rd Place Playoff";
+        return col.entries.map(({ match, tag }, mi) => {
           const isAssignedReferee =
             isReferee &&
             Boolean(
@@ -1258,12 +1336,21 @@ const BracketCanvas: React.FC<{
             );
           const canRecordScore = isAdmin || isAssignedReferee;
 
+          // Precise vertical card top placement
+          let topY: number;
+          if (isTP) {
+            topY = tpCY - CH / 2;
+          } else {
+            const cy = cyMap[ci]?.[mi] ?? (mi * (CH + VGAP) + CH / 2);
+            topY = cy - CH / 2;
+          }
+
           return (
             <div
               key={match.id}
               style={{
                 position: "absolute",
-                top: LH + 16 + top(col.entries.length) + mi * (CH + VGAP),
+                top: LH + 16 + topY,
                 left: ci * (CW + HG),
               }}
             >
@@ -1279,8 +1366,8 @@ const BracketCanvas: React.FC<{
               />
             </div>
           );
-        }),
-      )}
+        });
+      })}
     </div>
   );
 };
@@ -1704,8 +1791,8 @@ const KnockoutBracket: React.FC<KnockoutBracketProps> = ({
         <div
           style={{
             display: "flex",
-            justifyContent: "flex-start",
-            padding: "12px 48px 24px 16px",
+            justifyContent: "center",
+            padding: "8px 24px 20px 24px",
             minWidth: "max-content",
           }}
         >
