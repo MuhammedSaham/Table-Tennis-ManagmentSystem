@@ -91,18 +91,18 @@ const ChampionsSpotlight: React.FC = () => {
   }
 
   return (
-    <div className="bg-gradient-to-r from-primary-900 to-primary-800 py-16">
+    <div className="bg-[#061D23] py-20 relative border-t border-white/5 overflow-hidden w-full">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-12">
-          <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-full px-4 py-1.5 mb-4">
+        <div className="text-center mb-14">
+          <div className="inline-flex items-center gap-2 bg-[#12679E]/20 border border-[#4AEEFF]/30 backdrop-blur-sm rounded-full px-4 py-1 mb-4 shadow-[0_0_15px_rgba(74,238,255,0.12)]">
             <TrophyIcon className="w-4 h-4 text-yellow-400" />
-            <span className="text-sm text-white/90">Champions Spotlight</span>
+            <span className="text-xs font-semibold text-[#4AEEFF] uppercase tracking-wider">Champions Spotlight</span>
           </div>
-          <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-            Recent Tournament Champions
+          <h2 className="text-3xl md:text-5xl font-extrabold text-white tracking-tight mb-4 font-display">
+            Recent Tournament <span className="bg-gradient-to-r from-yellow-400 via-amber-200 to-white bg-clip-text text-transparent">Champions</span>
           </h2>
-          <p className="text-white/70 max-w-2xl mx-auto">
-            Celebrating the winners of our recent tournaments
+          <p className="text-gray-300 text-base sm:text-lg max-w-2xl mx-auto">
+            Celebrating the winners of our recent championship tournaments
           </p>
         </div>
 
@@ -113,7 +113,7 @@ const ChampionsSpotlight: React.FC = () => {
               to={`/tournaments/${winner.tournamentId}`}
               className="group"
             >
-              <div className="bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+              <div className="bg-[#08232B]/90 hover:bg-[#0C2F3A] border border-[#12679E]/40 hover:border-[#4AEEFF]/70 rounded-2xl overflow-hidden shadow-xl hover:shadow-[0_12px_35px_rgba(74,238,255,0.15)] transition-all duration-300 transform hover:-translate-y-1.5 backdrop-blur-md">
                 {/* Medal Color Header */}
                 <div
                   className={`h-2 ${
@@ -123,14 +123,14 @@ const ChampionsSpotlight: React.FC = () => {
                         ? "bg-gradient-to-r from-gray-400 to-gray-500"
                         : index === 2
                           ? "bg-gradient-to-r from-amber-600 to-amber-700"
-                          : "bg-gradient-to-r from-primary-500 to-secondary-500"
+                          : "bg-gradient-to-r from-[#12679E] to-[#4AEEFF]"
                   }`}
                 />
 
                 <div className="p-6">
                   {/* Tournament Name */}
                   <div className="flex items-center justify-between mb-3">
-                    <h3 className="font-semibold text-gray-900 line-clamp-1">
+                    <h3 className="font-bold text-white text-lg line-clamp-1 group-hover:text-[#4AEEFF] transition-colors">
                       {winner.tournamentName}
                     </h3>
                     {index === 0 && <span className="text-2xl">🏆</span>}
@@ -139,18 +139,18 @@ const ChampionsSpotlight: React.FC = () => {
                   </div>
 
                   {/* Category */}
-                  <p className="text-sm text-primary-600 font-medium mb-4">
+                  <p className="text-xs font-bold uppercase tracking-wider text-[#4AEEFF] bg-[#12679E]/30 border border-[#4AEEFF]/30 px-2.5 py-0.5 rounded-full inline-block mb-4">
                     {winner.categoryName}
                   </p>
 
                   {/* Winner Info */}
                   <div className="flex items-center gap-3 mb-3">
-                    <div className="w-12 h-12 bg-gradient-to-r from-yellow-400 to-amber-500 rounded-full flex items-center justify-center text-white text-xl">
+                    <div className="w-12 h-12 bg-gradient-to-r from-yellow-400 to-amber-500 rounded-full flex items-center justify-center text-white text-xl shadow-lg">
                       🏆
                     </div>
                     <div>
-                      <p className="text-sm text-gray-500">Champion</p>
-                      <p className="font-bold text-gray-900">
+                      <p className="text-xs uppercase tracking-wider text-yellow-400/90 font-medium">Champion</p>
+                      <p className="font-bold text-white">
                         {winner.winner.firstName} {winner.winner.lastName}
                       </p>
                     </div>
@@ -159,12 +159,12 @@ const ChampionsSpotlight: React.FC = () => {
                   {/* Runner Up */}
                   {winner.runnerUp && (
                     <div className="flex items-center gap-3 mb-3">
-                      <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center text-gray-500 text-xl">
+                      <div className="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center text-gray-300 text-xl">
                         🥈
                       </div>
                       <div>
-                        <p className="text-sm text-gray-500">Runner-up</p>
-                        <p className="font-medium text-gray-700">
+                        <p className="text-xs uppercase tracking-wider text-gray-400 font-medium">Runner-up</p>
+                        <p className="font-medium text-gray-200">
                           {winner.runnerUp.firstName} {winner.runnerUp.lastName}
                         </p>
                       </div>
@@ -174,14 +174,14 @@ const ChampionsSpotlight: React.FC = () => {
                   {/* 2ndRunner Up */}
                   {winner.secondrunnerUp && (
                     <div className="flex items-center gap-3 mb-3">
-                      <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center text-gray-500 text-xl">
+                      <div className="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center text-gray-300 text-xl">
                         🥉
                       </div>
                       <div>
-                        <p className="text-sm text-gray-500">
+                        <p className="text-xs uppercase tracking-wider text-gray-400 font-medium">
                           Second Runner-up
                         </p>
-                        <p className="font-medium text-gray-700">
+                        <p className="font-medium text-gray-200">
                           {winner.secondrunnerUp.firstName}{" "}
                           {winner.secondrunnerUp.lastName}
                         </p>
@@ -191,16 +191,16 @@ const ChampionsSpotlight: React.FC = () => {
 
                   {/* Score */}
                   {winner.score && (
-                    <div className="mt-3 pt-3 border-t border-gray-100">
-                      <p className="text-sm text-gray-500">Final Score</p>
-                      <p className="font-mono font-semibold text-primary-600">
+                    <div className="mt-3 pt-3 border-t border-white/10">
+                      <p className="text-xs uppercase tracking-wider text-gray-400">Final Score</p>
+                      <p className="font-mono font-semibold text-[#4AEEFF]">
                         {winner.score}
                       </p>
                     </div>
                   )}
 
                   {/* View Details Link */}
-                  <div className="mt-4 text-primary-600 text-sm font-medium group-hover:text-primary-700 transition">
+                  <div className="mt-4 pt-3 border-t border-white/10 text-[#4AEEFF] text-sm font-semibold group-hover:translate-x-1 transition-transform flex items-center gap-1.5">
                     View Tournament Details →
                   </div>
                 </div>

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import api from "../services/api";
 import toast from "react-hot-toast";
 import { useAuth } from "../context/AuthContext";
@@ -27,6 +27,37 @@ const NotificationBell: React.FC = () => {
   const [showDropdown, setShowDropdown] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading] = useState(false);
+  const bellContainerRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown when clicking or tapping anywhere outside
+  useEffect(() => {
+    if (!showDropdown) return;
+
+    const handleOutsideClick = (e: MouseEvent | TouchEvent) => {
+      if (
+        bellContainerRef.current &&
+        !bellContainerRef.current.contains(e.target as Node)
+      ) {
+        setShowDropdown(false);
+      }
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setShowDropdown(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleOutsideClick);
+    document.addEventListener("touchstart", handleOutsideClick, { passive: true });
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("mousedown", handleOutsideClick);
+      document.removeEventListener("touchstart", handleOutsideClick);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [showDropdown]);
 
   useEffect(() => {
     fetchNotifications();
@@ -160,7 +191,7 @@ const NotificationBell: React.FC = () => {
   };
 
   return (
-    <div className="relative">
+    <div ref={bellContainerRef} className="relative">
       <button
         onClick={() => setShowDropdown(!showDropdown)}
         className="relative p-2 text-gray-300 hover:text-white rounded-full hover:bg-[#0f2b33] transition-colors"
@@ -176,8 +207,9 @@ const NotificationBell: React.FC = () => {
       {showDropdown && (
         <>
           <div
-            className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm sm:bg-transparent"
+            className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm sm:bg-transparent"
             onClick={() => setShowDropdown(false)}
+            onTouchStart={() => setShowDropdown(false)}
           />
 
           <div className="fixed sm:absolute inset-x-3 sm:inset-x-auto right-auto sm:right-0 top-20 sm:top-auto mt-2 w-auto sm:w-96 max-w-md bg-[#082229] rounded-2xl shadow-2xl border border-cyan-500/30 z-50 overflow-hidden backdrop-blur-xl text-white">
