@@ -33,6 +33,7 @@ interface KnockoutMatch {
   team1?: Team | null;
   team2?: Team | null;
   winnerId: string | null;
+  winnerTeamId?: string | null;
   score: string | null;
   status: string;
   scheduledTime?: string;
@@ -107,7 +108,7 @@ export const UmpireSheet: React.FC<{
     ) {
       return match.resultDetails.bestOf;
     }
-    if (match.score && done && match.score !== "BYE") {
+    if (match.score && done && match.score !== "BYE" && match.score !== "W/O") {
       const parts = match.score.split(",").map((s) => s.trim());
       let p1Wins = 0;
       let p2Wins = 0;
@@ -132,7 +133,7 @@ export const UmpireSheet: React.FC<{
   const [bestOf, setBestOf] = useState<3 | 5>(initBestOf);
 
   const initGames = (currentBestOf: 3 | 5 = initBestOf()): GameScore[] => {
-    if (match.score && done && match.score !== "BYE") {
+    if (match.score && done && match.score !== "BYE" && match.score !== "W/O") {
       const parts = match.score.split(",").map((s) => s.trim());
       if (parts.length > 0)
         return [
@@ -747,54 +748,64 @@ const MatchCard: React.FC<{
   onAssignReferee,
   accent,
 }) => {
-  const done = match.status === "COMPLETED";
+  const isWalkover = match.status === "WALKOVER" || match.score === "W/O";
+  const isBye = match.score === "BYE";
+  const done = match.status === "COMPLETED" || isWalkover || isBye;
   const isDoubles = match.matchType === "DOUBLES";
   // For doubles the winnerId stores the winning team captain's userId;
   // compare against team1Id/team2Id for the highlight logic.
   const p1Won =
     done &&
     (isDoubles
-      ? match.winnerId === match.team1?.id
+      ? match.winnerId === match.team1?.id || match.winnerTeamId === match.team1?.id
       : match.winnerId === match.player1?.id);
   const p2Won =
     done &&
     (isDoubles
-      ? match.winnerId === match.team2?.id
+      ? match.winnerId === match.team2?.id || match.winnerTeamId === match.team2?.id
       : match.winnerId === match.player2?.id);
 
   const gameParts =
-    match.score && match.score !== "BYE"
+    match.score && match.score !== "BYE" && match.score !== "W/O"
       ? match.score.split(",").map((s) => s.trim())
       : [];
   const p1Games =
     match.score === "BYE" && p1Won
       ? "BYE"
-      : gameParts.filter((g) => {
-          const [a, b] = g.split("-").map(Number);
-          return a > b;
-        }).length;
+      : isWalkover && p1Won
+        ? "W/O"
+        : isWalkover && !p1Won
+          ? "-"
+          : gameParts.filter((g) => {
+              const [a, b] = g.split("-").map(Number);
+              return a > b;
+            }).length;
   const p2Games =
     match.score === "BYE" && p2Won
       ? "BYE"
-      : gameParts.filter((g) => {
-          const [a, b] = g.split("-").map(Number);
-          return b > a;
-        }).length;
-
-  const isBye = match.score === "BYE";
+      : isWalkover && p2Won
+        ? "W/O"
+        : isWalkover && !p2Won
+          ? "-"
+          : gameParts.filter((g) => {
+              const [a, b] = g.split("-").map(Number);
+              return b > a;
+            }).length;
 
   return (
     <div
-      onClick={() => !isBye && onOpen(match)}
+      onClick={() => !isBye && !isWalkover && onOpen(match)}
       style={{
         width: CW,
-        cursor: isBye ? "default" : "pointer",
+        cursor: isBye || isWalkover ? "default" : "pointer",
         fontFamily: "'Segoe UI',system-ui,sans-serif",
       }}
       title={
         isBye
           ? "BYE — Player advances automatically"
-          : "Click to open umpire sheet"
+          : isWalkover
+            ? "Walkover (W/O) — Opponent advanced"
+            : "Click to open umpire sheet"
       }
     >
       <div
@@ -812,14 +823,14 @@ const MatchCard: React.FC<{
           transition: "all 0.15s ease",
         }}
         onMouseEnter={(e) => {
-          if (!isBye) {
+          if (!isBye && !isWalkover) {
             (e.currentTarget as HTMLElement).style.boxShadow =
               "0 4px 16px rgba(74, 238, 255, 0.4)";
             (e.currentTarget as HTMLElement).style.borderColor = "#0284c7";
           }
         }}
         onMouseLeave={(e) => {
-          if (!isBye) {
+          if (!isBye && !isWalkover) {
             (e.currentTarget as HTMLElement).style.boxShadow = done
               ? "0 2px 10px rgba(34,197,94,0.16)"
               : "0 2px 8px rgba(0,0,0,0.08)";
@@ -881,15 +892,15 @@ const MatchCard: React.FC<{
                   <span
                     style={{
                       fontSize: 8,
-                      color: "#166534",
+                      color: isWalkover ? "#b45309" : "#166534",
                       fontWeight: 800,
-                      background: "#dcfce7",
-                      border: "1px solid #86efac",
+                      background: isWalkover ? "#fef3c7" : "#dcfce7",
+                      border: `1px solid ${isWalkover ? "#fde68a" : "#86efac"}`,
                       padding: "1px 5px",
                       borderRadius: 6,
                     }}
                   >
-                    ✓ Done
+                    {isWalkover ? "✓ W/O" : "✓ Done"}
                   </span>
                 )}
                 {isAdmin && !done && onAssignReferee && (
@@ -920,18 +931,18 @@ const MatchCard: React.FC<{
                       onEdit(match);
                     }}
                     style={{
-                      background: "#f8fafc",
-                      border: "1px solid #e2e8f0",
+                      background: "#fef2f2",
+                      border: "1px solid #fecaca",
                       cursor: "pointer",
                       fontSize: 8,
-                      color: "#475569",
+                      color: "#b91c1c",
                       padding: "1px 5px",
                       borderRadius: 4,
                       fontWeight: 700,
                     }}
-                    title="Edit players in this match"
+                    title="Declare Walkover (W/O) / No-Show"
                   >
-                    Edit
+                    W/O
                   </button>
                 )}
               </div>
@@ -1191,8 +1202,8 @@ const BracketCanvas: React.FC<{
       const p1Match = lc.entries[p1]?.match;
       const p2Match = lc.entries[p2]?.match;
 
-      const p1Done = p1Match?.status === "COMPLETED";
-      const p2Done = p2Match?.status === "COMPLETED";
+      const p1Done = p1Match?.status === "COMPLETED" || p1Match?.status === "WALKOVER" || p1Match?.score === "BYE" || p1Match?.score === "W/O";
+      const p2Done = p2Match?.status === "COMPLETED" || p2Match?.status === "WALKOVER" || p2Match?.score === "BYE" || p2Match?.score === "W/O";
 
       // Horizontal line from Parent 1 to midpoint X
       if (p1 < prevCY.length) {
@@ -1247,7 +1258,7 @@ const BracketCanvas: React.FC<{
       }
 
       // Horizontal line from midpoint X into child match
-      const childDone = rEntry.match.status === "COMPLETED";
+      const childDone = rEntry.match.status === "COMPLETED" || rEntry.match.status === "WALKOVER" || rEntry.match.score === "BYE" || rEntry.match.score === "W/O";
       lines.push(
         <line
           key={`rh_${ci}_${ri}`}
