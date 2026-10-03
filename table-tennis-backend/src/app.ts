@@ -18,6 +18,7 @@ import path from 'path';
 import adminRequestRoutes from './routes/adminRequest.routes';
 import notificationRoutes from './routes/notification.routes';
 import groupRoutes from './routes/group.routes';
+import clubMembershipRoutes from './routes/clubMembership.routes';
 
 
 
@@ -45,6 +46,7 @@ app.get('/health', (req: Request, res: Response) => {
 
 // API routes
 app.use('/api/v1/auth', authRoutes);
+app.use('/api/v1/club-membership', clubMembershipRoutes);
 app.use('/api/v1/users', userRoutes);
 app.use('/api/v1/tournaments', tournamentRoutes);
 app.use('/api/v1/registrations', registrationRoutes);
