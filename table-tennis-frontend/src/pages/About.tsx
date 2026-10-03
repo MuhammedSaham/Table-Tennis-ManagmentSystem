@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   AcademicCapIcon,
   BookOpenIcon,
@@ -26,11 +26,20 @@ const trainingCentres = [
   { name: "Kilinochchi", address: "Don Bosco School of Excellence\nSt. Theresa College Lane, Karadippokku, Kilinochchi", tag: "New 2026 Campus" },
 ];
 
+const getMapEmbedUrl = (address: string) =>
+  `https://www.google.com/maps?q=${encodeURIComponent(address.replace(/\n/g, ", "))}&output=embed`;
+
+const getMapUrl = (address: string) =>
+  `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address.replace(/\n/g, ", "))}`;
+
 const SectionHeading: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <h2 className="text-xl font-bold text-white sm:text-2xl md:text-3xl">{children}</h2>
 );
 
-const About: React.FC = () => (
+const About: React.FC = () => {
+  const [selectedCentre, setSelectedCentre] = useState<(typeof trainingCentres)[number] | null>(null);
+
+  return (
   <div className="relative min-h-screen w-full overflow-hidden bg-[#061D23] text-white">
     {/* ─── BG.PNG FIXED FULL-BLEED BACKGROUND ─── */}
     <div
@@ -177,7 +186,20 @@ const About: React.FC = () => (
         </div>
         <div className="grid gap-4 sm:gap-5 sm:grid-cols-2 xl:grid-cols-4">
           {trainingCentres.map((centre) => (
-            <article key={centre.name} className="group relative rounded-[16px] border border-white/20 bg-[#061D23]/25 p-5 sm:p-6 text-white shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl transition duration-200 hover:-translate-y-1 hover:border-[#4AEEFF]/60 hover:shadow-xl">
+            <article
+              key={centre.name}
+              role="button"
+              tabIndex={0}
+              onClick={() => setSelectedCentre(centre)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  setSelectedCentre(centre);
+                }
+              }}
+              aria-pressed={selectedCentre?.name === centre.name}
+              className="group relative cursor-pointer rounded-[16px] border border-white/20 bg-[#061D23]/25 p-5 text-white shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl transition duration-200 hover:-translate-y-1 hover:border-[#4AEEFF]/60 hover:shadow-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-[#4AEEFF] focus-visible:ring-offset-2 focus-visible:ring-offset-[#061D23] sm:p-6"
+            >
               <div className="flex items-center justify-between mb-4">
                 <MapPinIcon className="h-7 w-7 text-[#4AEEFF]" aria-hidden="true" />
                 <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-white/10 text-white/70 border border-white/10 group-hover:border-[#4AEEFF]/40 group-hover:text-[#4AEEFF] transition-colors">
@@ -189,9 +211,46 @@ const About: React.FC = () => (
             </article>
           ))}
         </div>
+
+        {selectedCentre && (
+          <div className="mt-6 overflow-hidden rounded-2xl border border-[#4AEEFF]/40 bg-[#061D23]/40 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.6)] backdrop-blur-xl">
+            <div className="flex items-center justify-between gap-4 border-b border-white/10 p-4 sm:p-5">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-wider text-[#4AEEFF]">Selected location</p>
+                <h3 className="mt-1 text-lg font-bold text-white sm:text-xl">{selectedCentre.name}</h3>
+                <p className="mt-1 text-xs text-white/60">{selectedCentre.address.replace(/\n/g, ", ")}</p>
+              </div>
+              <div className="flex shrink-0 items-center gap-2">
+                <a
+                  href={getMapUrl(selectedCentre.address)}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="rounded-md bg-[#4AEEFF] px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-[#061D23] transition hover:bg-white"
+                >
+                  Live location
+                </a>
+                <button
+                  type="button"
+                  onClick={() => setSelectedCentre(null)}
+                  className="rounded-md border border-white/20 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-white/80 transition hover:border-[#4AEEFF]/60 hover:text-[#4AEEFF]"
+                >
+                  Close map
+                </button>
+              </div>
+            </div>
+            <iframe
+              title={`${selectedCentre.name} map`}
+              src={getMapEmbedUrl(selectedCentre.address)}
+              className="h-72 w-full border-0 sm:h-96"
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+            />
+          </div>
+        )}
       </section>
     </div>
   </div>
-);
+  );
+};
 
 export default About;
