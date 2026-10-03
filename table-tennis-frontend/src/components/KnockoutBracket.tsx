@@ -1598,6 +1598,9 @@ const KnockoutBracket: React.FC<KnockoutBracketProps> = ({
             fontSize: 12,
             textTransform: "uppercase",
             letterSpacing: 0.5,
+            maxWidth: "100%",
+            whiteSpace: "normal",
+            lineHeight: 1.35,
             cursor: "pointer",
             transition: "all 0.2s",
           }}
@@ -1775,6 +1778,9 @@ const KnockoutBracket: React.FC<KnockoutBracketProps> = ({
             fontSize: 12,
             textTransform: "uppercase",
             letterSpacing: 0.5,
+            maxWidth: "100%",
+            whiteSpace: "normal",
+            lineHeight: 1.35,
             cursor: "pointer",
             transition: "all 0.2s",
           }}
@@ -1836,17 +1842,33 @@ const KnockoutBracket: React.FC<KnockoutBracketProps> = ({
           color: "rgba(255, 255, 255, 0.6)",
           flexWrap: "wrap",
           gap: 12,
+          minWidth: 0,
         }}
       >
-        <span>Matches are standard best of 5 games</span>
-        <div style={{ display: "flex", gap: 20 }}>
+        <span style={{ minWidth: 0, overflowWrap: "anywhere" }}>
+          Matches are standard best of 5 games
+        </span>
+        <div
+          style={{
+            display: "flex",
+            gap: 12,
+            flexWrap: "wrap",
+            minWidth: 0,
+          }}
+        >
           {[
             ["#22c55e", "Winner / Completed"],
             ["rgba(74, 238, 255, 0.3)", "Upcoming Match"],
           ].map(([c, l]) => (
             <span
               key={l}
-              style={{ display: "flex", alignItems: "center", gap: 6 }}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                minWidth: 0,
+                overflowWrap: "anywhere",
+              }}
             >
               <div
                 style={{

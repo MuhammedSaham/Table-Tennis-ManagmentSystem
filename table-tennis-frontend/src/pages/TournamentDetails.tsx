@@ -1554,10 +1554,10 @@ const TournamentDetails: React.FC = () => {
           style={{ minHeight: 200 }}
         >
           {isAdmin && activeCategoryFormat === "KNOCKOUT" && (
-            <div className="flex justify-end mb-4">
+            <div className="flex justify-end mb-4 min-w-0">
               <button
                 onClick={() => setShowResetConfirm(true)}
-                className="rounded-xl border border-red-500/40 bg-red-500/15 px-4 py-2 text-xs font-black uppercase tracking-wider text-red-300 hover:bg-red-500 hover:text-white transition-all shadow-md shadow-red-500/10"
+                className="max-w-full rounded-xl border border-red-500/40 bg-red-500/15 px-4 py-2 text-xs font-black uppercase tracking-wider text-red-300 hover:bg-red-500 hover:text-white transition-all shadow-md shadow-red-500/10 whitespace-normal leading-tight"
               >
                 Reset Bracket
               </button>
