@@ -59,6 +59,9 @@ const Users: React.FC = () => {
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
   const [deleting, setDeleting] = useState(false);
 
+  const [memberToRemove, setMemberToRemove] = useState<User | null>(null);
+  const [removingMembership, setRemovingMembership] = useState(false);
+
   useEffect(() => {
     fetchUsers();
   }, []);
@@ -122,6 +125,31 @@ const Users: React.FC = () => {
       toast.error(error.response?.data?.message || "Failed to delete user");
     } finally {
       setDeleting(false);
+    }
+  };
+
+  const confirmRemoveMembership = async () => {
+    if (!memberToRemove) return;
+
+    setRemovingMembership(true);
+
+    try {
+      await api.patch(`/club-membership/players/${memberToRemove.id}/remove`);
+
+      toast.success(
+        `${memberToRemove.firstName} ${memberToRemove.lastName} is now a guest player`,
+      );
+
+      setMemberToRemove(null);
+
+      // Refresh users so player moves CLUB -> GUEST
+      await fetchUsers();
+    } catch (error: any) {
+      toast.error(
+        error.response?.data?.message || "Failed to remove club membership",
+      );
+    } finally {
+      setRemovingMembership(false);
     }
   };
 
@@ -663,6 +691,19 @@ const Users: React.FC = () => {
                           </span>
                         )}
 
+                        {/* Remove Club Membership */}
+                        {activeTab === "CLUB" &&
+                          userItem.role === "PLAYER" &&
+                          userItem.isClubMember && (
+                            <button
+                              onClick={() => setMemberToRemove(userItem)}
+                              className="rounded-lg px-3 py-2 text-xs font-black uppercase tracking-wider text-amber-300 border border-amber-500/20 bg-[#061D23]/40 hover:border-amber-400 hover:bg-amber-500/10 transition-all"
+                              title="Remove Club Membership"
+                            >
+                              Remove Membership
+                            </button>
+                          )}
+
                         {/* Row Delete Option */}
                         {userItem.id !== user?.id && !userItem.isSuperAdmin && (
                           <button
@@ -864,6 +905,19 @@ const Users: React.FC = () => {
                         </select>
                       ) : null;
                     })()}
+
+                  {/* Remove Club Membership */}
+                  {activeTab === "CLUB" &&
+                    userItem.role === "PLAYER" &&
+                    userItem.isClubMember && (
+                      <button
+                        onClick={() => setMemberToRemove(userItem)}
+                        className="rounded-lg px-2.5 py-1.5 text-xs font-bold text-amber-300 border border-amber-500/20 bg-[#061D23]/60 hover:bg-amber-500/10"
+                        title="Remove Club Membership"
+                      >
+                        Remove Membership
+                      </button>
+                    )}
 
                   {/* Delete Button */}
                   {userItem.id !== user?.id && !userItem.isSuperAdmin && (
@@ -1217,6 +1271,52 @@ const Users: React.FC = () => {
                 className="flex-1 rounded-xl bg-red-500 py-3 text-xs font-black uppercase tracking-wider text-white transition-all hover:bg-red-600 disabled:opacity-50 shadow-lg shadow-red-500/20"
               >
                 {deleting ? "Deleting..." : "Yes, Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* REMOVE CLUB MEMBERSHIP CONFIRMATION */}
+      {memberToRemove && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl border border-amber-500/30 bg-[#061D23] p-6 shadow-2xl">
+            <div className="mb-4">
+              <h2 className="text-xl font-black uppercase tracking-wider text-white">
+                Remove Club Membership?
+              </h2>
+
+              <p className="mt-3 text-sm leading-relaxed text-white/70">
+                Are you sure you want to remove{" "}
+                <span className="font-bold text-white">
+                  {memberToRemove.firstName} {memberToRemove.lastName}
+                </span>{" "}
+                from the club?
+              </p>
+
+              <p className="mt-3 text-xs leading-relaxed text-amber-300">
+                The player will become a guest player. Their account, rankings,
+                tournament records and match history will not be deleted.
+              </p>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setMemberToRemove(null)}
+                disabled={removingMembership}
+                className="flex-1 rounded-lg border border-white/20 px-4 py-3 text-xs font-black uppercase tracking-wider text-white hover:bg-white/10 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                onClick={confirmRemoveMembership}
+                disabled={removingMembership}
+                className="flex-1 rounded-lg bg-amber-500 px-4 py-3 text-xs font-black uppercase tracking-wider text-[#061D23] hover:bg-amber-400 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {removingMembership ? "Removing..." : "Remove Membership"}
               </button>
             </div>
           </div>

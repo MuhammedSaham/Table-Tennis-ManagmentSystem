@@ -91,3 +91,22 @@ export const getMyMembershipStatus = catchAsync(
         );
     }
 );
+// Admin removes a player's club membership
+export const removeClubMembership = catchAsync(
+    async (req: Request, res: Response) => {
+        const { playerId } = req.params;
+        const adminId = req.user!.id;
+
+        const result = await clubMembershipService.removeMembership(
+            playerId,
+            adminId
+        );
+
+        sendResponse(
+            res,
+            200,
+            'Club membership removed successfully',
+            result
+        );
+    }
+);
