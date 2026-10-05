@@ -72,6 +72,22 @@ interface Registration {
   registeredAt: string;
 }
 
+interface PaymentProofInfo {
+  paymentProofRequired: boolean;
+  isClubMember: boolean;
+  registrationFee: string | null;
+  paymentInstructions: string | null;
+
+  paymentProof: {
+    id: string;
+    proofUrl: string;
+    status: "PENDING" | "APPROVED" | "REJECTED";
+    submittedAt: string;
+    verifiedAt: string | null;
+    rejectionReason: string | null;
+  } | null;
+}
+
 interface Tournament {
   id: string;
   name: string;
@@ -95,12 +111,23 @@ const TournamentDetails: React.FC = () => {
   const [tournament, setTournament] = useState<Tournament | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+
+  const [paymentProofInfo, setPaymentProofInfo] =
+    useState<PaymentProofInfo | null>(null);
+
+  const [paymentProofFile, setPaymentProofFile] = useState<File | null>(null);
+
+  const [uploadingProof, setUploadingProof] = useState(false);
+
   const [activeCategoryId, setActiveCategoryId] = useState<string>("");
   const [registering, setRegistering] = useState(false);
   const [generating, setGenerating] = useState<string | null>(null);
   const [tournamentType, setTournamentType] = useState("KNOCKOUT");
-  const activeCategory = tournament?.categories?.find((c) => c.id === activeCategoryId);
-  const activeCategoryFormat = activeCategory?.stageFormat || tournamentType || "KNOCKOUT";
+  const activeCategory = tournament?.categories?.find(
+    (c) => c.id === activeCategoryId,
+  );
+  const activeCategoryFormat =
+    activeCategory?.stageFormat || tournamentType || "KNOCKOUT";
   const [showGroupsModal, setShowGroupsModal] = useState(false);
   const [showScoreModal, setShowScoreModal] = useState(false);
   const [refreshGroups, setRefreshGroups] = useState(0);
@@ -126,7 +153,7 @@ const TournamentDetails: React.FC = () => {
     maxPlayers: "",
   });
   const [editCategories, setEditCategories] = useState<Category[]>([]);
-  
+
   // Doubles Pairing States
   const [partnerModalCategory, setPartnerModalCategory] = useState<{
     id: string;
@@ -134,13 +161,16 @@ const TournamentDetails: React.FC = () => {
   } | null>(null);
   const [myPendingInvites, setMyPendingInvites] = useState<any[]>([]);
   const [mySentInvites, setMySentInvites] = useState<any[]>([]);
-  const [respondingInviteId, setRespondingInviteId] = useState<string | null>(null);
+  const [respondingInviteId, setRespondingInviteId] = useState<string | null>(
+    null,
+  );
 
   const [showGuestModal, setShowGuestModal] = useState(false);
   const [showKnockoutModal, setShowKnockoutModal] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [showIneligible, setShowIneligible] = useState(false);
-  const [confirmDrawCategory, setConfirmDrawCategory] = useState<Category | null>(null);
+  const [confirmDrawCategory, setConfirmDrawCategory] =
+    useState<Category | null>(null);
 
   const fetchInvites = async () => {
     if (!user || user.role !== "PLAYER" || !id) return;
@@ -163,6 +193,10 @@ const TournamentDetails: React.FC = () => {
   useEffect(() => {
     fetchTournamentDetails();
     fetchInvites();
+
+    if (user?.role === "PLAYER") {
+      fetchMyPaymentProof();
+    }
   }, [id, user]);
 
   useEffect(() => {
@@ -226,6 +260,94 @@ const TournamentDetails: React.FC = () => {
         : [...prev, categoryId],
     );
   };
+  const fetchMyPaymentProof = async () => {
+    if (!id || user?.role !== "PLAYER") return;
+
+    try {
+      const response = await api.get(`/payment-proofs/my/${id}`);
+
+      setPaymentProofInfo(response.data.data);
+    } catch (error) {
+      console.error("Failed to fetch payment proof status", error);
+    }
+  };
+  const handlePaymentProofFileChange = (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = e.target.files?.[0];
+
+    if (!file) {
+      setPaymentProofFile(null);
+      return;
+    }
+
+    const allowedTypes = ["image/jpeg", "image/png", "application/pdf"];
+
+    if (!allowedTypes.includes(file.type)) {
+      toast.error("Only JPG, JPEG, PNG and PDF files are allowed");
+      e.target.value = "";
+      setPaymentProofFile(null);
+      return;
+    }
+
+    const maxSize = 5 * 1024 * 1024;
+
+    if (file.size > maxSize) {
+      toast.error("Payment proof must be 5MB or smaller");
+      e.target.value = "";
+      setPaymentProofFile(null);
+      return;
+    }
+
+    setPaymentProofFile(file);
+  };
+
+  const handleUploadPaymentProof = async () => {
+    if (!id) {
+      toast.error("Tournament not found");
+      return;
+    }
+
+    if (!paymentProofFile) {
+      toast.error("Please select a payment proof file");
+      return;
+    }
+
+    const formData = new FormData();
+
+    // IMPORTANT:
+    // Backend uses uploadPaymentProof.single("proof")
+    // so this name must be exactly "proof"
+    formData.append("proof", paymentProofFile);
+
+    setUploadingProof(true);
+
+    try {
+      await api.post(`/payment-proofs/${id}`, formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+
+      toast.success("Payment proof submitted successfully");
+
+      setPaymentProofFile(null);
+
+      // Refresh proof information so UI becomes PENDING
+      await fetchMyPaymentProof();
+
+      // Refresh registrations too
+      await fetchTournamentDetails();
+    } catch (error: any) {
+      console.error("Payment proof upload failed:", error);
+
+      toast.error(
+        error.response?.data?.message || "Failed to upload payment proof",
+      );
+    } finally {
+      setUploadingProof(false);
+    }
+  };
 
   const fetchTournamentDetails = async () => {
     try {
@@ -275,7 +397,9 @@ const TournamentDetails: React.FC = () => {
     setRespondingInviteId(inviteId);
     try {
       await api.post(`/teams/invites/${inviteId}/accept`);
-      toast.success("Doubles partner invite accepted! You are officially registered.");
+      toast.success(
+        "Doubles partner invite accepted! You are officially registered.",
+      );
       await fetchTournamentDetails();
       await fetchInvites();
     } catch (err: any) {
@@ -352,8 +476,7 @@ const TournamentDetails: React.FC = () => {
         } catch (err: any) {
           console.error(`Failed to register for category ${categoryId}:`, err);
           failCount++;
-          const errorMsg =
-            err.response?.data?.message || "Registration failed";
+          const errorMsg = err.response?.data?.message || "Registration failed";
           toast.error(
             selectedCategories.length > 1
               ? `${category?.name}: ${errorMsg}`
@@ -372,6 +495,7 @@ const TournamentDetails: React.FC = () => {
       }
 
       await fetchTournamentDetails();
+      await fetchMyPaymentProof();
       setSelectedCategories([]);
     } catch (error: any) {
       console.error("Registration error:", error);
@@ -516,14 +640,24 @@ const TournamentDetails: React.FC = () => {
   };
 
   const getMatchParticipantDetails = (match: any, slot: 1 | 2) => {
-    const isDoubles = !!(match.team1 || match.team2 || match.team1Id || match.team2Id);
+    const isDoubles = !!(
+      match.team1 ||
+      match.team2 ||
+      match.team1Id ||
+      match.team2Id
+    );
     if (isDoubles) {
       const team = slot === 1 ? match.team1 : match.team2;
       if (!team) return { name: "TBD", firstName: "TBD", lastName: "" };
-      const memberNames = team.members?.map(
-        (m: any) => `${m.player?.firstName || ""} ${m.player?.lastName || ""}`.trim()
-      ).filter(Boolean);
-      const displayName = memberNames && memberNames.length > 0 ? memberNames.join(" / ") : (team.name || "TBD");
+      const memberNames = team.members
+        ?.map((m: any) =>
+          `${m.player?.firstName || ""} ${m.player?.lastName || ""}`.trim(),
+        )
+        .filter(Boolean);
+      const displayName =
+        memberNames && memberNames.length > 0
+          ? memberNames.join(" / ")
+          : team.name || "TBD";
       return {
         ...team,
         name: displayName,
@@ -533,7 +667,8 @@ const TournamentDetails: React.FC = () => {
     } else {
       const player = slot === 1 ? match.player1 : match.player2;
       if (!player) return { name: "TBD", firstName: "TBD", lastName: "" };
-      const displayName = `${player.firstName || ""} ${player.lastName || ""}`.trim() || "TBD";
+      const displayName =
+        `${player.firstName || ""} ${player.lastName || ""}`.trim() || "TBD";
       return {
         ...player,
         name: displayName,
@@ -549,15 +684,18 @@ const TournamentDetails: React.FC = () => {
       return;
     }
     try {
-      const matchesResponse = await api.get(`/matches/tournaments/${id}?categoryId=${activeCategoryId}`);
+      const matchesResponse = await api.get(
+        `/matches/tournaments/${id}?categoryId=${activeCategoryId}`,
+      );
       const allMatches = matchesResponse.data.data;
       const finalMatch = allMatches.find(
         (m: any) =>
-          m.round && (m.round.trim().toLowerCase() === "final" ||
-          m.round.trim().toLowerCase() === "finals"),
+          m.round &&
+          (m.round.trim().toLowerCase() === "final" ||
+            m.round.trim().toLowerCase() === "finals"),
       );
-      const thirdPlaceMatch = allMatches.find((m: any) =>
-        m.round && m.round.includes("3rd Place"),
+      const thirdPlaceMatch = allMatches.find(
+        (m: any) => m.round && m.round.includes("3rd Place"),
       );
       let champion = null,
         runnerUp = null,
@@ -566,13 +704,18 @@ const TournamentDetails: React.FC = () => {
       const resolveMatchWinners = (match: any) => {
         if (!match) return { winner: null, loser: null };
         const winnerId = match.winnerTeamId || match.winnerId;
-        const isDoubles = !!(match.team1 || match.team2 || match.team1Id || match.team2Id);
+        const isDoubles = !!(
+          match.team1 ||
+          match.team2 ||
+          match.team1Id ||
+          match.team2Id
+        );
         let isSlot1Winner = false;
 
         if (winnerId) {
           isSlot1Winner = isDoubles
-            ? (winnerId === match.team1Id || winnerId === match.team1?.id)
-            : (winnerId === match.player1Id || winnerId === match.player1?.id);
+            ? winnerId === match.team1Id || winnerId === match.team1?.id
+            : winnerId === match.player1Id || winnerId === match.player1?.id;
         } else if (match.status === "COMPLETED" && match.score) {
           const parts = match.score.split(",").map((s: string) => s.trim());
           let p1Wins = 0;
@@ -609,7 +752,9 @@ const TournamentDetails: React.FC = () => {
       setWinners({ first: champion, second: runnerUp, third: thirdPlace });
       setShowWinners(true);
       setTimeout(() => {
-        document.getElementById("winners-section")?.scrollIntoView({ behavior: "smooth" });
+        document
+          .getElementById("winners-section")
+          ?.scrollIntoView({ behavior: "smooth" });
       }, 100);
     } catch (error) {
       console.error("Failed to fetch winners", error);
@@ -734,8 +879,10 @@ const TournamentDetails: React.FC = () => {
   if (!id) {
     return wrapInBaseLayout(
       <div className="flex flex-col items-center justify-center rounded-[16px] border border-white/20 bg-[#061D23]/25 p-12 text-center backdrop-blur-xl">
-        <h2 className="text-xl font-black uppercase tracking-wider text-white">Invalid Tournament ID</h2>
-      </div>
+        <h2 className="text-xl font-black uppercase tracking-wider text-white">
+          Invalid Tournament ID
+        </h2>
+      </div>,
     );
   }
 
@@ -746,15 +893,17 @@ const TournamentDetails: React.FC = () => {
         <p className="mt-4 text-xs font-black uppercase tracking-[0.2em] text-[#4AEEFF]">
           Loading tournament details...
         </p>
-      </div>
+      </div>,
     );
   }
 
   if (!tournament) {
     return wrapInBaseLayout(
       <div className="flex flex-col items-center justify-center rounded-[16px] border border-white/20 bg-[#061D23]/25 p-12 text-center backdrop-blur-xl">
-        <h2 className="text-xl font-black uppercase tracking-wider text-white">Tournament not found</h2>
-      </div>
+        <h2 className="text-xl font-black uppercase tracking-wider text-white">
+          Tournament not found
+        </h2>
+      </div>,
     );
   }
 
@@ -769,14 +918,20 @@ const TournamentDetails: React.FC = () => {
     tournament.registrations?.filter(
       (r) =>
         r.playerId === user?.id ||
-        r.team?.members?.some((m) => m.playerId === user?.id || m.player?.id === user?.id),
+        r.team?.members?.some(
+          (m) => m.playerId === user?.id || m.player?.id === user?.id,
+        ),
     ) || [];
   const hasRegistration = userRegistrations.length > 0;
   const canRegister = isPlayer && isRegistrationOpen;
 
   // Function to check if category is doubles
   const isDoublesCategory = (categoryType: string) => {
-    return categoryType === "DOUBLES" || categoryType === "MIXED" || categoryType === "MIXED_DOUBLES";
+    return (
+      categoryType === "DOUBLES" ||
+      categoryType === "MIXED" ||
+      categoryType === "MIXED_DOUBLES"
+    );
   };
 
   const eligibleCategories = tournament.categories.filter(
@@ -797,7 +952,9 @@ const TournamentDetails: React.FC = () => {
   const allEligibleRegistered =
     eligibleCategories.length > 0 &&
     eligibleCategories.every((cat) =>
-      userRegistrations.some((r) => r.categoryId === cat.id || r.category?.id === cat.id),
+      userRegistrations.some(
+        (r) => r.categoryId === cat.id || r.category?.id === cat.id,
+      ),
     );
 
   return wrapInBaseLayout(
@@ -811,7 +968,9 @@ const TournamentDetails: React.FC = () => {
               <span className="inline-block px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-md bg-[#4AEEFF]/20 text-[#4AEEFF] border border-[#4AEEFF]/40">
                 Tournament Hub
               </span>
-              <span className={`px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-md border ${getStatusColor(tournament.status)}`}>
+              <span
+                className={`px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-md border ${getStatusColor(tournament.status)}`}
+              >
                 {tournament.status}
               </span>
             </div>
@@ -819,7 +978,8 @@ const TournamentDetails: React.FC = () => {
               {tournament.name}
             </h1>
             <p className="text-white/70 text-sm mt-2 max-w-2xl leading-relaxed">
-              {tournament.description || "Official tournament event and match management."}
+              {tournament.description ||
+                "Official tournament event and match management."}
             </p>
           </div>
 
@@ -859,7 +1019,9 @@ const TournamentDetails: React.FC = () => {
                   <button
                     onClick={async () => {
                       try {
-                        await api.patch(`/tournaments/${id}`, { status: "COMPLETED" });
+                        await api.patch(`/tournaments/${id}`, {
+                          status: "COMPLETED",
+                        });
                         toast.success("Tournament marked as completed!");
                         fetchTournamentDetails();
                         setTimeout(() => fetchWinners(), 500);
@@ -886,25 +1048,46 @@ const TournamentDetails: React.FC = () => {
         {/* Quick Stat Tiles */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mt-6 pt-6 border-t border-white/10">
           <div className="rounded-xl border border-white/10 bg-[#061D23]/40 p-3.5 backdrop-blur-md">
-            <p className="text-[10px] font-black uppercase tracking-wider text-[#4AEEFF]/80">📍 Venue</p>
-            <p className="font-bold text-white text-sm mt-1 truncate">{tournament.venue}</p>
-          </div>
-          <div className="rounded-xl border border-white/10 bg-[#061D23]/40 p-3.5 backdrop-blur-md">
-            <p className="text-[10px] font-black uppercase tracking-wider text-[#4AEEFF]/80">📅 Start Date</p>
+            <p className="text-[10px] font-black uppercase tracking-wider text-[#4AEEFF]/80">
+              📍 Venue
+            </p>
             <p className="font-bold text-white text-sm mt-1 truncate">
-              {new Date(tournament.startDate).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
+              {tournament.venue}
             </p>
           </div>
           <div className="rounded-xl border border-white/10 bg-[#061D23]/40 p-3.5 backdrop-blur-md">
-            <p className="text-[10px] font-black uppercase tracking-wider text-[#4AEEFF]/80">🏁 End Date</p>
+            <p className="text-[10px] font-black uppercase tracking-wider text-[#4AEEFF]/80">
+              📅 Start Date
+            </p>
             <p className="font-bold text-white text-sm mt-1 truncate">
-              {new Date(tournament.endDate).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
+              {new Date(tournament.startDate).toLocaleDateString("en-GB", {
+                day: "numeric",
+                month: "short",
+                year: "numeric",
+              })}
             </p>
           </div>
           <div className="rounded-xl border border-white/10 bg-[#061D23]/40 p-3.5 backdrop-blur-md">
-            <p className="text-[10px] font-black uppercase tracking-wider text-[#4AEEFF]/80">⏳ Reg. Deadline</p>
+            <p className="text-[10px] font-black uppercase tracking-wider text-[#4AEEFF]/80">
+              🏁 End Date
+            </p>
             <p className="font-bold text-white text-sm mt-1 truncate">
-              {new Date(tournament.registrationDeadline).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
+              {new Date(tournament.endDate).toLocaleDateString("en-GB", {
+                day: "numeric",
+                month: "short",
+                year: "numeric",
+              })}
+            </p>
+          </div>
+          <div className="rounded-xl border border-white/10 bg-[#061D23]/40 p-3.5 backdrop-blur-md">
+            <p className="text-[10px] font-black uppercase tracking-wider text-[#4AEEFF]/80">
+              ⏳ Reg. Deadline
+            </p>
+            <p className="font-bold text-white text-sm mt-1 truncate">
+              {new Date(tournament.registrationDeadline).toLocaleDateString(
+                "en-GB",
+                { day: "numeric", month: "short", year: "numeric" },
+              )}
             </p>
           </div>
         </div>
@@ -916,7 +1099,8 @@ const TournamentDetails: React.FC = () => {
           <div className="flex items-center gap-2 mb-3">
             <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping" />
             <span className="text-xs font-black uppercase tracking-widest text-[#4AEEFF]">
-              ⚡ Action Required • Doubles Partner Invitations ({myPendingInvites.length})
+              ⚡ Action Required • Doubles Partner Invitations (
+              {myPendingInvites.length})
             </span>
           </div>
           <div className="space-y-3">
@@ -934,7 +1118,9 @@ const TournamentDetails: React.FC = () => {
                   </p>
                   <p className="text-xs text-slate-300 mt-1">
                     Tournament Division:{" "}
-                    <span className="text-white font-bold">{inv.category?.name}</span>{" "}
+                    <span className="text-white font-bold">
+                      {inv.category?.name}
+                    </span>{" "}
                     <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded bg-white/10 text-cyan-200 ml-1">
                       {inv.category?.type}
                     </span>
@@ -946,7 +1132,9 @@ const TournamentDetails: React.FC = () => {
                     disabled={respondingInviteId === inv.id}
                     className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-teal-500 hover:from-cyan-400 hover:to-teal-400 text-slate-950 text-xs font-black uppercase tracking-wider shadow-[0_4px_14px_rgba(74,238,255,0.35)] transition-all active:scale-95 disabled:opacity-50 flex items-center gap-1.5"
                   >
-                    {respondingInviteId === inv.id ? "Enrolling..." : "✓ Accept & Confirm Team"}
+                    {respondingInviteId === inv.id
+                      ? "Enrolling..."
+                      : "✓ Accept & Confirm Team"}
                   </button>
                   <button
                     onClick={() => handleDeclineInvite(inv.id)}
@@ -1109,7 +1297,9 @@ const TournamentDetails: React.FC = () => {
                     <h3 className="text-base font-bold text-white tracking-wide">
                       Tournament Categories
                     </h3>
-                    <p className="text-xs text-slate-400">Configure divisions and participant limits</p>
+                    <p className="text-xs text-slate-400">
+                      Configure divisions and participant limits
+                    </p>
                   </div>
                   <button
                     type="button"
@@ -1127,7 +1317,9 @@ const TournamentDetails: React.FC = () => {
                       className="border border-white/10 rounded-xl p-4 bg-white/5 backdrop-blur-sm space-y-3"
                     >
                       <div className="flex justify-between items-center">
-                        <span className="text-xs font-bold text-[#4AEEFF] uppercase tracking-wider">Category {index + 1}</span>
+                        <span className="text-xs font-bold text-[#4AEEFF] uppercase tracking-wider">
+                          Category {index + 1}
+                        </span>
                         {editCategories.length > 1 && (
                           <button
                             type="button"
@@ -1185,7 +1377,9 @@ const TournamentDetails: React.FC = () => {
                             className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-white/20 text-white text-xs focus:outline-none focus:border-[#4AEEFF]"
                           >
                             <option value="KNOCKOUT">Knockout</option>
-                            <option value="GROUP_KNOCKOUT">Group + Knockout</option>
+                            <option value="GROUP_KNOCKOUT">
+                              Group + Knockout
+                            </option>
                           </select>
                         </div>
                         <div>
@@ -1198,7 +1392,10 @@ const TournamentDetails: React.FC = () => {
                               updateEditCategory(
                                 index,
                                 "gender",
-                                (e.target.value as "MALE" | "FEMALE" | "MIXED") || undefined,
+                                (e.target.value as
+                                  | "MALE"
+                                  | "FEMALE"
+                                  | "MIXED") || undefined,
                               )
                             }
                             className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-white/20 text-white text-xs focus:outline-none focus:border-[#4AEEFF]"
@@ -1308,12 +1505,16 @@ const TournamentDetails: React.FC = () => {
               </h2>
               {tournament.categories.length > 0 && (
                 <span className="px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-md bg-[#4AEEFF]/15 text-[#4AEEFF] border border-[#4AEEFF]/30">
-                  {tournament.categories.length} {tournament.categories.length === 1 ? "Division" : "Divisions"}
+                  {tournament.categories.length}{" "}
+                  {tournament.categories.length === 1
+                    ? "Division"
+                    : "Divisions"}
                 </span>
               )}
             </div>
             <p className="text-xs text-slate-300">
-              Select a division below to view bracket draws, fixtures, and registered participants
+              Select a division below to view bracket draws, fixtures, and
+              registered participants
             </p>
           </div>
 
@@ -1328,7 +1529,11 @@ const TournamentDetails: React.FC = () => {
                 className="w-full sm:w-auto rounded-lg border border-white/15 bg-[#061D23] px-3 py-1.5 text-xs font-bold text-white outline-none focus:border-[#4AEEFF] cursor-pointer"
               >
                 {tournament.categories.map((category) => (
-                  <option key={category.id} value={category.id} className="bg-[#061D23]">
+                  <option
+                    key={category.id}
+                    value={category.id}
+                    className="bg-[#061D23]"
+                  >
                     {category.name} ({category.type})
                   </option>
                 ))}
@@ -1349,7 +1554,8 @@ const TournamentDetails: React.FC = () => {
               const isActive = activeCategoryId === category.id;
               const fillPct =
                 Math.round(
-                  (category.currentParticipants / category.maxParticipants) * 100,
+                  (category.currentParticipants / category.maxParticipants) *
+                    100,
                 ) || 0;
               const isFull =
                 category.currentParticipants >= category.maxParticipants;
@@ -1414,7 +1620,8 @@ const TournamentDetails: React.FC = () => {
                         )}
                         <span>•</span>
                         <span>
-                          {(category.stageFormat || tournamentType) === "GROUP_KNOCKOUT"
+                          {(category.stageFormat || tournamentType) ===
+                          "GROUP_KNOCKOUT"
                             ? "Group & Knockout"
                             : "Knockout"}
                         </span>
@@ -1428,7 +1635,8 @@ const TournamentDetails: React.FC = () => {
                           Participants
                         </span>
                         <span className="font-bold text-white">
-                          {category.currentParticipants} / {category.maxParticipants}{" "}
+                          {category.currentParticipants} /{" "}
+                          {category.maxParticipants}{" "}
                           <span className="text-slate-400 font-normal">
                             ({fillPct}%)
                           </span>
@@ -1464,30 +1672,31 @@ const TournamentDetails: React.FC = () => {
                   </div>
 
                   {/* Dedicated Action Button Area */}
-                  {isAdmin && (category.stageFormat || tournamentType) === "KNOCKOUT" && (
-                    <div className="p-3.5 bg-black/25 border-t border-white/10 mt-auto">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setConfirmDrawCategory(category);
-                        }}
-                        disabled={generating === category.id}
-                        className="w-full rounded-xl border border-[#4AEEFF]/40 bg-[#4AEEFF]/15 hover:bg-[#4AEEFF] text-[#4AEEFF] hover:text-[#061D23] px-3.5 py-2 text-xs font-black uppercase tracking-wider transition-all duration-200 flex items-center justify-center gap-2 shadow-sm disabled:opacity-50 active:scale-[0.98]"
-                      >
-                        {generating === category.id ? (
-                          <>
-                            <span className="animate-spin text-sm">⏳</span>
-                            <span>Generating Bracket...</span>
-                          </>
-                        ) : (
-                          <>
-                            <span>🎲</span>
-                            <span>Generate / Update Bracket</span>
-                          </>
-                        )}
-                      </button>
-                    </div>
-                  )}
+                  {isAdmin &&
+                    (category.stageFormat || tournamentType) === "KNOCKOUT" && (
+                      <div className="p-3.5 bg-black/25 border-t border-white/10 mt-auto">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setConfirmDrawCategory(category);
+                          }}
+                          disabled={generating === category.id}
+                          className="w-full rounded-xl border border-[#4AEEFF]/40 bg-[#4AEEFF]/15 hover:bg-[#4AEEFF] text-[#4AEEFF] hover:text-[#061D23] px-3.5 py-2 text-xs font-black uppercase tracking-wider transition-all duration-200 flex items-center justify-center gap-2 shadow-sm disabled:opacity-50 active:scale-[0.98]"
+                        >
+                          {generating === category.id ? (
+                            <>
+                              <span className="animate-spin text-sm">⏳</span>
+                              <span>Generating Bracket...</span>
+                            </>
+                          ) : (
+                            <>
+                              <span>🎲</span>
+                              <span>Generate / Update Bracket</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    )}
                 </div>
               );
             })}
@@ -1575,23 +1784,34 @@ const TournamentDetails: React.FC = () => {
 
       {/* Winners Section */}
       {showWinners && winners && (
-        <div id="winners-section" className="rounded-[16px] border border-amber-400/30 bg-[#061D23]/35 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl mb-6">
+        <div
+          id="winners-section"
+          className="rounded-[16px] border border-amber-400/30 bg-[#061D23]/35 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl mb-6"
+        >
           <h2 className="text-2xl font-black uppercase tracking-widest text-amber-300 mb-6 text-center">
             🏆 Tournament Champions 🏆
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
             <div className="rounded-2xl border border-yellow-400/40 bg-yellow-400/10 p-6 backdrop-blur-md">
               <div className="text-5xl mb-2">🥇</div>
-              <h3 className="font-black text-xs uppercase tracking-wider text-yellow-300">Champion</h3>
+              <h3 className="font-black text-xs uppercase tracking-wider text-yellow-300">
+                Champion
+              </h3>
               <p className="text-xl font-bold text-white mt-1">
-                {winners.first?.name || `${winners.first?.firstName || ""} ${winners.first?.lastName || ""}`.trim() || "TBD"}
+                {winners.first?.name ||
+                  `${winners.first?.firstName || ""} ${winners.first?.lastName || ""}`.trim() ||
+                  "TBD"}
               </p>
             </div>
             <div className="rounded-2xl border border-slate-300/40 bg-slate-300/10 p-6 backdrop-blur-md">
               <div className="text-5xl mb-2">🥈</div>
-              <h3 className="font-black text-xs uppercase tracking-wider text-slate-300">Runner-up</h3>
+              <h3 className="font-black text-xs uppercase tracking-wider text-slate-300">
+                Runner-up
+              </h3>
               <p className="text-xl font-bold text-white mt-1">
-                {winners.second?.name || `${winners.second?.firstName || ""} ${winners.second?.lastName || ""}`.trim() || "TBD"}
+                {winners.second?.name ||
+                  `${winners.second?.firstName || ""} ${winners.second?.lastName || ""}`.trim() ||
+                  "TBD"}
               </p>
             </div>
             <div className="rounded-2xl border border-amber-600/40 bg-amber-600/10 p-6 backdrop-blur-md">
@@ -1600,7 +1820,9 @@ const TournamentDetails: React.FC = () => {
                 Second Runner-up
               </h3>
               <p className="text-xl font-bold text-white mt-1">
-                {winners.third?.name || `${winners.third?.firstName || ""} ${winners.third?.lastName || ""}`.trim() || "TBD"}
+                {winners.third?.name ||
+                  `${winners.third?.firstName || ""} ${winners.third?.lastName || ""}`.trim() ||
+                  "TBD"}
               </p>
             </div>
           </div>
@@ -1630,13 +1852,18 @@ const TournamentDetails: React.FC = () => {
               {playerAge !== null && (
                 <div className="flex items-center gap-2 bg-black/40 border border-cyan-500/30 px-3.5 py-1.5 rounded-xl text-xs">
                   <span className="text-white/50">Verified:</span>
-                  <span className="font-bold text-[#4AEEFF]">{playerAge} yrs</span>
+                  <span className="font-bold text-[#4AEEFF]">
+                    {playerAge} yrs
+                  </span>
                   <span className="text-white/30">•</span>
-                  <span className="font-bold text-white capitalize">{playerGender?.toLowerCase() || "Athlete"}</span>
+                  <span className="font-bold text-white capitalize">
+                    {playerGender?.toLowerCase() || "Athlete"}
+                  </span>
                 </div>
               )}
               <span className="px-3 py-1.5 rounded-xl bg-cyan-400/10 text-cyan-300 border border-cyan-400/25 text-xs font-bold font-mono">
-                {userRegistrations.length} / {eligibleCategories.length} Divisions Enrolled
+                {userRegistrations.length} / {eligibleCategories.length}{" "}
+                Divisions Enrolled
               </span>
             </div>
           </div>
@@ -1644,11 +1871,14 @@ const TournamentDetails: React.FC = () => {
           <div className="space-y-3 mb-5">
             {eligibleCategories.map((category) => {
               const categoryRegistration = userRegistrations.find(
-                (r) => r.categoryId === category.id || r.category?.id === category.id,
+                (r) =>
+                  r.categoryId === category.id ||
+                  r.category?.id === category.id,
               );
               const isAlreadyRegistered = !!categoryRegistration;
               const isSelected = selectedCategories.includes(category.id);
-              const isFull = category.currentParticipants >= category.maxParticipants;
+              const isFull =
+                category.currentParticipants >= category.maxParticipants;
               const isDoubles = isDoublesCategory(category.type);
               const pendingSentInvite = mySentInvites.find(
                 (inv) => inv.categoryId === category.id,
@@ -1658,12 +1888,14 @@ const TournamentDetails: React.FC = () => {
               );
 
               // Extract confirmed partner name if registered
-              const partnerMember = categoryRegistration?.team?.members?.find((m: any) => m.playerId !== user?.id);
+              const partnerMember = categoryRegistration?.team?.members?.find(
+                (m: any) => m.playerId !== user?.id,
+              );
               const partnerName = partnerMember
                 ? `${partnerMember.player?.firstName || ""} ${partnerMember.player?.lastName || ""}`.trim()
-                : (categoryRegistration?.playerId !== user?.id
+                : categoryRegistration?.playerId !== user?.id
                   ? `${categoryRegistration?.player?.firstName || ""} ${categoryRegistration?.player?.lastName || ""}`.trim()
-                  : "Confirmed Partner");
+                  : "Confirmed Partner";
 
               return (
                 <div
@@ -1672,8 +1904,8 @@ const TournamentDetails: React.FC = () => {
                     isAlreadyRegistered
                       ? "border-emerald-500/50 bg-gradient-to-r from-emerald-950/40 via-emerald-900/15 to-[#061D23]/60 shadow-sm"
                       : isSelected
-                      ? "border-[#4AEEFF] bg-[#4AEEFF]/15 shadow-md shadow-[#4AEEFF]/10"
-                      : "border-white/10 bg-[#061D23]/40 hover:border-white/20"
+                        ? "border-[#4AEEFF] bg-[#4AEEFF]/15 shadow-md shadow-[#4AEEFF]/10"
+                        : "border-white/10 bg-[#061D23]/40 hover:border-white/20"
                   }`}
                 >
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -1704,14 +1936,18 @@ const TournamentDetails: React.FC = () => {
                         <div className="flex items-center gap-2 flex-wrap">
                           <h4
                             className={`font-black text-sm sm:text-base ${
-                              isAlreadyRegistered ? "text-emerald-100" : "text-white"
+                              isAlreadyRegistered
+                                ? "text-emerald-100"
+                                : "text-white"
                             }`}
                           >
                             {category.name}
                           </h4>
                           {category.gender && category.gender !== "MIXED" && (
                             <span className="px-2 py-0.5 text-[10px] font-black uppercase tracking-wider rounded bg-[#4AEEFF]/15 text-[#4AEEFF] border border-[#4AEEFF]/30">
-                              {category.gender === "MALE" ? "♂ Men's" : "♀ Women's"}
+                              {category.gender === "MALE"
+                                ? "♂ Men's"
+                                : "♀ Women's"}
                             </span>
                           )}
                           {category.gender === "MIXED" && (
@@ -1728,14 +1964,17 @@ const TournamentDetails: React.FC = () => {
                         <div className="mt-1 text-xs">
                           {isAlreadyRegistered && isDoubles ? (
                             <div className="flex items-center gap-2 text-white/80 flex-wrap">
-                              <span className="text-emerald-400 font-semibold">Confirmed Doubles Pair:</span>
+                              <span className="text-emerald-400 font-semibold">
+                                Confirmed Doubles Pair:
+                              </span>
                               <span className="font-bold text-white flex items-center gap-1">
                                 <span>🤝</span> {partnerName}
                               </span>
                             </div>
                           ) : (
                             <p className="text-white/60">
-                              {category.currentParticipants} / {category.maxParticipants} participants
+                              {category.currentParticipants} /{" "}
+                              {category.maxParticipants} participants
                               {isDoubles && (
                                 <span className="ml-2 text-cyan-300 font-medium">
                                   • Invite partner required
@@ -1766,18 +2005,27 @@ const TournamentDetails: React.FC = () => {
                         pendingReceivedInvite ? (
                           <div className="flex items-center gap-2 bg-cyan-950/60 border border-cyan-500/30 px-3 py-1.5 rounded-xl">
                             <span className="text-xs font-bold text-cyan-300">
-                              Invited by {pendingReceivedInvite.inviter?.firstName}
+                              Invited by{" "}
+                              {pendingReceivedInvite.inviter?.firstName}
                             </span>
                             <button
-                              onClick={() => handleAcceptInvite(pendingReceivedInvite.id)}
-                              disabled={respondingInviteId === pendingReceivedInvite.id}
+                              onClick={() =>
+                                handleAcceptInvite(pendingReceivedInvite.id)
+                              }
+                              disabled={
+                                respondingInviteId === pendingReceivedInvite.id
+                              }
                               className="px-3 py-1 rounded-lg bg-gradient-to-r from-cyan-400 to-teal-400 text-slate-950 text-xs font-black uppercase tracking-wider shadow-sm hover:brightness-110 active:scale-95 transition-all"
                             >
                               ✓ Accept
                             </button>
                             <button
-                              onClick={() => handleDeclineInvite(pendingReceivedInvite.id)}
-                              disabled={respondingInviteId === pendingReceivedInvite.id}
+                              onClick={() =>
+                                handleDeclineInvite(pendingReceivedInvite.id)
+                              }
+                              disabled={
+                                respondingInviteId === pendingReceivedInvite.id
+                              }
                               className="px-2 py-1 text-xs text-slate-400 hover:text-white"
                             >
                               ✕
@@ -1786,10 +2034,13 @@ const TournamentDetails: React.FC = () => {
                         ) : pendingSentInvite ? (
                           <div className="flex items-center gap-2 bg-amber-950/40 border border-amber-500/30 px-3 py-1.5 rounded-xl">
                             <span className="text-xs text-amber-300 font-medium">
-                              ⏳ Invited {pendingSentInvite.invitee?.firstName} {pendingSentInvite.invitee?.lastName}
+                              ⏳ Invited {pendingSentInvite.invitee?.firstName}{" "}
+                              {pendingSentInvite.invitee?.lastName}
                             </span>
                             <button
-                              onClick={() => handleCancelSentInvite(pendingSentInvite.id)}
+                              onClick={() =>
+                                handleCancelSentInvite(pendingSentInvite.id)
+                              }
                               className="px-2 py-0.5 rounded-md bg-red-500/20 hover:bg-red-500/40 text-red-300 border border-red-500/30 text-[11px] font-bold transition-all"
                             >
                               Cancel
@@ -1837,8 +2088,12 @@ const TournamentDetails: React.FC = () => {
                 onClick={() => setShowIneligible(!showIneligible)}
                 className="flex items-center justify-between w-full py-1 text-xs font-bold uppercase tracking-wider text-white/40 hover:text-white/70 transition-colors"
               >
-                <span>Ineligible Divisions ({ineligibleCategories.length})</span>
-                <span className="font-mono text-xs">{showIneligible ? "▲ Collapse" : "▼ Expand to view reasons"}</span>
+                <span>
+                  Ineligible Divisions ({ineligibleCategories.length})
+                </span>
+                <span className="font-mono text-xs">
+                  {showIneligible ? "▲ Collapse" : "▼ Expand to view reasons"}
+                </span>
               </button>
 
               {showIneligible && (
@@ -1856,7 +2111,9 @@ const TournamentDetails: React.FC = () => {
                       >
                         <div className="flex items-center gap-2.5">
                           <span className="w-1.5 h-1.5 rounded-full bg-red-400/60"></span>
-                          <span className="font-medium text-white/60">{category.name}</span>
+                          <span className="font-medium text-white/60">
+                            {category.name}
+                          </span>
                           <span className="text-[10px] text-white/30 uppercase font-mono">
                             {category.type}
                           </span>
@@ -1876,7 +2133,8 @@ const TournamentDetails: React.FC = () => {
           <div className="mt-5 pt-4 border-t border-white/10 flex items-center justify-between gap-4 flex-wrap">
             {allEligibleRegistered ? (
               <div className="w-full rounded-xl bg-emerald-500/15 border border-emerald-500/40 py-3.5 px-4 text-xs font-black uppercase tracking-wider text-emerald-300 text-center flex items-center justify-center gap-2 shadow-sm">
-                <span className="text-base">✓</span> You Are Officially Registered For All Eligible Divisions!
+                <span className="text-base">✓</span> You Are Officially
+                Registered For All Eligible Divisions!
               </div>
             ) : eligibleSinglesCategories.length > 0 ? (
               <div className="flex items-center justify-between w-full gap-4 flex-wrap">
@@ -1897,7 +2155,9 @@ const TournamentDetails: React.FC = () => {
               </div>
             ) : (
               <div className="w-full text-center py-2 text-xs text-cyan-300/80 font-medium">
-                💡 To enter remaining divisions, click <strong>"Invite Partner"</strong> on any doubles division card above.
+                💡 To enter remaining divisions, click{" "}
+                <strong>"Invite Partner"</strong> on any doubles division card
+                above.
               </div>
             )}
           </div>
@@ -1906,7 +2166,9 @@ const TournamentDetails: React.FC = () => {
 
       {hasRegistration && (
         <div className="rounded-[16px] border border-white/20 bg-[#061D23]/25 p-5 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl mb-6 flex items-center flex-wrap gap-2">
-          <p className="text-xs uppercase tracking-wider font-bold text-[#4AEEFF]">Your registration status:</p>
+          <p className="text-xs uppercase tracking-wider font-bold text-[#4AEEFF]">
+            Your registration status:
+          </p>
           {userRegistrations.map((reg) => (
             <span
               key={reg.id}
@@ -1917,6 +2179,199 @@ const TournamentDetails: React.FC = () => {
           ))}
         </div>
       )}
+      {/* Payment Proof Verification */}
+      {isPlayer &&
+        hasRegistration &&
+        paymentProofInfo?.paymentProofRequired && (
+          <div className="rounded-[16px] border border-white/20 bg-[#061D23]/25 p-5 sm:p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl mb-6">
+            <div className="flex items-start justify-between gap-4 flex-wrap mb-5">
+              <div>
+                <h3 className="text-lg font-black uppercase tracking-wider text-white">
+                  Payment Verification
+                </h3>
+
+                <p className="text-xs text-white/60 mt-1">
+                  Submit your payment proof for administrator verification.
+                </p>
+              </div>
+
+              {paymentProofInfo.registrationFee && (
+                <div className="rounded-xl border border-[#4AEEFF]/30 bg-[#4AEEFF]/10 px-4 py-2">
+                  <p className="text-[10px] uppercase tracking-wider text-white/50">
+                    Registration Fee
+                  </p>
+
+                  <p className="text-lg font-black text-[#4AEEFF]">
+                    LKR {paymentProofInfo.registrationFee}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Payment Instructions */}
+            {paymentProofInfo.paymentInstructions && (
+              <div className="mb-5 rounded-xl border border-white/10 bg-black/20 p-4">
+                <p className="text-[10px] font-black uppercase tracking-wider text-[#4AEEFF] mb-2">
+                  Payment Instructions
+                </p>
+
+                <p className="text-sm text-white/80 whitespace-pre-line">
+                  {paymentProofInfo.paymentInstructions}
+                </p>
+              </div>
+            )}
+
+            {/* No proof submitted yet */}
+            {!paymentProofInfo.paymentProof && (
+              <div className="space-y-4">
+                <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4">
+                  <p className="text-sm font-bold text-amber-300">
+                    Payment proof required
+                  </p>
+
+                  <p className="text-xs text-white/60 mt-1">
+                    Complete the payment and upload your receipt or payment
+                    confirmation below.
+                  </p>
+                </div>
+
+                <div>
+                  <input
+                    type="file"
+                    accept=".jpg,.jpeg,.png,.pdf"
+                    onChange={handlePaymentProofFileChange}
+                    className="block w-full text-xs text-white/70
+                file:mr-4 file:rounded-lg file:border-0
+                file:bg-[#4AEEFF] file:px-4 file:py-2.5
+                file:text-xs file:font-black file:uppercase
+                file:text-[#061D23] hover:file:bg-white
+                file:cursor-pointer"
+                  />
+
+                  <p className="text-[10px] text-white/40 mt-2">
+                    Accepted: JPG, JPEG, PNG or PDF • Maximum size: 5MB
+                  </p>
+                </div>
+
+                {paymentProofFile && (
+                  <div className="rounded-lg border border-white/10 bg-white/5 px-3 py-2">
+                    <p className="text-xs text-white/70">
+                      Selected:{" "}
+                      <span className="font-bold text-white">
+                        {paymentProofFile.name}
+                      </span>
+                    </p>
+                  </div>
+                )}
+
+                <button
+                  type="button"
+                  onClick={handleUploadPaymentProof}
+                  disabled={!paymentProofFile || uploadingProof}
+                  className="rounded-xl bg-[#4AEEFF] px-5 py-3 text-xs font-black uppercase tracking-wider text-[#061D23] transition-all hover:bg-white disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  {uploadingProof ? "Uploading..." : "Upload Payment Proof"}
+                </button>
+              </div>
+            )}
+
+            {/* Pending */}
+            {paymentProofInfo.paymentProof?.status === "PENDING" && (
+              <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4">
+                <div className="flex items-center gap-2">
+                  <span className="h-2.5 w-2.5 rounded-full bg-amber-400 animate-pulse" />
+
+                  <p className="text-sm font-black uppercase tracking-wider text-amber-300">
+                    Pending Verification
+                  </p>
+                </div>
+
+                <p className="text-xs text-white/60 mt-2">
+                  Your payment proof has been submitted and is waiting for
+                  administrator verification.
+                </p>
+              </div>
+            )}
+
+            {/* Approved */}
+            {paymentProofInfo.paymentProof?.status === "APPROVED" && (
+              <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4">
+                <p className="text-sm font-black uppercase tracking-wider text-emerald-300">
+                  ✓ Payment Verified
+                </p>
+
+                <p className="text-xs text-white/60 mt-2">
+                  Your payment has been verified and your tournament
+                  registration has been approved.
+                </p>
+              </div>
+            )}
+
+            {/* Rejected */}
+            {paymentProofInfo.paymentProof?.status === "REJECTED" && (
+              <div className="space-y-4">
+                <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-4">
+                  <p className="text-sm font-black uppercase tracking-wider text-red-300">
+                    Payment Proof Rejected
+                  </p>
+
+                  {paymentProofInfo.paymentProof.rejectionReason && (
+                    <div className="mt-3">
+                      <p className="text-[10px] font-black uppercase tracking-wider text-white/40">
+                        Reason
+                      </p>
+
+                      <p className="text-sm text-red-200 mt-1">
+                        {paymentProofInfo.paymentProof.rejectionReason}
+                      </p>
+                    </div>
+                  )}
+
+                  <p className="text-xs text-white/60 mt-3">
+                    Please upload a new payment proof after correcting the
+                    issue.
+                  </p>
+                </div>
+
+                <div>
+                  <input
+                    type="file"
+                    accept=".jpg,.jpeg,.png,.pdf"
+                    onChange={handlePaymentProofFileChange}
+                    className="block w-full text-xs text-white/70
+                file:mr-4 file:rounded-lg file:border-0
+                file:bg-[#4AEEFF] file:px-4 file:py-2.5
+                file:text-xs file:font-black file:uppercase
+                file:text-[#061D23] hover:file:bg-white
+                file:cursor-pointer"
+                  />
+
+                  <p className="text-[10px] text-white/40 mt-2">
+                    Accepted: JPG, JPEG, PNG or PDF • Maximum size: 5MB
+                  </p>
+                </div>
+
+                {paymentProofFile && (
+                  <p className="text-xs text-white/70">
+                    Selected:{" "}
+                    <span className="font-bold text-white">
+                      {paymentProofFile.name}
+                    </span>
+                  </p>
+                )}
+
+                <button
+                  type="button"
+                  onClick={handleUploadPaymentProof}
+                  disabled={!paymentProofFile || uploadingProof}
+                  className="rounded-xl bg-[#4AEEFF] px-5 py-3 text-xs font-black uppercase tracking-wider text-[#061D23] transition-all hover:bg-white disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  {uploadingProof ? "Uploading..." : "Upload New Payment Proof"}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
 
       {/* Registrations Section */}
       {(isAdmin || isReferee) && tournament.registrations?.length > 0 && (
@@ -1924,7 +2379,10 @@ const TournamentDetails: React.FC = () => {
           <h2 className="text-xl font-black uppercase tracking-wider text-white mb-4">
             Registrations ({tournament.registrations.length})
           </h2>
-          <div className="overflow-x-auto" style={{ WebkitOverflowScrolling: "touch" }}>
+          <div
+            className="overflow-x-auto"
+            style={{ WebkitOverflowScrolling: "touch" }}
+          >
             <table className="min-w-full divide-y divide-white/10">
               <thead>
                 <tr className="border-b border-white/10">
@@ -1947,15 +2405,22 @@ const TournamentDetails: React.FC = () => {
               </thead>
               <tbody className="divide-y divide-white/5">
                 {tournament.registrations.map((registration) => (
-                  <tr key={registration.id} className="hover:bg-white/5 transition-colors">
+                  <tr
+                    key={registration.id}
+                    className="hover:bg-white/5 transition-colors"
+                  >
                     <td className="px-6 py-4 whitespace-nowrap">
-                      {registration.team?.members && registration.team.members.length > 0 ? (
+                      {registration.team?.members &&
+                      registration.team.members.length > 0 ? (
                         <div className="flex flex-col">
                           <span className="text-white font-bold text-sm">
                             {registration.team.members
-                              .map((m) => `${m.player?.firstName || ""} ${m.player?.lastName || ""}`.trim())
+                              .map((m) =>
+                                `${m.player?.firstName || ""} ${m.player?.lastName || ""}`.trim(),
+                              )
                               .filter(Boolean)
-                              .join(" & ") || `${registration.player?.firstName || ""} ${registration.player?.lastName || ""}`}
+                              .join(" & ") ||
+                              `${registration.player?.firstName || ""} ${registration.player?.lastName || ""}`}
                           </span>
                           <span className="text-[10px] uppercase font-bold text-[#4AEEFF]">
                             Doubles Pair
@@ -1966,7 +2431,8 @@ const TournamentDetails: React.FC = () => {
                           to={`/profile/${registration.player?.id}`}
                           className="text-white hover:text-[#4AEEFF] font-bold text-sm transition-colors"
                         >
-                          {registration.player?.firstName} {registration.player?.lastName}
+                          {registration.player?.firstName}{" "}
+                          {registration.player?.lastName}
                         </Link>
                       )}
                     </td>
@@ -1976,7 +2442,8 @@ const TournamentDetails: React.FC = () => {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-white/70">
-                      {registration.team?.members && registration.team.members.length > 0
+                      {registration.team?.members &&
+                      registration.team.members.length > 0
                         ? registration.team.members
                             .map((m) => m.player?.email)
                             .filter(Boolean)
@@ -2072,129 +2539,144 @@ const TournamentDetails: React.FC = () => {
               padding: 16,
             }}
           >
-          <div
-            style={{
-              background: "#061D23",
-              border: "1px solid rgba(239, 68, 68, 0.4)",
-              borderRadius: 16,
-              maxWidth: 420,
-              width: "100%",
-              overflow: "hidden",
-              boxShadow: "0 25px 60px rgba(0,0,0,0.6)",
-              fontFamily: "'Segoe UI',system-ui,sans-serif",
-            }}
-          >
-            {/* Header */}
             <div
               style={{
-                background: "rgba(239, 68, 68, 0.15)",
-                padding: "20px 24px",
-                borderBottom: "1px solid rgba(239, 68, 68, 0.25)",
+                background: "#061D23",
+                border: "1px solid rgba(239, 68, 68, 0.4)",
+                borderRadius: 16,
+                maxWidth: 420,
+                width: "100%",
+                overflow: "hidden",
+                boxShadow: "0 25px 60px rgba(0,0,0,0.6)",
+                fontFamily: "'Segoe UI',system-ui,sans-serif",
               }}
             >
-              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <div
-                  style={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: "50%",
-                    background: "rgba(239, 68, 68, 0.2)",
-                    border: "1px solid rgba(239, 68, 68, 0.4)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontSize: 18,
-                  }}
-                >
-                  ⚠️
-                </div>
-                <div>
-                  <div
-                    style={{ fontWeight: 800, color: "#fca5a5", fontSize: 16, textTransform: "uppercase", letterSpacing: 0.5 }}
-                  >
-                    Reset Knockout Stage
-                  </div>
-                  <div style={{ fontSize: 12, color: "rgba(255, 255, 255, 0.6)" }}>
-                    This action cannot be undone
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Body */}
-            <div style={{ padding: "20px 24px" }}>
-              <p
-                style={{
-                  margin: "0 0 14px",
-                  color: "rgba(255, 255, 255, 0.8)",
-                  fontSize: 13,
-                  lineHeight: 1.6,
-                }}
-              >
-                This will permanently delete{" "}
-                <strong style={{ color: "#fff" }}>all knockout matches and recorded scores</strong>. Group stage results will remain intact.
-              </p>
+              {/* Header */}
               <div
                 style={{
-                  background: "rgba(239, 68, 68, 0.1)",
-                  border: "1px solid rgba(239, 68, 68, 0.3)",
-                  borderRadius: 10,
-                  padding: "10px 14px",
-                  fontSize: 12,
-                  color: "#fca5a5",
+                  background: "rgba(239, 68, 68, 0.15)",
+                  padding: "20px 24px",
+                  borderBottom: "1px solid rgba(239, 68, 68, 0.25)",
                 }}
               >
-                You will need to regenerate the knockout bracket after resetting.
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <div
+                    style={{
+                      width: 40,
+                      height: 40,
+                      borderRadius: "50%",
+                      background: "rgba(239, 68, 68, 0.2)",
+                      border: "1px solid rgba(239, 68, 68, 0.4)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: 18,
+                    }}
+                  >
+                    ⚠️
+                  </div>
+                  <div>
+                    <div
+                      style={{
+                        fontWeight: 800,
+                        color: "#fca5a5",
+                        fontSize: 16,
+                        textTransform: "uppercase",
+                        letterSpacing: 0.5,
+                      }}
+                    >
+                      Reset Knockout Stage
+                    </div>
+                    <div
+                      style={{
+                        fontSize: 12,
+                        color: "rgba(255, 255, 255, 0.6)",
+                      }}
+                    >
+                      This action cannot be undone
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Body */}
+              <div style={{ padding: "20px 24px" }}>
+                <p
+                  style={{
+                    margin: "0 0 14px",
+                    color: "rgba(255, 255, 255, 0.8)",
+                    fontSize: 13,
+                    lineHeight: 1.6,
+                  }}
+                >
+                  This will permanently delete{" "}
+                  <strong style={{ color: "#fff" }}>
+                    all knockout matches and recorded scores
+                  </strong>
+                  . Group stage results will remain intact.
+                </p>
+                <div
+                  style={{
+                    background: "rgba(239, 68, 68, 0.1)",
+                    border: "1px solid rgba(239, 68, 68, 0.3)",
+                    borderRadius: 10,
+                    padding: "10px 14px",
+                    fontSize: 12,
+                    color: "#fca5a5",
+                  }}
+                >
+                  You will need to regenerate the knockout bracket after
+                  resetting.
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div
+                style={{
+                  padding: "14px 24px",
+                  borderTop: "1px solid rgba(255, 255, 255, 0.1)",
+                  display: "flex",
+                  gap: 10,
+                  background: "rgba(6, 29, 35, 0.8)",
+                }}
+              >
+                <button
+                  onClick={() => setShowResetConfirm(false)}
+                  style={{
+                    flex: 1,
+                    padding: "10px 0",
+                    border: "1px solid rgba(255, 255, 255, 0.15)",
+                    borderRadius: 10,
+                    background: "rgba(255, 255, 255, 0.05)",
+                    color: "#fff",
+                    fontWeight: 600,
+                    fontSize: 13,
+                    cursor: "pointer",
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleResetKnockout}
+                  style={{
+                    flex: 1,
+                    padding: "10px 0",
+                    border: "none",
+                    borderRadius: 10,
+                    background: "#dc2626",
+                    color: "#fff",
+                    fontWeight: 700,
+                    fontSize: 13,
+                    cursor: "pointer",
+                  }}
+                >
+                  Yes, Reset
+                </button>
               </div>
             </div>
-
-            {/* Footer */}
-            <div
-              style={{
-                padding: "14px 24px",
-                borderTop: "1px solid rgba(255, 255, 255, 0.1)",
-                display: "flex",
-                gap: 10,
-                background: "rgba(6, 29, 35, 0.8)",
-              }}
-            >
-              <button
-                onClick={() => setShowResetConfirm(false)}
-                style={{
-                  flex: 1,
-                  padding: "10px 0",
-                  border: "1px solid rgba(255, 255, 255, 0.15)",
-                  borderRadius: 10,
-                  background: "rgba(255, 255, 255, 0.05)",
-                  color: "#fff",
-                  fontWeight: 600,
-                  fontSize: 13,
-                  cursor: "pointer",
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleResetKnockout}
-                style={{
-                  flex: 1,
-                  padding: "10px 0",
-                  border: "none",
-                  borderRadius: 10,
-                  background: "#dc2626",
-                  color: "#fff",
-                  fontWeight: 700,
-                  fontSize: 13,
-                  cursor: "pointer",
-                }}
-              >
-                Yes, Reset
-              </button>
-            </div>
-          </div>
-        </div>,
-        document.body
-      )}
+          </div>,
+          document.body,
+        )}
 
       {/* Custom Glassmorphic Modal for Generate / Update Bracket Confirmation */}
       {confirmDrawCategory &&
@@ -2222,7 +2704,8 @@ const TournamentDetails: React.FC = () => {
                 maxWidth: 440,
                 width: "100%",
                 overflow: "hidden",
-                boxShadow: "0 25px 60px rgba(0, 0, 0, 0.75), 0 0 35px rgba(74, 238, 255, 0.15)",
+                boxShadow:
+                  "0 25px 60px rgba(0, 0, 0, 0.75), 0 0 35px rgba(74, 238, 255, 0.15)",
                 fontFamily: "'Segoe UI',system-ui,sans-serif",
                 color: "#ffffff",
               }}
@@ -2230,7 +2713,8 @@ const TournamentDetails: React.FC = () => {
               {/* Header */}
               <div
                 style={{
-                  background: "linear-gradient(135deg, rgba(74, 238, 255, 0.15), rgba(6, 29, 35, 0.8))",
+                  background:
+                    "linear-gradient(135deg, rgba(74, 238, 255, 0.15), rgba(6, 29, 35, 0.8))",
                   padding: "20px 24px",
                   borderBottom: "1px solid rgba(74, 238, 255, 0.2)",
                   display: "flex",
@@ -2267,7 +2751,14 @@ const TournamentDetails: React.FC = () => {
                     >
                       Generate Knockout Draw
                     </h3>
-                    <div style={{ fontSize: 12, color: "#4AEEFF", fontWeight: 700, marginTop: 2 }}>
+                    <div
+                      style={{
+                        fontSize: 12,
+                        color: "#4AEEFF",
+                        fontWeight: 700,
+                        marginTop: 2,
+                      }}
+                    >
                       Official Bracket Generation
                     </div>
                   </div>
@@ -2304,8 +2795,22 @@ const TournamentDetails: React.FC = () => {
                     marginBottom: 16,
                   }}
                 >
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                    <span style={{ fontSize: 11, color: "rgba(255, 255, 255, 0.5)", textTransform: "uppercase", fontWeight: 700 }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      marginBottom: 6,
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontSize: 11,
+                        color: "rgba(255, 255, 255, 0.5)",
+                        textTransform: "uppercase",
+                        fontWeight: 700,
+                      }}
+                    >
                       Division / Category
                     </span>
                     <span
@@ -2320,14 +2825,25 @@ const TournamentDetails: React.FC = () => {
                         textTransform: "uppercase",
                       }}
                     >
-                      {isDoublesCategory(confirmDrawCategory.type) ? "Doubles" : "Singles"}
+                      {isDoublesCategory(confirmDrawCategory.type)
+                        ? "Doubles"
+                        : "Singles"}
                     </span>
                   </div>
-                  <div style={{ fontSize: 16, fontWeight: 800, color: "#ffffff" }}>
+                  <div
+                    style={{ fontSize: 16, fontWeight: 800, color: "#ffffff" }}
+                  >
                     {confirmDrawCategory.name}
                   </div>
-                  <div style={{ fontSize: 12, color: "rgba(255, 255, 255, 0.7)", marginTop: 4 }}>
-                    {confirmDrawCategory.currentParticipants ?? 0} approved entries ready to seed
+                  <div
+                    style={{
+                      fontSize: 12,
+                      color: "rgba(255, 255, 255, 0.7)",
+                      marginTop: 4,
+                    }}
+                  >
+                    {confirmDrawCategory.currentParticipants ?? 0} approved
+                    entries ready to seed
                   </div>
                 </div>
 
@@ -2339,7 +2855,9 @@ const TournamentDetails: React.FC = () => {
                     lineHeight: 1.5,
                   }}
                 >
-                  This will seed approved participants, calculate any necessary BYEs according to tournament rules, and generate official fixtures.
+                  This will seed approved participants, calculate any necessary
+                  BYEs according to tournament rules, and generate official
+                  fixtures.
                 </p>
 
                 <div
@@ -2352,7 +2870,8 @@ const TournamentDetails: React.FC = () => {
                     color: "#a5f3fc",
                   }}
                 >
-                  💡 Any unplayed or empty fixtures for this division will be updated to reflect the new draw.
+                  💡 Any unplayed or empty fixtures for this division will be
+                  updated to reflect the new draw.
                 </div>
               </div>
 
@@ -2397,7 +2916,10 @@ const TournamentDetails: React.FC = () => {
                     color: "#061D23",
                     fontWeight: 900,
                     fontSize: 13,
-                    cursor: generating === confirmDrawCategory.id ? "default" : "pointer",
+                    cursor:
+                      generating === confirmDrawCategory.id
+                        ? "default"
+                        : "pointer",
                     textTransform: "uppercase",
                     letterSpacing: 0.5,
                     boxShadow: "0 4px 14px rgba(74, 238, 255, 0.35)",
@@ -2422,9 +2944,9 @@ const TournamentDetails: React.FC = () => {
               </div>
             </div>
           </div>,
-          document.body
+          document.body,
         )}
-    </>
+    </>,
   );
 };
 

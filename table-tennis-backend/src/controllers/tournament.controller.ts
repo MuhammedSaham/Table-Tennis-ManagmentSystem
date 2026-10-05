@@ -18,7 +18,7 @@ export const createTournament = catchAsync(async (req: Request, res: Response) =
     throw new AppError('Only admins can create tournaments', 403);
   }
 
-  const { name, description, venue, startDate, endDate, registrationDeadline, maxPlayers,tournamentType } = req.body;
+  const { name, description, venue, startDate, endDate, registrationDeadline, maxPlayers,tournamentType,registrationFee,requirePaymentProofClub,requirePaymentProofGuest,paymentInstructions, } = req.body;
 
   // Validate dates
   if (new Date(startDate) >= new Date(endDate)) {
@@ -39,6 +39,10 @@ export const createTournament = catchAsync(async (req: Request, res: Response) =
       registrationDeadline: new Date(registrationDeadline),
       maxPlayers,
       tournamentType: tournamentType === 'GROUP_KNOCKOUT' ? 'GROUP_KNOCKOUT' : 'KNOCKOUT', // ← ADD THIS LINE
+      registrationFee: registrationFee !== undefined ? registrationFee : null,
+      requirePaymentProofClub: requirePaymentProofClub ?? false,
+      requirePaymentProofGuest: requirePaymentProofGuest ?? false,
+      paymentInstructions: paymentInstructions || null,
     },
   });
 
@@ -152,7 +156,7 @@ export const updateTournament = catchAsync(async (req: Request, res: Response) =
     throw new AppError('Tournament not found', 404);
   }
 
-  const { name, description, venue, startDate, endDate, registrationDeadline, status, maxPlayers } = req.body;
+  const { name, description, venue, startDate, endDate, registrationDeadline, status, maxPlayers,registrationFee,requirePaymentProofClub,requirePaymentProofGuest,paymentInstructions } = req.body;
 
   const updatedTournament = await prisma.tournament.update({
     where: { id },
@@ -165,6 +169,10 @@ export const updateTournament = catchAsync(async (req: Request, res: Response) =
       registrationDeadline: registrationDeadline ? new Date(registrationDeadline) : undefined,
       status: status || undefined,
       maxPlayers: maxPlayers !== undefined ? maxPlayers : undefined,
+      registrationFee: registrationFee !== undefined ? registrationFee : undefined,
+      requirePaymentProofClub: requirePaymentProofClub !== undefined ? requirePaymentProofClub : undefined,
+      requirePaymentProofGuest: requirePaymentProofGuest !== undefined ? requirePaymentProofGuest : undefined,
+      paymentInstructions: paymentInstructions !== undefined ? paymentInstructions : undefined,
     },
   });
 

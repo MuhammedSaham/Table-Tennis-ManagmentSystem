@@ -31,6 +31,23 @@ export const createTournamentSchema = z.object({
       .optional(),
 
       tournamentType: z.enum(['KNOCKOUT', 'GROUP_KNOCKOUT']).default('KNOCKOUT'),
+
+      registrationFee: z.number()
+  .nonnegative('Registration fee cannot be negative')
+  .optional(),
+
+requirePaymentProofClub: z.boolean()
+  .optional()
+  .default(false),
+
+requirePaymentProofGuest: z.boolean()
+  .optional()
+  .default(false),
+
+paymentInstructions: z.string()
+  .max(1000, 'Payment instructions must not exceed 1000 characters')
+  .optional(),
+
   }).refine(data => new Date(data.startDate) < new Date(data.endDate), {
     message: 'End date must be after start date',
     path: ['endDate'],
@@ -46,7 +63,23 @@ export const createTournamentSchema = z.object({
   }, {
     message: 'Tournament duration cannot exceed 30 days',
     path: ['endDate'],
-  }),
+  })
+
+  .refine(data => {
+  if (
+    data.requirePaymentProofClub ||
+    data.requirePaymentProofGuest
+  ) {
+    return data.registrationFee !== undefined &&
+           data.registrationFee > 0;
+  }
+
+  return true;
+}, {
+  message: 'Registration fee is required when payment proof is required',
+  path: ['registrationFee'],
+}),
+
 });
 
 // Update tournament validation schema
@@ -90,6 +123,21 @@ export const updateTournamentSchema = z.object({
       .positive('Max players must be positive')
       .max(1000, 'Max players cannot exceed 1000')
       .optional(),
+
+    registrationFee: z.number()
+  .nonnegative('Registration fee cannot be negative')
+  .optional(),
+
+requirePaymentProofClub: z.boolean()
+  .optional(),
+
+requirePaymentProofGuest: z.boolean()
+  .optional(),
+
+paymentInstructions: z.string()
+  .max(1000, 'Payment instructions must not exceed 1000 characters')
+  .nullable()
+  .optional(),
   }).refine(data => {
     // If both startDate and endDate are provided, validate they are in correct order
     if (data.startDate && data.endDate) {
