@@ -1,5 +1,7 @@
 import prisma from '../config/database';
 import { AppError } from '../utils/AppError';
+import fs from 'fs';
+import path from 'path';
 
 export class PaymentProofService {
   async submitPaymentProof(
@@ -749,6 +751,65 @@ if (!proof.registrationId) {
     });
 
   return updatedProof;
+}
+async deleteMyPaymentProof(
+  playerId: string,
+  proofId: string
+) {
+  // Find the proof and make sure it belongs to this player
+  const paymentProof =
+    await prisma.tournamentPaymentProof.findFirst({
+      where: {
+        id: proofId,
+        playerId
+      }
+    });
+
+  if (!paymentProof) {
+    throw new AppError(
+      'Payment proof not found or you do not have permission to delete it',
+      404
+    );
+  }
+
+  // Never allow an approved proof to be deleted
+  if (paymentProof.status === 'APPROVED') {
+    throw new AppError(
+      'Approved payment proofs cannot be deleted',
+      400
+    );
+  }
+
+  // Delete the database record
+  await prisma.tournamentPaymentProof.delete({
+    where: {
+      id: paymentProof.id
+    }
+  });
+
+  // Delete the uploaded file from the server
+  try {
+    const relativePath =
+      paymentProof.proofUrl.replace(/^\/+/, '');
+
+    const filePath = path.join(
+      process.cwd(),
+      relativePath
+    );
+
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+  } catch (error) {
+    console.error(
+      'Failed to delete payment proof file:',
+      error
+    );
+  }
+
+  return {
+    id: paymentProof.id
+  };
 }
 async getMyPaymentProof(
   playerId: string,

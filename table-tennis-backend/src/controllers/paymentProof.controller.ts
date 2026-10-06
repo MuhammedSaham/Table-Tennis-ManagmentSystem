@@ -94,3 +94,20 @@ export const getMyPaymentProof = catchAsync(
     );
   }
 );
+export const deleteMyPaymentProof = catchAsync(
+  async (req: Request, res: Response) => {
+    const { proofId } = req.params;
+
+    await paymentProofService.deleteMyPaymentProof(
+      req.user!.id,
+      proofId
+    );
+
+    sendResponse(
+      res,
+      200,
+      'Payment proof deleted successfully',
+      null
+    );
+  }
+);

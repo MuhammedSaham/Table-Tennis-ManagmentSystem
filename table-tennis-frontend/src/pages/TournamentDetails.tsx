@@ -118,9 +118,10 @@ const TournamentDetails: React.FC = () => {
     useState<PaymentProofInfo | null>(null);
 
   const [paymentProofFile, setPaymentProofFile] = useState<File | null>(null);
-
   const [uploadingProof, setUploadingProof] = useState(false);
 
+  const [showDeleteProofConfirm, setShowDeleteProofConfirm] = useState(false);
+  const [deletingProof, setDeletingProof] = useState(false);
   const [activeCategoryId, setActiveCategoryId] = useState<string>("");
   const [registering, setRegistering] = useState(false);
   const [generating, setGenerating] = useState<string | null>(null);
@@ -348,6 +349,41 @@ const TournamentDetails: React.FC = () => {
       );
     } finally {
       setUploadingProof(false);
+    }
+  };
+  const handleDeletePaymentProof = async () => {
+    const proof = paymentProofInfo?.paymentProof;
+
+    if (!proof) {
+      toast.error("Payment proof not found");
+      return;
+    }
+
+    if (proof.status === "APPROVED") {
+      toast.error("Approved payment proofs cannot be deleted");
+      return;
+    }
+
+    setDeletingProof(true);
+
+    try {
+      await api.delete(`/payment-proofs/${proof.id}`);
+
+      toast.success("Payment proof deleted successfully");
+
+      setPaymentProofFile(null);
+      setShowDeleteProofConfirm(false);
+
+      await fetchMyPaymentProof();
+      await fetchTournamentDetails();
+    } catch (error: any) {
+      console.error("Payment proof deletion failed:", error);
+
+      toast.error(
+        error.response?.data?.message || "Failed to delete payment proof",
+      );
+    } finally {
+      setDeletingProof(false);
     }
   };
 
@@ -2292,6 +2328,33 @@ const TournamentDetails: React.FC = () => {
                   Your payment proof has been submitted and is waiting for
                   administrator verification.
                 </p>
+
+                <p className="text-xs text-white/50 mt-2">
+                  Please check your uploaded proof. If you uploaded the wrong
+                  file, you can delete it and submit a new one before it is
+                  approved.
+                </p>
+
+                <div className="flex flex-wrap gap-3 mt-4">
+                  {/* View Proof */}
+                  <a
+                    href={`http://localhost:3000${paymentProofInfo.paymentProof.proofUrl}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="rounded-xl border border-[#4AEEFF]/40 bg-[#4AEEFF]/15 px-4 py-2.5 text-xs font-black uppercase tracking-wider text-[#4AEEFF] transition-all hover:bg-[#4AEEFF] hover:text-[#061D23]"
+                  >
+                    View Proof
+                  </a>
+
+                  {/* Delete Proof */}
+                  <button
+                    type="button"
+                    onClick={() => setShowDeleteProofConfirm(true)}
+                    className="rounded-xl border border-red-500/40 bg-red-500/15 px-4 py-2.5 text-xs font-black uppercase tracking-wider text-red-300 transition-all hover:bg-red-500 hover:text-white"
+                  >
+                    Delete Proof
+                  </button>
+                </div>
               </div>
             )}
 
@@ -2307,6 +2370,17 @@ const TournamentDetails: React.FC = () => {
                   or mixed doubles, the team registration will be approved after
                   both players' payment proofs are verified.
                 </p>
+
+                <div className="flex flex-wrap gap-3 mt-4">
+                  <a
+                    href={`http://localhost:3000${paymentProofInfo.paymentProof.proofUrl}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="rounded-xl border border-[#4AEEFF]/40 bg-[#4AEEFF]/15 px-4 py-2.5 text-xs font-black uppercase tracking-wider text-[#4AEEFF] transition-all hover:bg-[#4AEEFF] hover:text-[#061D23]"
+                  >
+                    View Proof
+                  </a>
+                </div>
               </div>
             )}
 
@@ -2329,6 +2403,26 @@ const TournamentDetails: React.FC = () => {
                       </p>
                     </div>
                   )}
+                  <div className="flex flex-wrap gap-3">
+                    {/* View Rejected Proof */}
+                    <a
+                      href={`http://localhost:3000${paymentProofInfo.paymentProof.proofUrl}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="rounded-xl border border-[#4AEEFF]/40 bg-[#4AEEFF]/15 px-4 py-2.5 text-xs font-black uppercase tracking-wider text-[#4AEEFF] transition-all hover:bg-[#4AEEFF] hover:text-[#061D23]"
+                    >
+                      View Proof
+                    </a>
+
+                    {/* Delete Rejected Proof */}
+                    <button
+                      type="button"
+                      onClick={() => setShowDeleteProofConfirm(true)}
+                      className="rounded-xl border border-red-500/40 bg-red-500/15 px-4 py-2.5 text-xs font-black uppercase tracking-wider text-red-300 transition-all hover:bg-red-500 hover:text-white"
+                    >
+                      Delete Proof
+                    </button>
+                  </div>
 
                   <p className="text-xs text-white/60 mt-3">
                     Please upload a new payment proof after correcting the
@@ -2949,6 +3043,50 @@ const TournamentDetails: React.FC = () => {
           </div>,
           document.body,
         )}
+      {/* Delete Payment Proof Confirmation Modal */}
+      {showDeleteProofConfirm && paymentProofInfo?.paymentProof && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/75 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md rounded-2xl border border-red-500/30 bg-[#061D23] p-6 shadow-2xl">
+            {/* Icon */}
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full border border-red-500/30 bg-red-500/15">
+              <span className="text-2xl">⚠️</span>
+            </div>
+
+            {/* Title */}
+            <h3 className="mt-4 text-center text-lg font-black uppercase tracking-wider text-white">
+              Delete Payment Proof?
+            </h3>
+
+            {/* Message */}
+            <p className="mt-3 text-center text-sm leading-relaxed text-white/60">
+              Are you sure you want to delete this payment proof? You will need
+              to upload a new proof after deleting it.
+            </p>
+
+            <div className="mt-6 flex gap-3">
+              {/* Cancel */}
+              <button
+                type="button"
+                onClick={() => setShowDeleteProofConfirm(false)}
+                disabled={deletingProof}
+                className="flex-1 rounded-xl border border-white/20 bg-white/5 px-4 py-3 text-xs font-black uppercase tracking-wider text-white transition-all hover:bg-white/10 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+
+              {/* Confirm Delete */}
+              <button
+                type="button"
+                onClick={handleDeletePaymentProof}
+                disabled={deletingProof}
+                className="flex-1 rounded-xl border border-red-500/40 bg-red-500/20 px-4 py-3 text-xs font-black uppercase tracking-wider text-red-300 transition-all hover:bg-red-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {deletingProof ? "Deleting..." : "Delete Proof"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>,
   );
 };

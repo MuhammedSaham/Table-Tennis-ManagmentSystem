@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { authenticate } from '../middleware/auth.middleware';
 import { isPlayer,isAdmin } from '../middleware/role.middleware';
 import { uploadPaymentProof } from '../middleware/paymentProofUpload.middleware';
-import { submitPaymentProof,getPendingPaymentProofs,processPaymentProof,getMyPaymentProof } from '../controllers/paymentProof.controller';
+import { submitPaymentProof,getPendingPaymentProofs,processPaymentProof,getMyPaymentProof,deleteMyPaymentProof } from '../controllers/paymentProof.controller';
 
 const router = Router();
 
@@ -26,6 +26,13 @@ router.patch(
   '/:proofId/process',
   isAdmin,
   processPaymentProof
+);
+
+// Player deletes their own payment proof
+router.delete(
+  '/:proofId',
+  isPlayer,
+  deleteMyPaymentProof
 );
 
 // Player uploads one payment proof for a tournament
