@@ -85,7 +85,7 @@ if (registrations.length === 0) {
 }
 
 
-    // 5. For doubles/mixed doubles, only ONE payment proof is allowed
+    //  For doubles/mixed doubles, only ONE payment proof is allowed
 // for the team, regardless of which partner uploads it.
 const teamRegistrations = registrations.filter(
   (registration) => registration.teamId !== null
@@ -134,63 +134,52 @@ if (!paymentProofRequired) {
   );
 }
 
-// 5. Check existing payment proof for team registrations
-for (const registration of teamRegistrations) {
-  const existingTeamProof =
-    await prisma.tournamentPaymentProof.findUnique({
-      where: {
-        registrationId: registration.id,
-      },
-    });
 
-  if (existingTeamProof) {
-    // Once approved, nobody can upload another proof
-    if (existingTeamProof.status === 'APPROVED') {
-      throw new AppError(
-        'Payment for this team has already been approved',
-        400
-      );
-    }
-
-    // While admin verification is pending,
-    // neither partner can replace the current proof
-    if (existingTeamProof.status === 'PENDING') {
-      throw new AppError(
-        'A payment proof has already been submitted for this team and is awaiting verification',
-        400
-      );
-    }
-
-    // REJECTED is intentionally allowed.
-    // Either partner will be able to submit the corrected proof.
-  }
-}
     //  One proof per player per tournament.
     // If one already exists, replace it and return it to PENDING.
     
         let paymentProof;
 
 // TEAM REGISTRATION: Doubles / Mixed Doubles
+// TEAM REGISTRATION: Doubles / Mixed Doubles
+// Each team member must submit their OWN payment proof.
 if (teamRegistrations.length > 0) {
   const teamRegistration = teamRegistrations[0];
 
+  // Find THIS player's proof for THIS team registration.
   const existingTeamProof =
     await prisma.tournamentPaymentProof.findUnique({
       where: {
-        registrationId: teamRegistration.id,
+        registrationId_playerId: {
+          registrationId: teamRegistration.id,
+          playerId,
+        },
       },
     });
 
   if (existingTeamProof) {
-    // At this point it should be REJECTED,
-    // because PENDING and APPROVED were blocked above.
+    // This player's proof is already approved.
+    if (existingTeamProof.status === 'APPROVED') {
+      throw new AppError(
+        'Your payment proof has already been approved',
+        400
+      );
+    }
+
+    // This player's proof is still waiting for admin verification.
+    if (existingTeamProof.status === 'PENDING') {
+      throw new AppError(
+        'Your payment proof has already been submitted and is awaiting verification',
+        400
+      );
+    }
+
+    // REJECTED -> this same player can resubmit their own proof.
     paymentProof = await prisma.tournamentPaymentProof.update({
       where: {
         id: existingTeamProof.id,
       },
       data: {
-        // Whoever resubmits becomes the current uploader
-        playerId,
         proofUrl,
         status: 'PENDING',
         submittedAt: new Date(),
@@ -217,6 +206,7 @@ if (teamRegistrations.length > 0) {
       },
     });
   } else {
+    // First proof from this player for this doubles registration.
     paymentProof = await prisma.tournamentPaymentProof.create({
       data: {
         tournamentId,
@@ -341,36 +331,41 @@ else {
 }
 
 
-    // If this is a resubmission after rejection,
-// return the player's own registration OR team registration to PENDING.
-await prisma.tournamentRegistration.updateMany({
-  where: teamRegistrations.length > 0
-    ? {
-        // Doubles / Mixed Doubles:
-        // reset only the exact team registration used for this proof
-        id: teamRegistrations[0].id,
-        status: 'REJECTED',
-      }
-    : {
-        // Singles:
-        // reset this player's rejected individual registrations
-        id: {
-          in: individualRegistrations
-            .filter(
-              (registration) =>
-                registration.status === 'REJECTED'
-            )
-            .map((registration) => registration.id),
-        },
+ // If a proof is resubmitted after rejection,
+// return the related registration to PENDING.
+if (teamRegistrations.length > 0) {
+  await prisma.tournamentRegistration.updateMany({
+    where: {
+      id: teamRegistrations[0].id,
+      status: 'REJECTED',
+    },
+    data: {
+      status: 'PENDING',
+      rejectionReason: null,
+      approvedBy: null,
+      approvedAt: null,
+    },
+  });
+} else {
+  await prisma.tournamentRegistration.updateMany({
+    where: {
+      id: {
+        in: individualRegistrations
+          .filter(
+            (registration) =>
+              registration.status === 'REJECTED'
+          )
+          .map((registration) => registration.id),
       },
-
-  data: {
-    status: 'PENDING',
-    rejectionReason: null,
-    approvedBy: null,
-    approvedAt: null,
-  },
-});
+    },
+    data: {
+      status: 'PENDING',
+      rejectionReason: null,
+      approvedBy: null,
+      approvedAt: null,
+    },
+  });
+}
 
     return paymentProof;
   }
@@ -497,59 +492,109 @@ async processPaymentProof(
   // ============================================================
 
   if (action === 'APPROVE') {
-    const registrations =
-  await prisma.tournamentRegistration.findMany({
-    where: proof.registrationId
-      ? {
-          // Doubles / Mixed Doubles:
-          // approve only the exact team registration
-          id: proof.registrationId,
-          status: 'PENDING',
-        }
-      : {
-          // Singles:
-          // approve this player's pending registrations
-          tournamentId: proof.tournamentId,
-          playerId: proof.playerId,
-          status: 'PENDING',
-        },
 
-    include: {
-      category: true,
-      team: {
+  // ============================================================
+  // DOUBLES / MIXED DOUBLES
+  // ============================================================
+  if (proof.registrationId) {
+    const registration =
+      await prisma.tournamentRegistration.findUnique({
+        where: {
+          id: proof.registrationId,
+        },
         include: {
-          members: {
-            select: {
-              playerId: true,
+          category: true,
+          team: {
+            include: {
+              members: {
+                where: {
+                  isActive: true,
+                },
+                select: {
+                  playerId: true,
+                },
+              },
             },
           },
         },
-      },
-    },
-  });
-    if (registrations.length === 0) {
+      });
+
+    if (!registration) {
       throw new AppError(
-        'No pending registrations found for this payment proof',
+        'Tournament registration not found',
         404
       );
     }
 
-    // Check category capacity BEFORE making changes
-    for (const registration of registrations) {
-      if (
-        registration.category &&
-        registration.category.currentParticipants >=
-          registration.category.maxParticipants
-      ) {
-        throw new AppError(
-          `Category "${registration.category.name}" is already full`,
-          400
-        );
-      }
+    if (!registration.team) {
+      throw new AppError(
+        'Team not found for this registration',
+        404
+      );
     }
 
-    // Approve registrations
-    for (const registration of registrations) {
+    // First approve THIS player's proof.
+    const updatedProof =
+      await prisma.tournamentPaymentProof.update({
+        where: {
+          id: proofId,
+        },
+        data: {
+          status: 'APPROVED',
+          verifiedBy: adminId,
+          verifiedAt: new Date(),
+          rejectionReason: null,
+        },
+      });
+
+    const activeMemberIds = registration.team.members.map(
+      (member) => member.playerId
+    );
+
+    // Get all approved proofs belonging to this team registration.
+    const approvedProofs =
+      await prisma.tournamentPaymentProof.findMany({
+        where: {
+          registrationId: registration.id,
+          status: 'APPROVED',
+          playerId: {
+            in: activeMemberIds,
+          },
+        },
+        select: {
+          playerId: true,
+        },
+      });
+
+    const approvedPlayerIds = new Set(
+      approvedProofs.map((item) => item.playerId)
+    );
+
+    // Every active team member must have an approved proof.
+    const allMembersApproved = activeMemberIds.every(
+      (memberId) => approvedPlayerIds.has(memberId)
+    );
+
+    // Player A approved but Player B not approved yet.
+    if (!allMembersApproved) {
+      return updatedProof;
+    }
+
+    // Both players are approved.
+    // Now check category capacity.
+    if (
+      registration.category &&
+      registration.category.currentParticipants >=
+        registration.category.maxParticipants
+    ) {
+      throw new AppError(
+        `Category "${registration.category.name}" is already full`,
+        400
+      );
+    }
+
+    // Prevent accidentally incrementing category count twice.
+    if (registration.status !== 'APPROVED') {
       await prisma.tournamentRegistration.update({
         where: {
           id: registration.id,
@@ -562,7 +607,6 @@ async processPaymentProof(
         },
       });
 
-      // Count participant only now
       if (registration.categoryId) {
         await prisma.category.update({
           where: {
@@ -577,22 +621,89 @@ async processPaymentProof(
       }
     }
 
-    // Approve payment proof
-    const updatedProof =
-      await prisma.tournamentPaymentProof.update({
-        where: {
-          id: proofId,
-        },
-        data: {
-          status: 'APPROVED',
-          verifiedBy: adminId,
-          verifiedAt: new Date(),
-          rejectionReason: null,
-        },
-      });
-
     return updatedProof;
   }
+
+  // ============================================================
+  // SINGLES - EXISTING BEHAVIOUR
+  // ============================================================
+
+  const registrations =
+    await prisma.tournamentRegistration.findMany({
+      where: {
+        tournamentId: proof.tournamentId,
+        playerId: proof.playerId,
+        status: 'PENDING',
+      },
+      include: {
+        category: true,
+      },
+    });
+
+  if (registrations.length === 0) {
+    throw new AppError(
+      'No pending registrations found for this payment proof',
+      404
+    );
+  }
+
+  // Check category capacity first.
+  for (const registration of registrations) {
+    if (
+      registration.category &&
+      registration.category.currentParticipants >=
+        registration.category.maxParticipants
+    ) {
+      throw new AppError(
+        `Category "${registration.category.name}" is already full`,
+        400
+      );
+    }
+  }
+
+  // Singles registration can be approved immediately.
+  for (const registration of registrations) {
+    await prisma.tournamentRegistration.update({
+      where: {
+        id: registration.id,
+      },
+      data: {
+        status: 'APPROVED',
+        approvedBy: adminId,
+        approvedAt: new Date(),
+        rejectionReason: null,
+      },
+    });
+
+    if (registration.categoryId) {
+      await prisma.category.update({
+        where: {
+          id: registration.categoryId,
+        },
+        data: {
+          currentParticipants: {
+            increment: 1,
+          },
+        },
+      });
+    }
+  }
+
+  const updatedProof =
+    await prisma.tournamentPaymentProof.update({
+      where: {
+        id: proofId,
+      },
+      data: {
+        status: 'APPROVED',
+        verifiedBy: adminId,
+        verifiedAt: new Date(),
+        rejectionReason: null,
+      },
+    });
+
+  return updatedProof;
+}
 
   // ============================================================
   // REJECT
@@ -605,32 +716,24 @@ async processPaymentProof(
     );
   }
 
-  // Mark related pending registrations as rejected
-  // Mark the related registration(s) as rejected
-await prisma.tournamentRegistration.updateMany({
-  where: proof.registrationId
-    ? {
-        // Doubles / Mixed Doubles:
-        // reject only the exact team registration
-        id: proof.registrationId,
-        status: 'PENDING',
-      }
-    : {
-        // Singles:
-        // reject this player's pending registrations
-        tournamentId: proof.tournamentId,
-        playerId: proof.playerId,
-        status: 'PENDING',
-      },
-
-  data: {
-    status: 'REJECTED',
-    approvedBy: adminId,
-    approvedAt: new Date(),
-    rejectionReason: rejectionReason.trim(),
-  },
-});
-
+  // For Singles, rejection keeps the existing registration behaviour.
+// For Doubles/Mixed Doubles, the team remains PENDING while the
+// rejected player corrects and resubmits their own proof.
+if (!proof.registrationId) {
+  await prisma.tournamentRegistration.updateMany({
+    where: {
+      tournamentId: proof.tournamentId,
+      playerId: proof.playerId,
+      status: 'PENDING',
+    },
+    data: {
+      status: 'REJECTED',
+      approvedBy: adminId,
+      approvedAt: new Date(),
+      rejectionReason: rejectionReason.trim(),
+    },
+  });
+}
   // Reject payment proof
   const updatedProof =
     await prisma.tournamentPaymentProof.update({
@@ -686,35 +789,13 @@ async getMyPaymentProof(
     ? tournament.requirePaymentProofClub
     : tournament.requirePaymentProofGuest;
 
-  // Find payment proof accessible to this player.
-// Singles: player's own proof.
-// Doubles / Mixed Doubles: proof belonging to a team
-// registration where this player is an active team member.
+ // Find ONLY this player's own payment proof.
+// This works for both Singles and Doubles/Mixed Doubles.
 const paymentProof =
   await prisma.tournamentPaymentProof.findFirst({
     where: {
       tournamentId,
-
-      OR: [
-        // Singles / proof uploaded by this player
-        {
-          playerId,
-        },
-
-        // Doubles / Mixed Doubles
-        {
-          registration: {
-            team: {
-              members: {
-                some: {
-                  playerId,
-                  isActive: true,
-                },
-              },
-            },
-          },
-        },
-      ],
+      playerId,
     },
 
     orderBy: {

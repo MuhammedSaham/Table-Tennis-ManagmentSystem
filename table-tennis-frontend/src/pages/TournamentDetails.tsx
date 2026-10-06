@@ -85,6 +85,8 @@ interface PaymentProofInfo {
     submittedAt: string;
     verifiedAt: string | null;
     rejectionReason: string | null;
+    registrationId: string | null;
+    playerId: string | null;
   } | null;
 }
 
@@ -2301,8 +2303,9 @@ const TournamentDetails: React.FC = () => {
                 </p>
 
                 <p className="text-xs text-white/60 mt-2">
-                  Your payment has been verified and your tournament
-                  registration has been approved.
+                  Your payment proof has been verified successfully. For doubles
+                  or mixed doubles, the team registration will be approved after
+                  both players' payment proofs are verified.
                 </p>
               </div>
             )}

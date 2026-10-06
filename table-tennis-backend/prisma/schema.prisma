@@ -245,24 +245,24 @@ model TeamMember {
 
 // Tournament Registrations
 model TournamentRegistration {
-  id              String             @id @default(cuid())
+  id              String                   @id @default(cuid())
   tournamentId    String
-  tournament      Tournament         @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  tournament      Tournament               @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
   categoryId      String?
-  category        Category?          @relation(fields: [categoryId], references: [id])
+  category        Category?                @relation(fields: [categoryId], references: [id])
   playerId        String
   partnerId       String?
-  player          User               @relation(fields: [playerId], references: [id])
+  player          User                     @relation(fields: [playerId], references: [id])
   teamId          String?
-  team            Team?              @relation(fields: [teamId], references: [id])
-  status          RegistrationStatus @default(PENDING)
+  team            Team?                    @relation(fields: [teamId], references: [id])
+  status          RegistrationStatus       @default(PENDING)
   approvedBy      String?
   approvedAt      DateTime?
   rejectionReason String?
-  registeredAt    DateTime           @default(now())
-  PlayerProfile   PlayerProfile?     @relation(fields: [playerProfileId], references: [id])
+  registeredAt    DateTime                 @default(now())
+  PlayerProfile   PlayerProfile?           @relation(fields: [playerProfileId], references: [id])
   playerProfileId String?
-  paymentProof TournamentPaymentProof?
+  paymentProofs   TournamentPaymentProof[]
 
   @@unique([tournamentId, categoryId, playerId])
   @@unique([tournamentId, teamId])
@@ -282,24 +282,24 @@ model TournamentPaymentProof {
 
   // The player who actually uploaded the proof
   playerId String
-  player   User @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  player   User   @relation(fields: [playerId], references: [id], onDelete: Cascade)
 
   // Used for doubles / mixed doubles team payment.
   // Both partners share the same TournamentRegistration.
-  registrationId String?                  @unique
+  registrationId String?
   registration   TournamentRegistration? @relation(fields: [registrationId], references: [id], onDelete: Cascade)
 
   proofUrl String
 
   status PaymentProofStatus @default(PENDING)
 
-  submittedAt DateTime @default(now())
+  submittedAt DateTime  @default(now())
   verifiedAt  DateTime?
   verifiedBy  String?
 
   rejectionReason String?
 
-
+  @@unique([registrationId, playerId])
   @@index([tournamentId, playerId])
 }
 

@@ -30,6 +30,7 @@ interface PaymentProofRequest {
   id: string;
   tournamentId: string;
   playerId: string;
+  registrationIds: string | null;
   proofUrl: string;
   status: "PENDING" | "APPROVED" | "REJECTED";
   submittedAt: string;
