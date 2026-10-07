@@ -392,10 +392,10 @@ const AdminRequests: React.FC = () => {
       <header className="rounded-[16px] border border-white/20 bg-[#061D23]/15 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl sm:p-8">
         <div className="mb-4 h-[3px] w-16 bg-[#4AEEFF]" />
         <h1 className="mb-2 text-2xl font-black uppercase tracking-[0.2em] text-[#FFFFFF] sm:text-4xl">
-          Club Membership Requests
+          Pending Requests
         </h1>
         <p className="text-xs uppercase tracking-[0.3em] text-[#4AEEFF]/90">
-          Review and manage player requests for official club membership
+          Review and manage player requests 
         </p>
       </header>
 
