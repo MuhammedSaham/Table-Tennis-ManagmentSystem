@@ -51,7 +51,11 @@ const Dashboard: React.FC = () => {
   const { user } = useAuth();
   const [newTournaments, setNewTournaments] = useState<Tournament[]>([]);
   const [doublesInvites, setDoublesInvites] = useState<DoublesInvite[]>([]);
-  const [pendingRequestsCount, setPendingRequestsCount] = useState<number>(0);
+  const [pendingMembershipCount, setPendingMembershipCount] =
+    useState<number>(0);
+
+  const [pendingPaymentCount, setPendingPaymentCount] = useState<number>(0);
+  const totalPendingRequests = pendingMembershipCount + pendingPaymentCount;
   const [respondingInviteId, setRespondingInviteId] = useState<string | null>(
     null,
   );
@@ -70,13 +74,20 @@ const Dashboard: React.FC = () => {
 
   const fetchPendingRequestsCount = async () => {
     try {
-      const res = await api.get("/club-membership/requests");
-      if (res.data?.data) {
-        const pendingClub = res.data.data.filter(
+      const [membershipRes, paymentRes] = await Promise.all([
+        api.get("/club-membership/requests"),
+        api.get("/payment-proofs/pending"),
+      ]);
+
+      const pendingMembership =
+        membershipRes.data?.data?.filter(
           (req: any) => req.status === "PENDING",
-        );
-        setPendingRequestsCount(pendingClub.length);
-      }
+        ) || [];
+
+      const pendingPayments = paymentRes.data?.data || [];
+
+      setPendingMembershipCount(pendingMembership.length);
+      setPendingPaymentCount(pendingPayments.length);
     } catch (err) {
       console.error("Failed to fetch pending requests count", err);
     }
@@ -183,10 +194,10 @@ const Dashboard: React.FC = () => {
                   <div className="p-3 rounded-xl bg-[#4AEEFF]/10 border border-[#4AEEFF]/30 text-[#4AEEFF] group-hover:scale-105 transition-transform duration-200">
                     <InboxStackIcon className="h-6 w-6" />
                   </div>
-                  {pendingRequestsCount > 0 ? (
+                  {totalPendingRequests > 0 ? (
                     <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#4AEEFF] text-[#061D23] text-[10px] font-black uppercase tracking-wider shadow-md shadow-[#4AEEFF]/20">
                       <span className="h-1.5 w-1.5 rounded-full bg-[#061D23] animate-ping"></span>
-                      {pendingRequestsCount} Pending
+                      {totalPendingRequests} Pending
                     </span>
                   ) : (
                     <span className="px-2.5 py-1 rounded-full bg-white/10 text-white/60 border border-white/10 text-[10px] font-mono">
@@ -196,15 +207,35 @@ const Dashboard: React.FC = () => {
                 </div>
 
                 <h3 className="mb-2 font-black uppercase tracking-wider text-white transition-colors group-hover:text-[#4AEEFF] flex items-center justify-between">
-                  <span>Membership Requests</span>
+                  <span>Pending Requests</span>
                   <span className="text-xs opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all text-[#4AEEFF]">
                     →
                   </span>
                 </h3>
 
                 <p className="text-xs text-white/70 leading-relaxed">
-                  Review and manage player requests for official club membership
+                  Review membership requests and tournament payment
+                  verifications
                 </p>
+                <div className="mt-4 grid grid-cols-2 gap-3">
+                  <div className="rounded-lg border border-white/10 bg-black/20 p-3">
+                    <p className="text-[10px] uppercase tracking-wider text-white/50">
+                      Membership
+                    </p>
+                    <p className="mt-1 text-lg font-black text-[#4AEEFF]">
+                      {pendingMembershipCount}
+                    </p>
+                  </div>
+
+                  <div className="rounded-lg border border-white/10 bg-black/20 p-3">
+                    <p className="text-[10px] uppercase tracking-wider text-white/50">
+                      Payment
+                    </p>
+                    <p className="mt-1 text-lg font-black text-[#4AEEFF]">
+                      {pendingPaymentCount}
+                    </p>
+                  </div>
+                </div>
               </div>
 
               <div className="mt-5 pt-3 border-t border-white/10 flex items-center justify-between text-[11px] font-bold text-[#4AEEFF]">

@@ -19,8 +19,7 @@ import adminRequestRoutes from './routes/adminRequest.routes';
 import notificationRoutes from './routes/notification.routes';
 import groupRoutes from './routes/group.routes';
 import clubMembershipRoutes from './routes/clubMembership.routes';
-
-
+import paymentProofRoutes from './routes/paymentProof.routes';
 
 
 const app: Application = express();
@@ -29,6 +28,10 @@ app.use(
   helmet({
     crossOriginResourcePolicy: { policy: "cross-origin" },
   })
+);
+app.use(
+  '/uploads',
+  express.static(path.join(process.cwd(), 'uploads'))
 );
 app.use(cors());
 app.use(express.json());
@@ -59,6 +62,10 @@ app.use('/api/v1/search', searchRoutes);
 app.use('/api/v1/admin-requests', adminRequestRoutes);
 app.use('/api/v1/notifications', notificationRoutes);
 app.use('/api/v1/groups', groupRoutes);
+app.use(
+  '/api/v1/payment-proofs',
+  paymentProofRoutes
+);
 // 404 handler
 app.all('*', (req: Request, res: Response, next: NextFunction) => {
     next(new AppError(`Can't find ${req.originalUrl} on this server!`, 404));

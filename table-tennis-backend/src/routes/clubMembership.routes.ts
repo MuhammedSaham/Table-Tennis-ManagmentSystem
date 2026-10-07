@@ -5,6 +5,7 @@ import {
     getPendingClubMembershipRequests,
     approveClubMembershipRequest,
     rejectClubMembershipRequest,
+    removeClubMembership
 } from '../controllers/clubMembership.controller';
 
 import { authenticate } from '../middleware/auth.middleware';
@@ -51,6 +52,15 @@ router.patch(
     authenticate,
     isAdmin,
     rejectClubMembershipRequest
+);
+
+
+// Admin removes a player's club membership
+router.patch(
+    '/players/:playerId/remove',
+    authenticate,
+    isAdmin,
+    removeClubMembership
 );
 
 export default router;

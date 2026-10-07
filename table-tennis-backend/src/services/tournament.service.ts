@@ -386,6 +386,16 @@ async registerForTournament(playerId: string, data: {
     throw new AppError('Tournament not found', 404);
   }
 
+  const isClubMember = player.isClubMember;
+
+const paymentProofRequired = isClubMember
+  ? tournament.requirePaymentProofClub
+  : tournament.requirePaymentProofGuest;
+
+const initialRegistrationStatus = paymentProofRequired
+  ? 'PENDING'
+  : 'APPROVED';
+
   // Check registration deadline
   if (new Date() > tournament.registrationDeadline) {
     throw new AppError('Registration deadline has passed', 400);
@@ -632,8 +642,8 @@ async registerForTournament(playerId: string, data: {
         playerId,
         partnerId: data.partnerId,
         teamId: data.teamId,
-        status: 'APPROVED',
-        approvedAt: new Date(),
+        status: initialRegistrationStatus,
+        approvedAt:paymentProofRequired ? null : new Date(),  
       },
       include: {
         tournament: true,
@@ -657,7 +667,7 @@ async registerForTournament(playerId: string, data: {
     });
 
   // Update category participant count
-  if (data.categoryId) {
+  if (data.categoryId && initialRegistrationStatus === 'APPROVED') {
     await prisma.category.update({
       where: { id: data.categoryId },
       data: {
@@ -786,7 +796,11 @@ async registerForTournament(playerId: string, data: {
       include: {
         tournament: true,
         category: true,
-        player: true,
+        player: {
+          include: {
+            playerProfile: true,
+          },
+        },
       },
     });
 
@@ -799,6 +813,39 @@ async registerForTournament(playerId: string, data: {
     }
 
     if (action === 'APPROVE') {
+      // Check whether this player requires payment proof
+const isClubMember =
+  registration.player.playerProfile?.isClubMember ?? false;
+
+const paymentProofRequired = isClubMember
+  ? registration.tournament.requirePaymentProofClub
+  : registration.tournament.requirePaymentProofGuest;
+
+if (paymentProofRequired) {
+  const paymentProof =
+    await prisma.tournamentPaymentProof.findFirst({
+      where: {
+        tournamentId: registration.tournamentId,
+        playerId: registration.playerId,
+        registrationId: null,
+        status: 'APPROVED',
+      },
+    });
+
+  if (!paymentProof) {
+    throw new AppError(
+      'Payment proof must be submitted before approving this registration',
+      400
+    );
+  }
+
+  if (paymentProof.status !== 'APPROVED') {
+    throw new AppError(
+      'Payment proof must be approved before approving this registration',
+      400
+    );
+  }
+}
       // Check if category has space
       if (registration.category) {
         const category = await prisma.category.findUnique({

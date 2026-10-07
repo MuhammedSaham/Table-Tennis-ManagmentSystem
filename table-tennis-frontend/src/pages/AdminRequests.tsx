@@ -26,9 +26,65 @@ interface ClubMembershipRequest {
     };
   };
 }
+interface PaymentProofRequest {
+  id: string;
+  tournamentId: string;
+  playerId: string;
+  registrationIds: string | null;
+  proofUrl: string;
+  status: "PENDING" | "APPROVED" | "REJECTED";
+  submittedAt: string;
+  verifiedAt: string | null;
+  verifiedBy: string | null;
+  rejectionReason: string | null;
+
+  tournament: {
+    id: string;
+    name: string;
+    registrationFee: string | null;
+  };
+
+  player: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    playerProfile?: {
+      isClubMember: boolean;
+    } | null;
+  };
+
+  registrations: Array<{
+    id: string;
+    status: string;
+    category: {
+      id: string;
+      name: string;
+      type: string;
+    } | null;
+  }>;
+}
 
 const AdminRequests: React.FC = () => {
   const { user } = useAuth();
+
+  const [paymentProofRequests, setPaymentProofRequests] = useState<
+    PaymentProofRequest[]
+  >([]);
+
+  const [paymentProofLoading, setPaymentProofLoading] = useState(true);
+
+  const [paymentProcessingId, setPaymentProcessingId] = useState<string | null>(
+    null,
+  );
+
+  const [showPaymentRejectModal, setShowPaymentRejectModal] = useState(false);
+
+  const [selectedPaymentProofId, setSelectedPaymentProofId] = useState<
+    string | null
+  >(null);
+
+  const [paymentRejectionReason, setPaymentRejectionReason] = useState("");
 
   const [membershipRequests, setMembershipRequests] = useState<
     ClubMembershipRequest[]
@@ -55,6 +111,7 @@ const AdminRequests: React.FC = () => {
 
   useEffect(() => {
     fetchMembershipRequests();
+    fetchPaymentProofRequests();
   }, []);
 
   const fetchMembershipRequests = async () => {
@@ -66,6 +123,100 @@ const AdminRequests: React.FC = () => {
       toast.error("Failed to fetch club membership requests");
     } finally {
       setMembershipLoading(false);
+    }
+  };
+
+  const fetchPaymentProofRequests = async () => {
+    try {
+      setPaymentProofLoading(true);
+
+      const response = await api.get("/payment-proofs/pending");
+
+      setPaymentProofRequests(response.data.data);
+    } catch (error: any) {
+      console.error(
+        "Failed to fetch payment proof requests:",
+        error.response?.data || error,
+      );
+
+      toast.error(
+        error.response?.data?.message ||
+          "Failed to fetch payment proof requests",
+      );
+    } finally {
+      setPaymentProofLoading(false);
+    }
+  };
+  const handlePaymentApprove = async (proofId: string) => {
+    setPaymentProcessingId(proofId);
+
+    try {
+      await api.patch(`/payment-proofs/${proofId}/process`, {
+        action: "APPROVE",
+      });
+
+      toast.success("Payment proof approved successfully!");
+
+      // Refresh the list.
+      // The approved proof should disappear from pending requests.
+      await fetchPaymentProofRequests();
+    } catch (error: any) {
+      console.error(
+        "Approve payment proof error:",
+        error.response?.status,
+        error.response?.data,
+      );
+
+      toast.error(
+        error.response?.data?.message || "Failed to approve payment proof",
+      );
+    } finally {
+      setPaymentProcessingId(null);
+    }
+  };
+  const openPaymentRejectModal = (proofId: string) => {
+    setSelectedPaymentProofId(proofId);
+    setPaymentRejectionReason("");
+    setShowPaymentRejectModal(true);
+  };
+
+  const handlePaymentReject = async () => {
+    if (!selectedPaymentProofId) return;
+
+    if (!paymentRejectionReason.trim()) {
+      toast.error("Please enter a rejection reason");
+      return;
+    }
+
+    setPaymentProcessingId(selectedPaymentProofId);
+
+    try {
+      await api.patch(`/payment-proofs/${selectedPaymentProofId}/process`, {
+        action: "REJECT",
+        rejectionReason: paymentRejectionReason.trim(),
+      });
+
+      toast.success("Payment proof rejected successfully");
+
+      setShowPaymentRejectModal(false);
+      setSelectedPaymentProofId(null);
+      setPaymentRejectionReason("");
+
+      // Rejected proof is no longer pending,
+      // so refresh the pending list.
+      await fetchPaymentProofRequests();
+    } catch (error: any) {
+      console.error(
+        "Reject payment proof error:",
+        error.response?.status,
+        error.response?.data,
+      );
+
+      toast.error(
+        error.response?.data?.message || "Failed to reject payment proof",
+      );
+    } finally {
+      setPaymentProcessingId(null);
     }
   };
 
@@ -322,7 +473,8 @@ const AdminRequests: React.FC = () => {
               No Pending Membership Requests
             </h3>
             <p className="mt-2 text-xs text-white/60">
-              There are currently no players waiting for club membership approval.
+              There are currently no players waiting for club membership
+              approval.
             </p>
           </div>
         ) : (
@@ -394,6 +546,182 @@ const AdminRequests: React.FC = () => {
                         onClick={() => openMembershipRejectModal(request.id)}
                         disabled={isProcessing}
                         className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-white/20 bg-transparent px-5 py-2.5 text-xs font-black uppercase tracking-wider text-[#4AEEFF] transition-all hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-50 lg:flex-none"
+                      >
+                        <XCircleIcon className="h-4 w-4" />
+                        Reject
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </section>
+
+      {/* PAYMENT PROOF REQUESTS */}
+      <section className="rounded-[16px] border border-white/20 bg-[#061D23]/10 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl">
+        <div className="mb-6 flex items-center gap-3">
+          <div className="rounded-lg bg-[#4AEEFF]/20 p-2 text-[#4AEEFF]">
+            <CheckCircleIcon className="h-5 w-5" />
+          </div>
+
+          <div>
+            <h2 className="text-lg font-bold uppercase tracking-wider text-white">
+              Pending Payment Verifications
+            </h2>
+
+            <p className="text-xs text-white/60">
+              Review player payment proofs before approving tournament
+              registrations
+            </p>
+          </div>
+        </div>
+
+        {paymentProofLoading ? (
+          <div className="rounded-[12px] border border-white/10 bg-[#061D23]/40 p-12 text-center">
+            <div className="mx-auto mb-3 h-8 w-8 animate-spin rounded-full border-b-2 border-[#4AEEFF]" />
+
+            <p className="text-xs font-black uppercase tracking-wider text-[#4AEEFF]">
+              Loading payment proofs...
+            </p>
+          </div>
+        ) : paymentProofRequests.length === 0 ? (
+          <div className="rounded-[12px] border border-white/10 bg-[#061D23]/40 p-12 text-center">
+            <CheckCircleIcon className="mx-auto mb-3 h-10 w-10 text-emerald-400" />
+
+            <h3 className="text-base font-bold uppercase tracking-wider text-white">
+              No Pending Payment Proofs
+            </h3>
+
+            <p className="mt-2 text-xs text-white/60">
+              There are currently no payment proofs waiting for verification.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {paymentProofRequests.map((proof) => {
+              const isProcessing = paymentProcessingId === proof.id;
+
+              return (
+                <div
+                  key={proof.id}
+                  className="rounded-[12px] border border-white/10 bg-[#061D23]/40 p-5 transition-all duration-300 hover:border-[#4AEEFF]/40"
+                >
+                  <div className="flex flex-col gap-5 lg:flex-row lg:justify-between">
+                    {/* LEFT SIDE */}
+                    <div className="flex-1">
+                      <div className="mb-4 flex flex-wrap items-center gap-3">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-lg border border-white/10 bg-[#061D23]/70 text-sm font-black text-[#4AEEFF]">
+                          {proof.player.firstName?.[0]?.toUpperCase()}
+                          {proof.player.lastName?.[0]?.toUpperCase()}
+                        </div>
+
+                        <div>
+                          <h3 className="font-bold uppercase tracking-wide text-white">
+                            {proof.player.firstName} {proof.player.lastName}
+                          </h3>
+
+                          <p className="text-xs text-white/60">
+                            {proof.player.email}
+                          </p>
+                        </div>
+
+                        <span
+                          className={`rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-wider ${
+                            proof.player.playerProfile?.isClubMember
+                              ? "bg-emerald-500/15 text-emerald-300"
+                              : "bg-amber-500/15 text-amber-300"
+                          }`}
+                        >
+                          {proof.player.playerProfile?.isClubMember
+                            ? "Club Member"
+                            : "Guest"}
+                        </span>
+                      </div>
+
+                      {/* Tournament */}
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <div className="rounded-lg border border-white/10 bg-black/20 p-3">
+                          <p className="text-[10px] font-black uppercase tracking-wider text-white/40">
+                            Tournament
+                          </p>
+
+                          <p className="mt-1 text-sm font-bold text-white">
+                            {proof.tournament.name}
+                          </p>
+                        </div>
+
+                        <div className="rounded-lg border border-white/10 bg-black/20 p-3">
+                          <p className="text-[10px] font-black uppercase tracking-wider text-white/40">
+                            Registration Fee
+                          </p>
+
+                          <p className="mt-1 text-sm font-bold text-[#4AEEFF]">
+                            {proof.tournament.registrationFee
+                              ? `LKR ${proof.tournament.registrationFee}`
+                              : "Not specified"}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Categories */}
+                      <div className="mt-4">
+                        <p className="mb-2 text-[10px] font-black uppercase tracking-wider text-white/40">
+                          Registered Categories
+                        </p>
+
+                        <div className="flex flex-wrap gap-2">
+                          {proof.registrations.map((registration) => (
+                            <span
+                              key={registration.id}
+                              className="rounded-lg border border-[#4AEEFF]/20 bg-[#4AEEFF]/10 px-3 py-1.5 text-xs font-bold text-[#4AEEFF]"
+                            >
+                              {registration.category?.name ||
+                                "Unknown Category"}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Submitted Date */}
+                      <div className="mt-4 flex items-center gap-2 text-xs text-white/50">
+                        <ClockIcon className="h-4 w-4 text-[#4AEEFF]" />
+
+                        <span>
+                          Submitted{" "}
+                          {new Date(proof.submittedAt).toLocaleString()}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* RIGHT SIDE */}
+                    <div className="flex flex-col gap-3 lg:w-56">
+                      <a
+                        href={`http://localhost:3000${proof.proofUrl}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-center rounded-lg border border-[#4AEEFF]/40 bg-[#4AEEFF]/10 px-5 py-2.5 text-xs font-black uppercase tracking-wider text-[#4AEEFF] transition-all hover:bg-[#4AEEFF]/20"
+                      >
+                        View Payment Proof
+                      </a>
+
+                      <button
+                        type="button"
+                        onClick={() => handlePaymentApprove(proof.id)}
+                        disabled={isProcessing}
+                        className="flex items-center justify-center gap-2 rounded-lg bg-[#4AEEFF] px-5 py-2.5 text-xs font-black uppercase tracking-wider text-[#061D23] transition-all hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        <CheckCircleIcon className="h-4 w-4" />
+
+                        {isProcessing ? "Processing..." : "Approve"}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => openPaymentRejectModal(proof.id)}
+                        disabled={isProcessing}
+                        className="flex items-center justify-center gap-2 rounded-lg border border-red-400/50 px-5 py-2.5 text-xs font-black uppercase tracking-wider text-red-300 transition-all hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         <XCircleIcon className="h-4 w-4" />
                         Reject
@@ -509,6 +837,67 @@ const AdminRequests: React.FC = () => {
                 className="rounded-lg bg-red-500 px-5 py-2.5 text-xs font-black uppercase tracking-wider text-white transition-all hover:bg-red-400 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {membershipProcessingId !== null
+                  ? "Rejecting..."
+                  : "Confirm Rejection"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* PAYMENT PROOF REJECTION MODAL */}
+      {showPaymentRejectModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-[16px] border border-white/20 bg-[#061D23] p-6 shadow-2xl">
+            <div className="mb-5">
+              <div className="mb-3 flex items-center gap-3">
+                <div className="rounded-lg bg-red-500/20 p-2 text-red-400">
+                  <XCircleIcon className="h-5 w-5" />
+                </div>
+
+                <h2 className="text-lg font-bold uppercase tracking-wider text-white">
+                  Reject Payment Proof
+                </h2>
+              </div>
+
+              <p className="text-sm text-white/60">
+                Please explain why this payment proof is being rejected. The
+                player will see this reason and can upload a new proof.
+              </p>
+            </div>
+
+            <textarea
+              value={paymentRejectionReason}
+              onChange={(e) => setPaymentRejectionReason(e.target.value)}
+              placeholder="Example: Payment receipt is unclear. Please upload a clearer receipt."
+              rows={4}
+              disabled={paymentProcessingId !== null}
+              className="w-full resize-none rounded-lg border border-white/10 bg-[#0A2A32] p-3 text-sm text-white outline-none placeholder:text-white/30 focus:border-[#4AEEFF]/50"
+            />
+
+            <div className="mt-5 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowPaymentRejectModal(false);
+                  setSelectedPaymentProofId(null);
+                  setPaymentRejectionReason("");
+                }}
+                disabled={paymentProcessingId !== null}
+                className="rounded-lg border border-white/20 px-5 py-2.5 text-xs font-black uppercase tracking-wider text-white/70 transition-all hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                onClick={handlePaymentReject}
+                disabled={
+                  paymentProcessingId !== null || !paymentRejectionReason.trim()
+                }
+                className="rounded-lg bg-red-500 px-5 py-2.5 text-xs font-black uppercase tracking-wider text-white transition-all hover:bg-red-400 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {paymentProcessingId !== null
                   ? "Rejecting..."
                   : "Confirm Rejection"}
               </button>

@@ -222,4 +222,57 @@ if (existingRequest) {
 
         return updatedRequest;
     }
+    // Admin removes an existing player's club membership
+async removeMembership(playerId: string, adminId: string) {
+    const playerProfile = await prisma.playerProfile.findUnique({
+        where: {
+            userId: playerId,
+        },
+        include: {
+            clubMembershipRequest: true,
+        },
+    });
+
+    if (!playerProfile) {
+        throw new AppError('Player profile not found', 404);
+    }
+
+    if (!playerProfile.isClubMember) {
+        throw new AppError('This player is not a club member', 400);
+    }
+
+    const result = await prisma.$transaction(async (tx) => {
+        // Change the player back to a guest
+        const updatedPlayerProfile = await tx.playerProfile.update({
+            where: {
+                id: playerProfile.id,
+            },
+            data: {
+                isClubMember: false,
+            },
+        });
+
+        // Reset the old membership request so the player
+        // can request club membership again in the future.
+        if (playerProfile.clubMembershipRequest) {
+            await tx.clubMembershipRequest.update({
+                where: {
+                    id: playerProfile.clubMembershipRequest.id,
+                },
+                data: {
+                    status: 'REJECTED',
+                    reviewedAt: new Date(),
+                    reviewedBy: adminId,
+                    rejectionReason:
+                        'Club membership was removed by an administrator',
+                    rejectionCount: 0,
+                },
+            });
+        }
+
+        return updatedPlayerProfile;
+    });
+
+    return result;
+}
 }

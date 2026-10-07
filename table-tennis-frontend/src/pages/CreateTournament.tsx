@@ -3,7 +3,11 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import api from "../services/api";
 import toast from "react-hot-toast";
-import { UserIcon, EnvelopeIcon, TrophyIcon } from "@heroicons/react/24/outline";
+import {
+  UserIcon,
+  EnvelopeIcon,
+  TrophyIcon,
+} from "@heroicons/react/24/outline";
 
 interface Category {
   name: string;
@@ -40,6 +44,11 @@ const CreateTournament: React.FC = () => {
     endDate: "",
     registrationDeadline: "",
     maxPlayers: "",
+
+    registrationFee: "",
+    requirePaymentProofClub: false,
+    requirePaymentProofGuest: false,
+    paymentInstructions: "",
   });
 
   const handleChange = (
@@ -48,6 +57,15 @@ const CreateTournament: React.FC = () => {
     >,
   ) => {
     const { name, value } = e.target;
+
+    if (e.target instanceof HTMLInputElement && e.target.type === "checkbox") {
+      setFormData({
+        ...formData,
+        [name]: e.target.checked,
+      });
+      return;
+    }
+
     setFormData({
       ...formData,
       [name]: value,
@@ -74,7 +92,8 @@ const CreateTournament: React.FC = () => {
       {
         name: "",
         type: "SINGLES",
-        stageFormat: (tournamentType as "KNOCKOUT" | "GROUP_KNOCKOUT") || "KNOCKOUT",
+        stageFormat:
+          (tournamentType as "KNOCKOUT" | "GROUP_KNOCKOUT") || "KNOCKOUT",
         minAge: undefined,
         maxAge: undefined,
         gender: undefined,
@@ -119,6 +138,19 @@ const CreateTournament: React.FC = () => {
       toast.error("Please fill all date fields");
       return;
     }
+    const paymentProofRequired =
+      formData.requirePaymentProofClub || formData.requirePaymentProofGuest;
+
+    if (paymentProofRequired) {
+      const fee = Number(formData.registrationFee);
+
+      if (!formData.registrationFee || fee <= 0) {
+        toast.error(
+          "Please enter a registration fee when payment proof is required",
+        );
+        return;
+      }
+    }
 
     // Validate categories
     for (const category of categories) {
@@ -158,6 +190,14 @@ const CreateTournament: React.FC = () => {
           ? parseInt(formData.maxPlayers)
           : undefined,
         tournamentType,
+
+        requirePaymentProofClub: formData.requirePaymentProofClub,
+        requirePaymentProofGuest: formData.requirePaymentProofGuest,
+        registrationFee:
+          formData.registrationFee !== ""
+            ? parseFloat(formData.registrationFee)
+            : undefined,
+        paymentInstructions: formData.paymentInstructions || undefined,
       });
 
       const tournamentId = tournamentResponse.data.data.id;
@@ -189,7 +229,8 @@ const CreateTournament: React.FC = () => {
 
   const inputStyles =
     "w-full rounded-lg border border-white/10 bg-[#061D23]/60 p-2.5 text-sm text-white placeholder-white/20 focus:border-[#4AEEFF] focus:outline-none";
-  const labelStyles = "block text-[15px] font-black uppercase tracking-wider text-white/70 mb-1.5";
+  const labelStyles =
+    "block text-[15px] font-black uppercase tracking-wider text-white/70 mb-1.5";
 
   const wrapInBaseLayout = (children: React.ReactNode) => (
     <div className="relative min-h-screen w-full overflow-hidden bg-[#061D23] text-white">
@@ -355,8 +396,150 @@ const CreateTournament: React.FC = () => {
                 </option>
               </select>
               <p className="text-xs text-white/50 mt-1.5">
-                Default for new categories. You can also customize each category individually below.
+                Default for new categories. You can also customize each category
+                individually below.
               </p>
+            </div>
+          </div>
+        </main>
+
+        {/* PAYMENT & REGISTRATION CONFIGURATION */}
+        <main className="rounded-[16px] border border-white/20 bg-[#061D23]/10 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl p-6">
+          <div className="mb-5">
+            <h2 className="text-lg font-black uppercase tracking-widest text-white">
+              Payment & Registration
+            </h2>
+
+            <p className="text-xs text-white/50 mt-1">
+              Configure whether club members or guest players must submit
+              payment proof.
+            </p>
+          </div>
+
+          <div className="space-y-5">
+            {/* Registration Fee */}
+            <div>
+              <label className={labelStyles}>Registration Fee (LKR)</label>
+
+              <input
+                type="number"
+                name="registrationFee"
+                value={formData.registrationFee}
+                onChange={handleChange}
+                min="0"
+                step="0.01"
+                className={inputStyles}
+                placeholder="e.g., 1500"
+              />
+
+              <p className="text-xs text-white/50 mt-1.5">
+                Leave empty if this tournament does not require payment.
+              </p>
+            </div>
+
+            {/* Payment proof requirements */}
+            <div>
+              <label className={labelStyles}>Require Payment Proof From</label>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {/* Club */}
+                <label className="flex items-center gap-3 rounded-lg border border-white/10 bg-[#061D23]/40 p-4 cursor-pointer hover:border-[#4AEEFF]/40 transition-colors">
+                  <input
+                    type="checkbox"
+                    name="requirePaymentProofClub"
+                    checked={formData.requirePaymentProofClub}
+                    onChange={handleChange}
+                    className="h-4 w-4 accent-[#4AEEFF]"
+                  />
+
+                  <div>
+                    <p className="text-sm font-bold text-white">Club Players</p>
+
+                    <p className="text-xs text-white/50">
+                      Club members must upload payment proof
+                    </p>
+                  </div>
+                </label>
+
+                {/* Guest */}
+                <label className="flex items-center gap-3 rounded-lg border border-white/10 bg-[#061D23]/40 p-4 cursor-pointer hover:border-[#4AEEFF]/40 transition-colors">
+                  <input
+                    type="checkbox"
+                    name="requirePaymentProofGuest"
+                    checked={formData.requirePaymentProofGuest}
+                    onChange={handleChange}
+                    className="h-4 w-4 accent-[#4AEEFF]"
+                  />
+
+                  <div>
+                    <p className="text-sm font-bold text-white">
+                      Guest Players
+                    </p>
+
+                    <p className="text-xs text-white/50">
+                      Guest players must upload payment proof
+                    </p>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            {/* Payment instructions */}
+            {(formData.requirePaymentProofClub ||
+              formData.requirePaymentProofGuest) && (
+              <div>
+                <label className={labelStyles}>Payment Instructions</label>
+
+                <textarea
+                  name="paymentInstructions"
+                  value={formData.paymentInstructions}
+                  onChange={handleChange}
+                  rows={4}
+                  className={inputStyles}
+                  placeholder="Example: Make the payment using the club's provided payment method and upload your receipt for verification."
+                />
+
+                <p className="text-xs text-white/50 mt-1.5">
+                  These instructions will be shown to players who need to submit
+                  payment proof.
+                </p>
+              </div>
+            )}
+
+            {/* Summary */}
+            <div className="rounded-lg border border-[#4AEEFF]/20 bg-[#4AEEFF]/5 p-4">
+              <p className="text-xs font-black uppercase tracking-wider text-[#4AEEFF] mb-2">
+                Registration Summary
+              </p>
+
+              <div className="space-y-1 text-xs text-white/70">
+                <p>
+                  Club Players:{" "}
+                  <span className="font-bold text-white">
+                    {formData.requirePaymentProofClub
+                      ? "Payment proof required"
+                      : "Direct registration"}
+                  </span>
+                </p>
+
+                <p>
+                  Guest Players:{" "}
+                  <span className="font-bold text-white">
+                    {formData.requirePaymentProofGuest
+                      ? "Payment proof required"
+                      : "Direct registration"}
+                  </span>
+                </p>
+
+                {formData.registrationFee && (
+                  <p>
+                    Registration Fee:{" "}
+                    <span className="font-bold text-white">
+                      LKR {formData.registrationFee}
+                    </span>
+                  </p>
+                )}
+              </div>
             </div>
           </div>
         </main>
@@ -451,7 +634,9 @@ const CreateTournament: React.FC = () => {
                       className={inputStyles}
                     >
                       <option value="KNOCKOUT">🏆 Knockout</option>
-                      <option value="GROUP_KNOCKOUT">🏅 Group + Knockout</option>
+                      <option value="GROUP_KNOCKOUT">
+                        🏅 Group + Knockout
+                      </option>
                     </select>
                   </div>
                 </div>
@@ -598,7 +783,7 @@ const CreateTournament: React.FC = () => {
           )}
         </div>
       </footer>
-    </>
+    </>,
   );
 };
 
