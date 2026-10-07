@@ -1190,19 +1190,19 @@ const TournamentDetails: React.FC = () => {
 
       {/* Edit Tournament Modal */}
       {showEditModal && (
-        <div className="fixed inset-0 bg-black/75 backdrop-blur-md flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
-          <div className="bg-[#061D23]/95 border border-[#4AEEFF]/30 rounded-2xl p-6 sm:p-8 max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-[0_10px_40px_rgba(0,0,0,0.8)] text-white custom-scrollbar">
-            <div className="flex items-center justify-between pb-4 mb-6 border-b border-white/10">
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/70 p-4 pt-24 backdrop-blur-sm animate-fadeIn sm:pt-28">
+          <div className="w-full max-w-4xl rounded-2xl border border-white/20 bg-[#061D23]/90 p-6 text-white shadow-[0_25px_60px_-15px_rgba(0,0,0,0.8)] backdrop-blur-2xl sm:p-8">
+            <div className="mb-6 flex items-center justify-between border-b border-white/10 pb-4">
               <div className="flex items-center gap-3">
-                <span className="w-2.5 h-6 bg-[#4AEEFF] rounded-full shadow-[0_0_10px_#4AEEFF]"></span>
-                <h2 className="text-xl sm:text-2xl font-black text-white tracking-wide">
-                  EDIT TOURNAMENT
+                <span className="h-6 w-2.5 rounded-full bg-[#4AEEFF] shadow-[0_0_10px_#4AEEFF]" />
+                <h2 className="text-xl font-black uppercase tracking-widest text-white sm:text-2xl">
+                  Edit Tournament
                 </h2>
               </div>
               <button
                 type="button"
                 onClick={() => setShowEditModal(false)}
-                className="text-slate-400 hover:text-white p-2 rounded-lg hover:bg-white/10 transition"
+                className="rounded-lg p-2 text-white/50 transition hover:bg-white/10 hover:text-white"
               >
                 ✕
               </button>
@@ -1212,7 +1212,7 @@ const TournamentDetails: React.FC = () => {
               {/* Basic Info */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1.5">
+                  <label className="mb-1.5 block text-xs font-black uppercase tracking-wider text-white/70">
                     Tournament Name
                   </label>
                   <input
@@ -1221,11 +1221,11 @@ const TournamentDetails: React.FC = () => {
                     onChange={(e) =>
                       setEditFormData({ ...editFormData, name: e.target.value })
                     }
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-black/40 border border-white/20 text-white placeholder-slate-400 focus:outline-none focus:border-[#4AEEFF] focus:ring-1 focus:ring-[#4AEEFF] text-sm transition"
+                    className="w-full rounded-lg border border-white/10 bg-[#061D23]/60 p-2.5 text-sm text-white placeholder-white/20 transition focus:border-[#4AEEFF] focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1.5">
+                  <label className="mb-1.5 block text-xs font-black uppercase tracking-wider text-white/70">
                     Venue
                   </label>
                   <input
@@ -1237,13 +1237,13 @@ const TournamentDetails: React.FC = () => {
                         venue: e.target.value,
                       })
                     }
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-black/40 border border-white/20 text-white placeholder-slate-400 focus:outline-none focus:border-[#4AEEFF] focus:ring-1 focus:ring-[#4AEEFF] text-sm transition"
+                    className="w-full rounded-lg border border-white/10 bg-[#061D23]/60 p-2.5 text-sm text-white placeholder-white/20 transition focus:border-[#4AEEFF] focus:outline-none"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1.5">
+                <label className="mb-1.5 block text-xs font-black uppercase tracking-wider text-white/70">
                   Description
                 </label>
                 <textarea
@@ -1255,13 +1255,13 @@ const TournamentDetails: React.FC = () => {
                     })
                   }
                   rows={2}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-black/40 border border-white/20 text-white placeholder-slate-400 focus:outline-none focus:border-[#4AEEFF] focus:ring-1 focus:ring-[#4AEEFF] text-sm transition"
+                  className="w-full rounded-lg border border-white/10 bg-[#061D23]/60 p-2.5 text-sm text-white placeholder-white/20 transition focus:border-[#4AEEFF] focus:outline-none"
                 />
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1.5">
+                  <label className="mb-1.5 block text-xs font-black uppercase tracking-wider text-white/70">
                     Start Date
                   </label>
                   <input
@@ -1273,11 +1273,11 @@ const TournamentDetails: React.FC = () => {
                         startDate: e.target.value,
                       })
                     }
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-black/40 border border-white/20 text-white placeholder-slate-400 focus:outline-none focus:border-[#4AEEFF] focus:ring-1 focus:ring-[#4AEEFF] text-sm transition"
+                    className="w-full rounded-lg border border-white/10 bg-[#061D23]/60 p-2.5 text-sm text-white placeholder-white/20 [color-scheme:dark] transition focus:border-[#4AEEFF] focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1.5">
+                  <label className="mb-1.5 block text-xs font-black uppercase tracking-wider text-white/70">
                     End Date
                   </label>
                   <input
@@ -1289,11 +1289,11 @@ const TournamentDetails: React.FC = () => {
                         endDate: e.target.value,
                       })
                     }
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-black/40 border border-white/20 text-white placeholder-slate-400 focus:outline-none focus:border-[#4AEEFF] focus:ring-1 focus:ring-[#4AEEFF] text-sm transition"
+                    className="w-full rounded-lg border border-white/10 bg-[#061D23]/60 p-2.5 text-sm text-white placeholder-white/20 [color-scheme:dark] transition focus:border-[#4AEEFF] focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1.5">
+                  <label className="mb-1.5 block text-xs font-black uppercase tracking-wider text-white/70">
                     Registration Deadline
                   </label>
                   <input
@@ -1305,13 +1305,13 @@ const TournamentDetails: React.FC = () => {
                         registrationDeadline: e.target.value,
                       })
                     }
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-black/40 border border-white/20 text-white placeholder-slate-400 focus:outline-none focus:border-[#4AEEFF] focus:ring-1 focus:ring-[#4AEEFF] text-sm transition"
+                    className="w-full rounded-lg border border-white/10 bg-[#061D23]/60 p-2.5 text-sm text-white placeholder-white/20 [color-scheme:dark] transition focus:border-[#4AEEFF] focus:outline-none"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1.5">
+                <label className="mb-1.5 block text-xs font-black uppercase tracking-wider text-white/70">
                   Max Players (Optional)
                 </label>
                 <input
@@ -1323,26 +1323,26 @@ const TournamentDetails: React.FC = () => {
                       maxPlayers: e.target.value,
                     })
                   }
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-black/40 border border-white/20 text-white placeholder-slate-400 focus:outline-none focus:border-[#4AEEFF] focus:ring-1 focus:ring-[#4AEEFF] text-sm transition"
+                  className="w-full rounded-lg border border-white/10 bg-[#061D23]/60 p-2.5 text-sm text-white placeholder-white/20 transition focus:border-[#4AEEFF] focus:outline-none"
                   min="2"
                 />
               </div>
 
               {/* Categories Section */}
-              <div className="border-t border-white/10 pt-5 mt-4">
+              <div className="mt-4 border-t border-white/10 pt-5">
                 <div className="flex justify-between items-center mb-4">
                   <div>
-                    <h3 className="text-base font-bold text-white tracking-wide">
+                    <h3 className="text-base font-black uppercase tracking-wider text-white">
                       Tournament Categories
                     </h3>
-                    <p className="text-xs text-slate-400">
+                    <p className="mt-1 text-xs text-white/50">
                       Configure divisions and participant limits
                     </p>
                   </div>
                   <button
                     type="button"
                     onClick={addEditCategory}
-                    className="bg-[#4AEEFF]/15 border border-[#4AEEFF]/40 text-[#4AEEFF] px-3.5 py-1.5 rounded-xl text-xs font-bold hover:bg-[#4AEEFF]/25 transition flex items-center gap-1.5 shadow-sm"
+                    className="flex items-center gap-1.5 rounded-lg border border-[#4AEEFF]/40 bg-[#4AEEFF]/15 px-3.5 py-1.5 text-xs font-black uppercase tracking-wider text-[#4AEEFF] shadow-sm transition hover:bg-[#4AEEFF]/25"
                   >
                     <span>+</span> Add Category
                   </button>
@@ -1352,17 +1352,17 @@ const TournamentDetails: React.FC = () => {
                   {editCategories.map((category, index) => (
                     <div
                       key={category.id}
-                      className="border border-white/10 rounded-xl p-4 bg-white/5 backdrop-blur-sm space-y-3"
+                      className="space-y-3 rounded-xl border border-white/10 bg-[#061D23]/60 p-4 backdrop-blur-sm"
                     >
                       <div className="flex justify-between items-center">
-                        <span className="text-xs font-bold text-[#4AEEFF] uppercase tracking-wider">
+                        <span className="text-xs font-black uppercase tracking-wider text-[#4AEEFF]">
                           Category {index + 1}
                         </span>
                         {editCategories.length > 1 && (
                           <button
                             type="button"
                             onClick={() => removeEditCategory(index)}
-                            className="text-red-400 hover:text-red-300 text-xs font-bold transition flex items-center gap-1"
+                            className="flex items-center gap-1 text-xs font-bold text-red-400 transition hover:text-red-300"
                           >
                             Remove
                           </button>
@@ -1370,7 +1370,7 @@ const TournamentDetails: React.FC = () => {
                       </div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
-                          <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">
+                          <label className="mb-1 block text-[10px] font-black uppercase tracking-wider text-white/60">
                             Category Name
                           </label>
                           <input
@@ -1380,11 +1380,11 @@ const TournamentDetails: React.FC = () => {
                             onChange={(e) =>
                               updateEditCategory(index, "name", e.target.value)
                             }
-                            className="w-full px-3 py-2 rounded-lg bg-black/40 border border-white/20 text-white text-xs placeholder-slate-400 focus:outline-none focus:border-[#4AEEFF]"
+                            className="w-full rounded-lg border border-white/10 bg-[#061D23]/60 px-3 py-2 text-xs text-white placeholder-white/20 focus:border-[#4AEEFF] focus:outline-none"
                           />
                         </div>
                         <div>
-                          <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">
+                          <label className="mb-1 block text-[10px] font-black uppercase tracking-wider text-white/60">
                             Match Type
                           </label>
                           <select
@@ -1392,7 +1392,7 @@ const TournamentDetails: React.FC = () => {
                             onChange={(e) =>
                               updateEditCategory(index, "type", e.target.value)
                             }
-                            className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-white/20 text-white text-xs focus:outline-none focus:border-[#4AEEFF]"
+                            className="w-full rounded-lg border border-white/10 bg-[#061D23] px-3 py-2 text-xs text-white focus:border-[#4AEEFF] focus:outline-none"
                           >
                             <option value="SINGLES">Singles</option>
                             <option value="DOUBLES">Doubles</option>
@@ -1400,7 +1400,7 @@ const TournamentDetails: React.FC = () => {
                           </select>
                         </div>
                         <div>
-                          <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">
+                          <label className="mb-1 block text-[10px] font-black uppercase tracking-wider text-white/60">
                             Draw Format
                           </label>
                           <select
@@ -1412,7 +1412,7 @@ const TournamentDetails: React.FC = () => {
                                 e.target.value as "KNOCKOUT" | "GROUP_KNOCKOUT",
                               )
                             }
-                            className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-white/20 text-white text-xs focus:outline-none focus:border-[#4AEEFF]"
+                            className="w-full rounded-lg border border-white/10 bg-[#061D23] px-3 py-2 text-xs text-white focus:border-[#4AEEFF] focus:outline-none"
                           >
                             <option value="KNOCKOUT">Knockout</option>
                             <option value="GROUP_KNOCKOUT">
@@ -1421,7 +1421,7 @@ const TournamentDetails: React.FC = () => {
                           </select>
                         </div>
                         <div>
-                          <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">
+                          <label className="mb-1 block text-[10px] font-black uppercase tracking-wider text-white/60">
                             Gender Division
                           </label>
                           <select
@@ -1436,7 +1436,7 @@ const TournamentDetails: React.FC = () => {
                                   | "MIXED") || undefined,
                               )
                             }
-                            className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-white/20 text-white text-xs focus:outline-none focus:border-[#4AEEFF]"
+                            className="w-full rounded-lg border border-white/10 bg-[#061D23] px-3 py-2 text-xs text-white focus:border-[#4AEEFF] focus:outline-none"
                           >
                             <option value="">Mixed / Open</option>
                             <option value="MALE">Men's Only</option>
@@ -1444,7 +1444,7 @@ const TournamentDetails: React.FC = () => {
                           </select>
                         </div>
                         <div>
-                          <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">
+                          <label className="mb-1 block text-[10px] font-black uppercase tracking-wider text-white/60">
                             Max Participants
                           </label>
                           <input
@@ -1460,11 +1460,11 @@ const TournamentDetails: React.FC = () => {
                             }
                             min="2"
                             max="256"
-                            className="w-full px-3 py-2 rounded-lg bg-black/40 border border-white/20 text-white text-xs placeholder-slate-400 focus:outline-none focus:border-[#4AEEFF]"
+                            className="w-full rounded-lg border border-white/10 bg-[#061D23]/60 px-3 py-2 text-xs text-white placeholder-white/20 focus:border-[#4AEEFF] focus:outline-none"
                           />
                         </div>
                         <div className="sm:col-span-2">
-                          <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">
+                          <label className="mb-1 block text-[10px] font-black uppercase tracking-wider text-white/60">
                             Age Restrictions (Optional)
                           </label>
                           <div className="flex gap-2">
@@ -1481,7 +1481,7 @@ const TournamentDetails: React.FC = () => {
                                     : undefined,
                                 )
                               }
-                              className="w-1/2 px-3 py-2 rounded-lg bg-black/40 border border-white/20 text-white text-xs placeholder-slate-400 focus:outline-none focus:border-[#4AEEFF]"
+                              className="w-1/2 rounded-lg border border-white/10 bg-[#061D23]/60 px-3 py-2 text-xs text-white placeholder-white/20 focus:border-[#4AEEFF] focus:outline-none"
                             />
                             <input
                               type="number"
@@ -1496,7 +1496,7 @@ const TournamentDetails: React.FC = () => {
                                     : undefined,
                                 )
                               }
-                              className="w-1/2 px-3 py-2 rounded-lg bg-black/40 border border-white/20 text-white text-xs placeholder-slate-400 focus:outline-none focus:border-[#4AEEFF]"
+                              className="w-1/2 rounded-lg border border-white/10 bg-[#061D23]/60 px-3 py-2 text-xs text-white placeholder-white/20 focus:border-[#4AEEFF] focus:outline-none"
                             />
                           </div>
                         </div>
@@ -1505,24 +1505,24 @@ const TournamentDetails: React.FC = () => {
                   ))}
                 </div>
                 {editCategories.length === 0 && (
-                  <p className="text-slate-400 text-center py-4 text-xs">
+                  <p className="py-4 text-center text-xs text-white/50">
                     No categories. Click "+ Add Category" to create one.
                   </p>
                 )}
               </div>
 
-              <div className="flex gap-3 pt-4 border-t border-white/10">
+              <div className="flex gap-3 border-t border-white/10 pt-4">
                 <button
                   type="button"
                   onClick={handleUpdateTournament}
-                  className="flex-1 py-3 rounded-xl bg-gradient-to-r from-[#4AEEFF] to-[#00b4d8] text-black font-extrabold text-sm tracking-wider uppercase hover:brightness-110 shadow-[0_0_20px_rgba(74,238,255,0.3)] transition"
+                  className="flex-1 rounded-lg bg-[#4AEEFF] py-3 text-sm font-black uppercase tracking-wider text-[#061D23] shadow-lg shadow-[#4AEEFF]/20 transition hover:bg-white"
                 >
                   Save Changes
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowEditModal(false)}
-                  className="flex-1 py-3 rounded-xl border border-white/20 text-white hover:bg-white/10 font-bold text-sm tracking-wider uppercase transition"
+                  className="flex-1 rounded-lg border border-white/20 py-3 text-sm font-black uppercase tracking-wider text-white transition hover:bg-white/10"
                 >
                   Cancel
                 </button>
