@@ -1,11 +1,11 @@
 import bcrypt from 'bcrypt';
+import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import { Prisma } from '@prisma/client';
 import prisma from '../config/database';
 import { AppError } from '../utils/AppError';
 import { config } from '../config/env';
-//import crypto from 'crypto';
-//import { sendPasswordResetEmail, sendVerificationEmail } from './email.service';
+import { sendPasswordResetEmail } from './email.service';
 
 export class AuthService {
     // Register new user with Admin Approval Workflow
@@ -246,8 +246,8 @@ export class AuthService {
         }
     }
 
-    // Forgot password - generate reset token
-    /*async forgotPassword(email: string) {
+    // Forgot password - generate a single-use reset token and email it to the user.
+    async forgotPassword(email: string) {
         const user = await prisma.user.findUnique({
             where: { email },
         });
@@ -259,6 +259,7 @@ export class AuthService {
         const resetToken = crypto.randomBytes(32).toString('hex');
         const resetTokenExpiry = new Date(Date.now() + 3600000);
 
+        await sendPasswordResetEmail(email, resetToken);
         await prisma.user.update({
             where: { email },
             data: {
@@ -267,14 +268,8 @@ export class AuthService {
             },
         });
 
-        try {
-            await sendPasswordResetEmail(email, resetToken);
-            return { message: 'Password reset link sent to your email.' };
-        } catch (error) {
-            console.error('Email sending failed:', error);
-            return { message: 'Failed to send reset email. Please try again later.' };
-        }
-    }*/
+        return { message: 'If your email is registered, you will receive a reset link.' };
+    }
 
     // Reset password - verify token and set new password
     async resetPassword(token: string, newPassword: string) {
@@ -304,54 +299,4 @@ export class AuthService {
 
         return { message: 'Password reset successful. You can now login with your new password.' };
     }
-    /*async verifyEmail(token: string) {
-  const user = await prisma.user.findFirst({
-    where: { emailVerificationToken: token },
-  });
-
-  if (!user) {
-    throw new AppError('Invalid or expired verification link', 400);
-  }
-
-  await prisma.user.update({
-    where: { id: user.id },
-    data: {
-      isEmailVerified: true,
-      emailVerificationToken: null,
-    },
-  });
-
-  return {
-    message: 'Email verified successfully! You can now log in.',
-    user: {
-      id: user.id,
-      email: user.email,
-      firstName: user.firstName,
-      lastName: user.lastName,
-    },
-  };
-}
-
-// Resend verification email
-async resendVerification(email: string) {
-  const user = await prisma.user.findUnique({ where: { email } });
-
-  if (!user) {
-    return { message: 'If that email is registered, a verification link has been sent.' };
-  }
-
-  if (user.isEmailVerified) {
-    throw new AppError('This email is already verified.', 400);
-  }
-
-  const token = crypto.randomBytes(32).toString('hex');
-
-  await prisma.user.update({
-    where: { id: user.id },
-    data: { emailVerificationToken: token },
-  });
-
-  await sendVerificationEmail(email, token, user.firstName);
-  return { message: 'Verification email sent! Please check your inbox.' };
-}*/
 }

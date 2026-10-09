@@ -2,7 +2,6 @@ import { Request, Response } from 'express';
 import { AuthService } from '../services/auth.service';
 import { catchAsync } from '../utils/catchAsync';
 import { sendResponse } from '../utils/sendResponse';
-//import { AppError } from '../utils/AppError';
 
 const authService = new AuthService();
 
@@ -28,7 +27,7 @@ export const login = catchAsync(async (req: Request, res: Response) => {
 });
 
 // Forgot password
-/*export const forgotPassword = catchAsync(async (req: Request, res: Response) => {
+export const forgotPassword = catchAsync(async (req: Request, res: Response) => {
   const { email } = req.body;
   const result = await authService.forgotPassword(email);
   sendResponse(res, 200, result.message);
@@ -40,15 +39,3 @@ export const resetPassword = catchAsync(async (req: Request, res: Response) => {
   const result = await authService.resetPassword(token, password);
   sendResponse(res, 200, result.message);
 });
-/*export const verifyEmail = catchAsync(async (req: Request, res: Response) => {
-  const { token } = req.query as { token: string };
-  if (!token) throw new AppError('Verification token is required', 400);
-  const result = await authService.verifyEmail(token);
-  sendResponse(res, 200, result.message, result.user);
-});
-
-export const resendVerification = catchAsync(async (req: Request, res: Response) => {
-  const { email } = req.body;
-  const result = await authService.resendVerification(email);
-  sendResponse(res, 200, result.message);
-});*/

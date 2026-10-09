@@ -1,5 +1,6 @@
 import nodemailer from 'nodemailer';
 import { config } from '../config/env';
+import { AppError } from '../utils/AppError';
 
 // Check if email is configured
 const isEmailConfigured = () => {
@@ -39,25 +40,20 @@ if (transporter) {
 }
 
 export const sendPasswordResetEmail = async (email: string, resetToken: string) => {
+  if (!transporter || !isEmailConfigured()) {
+    throw new AppError(
+      'Password reset email service is not configured. Please contact an administrator.',
+      503,
+    );
+  }
+
   const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password?token=${resetToken}`;
-  
-  // Always log to console for development/demo
-  console.log('\n' + '='.repeat(70));
-  console.log('🔐 PASSWORD RESET REQUEST');
-  console.log('='.repeat(70));
-  console.log(`📧 To: ${email}`);
-  console.log(`🔗 Reset Link: ${resetUrl}`);
-  console.log(`⏰ Expires: 1 hour`);
-  console.log('='.repeat(70) + '\n');
-  
-  // Try to send real email if configured
-  if (transporter && isEmailConfigured()) {
-    try {
-      const mailOptions = {
-        from: process.env.EMAIL_FROM || 'noreply@tabletennis.com',
-        to: email,
-        subject: 'Password Reset Request - Table Tennis Tournament System',
-        html: `
+
+  const mailOptions = {
+    from: process.env.EMAIL_FROM || 'noreply@tabletennis.com',
+    to: email,
+    subject: 'Password Reset Request - Table Tennis Tournament System',
+    html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
             <h2 style="color: #0284c7;">Password Reset Request</h2>
             <p>You requested to reset your password for your Table Tennis Tournament System account.</p>
@@ -71,20 +67,18 @@ export const sendPasswordResetEmail = async (email: string, resetToken: string) 
             <p style="font-size: 12px; color: #666;">Table Tennis Tournament Management System</p>
           </div>
         `,
-      };
+  };
 
-      await transporter.sendMail(mailOptions);
-      console.log(`✅ Email sent successfully to ${email}`);
-    } catch (error) {
-      console.error('❌ Failed to send email:', error);
-      console.log('📝 Reset link is still available in the console above');
-    }
-  } else {
-    console.log('📧 Email service not configured. Using console log only.');
-    console.log('💡 To enable real email, configure EMAIL_HOST, EMAIL_USER, and EMAIL_PASS in .env');
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log(`✅ Email sent successfully to ${email}`);
+  } catch (error) {
+    console.error('❌ Failed to send password reset email:', error);
+    throw new AppError(
+      'Unable to send password reset email. Please try again later.',
+      503,
+    );
   }
-  
-  return { message: 'Password reset link generated (check console for link)' };
 };
 export const sendVerificationEmail = async (email: string, token: string, firstName: string) => {
   const verifyUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/verify-email?token=${token}`;

@@ -1,7 +1,12 @@
-import React, { useState, useEffect } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import React, { useEffect, useState } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import api from "../services/api";
 import toast from "react-hot-toast";
+
+const inputClassName =
+  "w-full rounded-lg border border-white/10 bg-[#061D23]/60 p-2.5 text-sm text-white placeholder-white/20 transition focus:border-[#4AEEFF] focus:outline-none";
+const labelClassName =
+  "mb-1.5 block text-xs font-black uppercase tracking-wider text-white/70";
 
 const ResetPassword: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -22,8 +27,8 @@ const ResetPassword: React.FC = () => {
     }
   }, [searchParams]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
 
     if (password !== confirmPassword) {
       toast.error("Passwords do not match");
@@ -38,95 +43,117 @@ const ResetPassword: React.FC = () => {
     setIsLoading(true);
     try {
       await api.post("/auth/reset-password", { token, password });
-      toast.success(
-        "Password reset successful! Please login with your new password.",
-      );
+      toast.success("Password reset successful! Please login with your new password.");
       navigate("/login");
-    } catch (error) {
-      // Error handled by interceptor
+    } catch {
+      // The API interceptor displays the server error.
     } finally {
       setIsLoading(false);
     }
   };
 
-  if (!isValidToken) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-primary-500 to-primary-700">
-        <div className="w-full max-w-md p-8 bg-white rounded-2xl shadow-xl text-center">
-          <div className="text-6xl mb-4">🔒</div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">
-            Invalid Reset Link
-          </h1>
-          <p className="text-gray-600 mb-6">
-            This password reset link is invalid or has expired.
-          </p>
-          <a href="/login" className="btn-primary inline-block">
-            Back to Login
-          </a>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-primary-500 to-primary-700">
-      <div className="w-full max-w-md p-8 bg-white rounded-2xl shadow-xl">
-        <div className="text-center mb-8">
-          <div className="text-6xl mb-4">🔐</div>
-          <h1 className="text-3xl font-bold text-gray-900">Reset Password</h1>
-          <p className="text-gray-600 mt-2">Enter your new password</p>
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/70 p-4 pt-24 backdrop-blur-sm sm:pt-28">
+      <div className="w-full max-w-4xl rounded-2xl border border-white/20 bg-[#061D23]/90 p-6 text-white shadow-[0_25px_60px_-15px_rgba(0,0,0,0.8)] backdrop-blur-2xl sm:p-8">
+        <div className="mb-6 flex items-center justify-between border-b border-white/10 pb-4">
+          <div className="flex items-center gap-3">
+            <span className="h-6 w-2.5 rounded-full bg-[#4AEEFF] shadow-[0_0_10px_#4AEEFF]" />
+            <h1 className="text-xl font-black uppercase tracking-widest text-white sm:text-2xl">
+              Reset Password
+            </h1>
+          </div>
+          <Link
+            to="/login"
+            aria-label="Close reset password"
+            className="rounded-lg p-2 text-white/50 transition hover:bg-white/10 hover:text-white"
+          >
+            ✕
+          </Link>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              New Password
-            </label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              className="input-field"
-              placeholder="Enter new password"
-            />
-            <p className="text-xs text-gray-500 mt-1">
-              Must be at least 8 characters with uppercase, lowercase, and
-              number
+        {!isValidToken ? (
+          <div className="py-8 text-center">
+            <div className="mb-4 text-5xl">🔒</div>
+            <h2 className="text-lg font-black uppercase tracking-wider text-white">
+              Invalid Reset Link
+            </h2>
+            <p className="mt-2 text-sm text-white/60">
+              This password reset link is invalid or has expired.
             </p>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Confirm New Password
-            </label>
-            <input
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              required
-              className="input-field"
-              placeholder="Confirm your new password"
-            />
-          </div>
-
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="btn-primary w-full disabled:opacity-50"
-          >
-            {isLoading ? "Resetting..." : "Reset Password"}
-          </button>
-
-          <div className="text-center">
-            <a
-              href="/login"
-              className="text-sm text-primary-600 hover:text-primary-700"
+            <Link
+              to="/login"
+              className="mt-6 inline-flex rounded-lg bg-[#4AEEFF] px-8 py-3 text-xs font-black uppercase tracking-widest text-[#061D23] transition-all hover:bg-white"
             >
-              ← Back to Login
-            </a>
+              Back to Login
+            </Link>
           </div>
-        </form>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div className="rounded-lg border border-white/10 bg-[#061D23]/60 p-4">
+              <h2 className="text-base font-black uppercase tracking-wider text-white">
+                Account Recovery
+              </h2>
+              <p className="mt-1 text-xs text-white/50">
+                Create a new password. The emailed reset link can only be used
+                once and expires shortly.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div>
+                <label className={labelClassName} htmlFor="new-password">
+                  New Password
+                </label>
+                <input
+                  id="new-password"
+                  type="password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  required
+                  autoComplete="new-password"
+                  placeholder="Enter new password"
+                  className={inputClassName}
+                />
+              </div>
+              <div>
+                <label className={labelClassName} htmlFor="confirm-password">
+                  Confirm New Password
+                </label>
+                <input
+                  id="confirm-password"
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(event) => setConfirmPassword(event.target.value)}
+                  required
+                  autoComplete="new-password"
+                  placeholder="Confirm your new password"
+                  className={inputClassName}
+                />
+              </div>
+            </div>
+
+            <p className="-mt-2 text-xs text-white/50">
+              Password must contain at least 8 characters with uppercase,
+              lowercase, and number.
+            </p>
+
+            <div className="flex gap-3 border-t border-white/10 pt-5">
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="flex-1 rounded-lg bg-[#4AEEFF] py-3 text-xs font-black uppercase tracking-widest text-[#061D23] transition-all hover:bg-white disabled:opacity-50 sm:flex-none sm:px-10"
+              >
+                {isLoading ? "Resetting..." : "Reset Password"}
+              </button>
+              <Link
+                to="/login"
+                className="flex-1 rounded-lg border border-white/20 bg-transparent py-3 text-center text-xs font-black uppercase tracking-widest text-[#4AEEFF] transition-all hover:bg-white/5 sm:flex-none sm:px-10"
+              >
+                Cancel
+              </Link>
+            </div>
+          </form>
+        )}
       </div>
     </div>
   );
