@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import api from "../services/api";
+import api, { getProfileImageUrl } from "../services/api";
 import toast from "react-hot-toast";
 import {
   CheckCircleIcon,
@@ -392,7 +392,7 @@ const AdminRequests: React.FC = () => {
       <header className="rounded-[16px] border border-white/20 bg-[#061D23]/15 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl sm:p-8">
         <div className="mb-4 h-[3px] w-16 bg-[#4AEEFF]" />
         <h1 className="mb-2 text-2xl font-black uppercase tracking-[0.2em] text-[#FFFFFF] sm:text-4xl">
-          Club Membership Requests
+          Pending Requests
         </h1>
         <p className="text-xs uppercase tracking-[0.3em] text-[#4AEEFF]/90">
           Review and manage player requests for official club membership
@@ -407,7 +407,7 @@ const AdminRequests: React.FC = () => {
           </div>
           <div>
             <h2 className="text-lg font-bold uppercase tracking-wider text-white">
-              Pending Requests
+              Pending  Membership Requests
             </h2>
             <p className="text-xs text-white/60">
               Select individual or bulk options to process membership requests
@@ -698,7 +698,7 @@ const AdminRequests: React.FC = () => {
                     {/* RIGHT SIDE */}
                     <div className="flex flex-col gap-3 lg:w-56">
                       <a
-                        href={`http://localhost:3000${proof.proofUrl}`}
+                        href={getProfileImageUrl(proof.proofUrl)}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="flex items-center justify-center rounded-lg border border-[#4AEEFF]/40 bg-[#4AEEFF]/10 px-5 py-2.5 text-xs font-black uppercase tracking-wider text-[#4AEEFF] transition-all hover:bg-[#4AEEFF]/20"
