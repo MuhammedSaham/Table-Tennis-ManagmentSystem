@@ -260,23 +260,7 @@ export class BracketService {
     }
 
     // 3rd Place Playoff (requires bracketSize >= 4)
-    if (bracketSize >= 4) {
-      matchesToCreate.push({
-        tournamentId,
-        categoryId,
-        matchType,
-        team1Id: null,
-        team2Id: null,
-        round: '3rd Place Playoff',
-        matchNumber: matchNumber++,
-        scheduledTime: startDate,
-        status: MatchStatus.SCHEDULED,
-        score: null,
-        winnerTeamId: null,
-        winnerId: null,
-      });
-    }
-
+    
     await prisma.match.createMany({ data: matchesToCreate });
 
     const created = await prisma.match.findMany({
@@ -426,22 +410,7 @@ export class BracketService {
     }
 
     // ── 3rd Place Playoff ──
-    if (bracketSize >= 4) {
-      matches.push({
-        tournamentId,
-        categoryId,
-        matchType,
-        round: '3rd Place Playoff',
-        matchNumber: matchNumber++,
-        scheduledTime: startDate,
-        player1Id: null,
-        player2Id: null,
-        status: MatchStatus.SCHEDULED,
-        winnerId: null,
-        score: null,
-      });
-    }
-
+    
     return matches;
   }
 
