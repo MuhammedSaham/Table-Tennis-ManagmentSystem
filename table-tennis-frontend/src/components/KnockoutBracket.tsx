@@ -104,10 +104,21 @@ export const UmpireSheet: React.FC<{
     endTime?: string,
   ) => Promise<void>;
   isAdminOrReferee: boolean;
-}> = ({ match, onClose, onSave, isAdminOrReferee }) => {
+  onCorrectScore: (
+    id: string,
+    games: GameScore[],
+    bestOf: 3 | 5,
+    reason: string,
+  ) => Promise<void>;
+}> = ({ match, onClose, onSave, onCorrectScore, isAdminOrReferee }) => {
   const { user } = useAuth();
   const today = new Date().toLocaleDateString("en-GB");
   const done = match.status === "COMPLETED";
+  // Only admins may edit a completed match.
+  const canEditCompleted = user?.role === "ADMIN" && done;
+
+  // Referees can only enter scores for unfinished matches.
+  const canEditScore = isAdminOrReferee && (!done || canEditCompleted);
 
   const initBestOf = (): 3 | 5 => {
     if (
@@ -173,6 +184,7 @@ export const UmpireSheet: React.FC<{
     setEndTime(formatSavedTime(match.endTime));
   }, [match.id, match.score, match.status, match.startTime, match.endTime]);
   const [saving, setSaving] = useState(false);
+  const [correctionReason, setCorrectionReason] = useState("");
 
   const formatSavedTime = (value?: string | null) => {
     if (!value) return "";
@@ -489,7 +501,7 @@ export const UmpireSheet: React.FC<{
                 type="time"
                 value={startTime}
                 onChange={(e) => setStartTime(e.target.value)}
-                disabled={!isAdminOrReferee || done}
+                disabled={done || !canEditScore}
                 style={{
                   display: "block",
                   marginTop: 5,
@@ -506,7 +518,7 @@ export const UmpireSheet: React.FC<{
                 type="time"
                 value={endTime}
                 onChange={(e) => setEndTime(e.target.value)}
-                disabled={!isAdminOrReferee || done}
+                disabled={done || !canEditScore}
                 style={{
                   display: "block",
                   marginTop: 5,
@@ -664,29 +676,25 @@ export const UmpireSheet: React.FC<{
                             min={0}
                             value={g[side]}
                             onChange={(e) => {
-                              if (!isAdminOrReferee || done || !nd) return;
+                              if (!canEditScore) return;
                               const nx = [...games];
                               nx[i] = { ...nx[i], [side]: e.target.value };
                               setGames(nx);
                             }}
-                            disabled={!isAdminOrReferee || done || !nd}
+                            disabled={!canEditScore}
                             style={{
                               width: 42,
                               height: 36,
                               textAlign: "center",
                               border: "1.5px solid",
                               borderColor:
-                                !isAdminOrReferee || done || !nd
-                                  ? "#e2e8f0"
-                                  : "#cbd5e1",
+                                !canEditScore || !nd ? "#e2e8f0" : "#cbd5e1",
                               borderRadius: 8,
                               fontSize: 15,
                               fontWeight: 700,
                               color: !nd ? "#cbd5e1" : "#0f172a",
                               background:
-                                !isAdminOrReferee || done || !nd
-                                  ? "#f8fafc"
-                                  : "#fff",
+                                !canEditScore || !nd ? "#f8fafc" : "#fff",
                               outline: "none",
                             }}
                             onFocus={(e) => {
@@ -796,6 +804,69 @@ export const UmpireSheet: React.FC<{
           >
             Close
           </button>
+          {canEditCompleted && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              <input
+                type="text"
+                value={correctionReason}
+                onChange={(e) => setCorrectionReason(e.target.value)}
+                placeholder="Reason for correction"
+                style={{
+                  padding: "9px 12px",
+                  border: "1px solid #cbd5e1",
+                  borderRadius: 8,
+                  fontSize: 13,
+                  color: "#0f172a",
+                }}
+              />
+
+              <button
+                disabled={saving || !over}
+                onClick={async () => {
+                  if (correctionReason.trim().length < 5) {
+                    toast.error(
+                      "Please enter a correction reason (at least 5 characters)",
+                    );
+                    return;
+                  }
+
+                  for (let i = 0; i < games.length; i++) {
+                    const g = games[i];
+
+                    if (g.p1 === "" && g.p2 === "") continue;
+
+                    if (!isGameValid(g.p1, g.p2)) {
+                      toast.error(`Game ${i + 1} has an invalid score`);
+                      return;
+                    }
+                  }
+
+                  setSaving(true);
+                  try {
+                    await onCorrectScore(
+                      match.id,
+                      games,
+                      bestOf,
+                      correctionReason.trim(),
+                    );
+                  } finally {
+                    setSaving(false);
+                  }
+                }}
+                style={{
+                  padding: "9px 20px",
+                  border: "none",
+                  borderRadius: 10,
+                  background: saving || !over ? "#94a3b8" : "#0369a1",
+                  color: "#fff",
+                  fontWeight: 700,
+                  cursor: saving || !over ? "default" : "pointer",
+                }}
+              >
+                {saving ? "Saving..." : "Save Correction"}
+              </button>
+            </div>
+          )}
           {isAdminOrReferee && !done && (
             <button
               onClick={async () => {
@@ -1611,6 +1682,44 @@ const KnockoutBracket: React.FC<KnockoutBracketProps> = ({
       .filter((m) => m.round === r)
       .sort((a, b) => a.matchNumber - b.matchNumber);
 
+  const handleCorrectScore = async (
+    matchId: string,
+    games: GameScore[],
+    bestOf: 3 | 5,
+    reason: string,
+  ) => {
+    if (user?.role !== "ADMIN") {
+      toast.error("Only admins can correct completed matches");
+      return;
+    }
+
+    const correctedGames = games
+      .filter((g) => g.p1 !== "" && g.p2 !== "")
+      .map((g, index) => ({
+        gameNumber: index + 1,
+        player1Score: Number(g.p1),
+        player2Score: Number(g.p2),
+      }));
+
+    try {
+      await api.patch(`/matches/${matchId}/correct-score`, {
+        games: correctedGames,
+        bestOf,
+        reason,
+      });
+
+      toast.success("Match score corrected successfully!");
+      setSelectedMatch(null);
+      await load();
+      onScoreRecorded?.();
+    } catch (error: any) {
+      toast.error(
+        error.response?.data?.message || "Failed to correct match score",
+      );
+      throw error;
+    }
+  };
+
   const handleSave = async (
     matchId: string,
     games: GameScore[],
@@ -2103,6 +2212,7 @@ const KnockoutBracket: React.FC<KnockoutBracketProps> = ({
           match={selectedMatch}
           onClose={() => setSelectedMatch(null)}
           onSave={handleSave}
+          onCorrectScore={handleCorrectScore}
           isAdminOrReferee={
             isAdmin ||
             (isReferee &&

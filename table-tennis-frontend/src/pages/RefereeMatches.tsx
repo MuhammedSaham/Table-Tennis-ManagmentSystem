@@ -732,7 +732,7 @@ const RefereeMatches: React.FC = () => {
                     }`}
                   >
                     {match.status === "COMPLETED"
-                      ? "Edit Score"
+                      ? "View Score"
                       : "Manage Score →"}
                   </button>
                 </div>
@@ -835,7 +835,7 @@ const RefereeMatches: React.FC = () => {
             match={selectedMatch as any}
             onClose={() => setSelectedMatch(null)}
             onSave={handleKnockoutMatchSave}
-            isAdminOrReferee={true}
+            isAdminOrReferee={selectedMatch.status !== "COMPLETED"}
           />
         ))}
     </>,

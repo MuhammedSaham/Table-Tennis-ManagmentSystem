@@ -111,14 +111,34 @@ export const updateMatch = catchAsync(async (req: Request, res: Response) => {
   const { score, winnerId,winnerTeamId, status, player1Id, player2Id,team1Id,team2Id, resultDetails,startTime,endTime, } = req.body;
   
   if (req.user?.role === 'REFEREE') {
-    const existingMatch = await prisma.match.findUnique({
-      where: { id: matchId },
-      include: { referee: true },
-    });
-    if (!existingMatch || existingMatch.referee?.userId !== req.user.id) {
-      throw new AppError('You can only record scores for matches assigned to you', 403);
-    }
+  const existingMatch = await prisma.match.findUnique({
+    where: { id: matchId },
+    include: { referee: true },
+  });
+
+  if (!existingMatch) {
+    throw new AppError('Match not found', 404);
   }
+
+  // Referee can update only their assigned matches
+  if (existingMatch.referee?.userId !== req.user.id) {
+    throw new AppError(
+      'You can only record scores for matches assigned to you',
+      403
+    );
+  }
+
+  // Referee cannot edit completed match results
+  if (
+    existingMatch.status === 'COMPLETED' ||
+    existingMatch.status === 'WALKOVER'
+  ) {
+    throw new AppError(
+      'Completed match results can only be edited by an admin',
+      403
+    );
+  }
+}
 
   const updateData: any = {};
   if (score !== undefined) updateData.score = score;
@@ -325,14 +345,32 @@ export const updateMatchAndAdvance = catchAsync(async (req: Request, res: Respon
   const { player1Score, player2Score } = req.body;
   
   if (req.user?.role === 'REFEREE') {
-    const existingMatch = await prisma.match.findUnique({
-      where: { id: matchId },
-      include: { referee: true },
-    });
-    if (!existingMatch || existingMatch.referee?.userId !== req.user.id) {
-      throw new AppError('You can only record scores for matches assigned to you', 403);
-    }
+  const existingMatch = await prisma.match.findUnique({
+    where: { id: matchId },
+    include: { referee: true },
+  });
+
+  if (!existingMatch) {
+    throw new AppError('Match not found', 404);
   }
+
+  if (existingMatch.referee?.userId !== req.user.id) {
+    throw new AppError(
+      'You can only record scores for matches assigned to you',
+      403
+    );
+  }
+
+  if (
+    existingMatch.status === 'COMPLETED' ||
+    existingMatch.status === 'WALKOVER'
+  ) {
+    throw new AppError(
+      'Completed match results can only be edited by an admin',
+      403
+    );
+  }
+}
 
   // Update the current match
   const winnerId = player1Score > player2Score ? 
@@ -535,4 +573,30 @@ export const swapPlayers = catchAsync(async (req: Request, res: Response) => {
     }
   );
 });
+// Correct a completed knockout match (Admin only)
+export const correctCompletedMatch = catchAsync(
+  async (req: Request, res: Response) => {
+    const { matchId } = req.params;
+    const { games, bestOf, reason } = req.body;
+
+    if (req.user?.role !== 'ADMIN') {
+      throw new AppError('Only admins can correct completed matches', 403);
+    }
+
+    const correctedMatch = await matchService.correctCompletedMatch(
+      req.user.id,
+      matchId,
+      games,
+      bestOf,
+      reason
+    );
+
+    sendResponse(
+      res,
+      200,
+      'Completed match score corrected successfully',
+      correctedMatch
+    );
+  }
+);
 
