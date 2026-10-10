@@ -14,6 +14,8 @@ import {
   GlobeAltIcon,
   ChevronRightIcon,
   ArrowUpIcon,
+  MapPinIcon,
+  PhoneIcon,
 } from "@heroicons/react/24/outline";
 
 const PublicLayout: React.FC = () => {
@@ -299,12 +301,14 @@ const PublicLayout: React.FC = () => {
             <div className="md:col-span-3">
               <h4 className="font-bold text-lg text-white mb-4">Contact</h4>
               <ul className="space-y-2 text-sm text-white">
-                <li className="text-xs leading-relaxed text-white">
-                  📍 Broody front lane, Jaffna, Sri Lanka, 40000
+                <li className="flex items-start gap-2 text-xs leading-relaxed text-white">
+                  <MapPinIcon className="h-4 w-4 shrink-0 text-white" />
+                  <span>Broody front lane, Jaffna, Sri Lanka, 40000</span>
                 </li>
                 <li>
-                  <a href="tel:+94755711174" className="text-white hover:text-[#4AEEFF] transition">
-                    📞 +94 75 571 1174
+                  <a href="tel:+94755711174" className="flex items-center gap-2 text-white hover:text-[#4AEEFF] transition">
+                    <PhoneIcon className="h-4 w-4 shrink-0 text-white" />
+                    <span>+94 75 571 1174</span>
                   </a>
                 </li>
                 <li>
@@ -370,7 +374,7 @@ const PublicLayout: React.FC = () => {
           <button
             type="button"
             onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-            className="fixed right-[1cm] bottom-[2cm] z-50 inline-flex h-[10mm] w-[10mm] items-center justify-center rounded-lg border-2 border-black bg-white text-black shadow-lg transition-colors hover:border-blue-600 hover:bg-blue-600 hover:text-white focus:outline-none focus:ring-2 focus:ring-blue-400"
+            className="absolute right-[1cm] bottom-[2cm] z-50 inline-flex h-[10mm] w-[10mm] items-center justify-center rounded-lg border-2 border-black bg-white text-black shadow-lg transition-colors hover:border-[#4AEEFF] hover:bg-[#4AEEFF] hover:text-white focus:outline-none focus:ring-2 focus:ring-[#4AEEFF]/60"
             aria-label="Back to top"
             title="Back to top"
           >
