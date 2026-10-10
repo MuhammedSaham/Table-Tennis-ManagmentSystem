@@ -37,6 +37,8 @@ interface KnockoutMatch {
   score: string | null;
   status: string;
   scheduledTime?: string;
+  startTime?: string | null;
+  endTime?: string | null;
   referee?: {
     id: string;
     user: { firstName: string; lastName: string };
@@ -94,7 +96,13 @@ const LH = 34;
 export const UmpireSheet: React.FC<{
   match: KnockoutMatch;
   onClose: () => void;
-  onSave: (id: string, games: GameScore[], bestOf: 3 | 5) => Promise<void>;
+  onSave: (
+    id: string,
+    games: GameScore[],
+    bestOf: 3 | 5,
+    startTime?: string,
+    endTime?: string,
+  ) => Promise<void>;
   isAdminOrReferee: boolean;
 }> = ({ match, onClose, onSave, isAdminOrReferee }) => {
   const { user } = useAuth();
@@ -160,8 +168,46 @@ export const UmpireSheet: React.FC<{
     const bo = initBestOf();
     setBestOf(bo);
     setGames(initGames(bo));
-  }, [match.id, match.score, match.status]);
+
+    setStartTime(formatSavedTime(match.startTime));
+    setEndTime(formatSavedTime(match.endTime));
+  }, [match.id, match.score, match.status, match.startTime, match.endTime]);
   const [saving, setSaving] = useState(false);
+
+  const formatSavedTime = (value?: string | null) => {
+    if (!value) return "";
+
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) return "";
+
+    const hours = String(date.getHours()).padStart(2, "0");
+    const minutes = String(date.getMinutes()).padStart(2, "0");
+
+    return `${hours}:${minutes}`;
+  };
+
+  const [startTime, setStartTime] = useState(formatSavedTime(match.startTime));
+
+  const [endTime, setEndTime] = useState(formatSavedTime(match.endTime));
+  const calculateDuration = () => {
+    if (!startTime || !endTime) return null;
+
+    const [startHour, startMinute] = startTime.split(":").map(Number);
+    const [endHour, endMinute] = endTime.split(":").map(Number);
+
+    let duration = endHour * 60 + endMinute - (startHour * 60 + startMinute);
+
+    // Support matches ending after midnight
+    if (duration < 0) {
+      duration += 24 * 60;
+    }
+
+    return duration;
+  };
+
+  const matchDuration = calculateDuration();
+
   const [pointsToWin, setPointsToWin] = useState<number>(11);
   const targetPts =
     typeof pointsToWin === "number" && !isNaN(pointsToWin) && pointsToWin > 0
@@ -421,6 +467,62 @@ export const UmpireSheet: React.FC<{
                 Best of {bestOf}
               </span>
             )}
+          </div>
+
+          {/* Optional Match Time */}
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              alignItems: "center",
+              gap: 16,
+              marginBottom: 16,
+              padding: 12,
+              background: "#f8fafc",
+              border: "1px solid #e2e8f0",
+              borderRadius: 10,
+            }}
+          >
+            <label style={{ fontSize: 13, fontWeight: 600 }}>
+              Start Time
+              <input
+                type="time"
+                value={startTime}
+                onChange={(e) => setStartTime(e.target.value)}
+                disabled={!isAdminOrReferee || done}
+                style={{
+                  display: "block",
+                  marginTop: 5,
+                  padding: 7,
+                  border: "1px solid #cbd5e1",
+                  borderRadius: 6,
+                }}
+              />
+            </label>
+
+            <label style={{ fontSize: 13, fontWeight: 600 }}>
+              End Time
+              <input
+                type="time"
+                value={endTime}
+                onChange={(e) => setEndTime(e.target.value)}
+                disabled={!isAdminOrReferee || done}
+                style={{
+                  display: "block",
+                  marginTop: 5,
+                  padding: 7,
+                  border: "1px solid #cbd5e1",
+                  borderRadius: 6,
+                }}
+              />
+            </label>
+
+            <div style={{ fontSize: 13 }}>
+              <strong>Duration:</strong>{" "}
+              {matchDuration === null
+                ? "Not entered"
+                : `${Math.floor(matchDuration / 60)} hr ${matchDuration % 60} min`}
+            </div>
           </div>
 
           {/* Live progress */}
@@ -697,6 +799,12 @@ export const UmpireSheet: React.FC<{
           {isAdminOrReferee && !done && (
             <button
               onClick={async () => {
+                if (Boolean(startTime) !== Boolean(endTime)) {
+                  toast.error(
+                    "Please enter both Start Time and End Time, or leave both empty.",
+                  );
+                  return;
+                }
                 for (let i = 0; i < games.length; i++) {
                   const g = games[i];
                   if (g.p1 === "" && g.p2 === "") continue;
@@ -715,7 +823,7 @@ export const UmpireSheet: React.FC<{
                   return;
                 }
                 setSaving(true);
-                await onSave(match.id, games, bestOf);
+                await onSave(match.id, games, bestOf, startTime, endTime);
                 setSaving(false);
               }}
               disabled={saving || !over}
@@ -1507,6 +1615,8 @@ const KnockoutBracket: React.FC<KnockoutBracketProps> = ({
     matchId: string,
     games: GameScore[],
     bestOf: 3 | 5,
+    startTime?: string,
+    endTime?: string,
   ) => {
     const match = matches.find((m) => m.id === matchId);
     const isDoubles = match?.matchType === "DOUBLES";
@@ -1551,6 +1661,33 @@ const KnockoutBracket: React.FC<KnockoutBracketProps> = ({
         : match!.team2!.id
       : undefined;
 
+    const matchDate = match?.scheduledTime
+      ? new Date(match.scheduledTime)
+      : new Date();
+
+    const toDateTime = (time?: string) => {
+      if (!time) return undefined;
+
+      const [hours, minutes] = time.split(":").map(Number);
+      const date = new Date(matchDate);
+      date.setHours(hours, minutes, 0, 0);
+
+      return date;
+    };
+
+    const startDate = toDateTime(startTime);
+    const endDate = toDateTime(endTime);
+
+    // A match may finish after midnight.
+    if (startDate && endDate && endDate < startDate) {
+      endDate.setDate(endDate.getDate() + 1);
+    }
+
+    const durationMinutes =
+      startDate && endDate
+        ? Math.round((endDate.getTime() - startDate.getTime()) / 60000)
+        : null;
+
     try {
       const umpireName = match?.referee?.user
         ? `${match.referee.user.firstName} ${match.referee.user.lastName}`
@@ -1563,8 +1700,13 @@ const KnockoutBracket: React.FC<KnockoutBracketProps> = ({
         winnerId,
         winnerTeamId,
         status: "COMPLETED",
-        endTime: new Date().toISOString(),
-        resultDetails: { bestOf, umpireName },
+        ...(startDate ? { startTime: startDate.toISOString() } : {}),
+        ...(endDate ? { endTime: endDate.toISOString() } : {}),
+        resultDetails: {
+          bestOf,
+          umpireName,
+          ...(durationMinutes !== null ? { durationMinutes } : {}),
+        },
       });
 
       toast.success("Score saved!");

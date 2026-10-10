@@ -108,7 +108,7 @@ export const getPlayerPerformanceStatsById = catchAsync(async (req: Request, res
 // Update match details (score, winner, etc.)
 export const updateMatch = catchAsync(async (req: Request, res: Response) => {
   const { matchId } = req.params;
-  const { score, winnerId,winnerTeamId, status, player1Id, player2Id,team1Id,team2Id, resultDetails } = req.body;
+  const { score, winnerId,winnerTeamId, status, player1Id, player2Id,team1Id,team2Id, resultDetails,startTime,endTime, } = req.body;
   
   if (req.user?.role === 'REFEREE') {
     const existingMatch = await prisma.match.findUnique({
@@ -130,8 +130,41 @@ export const updateMatch = catchAsync(async (req: Request, res: Response) => {
   if (team1Id !== undefined) updateData.team1Id = team1Id;
   if (team2Id !== undefined) updateData.team2Id = team2Id;
   if (resultDetails !== undefined) updateData.resultDetails = resultDetails;
-  const isMatchFinished = (status === 'COMPLETED' || status === 'WALKOVER') && Boolean(winnerId || winnerTeamId);
-  if (isMatchFinished) updateData.endTime = new Date();
+
+  
+if (startTime !== undefined) {
+  const parsedStartTime = new Date(startTime);
+
+  if (!startTime || Number.isNaN(parsedStartTime.getTime())) {
+    throw new AppError('Invalid match start time', 400);
+  }
+
+  updateData.startTime = parsedStartTime;
+}
+
+if (endTime !== undefined) {
+  const parsedEndTime = new Date(endTime);
+
+  if (!endTime || Number.isNaN(parsedEndTime.getTime())) {
+    throw new AppError('Invalid match end time', 400);
+  }
+
+  updateData.endTime = parsedEndTime;
+}
+
+
+
+
+  
+const isMatchFinished =
+  (status === 'COMPLETED' || status === 'WALKOVER') &&
+  Boolean(winnerId || winnerTeamId);
+
+// Keep the existing automatic end time when no manual time is provided.
+if (isMatchFinished && endTime === undefined) {
+  updateData.endTime = new Date();
+}
+
 
   const match = await prisma.match.update({
     where: { id: matchId },

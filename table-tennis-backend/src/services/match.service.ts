@@ -8,6 +8,8 @@ interface NormalizedMatch {
   round: string;
   matchNumber: number;
   scheduledTime: Date;
+  startTime?: Date | null;
+  endTime?: Date | null;
   status: string;
   score: string | null;
   winnerId: string | null;
@@ -435,6 +437,10 @@ export class MatchService {
       round: match.round,
       matchNumber: match.matchNumber,
       scheduledTime: match.scheduledTime,
+
+      startTime: match.startTime,
+      endTime: match.endTime,
+
       status: match.status,
       score: match.score ?? null,
       winnerId: match.winnerId ?? null,
