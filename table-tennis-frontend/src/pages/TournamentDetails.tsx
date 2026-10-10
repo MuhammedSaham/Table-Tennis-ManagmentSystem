@@ -393,9 +393,8 @@ const TournamentDetails: React.FC = () => {
       const tournamentData = response.data.data;
 
       if (user?.role === "ADMIN") {
-        const regResponse = await api.get(
-          `/registrations/tournaments/${id}${id}${selectedCategories ? `?categoryId=${selectedCategories}` : ""}`,
-        );
+        const regResponse = await api.get(`/registrations/tournaments/${id}`);
+
         tournamentData.registrations = regResponse.data.data;
       }
 
