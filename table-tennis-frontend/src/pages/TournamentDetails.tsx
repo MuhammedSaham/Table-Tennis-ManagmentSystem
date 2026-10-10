@@ -142,7 +142,7 @@ const TournamentDetails: React.FC = () => {
   const [winners, setWinners] = useState<{
     first: any;
     second: any;
-    third: any;
+    jointThird: any[];
   } | null>(null);
   const [showWinners, setShowWinners] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -393,9 +393,8 @@ const TournamentDetails: React.FC = () => {
       const tournamentData = response.data.data;
 
       if (user?.role === "ADMIN") {
-        const regResponse = await api.get(
-          `/registrations/tournaments/${id}${id}${selectedCategories ? `?categoryId=${selectedCategories}` : ""}`,
-        );
+        const regResponse = await api.get(`/registrations/tournaments/${id}`);
+
         tournamentData.registrations = regResponse.data.data;
       }
 
@@ -721,26 +720,40 @@ const TournamentDetails: React.FC = () => {
       toast.error("Please select a category first.");
       return;
     }
+
     try {
       const matchesResponse = await api.get(
         `/matches/tournaments/${id}?categoryId=${activeCategoryId}`,
       );
+
       const allMatches = matchesResponse.data.data;
+      /*console.table(
+        allMatches.map((m: any) => ({
+          round: m.round,
+          status: m.status,
+          winnerId: m.winnerId,
+          winnerTeamId: m.winnerTeamId,
+          player1Id: m.player1Id,
+          player2Id: m.player2Id,
+          score: m.score,
+          isWalkover: m.isWalkover,
+          walkoverWinnerId: m.walkoverWinnerId,
+        })),
+      );*/
+
       const finalMatch = allMatches.find(
         (m: any) =>
-          m.round &&
-          (m.round.trim().toLowerCase() === "final" ||
-            m.round.trim().toLowerCase() === "finals"),
+          m.round && ["final", "finals"].includes(m.round.trim().toLowerCase()),
       );
-      const thirdPlaceMatch = allMatches.find(
-        (m: any) => m.round && m.round.includes("3rd Place"),
-      );
-      let champion = null,
-        runnerUp = null,
-        thirdPlace = null;
+
+      let champion = null;
+      let runnerUp = null;
+      const jointThird: any[] = [];
 
       const resolveMatchWinners = (match: any) => {
-        if (!match) return { winner: null, loser: null };
+        if (!match || !["COMPLETED", "WALKOVER"].includes(match.status)) {
+          return { winner: null, loser: null };
+        }
         const winnerId = match.winnerTeamId || match.winnerId;
         const isDoubles = !!(
           match.team1 ||
@@ -748,27 +761,24 @@ const TournamentDetails: React.FC = () => {
           match.team1Id ||
           match.team2Id
         );
-        let isSlot1Winner = false;
 
-        if (winnerId) {
-          isSlot1Winner = isDoubles
-            ? winnerId === match.team1Id || winnerId === match.team1?.id
-            : winnerId === match.player1Id || winnerId === match.player1?.id;
-        } else if (match.status === "COMPLETED" && match.score) {
-          const parts = match.score.split(",").map((s: string) => s.trim());
-          let p1Wins = 0;
-          let p2Wins = 0;
-          for (const part of parts) {
-            const [s1, s2] = part.split("-").map(Number);
-            if (!isNaN(s1) && !isNaN(s2)) {
-              if (s1 > s2) p1Wins++;
-              else if (s2 > s1) p2Wins++;
-            }
-          }
-          isSlot1Winner = p1Wins >= p2Wins;
-        } else {
+        if (!winnerId) {
           return { winner: null, loser: null };
         }
+
+        const slot1Id = isDoubles
+          ? match.team1Id || match.team1?.id
+          : match.player1Id || match.player1?.id;
+
+        const slot2Id = isDoubles
+          ? match.team2Id || match.team2?.id
+          : match.player2Id || match.player2?.id;
+
+        if (winnerId !== slot1Id && winnerId !== slot2Id) {
+          return { winner: null, loser: null };
+        }
+
+        const isSlot1Winner = winnerId === slot1Id;
 
         return {
           winner: getMatchParticipantDetails(match, isSlot1Winner ? 1 : 2),
@@ -782,13 +792,31 @@ const TournamentDetails: React.FC = () => {
         runnerUp = loser;
       }
 
-      if (thirdPlaceMatch) {
-        const { winner } = resolveMatchWinners(thirdPlaceMatch);
-        thirdPlace = winner;
+      const semifinalMatches = allMatches.filter(
+        (m: any) =>
+          m.round?.trim().toLowerCase() === "semi-finals" &&
+          ["COMPLETED", "WALKOVER"].includes(m.status),
+      );
+
+      for (const match of semifinalMatches) {
+        const { winner, loser } = resolveMatchWinners(match);
+
+        if (winner && loser && loser.name !== "TBD") {
+          jointThird.push(loser);
+        }
       }
 
-      setWinners({ first: champion, second: runnerUp, third: thirdPlace });
+      setWinners({
+        first: champion,
+        second: runnerUp,
+        jointThird:
+          semifinalMatches.length === 2 && jointThird.length === 2
+            ? jointThird
+            : [],
+      });
+
       setShowWinners(true);
+
       setTimeout(() => {
         document
           .getElementById("winners-section")
@@ -796,8 +824,10 @@ const TournamentDetails: React.FC = () => {
       }, 100);
     } catch (error) {
       console.error("Failed to fetch winners", error);
+      toast.error("Failed to fetch tournament winners");
     }
   };
+
   // Add category to edit
   const addEditCategory = () => {
     setEditCategories([
@@ -1797,7 +1827,7 @@ const TournamentDetails: React.FC = () => {
       {/* Knockout Bracket Section */}
       {activeCategoryId && (
         <div
-          className="relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] w-screen mb-8 pt-4 pb-8 bg-transparent px-4 sm:px-8 lg:px-12"
+          className="relative w-full min-w-0 max-w-full mb-8 pt-4 pb-8 bg-transparent"
           style={{ minHeight: 200 }}
         >
           {isAdmin && activeCategoryFormat === "KNOCKOUT" && (
@@ -1855,13 +1885,26 @@ const TournamentDetails: React.FC = () => {
             <div className="rounded-2xl border border-amber-600/40 bg-amber-600/10 p-6 backdrop-blur-md">
               <div className="text-5xl mb-2">🥉</div>
               <h3 className="font-black text-xs uppercase tracking-wider text-amber-400">
-                Second Runner-up
+                Joint 3rd Place
               </h3>
-              <p className="text-xl font-bold text-white mt-1">
-                {winners.third?.name ||
-                  `${winners.third?.firstName || ""} ${winners.third?.lastName || ""}`.trim() ||
-                  "TBD"}
-              </p>
+              <div className="mt-3 space-y-2">
+                {winners.jointThird.length === 2 ? (
+                  winners.jointThird.map((participant: any, index: number) => (
+                    <p
+                      key={participant.id || index}
+                      className="text-lg font-bold text-white"
+                    >
+                      🥉{" "}
+                      {participant.name ||
+                        `${participant.firstName || ""} ${participant.lastName || ""}`.trim()}
+                    </p>
+                  ))
+                ) : (
+                  <p className="text-lg font-bold text-white/60">
+                    Awaiting semifinal results
+                  </p>
+                )}
+              </div>
             </div>
           </div>
         </div>

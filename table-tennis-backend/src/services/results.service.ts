@@ -163,19 +163,54 @@ export class ResultsService {
   }
 
   // Get category winners
-  async getCategoryWinners(tournamentId: string) {
+ 
+async getCategoryWinners(tournamentId: string) {
   const tournament = await prisma.tournament.findUnique({
     where: { id: tournamentId },
     include: {
       categories: {
         include: {
           matches: {
-            where: { 
-              round: { in: ['Final', '3rd Place'] },
+            where: {
+              round: { in: ['Final', 'Semi-Finals'] },
             },
             include: {
-              player1: { select: { id: true, firstName: true, lastName: true } },
-              player2: { select: { id: true, firstName: true, lastName: true } },
+              player1: {
+                select: { id: true, firstName: true, lastName: true },
+              },
+              player2: {
+                select: { id: true, firstName: true, lastName: true },
+              },
+              team1: {
+                include: {
+                  members: {
+                    include: {
+                      player: {
+                        select: {
+                          id: true,
+                          firstName: true,
+                          lastName: true,
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+              team2: {
+                include: {
+                  members: {
+                    include: {
+                      player: {
+                        select: {
+                          id: true,
+                          firstName: true,
+                          lastName: true,
+                        },
+                      },
+                    },
+                  },
+                },
+              },
             },
           },
         },
@@ -188,41 +223,92 @@ export class ResultsService {
   }
 
   const winners = tournament.categories.map(category => {
-    // Find the final match for this category
-    const finalMatch = category.matches.find(m => m.round === 'Final');
-    const thirdPlaceMatch = category.matches.find(m => m.round === '3rd Place');
+    const isDoubles = [
+      'DOUBLES',
+      'MIXED',
+      'MIXED_DOUBLES',
+    ].includes(category.type);
+
+    const finalMatch = category.matches.find(
+  m =>
+    m.round === 'Final' &&
+    ['COMPLETED', 'WALKOVER'].includes(m.status),
+);
+
+    const semifinals = category.matches.filter(
+      m => m.round === 'Semi-Finals',
+    );
+
+    const getParticipants = (match: typeof category.matches[number]) => {
+      if (isDoubles) {
+        return {
+          first: match.team1,
+          second: match.team2,
+          winnerId: match.winnerTeamId,
+          firstId: match.team1Id,
+          secondId: match.team2Id,
+        };
+      }
+
+      return {
+        first: match.player1,
+        second: match.player2,
+        winnerId: match.winnerId,
+        firstId: match.player1Id,
+        secondId: match.player2Id,
+      };
+    };
+
     let winner = null;
     let runnerUp = null;
-    let secondrunnerUp = null;
 
-    if (finalMatch && finalMatch.winnerId) {
-      const isPlayer1Winner = finalMatch.winnerId === finalMatch.player1Id;
-      winner = isPlayer1Winner ? finalMatch.player1 : finalMatch.player2;
-      runnerUp = isPlayer1Winner ? finalMatch.player2 : finalMatch.player1;
+    if (finalMatch) {
+      const participants = getParticipants(finalMatch);
+
+      if (
+        participants.winnerId &&
+        participants.firstId &&
+        participants.secondId
+      ) {
+        if (participants.winnerId === participants.firstId) {
+          winner = participants.first;
+          runnerUp = participants.second;
+        } else if (participants.winnerId === participants.secondId) {
+          winner = participants.second;
+          runnerUp = participants.first;
+        }
+      }
     }
-    if (thirdPlaceMatch && thirdPlaceMatch.winnerId) {
-      const isPlayer1Winner = thirdPlaceMatch.winnerId === thirdPlaceMatch.player1Id;
-      secondrunnerUp = isPlayer1Winner ? thirdPlaceMatch.player1 : thirdPlaceMatch.player2;
+
+    const jointThird: any[] = [];
+
+    if (
+  semifinals.length === 2 &&
+  semifinals.every(
+    match => ['COMPLETED', 'WALKOVER'].includes(match.status),
+  )
+){
+      for (const match of semifinals) {
+        const participants = getParticipants(match);
+
+        if (participants.winnerId === participants.firstId) {
+          if (participants.second) {
+            jointThird.push(participants.second);
+          }
+        } else if (participants.winnerId === participants.secondId) {
+          if (participants.first) {
+            jointThird.push(participants.first);
+          }
+        }
+      }
     }
 
     return {
       categoryId: category.id,
       categoryName: category.name,
-      winner: winner ? {
-        id: winner.id,
-        firstName: winner.firstName,
-        lastName: winner.lastName
-      } : null,
-      runnerUp: runnerUp ? {
-        id: runnerUp.id,
-        firstName: runnerUp.firstName,
-        lastName: runnerUp.lastName
-      } : null,
-      secondrunnerUp: secondrunnerUp ? { // ✅
-        id: secondrunnerUp.id,
-        firstName: secondrunnerUp.firstName,
-        lastName: secondrunnerUp.lastName,
-      } : null,
+      winner,
+      runnerUp,
+      jointThird: jointThird.length === 2 ? jointThird : [],
       score: finalMatch?.score || null,
     };
   });
@@ -236,6 +322,7 @@ export class ResultsService {
     releasedAt: null,
   };
 }
+
 
   // Release tournament results (Admin only)
   async releaseResults(adminId: string, tournamentId: string) {
@@ -269,17 +356,39 @@ export class ResultsService {
     }
 
     // Get winners for each category
-    const categoryWinners: any = {};
-    for (const category of tournament.categories) {
-      const finalMatch = category.matches.find(m => m.round === 'Final');
-      if (finalMatch && finalMatch.winnerId) {
-        categoryWinners[category.id] = {
-          winnerId: finalMatch.winnerId,
-          runnerUpId: finalMatch.winnerId === finalMatch.player1Id ? finalMatch.player2Id : finalMatch.player1Id,
-          score: finalMatch.score,
-        };
-      }
-    }
+    
+const categoryWinners: any = {};
+
+const categoryResults = await this.getCategoryWinners(tournamentId);
+
+for (const category of categoryResults.winners) {
+  if (!category.winner || !category.runnerUp) {
+    continue;
+  }
+
+  const isDoubles = [
+    'DOUBLES',
+    'MIXED',
+    'MIXED_DOUBLES',
+  ].includes(
+    tournament.categories.find(c => c.id === category.categoryId)
+      ?.type || '',
+  );
+
+  categoryWinners[category.categoryId] = {
+    winnerId: category.winner.id,
+    runnerUpId: category.runnerUp.id,
+
+    // Both semifinal losers share third place
+    jointThirdIds: category.jointThird.map(
+      (participant: any) => participant.id,
+    ),
+
+    participantType: isDoubles ? 'TEAM' : 'PLAYER',
+    score: category.score,
+  };
+}
+
 
     // Create or update tournament results
     const results = await prisma.tournamentResult.upsert({

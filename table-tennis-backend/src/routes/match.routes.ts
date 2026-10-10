@@ -25,6 +25,8 @@ import { getPlayerPerformanceStatsById } from '../controllers/match.controller';
 import { updateMatch } from '../controllers/match.controller';
 import { deleteKnockoutMatches } from '../controllers/match.controller';
 import { updateMatchAndAdvance } from '../controllers/match.controller';
+import { correctCompletedMatch } from '../controllers/match.controller';
+
 
 
 
@@ -74,7 +76,13 @@ router.delete('/tournaments/:tournamentId/categories/:categoryId/knockout',
 
 router.post('/:matchId/complete', authenticate, restrictTo('ADMIN', 'REFEREE'), updateMatchAndAdvance);
 
-
+// Admin-only correction of completed knockout match scores
+router.patch(
+  '/:matchId/correct-score',
+  authenticate,
+  isAdmin,
+  correctCompletedMatch
+);
 
 
 export default router;
