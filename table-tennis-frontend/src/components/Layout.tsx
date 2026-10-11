@@ -60,7 +60,7 @@ const Layout: React.FC = () => {
     navigation.push({ name: "Users", href: "/app/users", icon: UserGroupIcon });
   }
 
-  if (isSuperAdmin) {
+  if (isSuperAdmin || hasPermission("MANAGE_CLUB_MEMBERSHIPS") || hasPermission("MANAGE_REGISTRATIONS")) {
     navigation.push({ name: "Admin Requests", href: "/app/admin-requests", icon: UserGroupIcon });
   }
   // Pages that should NOT show the navbar

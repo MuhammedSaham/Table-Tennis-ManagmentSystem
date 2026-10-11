@@ -34,6 +34,18 @@ interface PendingAdminUser {
   lastName: string;
   adminRequestedAt: string;
 }
+
+const AVAILABLE_ADMIN_PERMISSIONS = [
+  { id: "MANAGE_USERS", name: "Manage Users", desc: "View, update user accounts, roles & permissions" },
+  { id: "MANAGE_PLAYERS", name: "Manage Players", desc: "Create, edit, rank, and manage player profiles" },
+  { id: "MANAGE_REFEREES", name: "Manage Referees", desc: "Manage referee assignments and information" },
+  { id: "MANAGE_TOURNAMENTS", name: "Manage Tournaments", desc: "Create, edit, and manage tournaments" },
+  { id: "MANAGE_REGISTRATIONS", name: "Manage Registrations", desc: "Approve, reject, or modify tournament registrations" },
+  { id: "MANAGE_MATCHES", name: "Manage Matches", desc: "Schedule matches, assign referees, and update scores" },
+  { id: "MANAGE_RESULTS", name: "Manage Results", desc: "Record, verify, and publish tournament results" },
+  { id: "MANAGE_RANKINGS", name: "Manage Rankings", desc: "Update official player rankings and points" },
+  { id: "MANAGE_CLUB_MEMBERSHIPS", name: "Manage Club Memberships", desc: "Grant or revoke player club memberships" },
+];
 interface PaymentProofRequest {
   id: string;
   tournamentId: string;
@@ -125,10 +137,22 @@ const AdminRequests: React.FC = () => {
   const [showAdminRejectModal, setShowAdminRejectModal] = useState(false);
   const [selectedAdminId, setSelectedAdminId] = useState<string | null>(null);
   const [adminRejectionReason, setAdminRejectionReason] = useState("");
+  const [adminToApprove, setAdminToApprove] = useState<PendingAdminUser | null>(null);
+  const [selectedPermissionsToGrant, setSelectedPermissionsToGrant] = useState<string[]>([]);
 
   useEffect(() => {
-    fetchMembershipRequests();
-    fetchPaymentProofRequests();
+    if (isSuperAdmin || hasPermission("MANAGE_CLUB_MEMBERSHIPS")) {
+      fetchMembershipRequests();
+    } else {
+      setMembershipLoading(false);
+    }
+
+    if (isSuperAdmin || hasPermission("MANAGE_REGISTRATIONS")) {
+      fetchPaymentProofRequests();
+    } else {
+      setPaymentProofLoading(false);
+    }
+
     if (isSuperAdmin) {
       fetchAdminRequests();
     }
@@ -146,11 +170,38 @@ const AdminRequests: React.FC = () => {
     }
   };
 
-  const handleApproveAdmin = async (userId: string) => {
-    setAdminProcessingId(userId);
+  const openAdminApproveModal = (applicant: PendingAdminUser) => {
+    setAdminToApprove(applicant);
+    // Pre-select all permissions by default so SUPER_ADMIN has full control to check/uncheck
+    setSelectedPermissionsToGrant(AVAILABLE_ADMIN_PERMISSIONS.map((p) => p.id));
+  };
+
+  const togglePermissionToGrant = (permId: string) => {
+    setSelectedPermissionsToGrant((prev) =>
+      prev.includes(permId) ? prev.filter((p) => p !== permId) : [...prev, permId]
+    );
+  };
+
+  const selectAllPermissions = () => {
+    setSelectedPermissionsToGrant(AVAILABLE_ADMIN_PERMISSIONS.map((p) => p.id));
+  };
+
+  const clearAllPermissions = () => {
+    setSelectedPermissionsToGrant([]);
+  };
+
+  const handleConfirmApproveAdmin = async () => {
+    if (!adminToApprove) return;
+    setAdminProcessingId(adminToApprove.id);
     try {
-      await api.post(`/admin-requests/${userId}/approve`);
-      toast.success("Admin request approved! User is now an ADMIN.");
+      await api.post(`/admin-requests/${adminToApprove.id}/approve`, {
+        permissions: selectedPermissionsToGrant,
+      });
+      toast.success(
+        `Admin request approved! ${selectedPermissionsToGrant.length} permission(s) granted.`
+      );
+      setAdminToApprove(null);
+      setSelectedPermissionsToGrant([]);
       await fetchAdminRequests();
     } catch (error: any) {
       toast.error(error.response?.data?.message || "Failed to approve admin request");
@@ -542,7 +593,7 @@ const AdminRequests: React.FC = () => {
 
                   <div className="flex items-center gap-2 self-end sm:self-center">
                     <button
-                      onClick={() => handleApproveAdmin(req.id)}
+                      onClick={() => openAdminApproveModal(req)}
                       disabled={adminProcessingId === req.id}
                       className="rounded-lg bg-emerald-500/20 hover:bg-emerald-500 text-emerald-300 hover:text-slate-950 border border-emerald-500/40 px-4 py-2 text-xs font-black uppercase tracking-wider transition-all disabled:opacity-50"
                     >
@@ -564,7 +615,8 @@ const AdminRequests: React.FC = () => {
       )}
 
       {/* CLUB MEMBERSHIP REQUESTS MAIN CONTAINER */}
-      <section className="rounded-[16px] border border-white/20 bg-[#061D23]/10 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl">
+      {(isSuperAdmin || hasPermission("MANAGE_CLUB_MEMBERSHIPS")) && (
+        <section className="rounded-[16px] border border-white/20 bg-[#061D23]/10 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl">
         <div className="mb-6 flex items-center gap-3">
           <div className="rounded-lg bg-[#4AEEFF]/20 p-2 text-[#4AEEFF]">
             <UserIcon className="h-5 w-5" />
@@ -722,9 +774,11 @@ const AdminRequests: React.FC = () => {
           </div>
         )}
       </section>
+      )}
 
       {/* PAYMENT PROOF REQUESTS */}
-      <section className="rounded-[16px] border border-white/20 bg-[#061D23]/10 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl">
+      {(isSuperAdmin || hasPermission("MANAGE_REGISTRATIONS")) && (
+        <section className="rounded-[16px] border border-white/20 bg-[#061D23]/10 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl">
         <div className="mb-6 flex items-center gap-3">
           <div className="rounded-lg bg-[#4AEEFF]/20 p-2 text-[#4AEEFF]">
             <CheckCircleIcon className="h-5 w-5" />
@@ -898,6 +952,7 @@ const AdminRequests: React.FC = () => {
           </div>
         )}
       </section>
+      )}
 
       {/* BULK MEMBERSHIP REJECTION MODAL */}
       {showBulkRejectModal && (
@@ -1107,6 +1162,123 @@ const AdminRequests: React.FC = () => {
                 className="flex-1 rounded-xl bg-red-500 py-2.5 text-xs font-black uppercase tracking-wider text-white hover:bg-red-600 shadow-lg shadow-red-500/20"
               >
                 {adminProcessingId !== null ? "Rejecting..." : "Confirm Reject"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* APPROVE ADMIN WITH PERMISSIONS MODAL */}
+      {adminToApprove && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-md animate-fadeIn">
+          <div className="w-full max-w-xl rounded-2xl border border-emerald-500/40 bg-[#061D23]/95 p-6 sm:p-8 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.8)] backdrop-blur-2xl space-y-6 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-white/10 pb-4">
+              <div>
+                <h3 className="text-xl font-black uppercase tracking-widest text-white flex items-center gap-2">
+                  👑 Approve Admin Request
+                </h3>
+                <p className="text-xs text-emerald-300 font-mono mt-1">
+                  Granting access to: <span className="font-bold text-white">{adminToApprove.firstName} {adminToApprove.lastName}</span> ({adminToApprove.email})
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setAdminToApprove(null);
+                  setSelectedPermissionsToGrant([]);
+                }}
+                disabled={adminProcessingId !== null}
+                className="text-white/50 hover:text-white transition-colors p-1"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <p className="text-xs text-white/80 uppercase tracking-wider font-bold">
+                  Select module permissions to assign:
+                </p>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={selectAllPermissions}
+                    className="text-[11px] font-bold uppercase tracking-wider text-[#4AEEFF] hover:underline"
+                  >
+                    Select All
+                  </button>
+                  <span className="text-white/30 text-xs">|</span>
+                  <button
+                    type="button"
+                    onClick={clearAllPermissions}
+                    className="text-[11px] font-bold uppercase tracking-wider text-amber-400 hover:underline"
+                  >
+                    Clear All
+                  </button>
+                  <span className="rounded-md bg-white/10 px-2 py-0.5 text-[11px] font-mono text-white/70 ml-1">
+                    {selectedPermissionsToGrant.length} of {AVAILABLE_ADMIN_PERMISSIONS.length}
+                  </span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-2.5">
+                {AVAILABLE_ADMIN_PERMISSIONS.map((perm) => {
+                  const isChecked = selectedPermissionsToGrant.includes(perm.id);
+                  return (
+                    <div
+                      key={perm.id}
+                      onClick={() => togglePermissionToGrant(perm.id)}
+                      className={`flex items-start gap-3 p-3 rounded-xl border transition-all cursor-pointer ${
+                        isChecked
+                          ? "bg-emerald-500/10 border-emerald-500/60 text-white"
+                          : "bg-white/5 border-white/10 text-white/60 hover:bg-white/10"
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() => {}}
+                        className="mt-0.5 h-4 w-4 rounded border-white/20 bg-transparent text-emerald-400 focus:ring-0 focus:ring-offset-0 cursor-pointer accent-emerald-500"
+                      />
+                      <div>
+                        <span className="font-bold text-sm block leading-tight text-white">
+                          {perm.name}
+                        </span>
+                        <span className="text-xs text-white/50 block mt-0.5 font-mono">
+                          {perm.desc}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {selectedPermissionsToGrant.length === 0 && (
+                <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-200">
+                  ⚠️ Note: No permissions selected. The user will be approved as an ADMIN without module permissions until you grant permissions in User Management.
+                </div>
+              )}
+            </div>
+
+            <div className="flex gap-3 pt-2 border-t border-white/10">
+              <button
+                type="button"
+                onClick={() => {
+                  setAdminToApprove(null);
+                  setSelectedPermissionsToGrant([]);
+                }}
+                disabled={adminProcessingId !== null}
+                className="flex-1 rounded-xl border border-white/20 bg-white/5 py-3 text-xs font-black uppercase tracking-wider text-white transition-all hover:bg-white/10 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmApproveAdmin}
+                disabled={adminProcessingId !== null}
+                className="flex-1 rounded-xl bg-emerald-500 py-3 text-xs font-black uppercase tracking-wider text-slate-950 transition-all hover:bg-emerald-400 disabled:opacity-50 font-bold shadow-lg shadow-emerald-500/20"
+              >
+                {adminProcessingId !== null ? "Approving & Saving..." : "Confirm & Approve Admin"}
               </button>
             </div>
           </div>

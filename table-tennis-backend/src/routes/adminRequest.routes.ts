@@ -16,6 +16,8 @@ router.use(isSuperAdmin);
 router.get('/', getPendingAdminRequests);
 router.get('/pending', getPendingAdminRequests);
 router.post('/:userId/approve', approveAdminRequest);
+router.patch('/:userId/approve', approveAdminRequest);
 router.post('/:userId/reject', rejectAdminRequest);
+router.patch('/:userId/reject', rejectAdminRequest);
 
 export default router;

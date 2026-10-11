@@ -10,6 +10,7 @@ export class UserService {
                 playerProfile: true,
                 refereeProfile: true,
                 adminProfile: true,
+                adminPermissions: true,
             },
         });
 
@@ -17,10 +18,32 @@ export class UserService {
             throw new AppError('User not found', 404);
         }
 
+        const allPermissions = [
+            'MANAGE_USERS',
+            'MANAGE_PLAYERS',
+            'MANAGE_REFEREES',
+            'MANAGE_TOURNAMENTS',
+            'MANAGE_REGISTRATIONS',
+            'MANAGE_MATCHES',
+            'MANAGE_RESULTS',
+            'MANAGE_RANKINGS',
+            'MANAGE_CLUB_MEMBERSHIPS',
+        ];
+
+        let permissions: string[] = [];
+        if (user.role === 'SUPER_ADMIN') {
+            permissions = allPermissions;
+        } else if (user.role === 'ADMIN') {
+            permissions = user.adminPermissions?.map((p) => p.permission) || [];
+        }
+
         // Remove password from response
         const { password, ...userWithoutPassword } = user;
 
-        return userWithoutPassword;
+        return {
+            ...userWithoutPassword,
+            permissions,
+        };
     }
 
     // Update user profile
@@ -37,7 +60,7 @@ export class UserService {
         };
     }) {
         // Update base user
-        const updatedUser = await prisma.user.update({
+        await prisma.user.update({
             where: { id: userId },
             data: {
                 firstName: data.firstName,
@@ -71,11 +94,34 @@ export class UserService {
                 playerProfile: true,
                 refereeProfile: true,
                 adminProfile: true,
+                adminPermissions: true,
             },
         });
 
+        const allPermissions = [
+            'MANAGE_USERS',
+            'MANAGE_PLAYERS',
+            'MANAGE_REFEREES',
+            'MANAGE_TOURNAMENTS',
+            'MANAGE_REGISTRATIONS',
+            'MANAGE_MATCHES',
+            'MANAGE_RESULTS',
+            'MANAGE_RANKINGS',
+            'MANAGE_CLUB_MEMBERSHIPS',
+        ];
+
+        let permissions: string[] = [];
+        if (freshUser!.role === 'SUPER_ADMIN') {
+            permissions = allPermissions;
+        } else if (freshUser!.role === 'ADMIN') {
+            permissions = freshUser!.adminPermissions?.map((p) => p.permission) || [];
+        }
+
         const { password, ...userWithoutPassword } = freshUser!;
-        return userWithoutPassword;
+        return {
+            ...userWithoutPassword,
+            permissions,
+        };
     }
 
     // Get all users (Admin only)

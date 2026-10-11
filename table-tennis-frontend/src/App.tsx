@@ -102,13 +102,6 @@ const PublicGlobalLeaderboardRoute: React.FC = () => {
   return <GlobalLeaderboard />;
 };
 
-const SuperAdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user } = useAuth();
-  if (user?.role !== "SUPER_ADMIN" && !user?.isSuperAdmin) {
-    return <Navigate to="/app/dashboard" replace />;
-  }
-  return <>{children}</>;
-};
 
 const PermissionRoute: React.FC<{ permission: any; children: React.ReactNode }> = ({
   permission,
@@ -116,6 +109,19 @@ const PermissionRoute: React.FC<{ permission: any; children: React.ReactNode }> 
 }) => {
   const { user, hasPermission } = useAuth();
   if (user?.role === "SUPER_ADMIN" || user?.isSuperAdmin || hasPermission(permission)) {
+    return <>{children}</>;
+  }
+  return <Navigate to="/app/dashboard" replace />;
+};
+
+const AdminRequestsRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user, hasPermission } = useAuth();
+  if (
+    user?.role === "SUPER_ADMIN" ||
+    user?.isSuperAdmin ||
+    hasPermission("MANAGE_CLUB_MEMBERSHIPS") ||
+    hasPermission("MANAGE_REGISTRATIONS")
+  ) {
     return <>{children}</>;
   }
   return <Navigate to="/app/dashboard" replace />;
@@ -179,9 +185,9 @@ function AppRoutes() {
         <Route
           path="admin-requests"
           element={
-            <SuperAdminRoute>
+            <AdminRequestsRoute>
               <AdminRequests />
-            </SuperAdminRoute>
+            </AdminRequestsRoute>
           }
         />
       </Route>

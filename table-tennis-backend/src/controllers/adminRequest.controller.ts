@@ -1,24 +1,12 @@
 import { Request, Response } from 'express';
-import prisma from '../config/database';
-import { AppError } from '../utils/AppError';
 import { catchAsync } from '../utils/catchAsync';
 import { sendResponse } from '../utils/sendResponse';
+import { AdminRequestService } from '../services/adminRequest.service';
+import { AppError } from '../utils/AppError';
 
 // Get all pending admin requests
 export const getPendingAdminRequests = catchAsync(async (req: Request, res: Response) => {
-    const pendingRequests = await prisma.user.findMany({
-        where: {
-            adminRequestStatus: 'PENDING',
-        },
-        select: {
-            id: true,
-            email: true,
-            firstName: true,
-            lastName: true,
-            adminRequestedAt: true,
-        },
-    });
-
+    const pendingRequests = await AdminRequestService.getPendingRequests();
     sendResponse(res, 200, 'Pending admin requests retrieved', pendingRequests);
 });
 
@@ -26,59 +14,14 @@ export const getPendingAdminRequests = catchAsync(async (req: Request, res: Resp
 export const approveAdminRequest = catchAsync(async (req: Request, res: Response) => {
     const { userId } = req.params;
     const adminId = req.user!.id;
+    const rawPermissions = req.body?.permissions ?? req.body?.permissionIds ?? [];
 
     if (req.user!.role !== 'SUPER_ADMIN') {
         throw new AppError('Only the Super Admin can approve requests', 403);
     }
 
-    const user = await prisma.user.findUnique({
-        where: { id: userId },
-    });
-
-    if (!user) {
-        throw new AppError('User not found', 404);
-    }
-
-    if (user.adminRequestStatus !== 'PENDING') {
-        throw new AppError('User has no pending admin request', 400);
-    }
-
-    // Update user to ADMIN
-    const updatedUser = await prisma.user.update({
-        where: { id: userId },
-        data: {
-            role: 'ADMIN',
-            adminRequestStatus: 'APPROVED',
-            adminApprovedBy: adminId,
-            adminApprovedAt: new Date(),
-        },
-    });
-
-    // Create admin profile if not already present
-    const existingProfile = await prisma.adminProfile.findUnique({
-        where: { userId: userId },
-    });
-
-    if (!existingProfile) {
-        await prisma.adminProfile.create({
-            data: {
-                userId: userId,
-                department: 'Approved Admin',
-            },
-        });
-    }
-
-    // Create notification
-    await prisma.notification.create({
-        data: {
-            userId: userId,
-            type: 'ADMIN_APPROVED',
-            title: 'Admin Request Approved',
-            message: 'Your request to become an administrator has been approved! You now have admin access assigned by Super Admin.',
-        },
-    });
-
-    sendResponse(res, 200, 'Admin request approved successfully', updatedUser);
+    const result = await AdminRequestService.approveRequest(userId, adminId, rawPermissions);
+    sendResponse(res, 200, 'Admin request approved successfully', result);
 });
 
 // Reject admin request
@@ -91,36 +34,6 @@ export const rejectAdminRequest = catchAsync(async (req: Request, res: Response)
         throw new AppError('Only the Super Admin can reject requests', 403);
     }
 
-    const user = await prisma.user.findUnique({
-        where: { id: userId },
-    });
-
-    if (!user) {
-        throw new AppError('User not found', 404);
-    }
-
-    if (user.adminRequestStatus !== 'PENDING') {
-        throw new AppError('User has no pending admin request', 400);
-    }
-
-    const updatedUser = await prisma.user.update({
-        where: { id: userId },
-        data: {
-            adminRequestStatus: 'REJECTED',
-            adminApprovedBy: adminId,
-            adminApprovedAt: new Date(),
-            adminRejectionReason: reason || 'No reason provided',
-        },
-    });
-
-    await prisma.notification.create({
-        data: {
-            userId: userId,
-            type: 'ADMIN_REJECTED',
-            title: 'Admin Request Rejected',
-            message: `Your admin request was rejected. Reason: ${reason || 'Not specified'}`,
-        },
-    });
-
-    sendResponse(res, 200, 'Admin request rejected', updatedUser);
+    const result = await AdminRequestService.rejectRequest(userId, adminId, reason);
+    sendResponse(res, 200, 'Admin request rejected', result);
 });
