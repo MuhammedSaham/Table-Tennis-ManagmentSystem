@@ -448,8 +448,14 @@ const Profile: React.FC = () => {
                 <h2 className="text-2xl font-black text-white uppercase tracking-wide">
                   {profile.firstName} {profile.lastName}
                 </h2>
-                <div className="mt-2 inline-flex items-center rounded bg-[#4AEEFF]/20 px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider text-[#4AEEFF]">
-                  {profile.role}
+                <div className={`mt-2 inline-flex items-center rounded px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider ${
+                  profile.role === "SUPER_ADMIN"
+                    ? "bg-amber-500/20 text-amber-300 border border-amber-500/40"
+                    : profile.role === "ADMIN"
+                    ? "bg-purple-500/20 text-purple-300 border border-purple-500/40"
+                    : "bg-[#4AEEFF]/20 text-[#4AEEFF]"
+                }`}>
+                  {profile.role === "SUPER_ADMIN" ? "SUPER ADMIN" : profile.role}
                 </div>
               </div>
             </div>
@@ -1138,7 +1144,7 @@ const Profile: React.FC = () => {
           )}
 
           {/* Admin properties profile template */}
-          {profile.role === "ADMIN" && profile.adminProfile && (
+          {(profile.role === "ADMIN" || profile.role === "SUPER_ADMIN") && profile.adminProfile && (
             <section className="rounded-[16px] border border-white/20 bg-[#061D23]/5 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl">
               <div className="mb-4 flex items-center gap-3">
                 <IdentificationIcon className="h-5 w-5 text-[#4AEEFF]" />

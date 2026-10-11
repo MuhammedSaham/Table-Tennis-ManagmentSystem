@@ -22,7 +22,8 @@ const Tournaments: React.FC = () => {
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [pendingTournamentIds, setPendingTournamentIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
-  const { user } = useAuth();
+  const { user, hasPermission } = useAuth();
+  const canManageTournaments = user?.role === "SUPER_ADMIN" || hasPermission("MANAGE_TOURNAMENTS");
   const location = useLocation();
   const isAppScope = location.pathname.startsWith("/app") || !!user;
 
@@ -115,7 +116,7 @@ const Tournaments: React.FC = () => {
           </p>
         </div>
 
-        {user?.role === "ADMIN" && (
+        {canManageTournaments && (
           <Link
             to="/app/create-tournament"
             className="flex items-center justify-center gap-2 rounded-xl bg-[#4AEEFF] px-5 py-3 text-xs font-black uppercase tracking-wider text-[#061D23] shadow-md shadow-[#4AEEFF]/20 transition-all hover:bg-white hover:shadow-white/20 active:scale-95 w-full sm:w-auto"
@@ -199,7 +200,7 @@ const Tournaments: React.FC = () => {
           <p className="mt-1 text-xs text-white/60">
             There are currently no tournaments available.
           </p>
-          {user?.role === "ADMIN" && (
+          {canManageTournaments && (
             <Link
               to="/app/create-tournament"
               className="mt-6 inline-flex items-center gap-2 rounded-xl bg-[#4AEEFF] px-6 py-2.5 text-xs font-black uppercase tracking-wider text-[#061D23] shadow-md shadow-[#4AEEFF]/20 hover:bg-white transition-all"

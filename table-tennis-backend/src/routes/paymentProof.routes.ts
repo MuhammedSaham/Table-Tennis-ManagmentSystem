@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { authenticate } from '../middleware/auth.middleware';
-import { isPlayer,isAdmin } from '../middleware/role.middleware';
+import { isPlayer, hasPermission } from '../middleware/role.middleware';
 import { uploadPaymentProof } from '../middleware/paymentProofUpload.middleware';
 import { submitPaymentProof,getPendingPaymentProofs,processPaymentProof,getMyPaymentProof,deleteMyPaymentProof } from '../controllers/paymentProof.controller';
 
@@ -11,7 +11,7 @@ router.use(authenticate);
 // Admin gets all pending payment proofs
 router.get(
   '/pending',
-  isAdmin,
+  hasPermission('MANAGE_REGISTRATIONS'),
   getPendingPaymentProofs
 );
 
@@ -24,7 +24,7 @@ router.get(
 // Admin approves or rejects a payment proof
 router.patch(
   '/:proofId/process',
-  isAdmin,
+  hasPermission('MANAGE_REGISTRATIONS'),
   processPaymentProof
 );
 

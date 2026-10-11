@@ -18,7 +18,7 @@ interface User {
   email: string;
   firstName: string;
   lastName: string;
-  role: "ADMIN" | "REFEREE" | "PLAYER";
+  role: "SUPER_ADMIN" | "ADMIN" | "REFEREE" | "PLAYER";
   phone: string | null;
   createdAt: string;
   isSuperAdmin: boolean;
@@ -28,7 +28,7 @@ interface User {
 }
 
 const Users: React.FC = () => {
-  const { user } = useAuth();
+  const { user, hasPermission } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -61,6 +61,9 @@ const Users: React.FC = () => {
 
   const [memberToRemove, setMemberToRemove] = useState<User | null>(null);
   const [removingMembership, setRemovingMembership] = useState(false);
+  const [userForPermissions, setUserForPermissions] = useState<User | null>(null);
+
+  const isSuperAdmin = user?.role === "SUPER_ADMIN" || user?.isSuperAdmin;
 
   useEffect(() => {
     fetchUsers();
@@ -85,7 +88,7 @@ const Users: React.FC = () => {
     (u) => u.role === "PLAYER" && !u.isClubMember,
   );
   const referees = users.filter((u) => u.role === "REFEREE");
-  const admins = users.filter((u) => u.role === "ADMIN");
+  const admins = users.filter((u) => u.role === "ADMIN" || u.role === "SUPER_ADMIN");
 
   useEffect(() => {
     if (activeTab === "REFEREE" && referees.length === 0) {
@@ -117,7 +120,7 @@ const Users: React.FC = () => {
     try {
       await api.delete(`/users/${userToDelete.id}`);
       toast.success(
-        `Player "${userToDelete.firstName} ${userToDelete.lastName}" deleted successfully`,
+        `User "${userToDelete.firstName} ${userToDelete.lastName}" deleted successfully`,
       );
       setUserToDelete(null);
       fetchUsers();
@@ -158,8 +161,8 @@ const Users: React.FC = () => {
       await api.patch(`/users/${id}/role`, { role });
       toast.success("Role updated successfully");
       fetchUsers();
-    } catch (error) {
-      toast.error("Failed to update role");
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Failed to update role");
     }
   };
 
@@ -238,7 +241,7 @@ const Users: React.FC = () => {
           dateOfBirth: newPlayer.dateOfBirth
             ? new Date(newPlayer.dateOfBirth)
             : undefined,
-          isClubMember: true, // Admin-created → always a club member
+          isClubMember: true,
         },
       };
 
@@ -247,7 +250,6 @@ const Users: React.FC = () => {
         `Player ${newPlayer.firstName} ${newPlayer.lastName} added successfully!`,
       );
 
-      // Present credentials directly inside the modal for professional enterprise UX
       setCreatedPlayerData({
         email: newPlayer.email,
         name: `${newPlayer.firstName} ${newPlayer.lastName}`,
@@ -269,6 +271,8 @@ const Users: React.FC = () => {
 
   const getRoleBadgeStyles = (role: string) => {
     switch (role) {
+      case "SUPER_ADMIN":
+        return "bg-amber-500/20 text-amber-300 border border-amber-500/40";
       case "ADMIN":
         return "bg-purple-500/20 text-purple-300 border border-purple-500/40";
       case "REFEREE":
@@ -282,12 +286,10 @@ const Users: React.FC = () => {
 
   const wrapInBaseLayout = (children: React.ReactNode) => (
     <div className="relative min-h-screen w-full overflow-hidden bg-[#061D23] text-white">
-      {/* ─── BG.PNG FIXED FULL-BLEED BACKGROUND ─── */}
       <div
         className="fixed inset-0 bg-cover bg-center bg-no-repeat"
         style={{ backgroundImage: "url('/bg1.png')" }}
       />
-      {/* Light overlay for text legibility over the paper-texture artwork */}
       <div className="fixed inset-0 bg-[#061D23]/25" />
       <div className="fixed inset-0 bg-gradient-to-b from-[#061D23]/20 via-transparent to-[#061D23]/35" />
 
@@ -297,11 +299,11 @@ const Users: React.FC = () => {
     </div>
   );
 
-  if (user?.role !== "ADMIN") {
+  if (!isSuperAdmin && !hasPermission("MANAGE_USERS")) {
     return wrapInBaseLayout(
       <div className="rounded-[16px] border border-red-500/30 bg-[#061D23]/40 p-12 text-center backdrop-blur-xl shadow-2xl">
         <p className="font-black uppercase tracking-widest text-red-400">
-          Access denied. Admin only.
+          Access denied. User Management permission required.
         </p>
       </div>,
     );
@@ -691,6 +693,17 @@ const Users: React.FC = () => {
                           </span>
                         )}
 
+                        {/* Manage Permissions for Admin Users */}
+                        {isSuperAdmin && userItem.role === "ADMIN" && (
+                          <button
+                            onClick={() => setUserForPermissions(userItem)}
+                            className="rounded-lg px-2.5 py-1.5 text-xs font-black uppercase tracking-wider text-[#4AEEFF] border border-[#4AEEFF]/30 bg-[#4AEEFF]/10 hover:bg-[#4AEEFF]/20 transition-all flex items-center gap-1"
+                            title="Manage Permissions"
+                          >
+                            🔑 Permissions
+                          </button>
+                        )}
+
                         {/* Remove Club Membership */}
                         {activeTab === "CLUB" &&
                           userItem.role === "PLAYER" &&
@@ -905,6 +918,17 @@ const Users: React.FC = () => {
                         </select>
                       ) : null;
                     })()}
+
+                  {/* Manage Permissions for Admin Users (Mobile) */}
+                  {isSuperAdmin && userItem.role === "ADMIN" && (
+                    <button
+                      onClick={() => setUserForPermissions(userItem)}
+                      className="rounded-lg px-2.5 py-1.5 text-xs font-bold text-[#4AEEFF] border border-[#4AEEFF]/30 bg-[#4AEEFF]/10 hover:bg-[#4AEEFF]/20"
+                      title="Manage Permissions"
+                    >
+                      🔑 Permissions
+                    </button>
+                  )}
 
                   {/* Remove Club Membership */}
                   {activeTab === "CLUB" &&
@@ -1323,6 +1347,15 @@ const Users: React.FC = () => {
         </div>
       )}
 
+      {/* ADMIN PERMISSIONS MODAL */}
+      {userForPermissions && (
+        <ManagePermissionsModal
+          targetUser={userForPermissions}
+          onClose={() => setUserForPermissions(null)}
+          onUpdated={fetchUsers}
+        />
+      )}
+
       {/* SHADED BOTTOM FOOTER BRANDING MODULE */}
       <footer className="mt-auto rounded-[16px] border border-white/10 bg-[#061D23]/25 p-5 shadow-[0_15px_40px_rgba(0,0,0,0.3)] backdrop-blur-md">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -1342,6 +1375,161 @@ const Users: React.FC = () => {
         </div>
       </footer>
     </>,
+  );
+};
+
+const ALL_PERMISSIONS = [
+  { id: "MANAGE_USERS", name: "Manage Users", desc: "View, update user accounts, roles & permissions" },
+  { id: "MANAGE_PLAYERS", name: "Manage Players", desc: "Create, edit, rank, and manage player profiles" },
+  { id: "MANAGE_REFEREES", name: "Manage Referees", desc: "Manage referee assignments and information" },
+  { id: "MANAGE_TOURNAMENTS", name: "Manage Tournaments", desc: "Create, edit, and manage tournaments" },
+  { id: "MANAGE_REGISTRATIONS", name: "Manage Registrations", desc: "Approve, reject, or modify tournament registrations" },
+  { id: "MANAGE_MATCHES", name: "Manage Matches", desc: "Schedule matches, assign referees, and update scores" },
+  { id: "MANAGE_RESULTS", name: "Manage Results", desc: "Record, verify, and publish tournament results" },
+  { id: "MANAGE_RANKINGS", name: "Manage Rankings", desc: "Update official player rankings and points" },
+  { id: "MANAGE_CLUB_MEMBERSHIPS", name: "Manage Club Memberships", desc: "Grant or revoke player club memberships" },
+];
+
+interface ManagePermissionsModalProps {
+  targetUser: User;
+  onClose: () => void;
+  onUpdated: () => void;
+}
+
+const ManagePermissionsModal: React.FC<ManagePermissionsModalProps> = ({
+  targetUser,
+  onClose,
+  onUpdated,
+}) => {
+  const [selectedPermissions, setSelectedPermissions] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    fetchPermissions();
+  }, [targetUser.id]);
+
+  const fetchPermissions = async () => {
+    try {
+      setLoading(true);
+      const res = await api.get(`/users/${targetUser.id}/permissions`);
+      setSelectedPermissions(res.data.data || []);
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Failed to load permissions");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const togglePermission = (permId: string) => {
+    setSelectedPermissions((prev) =>
+      prev.includes(permId)
+        ? prev.filter((p) => p !== permId)
+        : [...prev, permId],
+    );
+  };
+
+  const handleSave = async () => {
+    try {
+      setSaving(true);
+      await api.put(`/users/${targetUser.id}/permissions`, {
+        permissions: selectedPermissions,
+      });
+      toast.success(`Permissions updated for ${targetUser.firstName} ${targetUser.lastName}`);
+      onUpdated();
+      onClose();
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Failed to update permissions");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-md animate-fadeIn">
+      <div className="w-full max-w-xl rounded-2xl border border-[#4AEEFF]/30 bg-[#061D23]/95 p-6 sm:p-8 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.8)] backdrop-blur-2xl space-y-6 max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between border-b border-white/10 pb-4">
+          <div>
+            <h3 className="text-xl font-black uppercase tracking-widest text-white flex items-center gap-2">
+              🔑 Admin Permissions
+            </h3>
+            <p className="text-xs text-[#4AEEFF] font-mono mt-1">
+              Configure access scope for: <span className="font-bold text-white">{targetUser.firstName} {targetUser.lastName}</span> ({targetUser.email})
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-white/50 hover:text-white transition-colors p-1"
+          >
+            <XMarkIcon className="w-5 h-5" />
+          </button>
+        </div>
+
+        {loading ? (
+          <div className="py-8 text-center">
+            <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-[#4AEEFF] mx-auto"></div>
+            <p className="text-xs font-mono text-[#4AEEFF] mt-3">Loading permissions...</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <p className="text-xs text-white/70 uppercase tracking-wider font-bold">
+              Select module access permissions:
+            </p>
+
+            <div className="grid grid-cols-1 gap-2.5">
+              {ALL_PERMISSIONS.map((perm) => {
+                const isChecked = selectedPermissions.includes(perm.id);
+                return (
+                  <div
+                    key={perm.id}
+                    onClick={() => togglePermission(perm.id)}
+                    className={`flex items-start gap-3 p-3 rounded-xl border transition-all cursor-pointer ${
+                      isChecked
+                        ? "bg-[#4AEEFF]/10 border-[#4AEEFF] text-white"
+                        : "bg-white/5 border-white/10 text-white/60 hover:bg-white/10"
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={isChecked}
+                      onChange={() => {}}
+                      className="mt-0.5 h-4 w-4 rounded border-white/20 bg-transparent text-[#4AEEFF] focus:ring-0 focus:ring-offset-0 cursor-pointer"
+                    />
+                    <div>
+                      <span className="font-bold text-sm block leading-tight">
+                        {perm.name}
+                      </span>
+                      <span className="text-xs text-white/50 block mt-0.5 font-mono">
+                        {perm.desc}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        <div className="flex gap-3 pt-2 border-t border-white/10">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={saving}
+            className="flex-1 rounded-xl border border-white/20 bg-white/5 py-3 text-xs font-black uppercase tracking-wider text-white transition-all hover:bg-white/10 disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={saving || loading}
+            className="flex-1 rounded-xl bg-[#4AEEFF] py-3 text-xs font-black uppercase tracking-wider text-[#061D23] transition-all hover:bg-white disabled:opacity-50 font-bold shadow-lg"
+          >
+            {saving ? "Saving..." : "Save Permissions"}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 };
 

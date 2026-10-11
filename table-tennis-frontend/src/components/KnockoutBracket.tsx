@@ -104,7 +104,7 @@ export const UmpireSheet: React.FC<{
     endTime?: string,
   ) => Promise<void>;
   isAdminOrReferee: boolean;
-  onCorrectScore: (
+  onCorrectScore?: (
     id: string,
     games: GameScore[],
     bestOf: 3 | 5,
@@ -115,7 +115,7 @@ export const UmpireSheet: React.FC<{
   const today = new Date().toLocaleDateString("en-GB");
   const done = match.status === "COMPLETED";
   // Only admins may edit a completed match.
-  const canEditCompleted = user?.role === "ADMIN" && done;
+  const canEditCompleted = (user?.role === "SUPER_ADMIN" || user?.role === "ADMIN") && done;
 
   // Referees can only enter scores for unfinished matches.
   const canEditScore = isAdminOrReferee && (!done || canEditCompleted);
@@ -843,12 +843,14 @@ export const UmpireSheet: React.FC<{
 
                   setSaving(true);
                   try {
-                    await onCorrectScore(
-                      match.id,
-                      games,
-                      bestOf,
-                      correctionReason.trim(),
-                    );
+                    if (onCorrectScore) {
+                      await onCorrectScore(
+                        match.id,
+                        games,
+                        bestOf,
+                        correctionReason.trim(),
+                      );
+                    }
                   } finally {
                     setSaving(false);
                   }

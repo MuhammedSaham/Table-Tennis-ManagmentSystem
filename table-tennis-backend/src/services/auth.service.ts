@@ -15,7 +15,7 @@ export class AuthService {
         firstName: string;
         lastName: string;
         phone?: string;
-        role: 'ADMIN' | 'REFEREE' | 'PLAYER';
+        role: 'SUPER_ADMIN' | 'ADMIN' | 'REFEREE' | 'PLAYER';
         adminRequestReason?: string;
         playerProfile?: {
             dateOfBirth?: Date;
@@ -32,6 +32,11 @@ export class AuthService {
             department?: string;
         };
     }) {
+        // Prevent public registration as SUPER_ADMIN
+        if ((userData.role as string) === 'SUPER_ADMIN') {
+            throw new AppError('Public registration as SUPER_ADMIN is prohibited', 400);
+        }
+
         // Check if user already exists
         const existingUser = await prisma.user.findUnique({
             where: { email: userData.email },
@@ -47,7 +52,7 @@ export class AuthService {
         // Create user with role-specific profile in a transaction
         const user = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
             // Set admin request status if registering as ADMIN
-            let adminRequestStatus = 'NONE';
+            let adminRequestStatus: any = 'NONE';
             let adminRequestedAt = null;
             let finalRole = userData.role;
             
@@ -65,7 +70,7 @@ export class AuthService {
                     firstName: userData.firstName,
                     lastName: userData.lastName,
                     phone: userData.phone,
-                    role: finalRole,
+                    role: finalRole as any,
                     adminRequestStatus,
                     adminRequestedAt,
                 },
@@ -92,21 +97,19 @@ export class AuthService {
                     },
                 });
             }
-            // DO NOT create AdminProfile here - it will be created after approval
 
             return newUser;
         });
 
-        // NOTIFY EXISTING ADMINS ABOUT NEW ADMIN REQUEST
+        // NOTIFY EXISTING SUPER ADMINS AND ADMINS ABOUT NEW ADMIN REQUEST
         if (userData.role === 'ADMIN') {
             try {
-                // Get all existing admins
+                // Get all existing super admins and admins
                 const existingAdmins: Array<{ id: string }> = await prisma.user.findMany({
-                    where: { role: 'ADMIN' },
+                    where: { role: { in: ['SUPER_ADMIN', 'ADMIN'] } },
                     select: { id: true },
                 });
 
-                // Create notifications for all admins
                 if (existingAdmins.length > 0) {
                     await prisma.notification.createMany({
                         data: existingAdmins.map((admin: { id: string }) => ({
@@ -117,25 +120,15 @@ export class AuthService {
                             createdAt: new Date(),
                         })),
                     });
-                    console.log(`📧 Notified ${existingAdmins.length} admin(s) about new request`);
                 }
             } catch (error) {
                 console.error('Failed to notify admins:', error);
             }
         }
-        /*const verificationToken = crypto.randomBytes(32).toString('hex');
-
-        await prisma.user.update({
-        where: { id: user.id },
-        data: { emailVerificationToken: verificationToken },
-        });
-
-        sendVerificationEmail(userData.email, verificationToken, userData.firstName).catch(console.error);*/
 
         // Generate JWT token
         const token = this.generateToken(user.id);
 
-        // Return user without password
         return {
             user: {
                 id: user.id,
@@ -144,6 +137,7 @@ export class AuthService {
                 lastName: user.lastName,
                 role: userData.role === 'ADMIN' ? 'PENDING_ADMIN' : user.role,
                 adminRequestStatus: user.adminRequestStatus,
+                permissions: [],
                 isEmailVerified: true,
             } as any,
             token,
@@ -160,6 +154,7 @@ export class AuthService {
                 playerProfile: true,
                 refereeProfile: true,
                 adminProfile: true,
+                adminPermissions: true,
             },
         });
 
@@ -170,15 +165,9 @@ export class AuthService {
         // Check password
         const isPasswordValid = await bcrypt.compare(password, user.password);
 
-        /*if (!isPasswordValid) {
+        if (!isPasswordValid) {
             throw new AppError('Invalid email or password', 401);
         }
-        if (!user.isEmailVerified) {
-  throw new AppError(
-    'Please verify your email address before logging in. Check your inbox for the verification link.',
-    403
-  );
-}*/
 
         // Generate token
         const token = this.generateToken(user.id);
@@ -187,9 +176,26 @@ export class AuthService {
         let profile = null;
         if (user.role === 'PLAYER') profile = user.playerProfile;
         else if (user.role === 'REFEREE') profile = user.refereeProfile;
-        else if (user.role === 'ADMIN') profile = user.adminProfile;
+        else if (user.role === 'ADMIN' || user.role === 'SUPER_ADMIN') profile = user.adminProfile;
 
-        // Return user without password
+        // Compute permissions list
+        let permissions: string[] = [];
+        if (user.role === 'SUPER_ADMIN') {
+            permissions = [
+                'MANAGE_USERS',
+                'MANAGE_PLAYERS',
+                'MANAGE_REFEREES',
+                'MANAGE_TOURNAMENTS',
+                'MANAGE_REGISTRATIONS',
+                'MANAGE_MATCHES',
+                'MANAGE_RESULTS',
+                'MANAGE_RANKINGS',
+                'MANAGE_CLUB_MEMBERSHIPS',
+            ];
+        } else if (user.role === 'ADMIN') {
+            permissions = user.adminPermissions.map((p) => p.permission);
+        }
+
         return {
             user: {
                 id: user.id,
@@ -198,7 +204,8 @@ export class AuthService {
                 lastName: user.lastName,
                 role: user.role,
                 adminRequestStatus: user.adminRequestStatus,
-                isSuperAdmin: user.isSuperAdmin ?? false,
+                isSuperAdmin: user.role === 'SUPER_ADMIN' || user.isSuperAdmin,
+                permissions,
                 profile,
             },
             token,
@@ -233,6 +240,11 @@ export class AuthService {
                     role: true,
                     adminRequestStatus: true,
                     isSuperAdmin: true,
+                    adminPermissions: {
+                        select: {
+                            permission: true,
+                        },
+                    },
                 },
             });
 
@@ -240,7 +252,28 @@ export class AuthService {
                 throw new AppError('User not found', 401);
             }
 
-            return user;
+            let permissions: string[] = [];
+            if (user.role === 'SUPER_ADMIN') {
+                permissions = [
+                    'MANAGE_USERS',
+                    'MANAGE_PLAYERS',
+                    'MANAGE_REFEREES',
+                    'MANAGE_TOURNAMENTS',
+                    'MANAGE_REGISTRATIONS',
+                    'MANAGE_MATCHES',
+                    'MANAGE_RESULTS',
+                    'MANAGE_RANKINGS',
+                    'MANAGE_CLUB_MEMBERSHIPS',
+                ];
+            } else if (user.role === 'ADMIN') {
+                permissions = user.adminPermissions.map((p) => p.permission);
+            }
+
+            return {
+                ...user,
+                isSuperAdmin: user.role === 'SUPER_ADMIN' || user.isSuperAdmin,
+                permissions,
+            };
         } catch (error) {
             throw new AppError('Invalid token', 401);
         }

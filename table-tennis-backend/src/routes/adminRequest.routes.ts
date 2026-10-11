@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { authenticate } from '../middleware/auth.middleware';
-import { isAdmin } from '../middleware/role.middleware';
+import { isSuperAdmin } from '../middleware/role.middleware';
 import {
     getPendingAdminRequests,
     approveAdminRequest,
@@ -9,10 +9,11 @@ import {
 
 const router = Router();
 
-// All routes require authentication and admin role
+// All admin request management routes require authentication and SUPER_ADMIN role
 router.use(authenticate);
-router.use(isAdmin);
+router.use(isSuperAdmin);
 
+router.get('/', getPendingAdminRequests);
 router.get('/pending', getPendingAdminRequests);
 router.post('/:userId/approve', approveAdminRequest);
 router.post('/:userId/reject', rejectAdminRequest);

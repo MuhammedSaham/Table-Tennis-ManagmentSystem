@@ -9,7 +9,7 @@ import {
 } from '../controllers/clubMembership.controller';
 
 import { authenticate } from '../middleware/auth.middleware';
-import { isPlayer, isAdmin } from '../middleware/role.middleware';
+import { isPlayer, hasPermission } from '../middleware/role.middleware';
 
 const router = Router();
 
@@ -29,12 +29,11 @@ router.get(
     getMyMembershipStatus
 );
 
-
 // Admin gets pending membership requests
 router.get(
     '/requests',
     authenticate,
-    isAdmin,
+    hasPermission('MANAGE_PLAYERS', 'MANAGE_CLUB_MEMBERSHIPS'),
     getPendingClubMembershipRequests
 );
 
@@ -42,7 +41,7 @@ router.get(
 router.patch(
     '/requests/:requestId/approve',
     authenticate,
-    isAdmin,
+    hasPermission('MANAGE_PLAYERS', 'MANAGE_CLUB_MEMBERSHIPS'),
     approveClubMembershipRequest
 );
 
@@ -50,16 +49,15 @@ router.patch(
 router.patch(
     '/requests/:requestId/reject',
     authenticate,
-    isAdmin,
+    hasPermission('MANAGE_PLAYERS', 'MANAGE_CLUB_MEMBERSHIPS'),
     rejectClubMembershipRequest
 );
-
 
 // Admin removes a player's club membership
 router.patch(
     '/players/:playerId/remove',
     authenticate,
-    isAdmin,
+    hasPermission('MANAGE_PLAYERS', 'MANAGE_CLUB_MEMBERSHIPS'),
     removeClubMembership
 );
 

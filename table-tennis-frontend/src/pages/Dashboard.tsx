@@ -48,7 +48,7 @@ interface DoublesInvite {
 }
 
 const Dashboard: React.FC = () => {
-  const { user } = useAuth();
+  const { user, hasPermission } = useAuth();
   const [newTournaments, setNewTournaments] = useState<Tournament[]>([]);
   const [doublesInvites, setDoublesInvites] = useState<DoublesInvite[]>([]);
   const [pendingMembershipCount, setPendingMembershipCount] =
@@ -60,14 +60,15 @@ const Dashboard: React.FC = () => {
     null,
   );
   const isPlayer = user?.role === "PLAYER";
-  const isAdmin = user?.role === "ADMIN";
+  const isSuperAdmin = user?.role === "SUPER_ADMIN" || user?.isSuperAdmin;
+  const isAdmin = isSuperAdmin || user?.role === "ADMIN";
 
   useEffect(() => {
     fetchNewTournaments();
     if (isPlayer) {
       fetchDoublesInvites();
     }
-    if (isAdmin) {
+    if (isSuperAdmin || (isAdmin && (hasPermission("MANAGE_CLUB_MEMBERSHIPS") || hasPermission("MANAGE_REGISTRATIONS")))) {
       fetchPendingRequestsCount();
     }
   }, [user]);
@@ -185,132 +186,138 @@ const Dashboard: React.FC = () => {
 
           <main className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {/* Requests Button */}
-            <Link
-              to="/app/admin-requests"
-              className="group relative flex flex-col justify-between rounded-[16px] border border-white/20 bg-[#061D23]/10 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl transition-all duration-300 hover:border-[#4AEEFF] hover:bg-[#061D23]/30"
-            >
-              <div>
-                <div className="flex items-center justify-between mb-4">
-                  <div className="p-3 rounded-xl bg-[#4AEEFF]/10 border border-[#4AEEFF]/30 text-[#4AEEFF] group-hover:scale-105 transition-transform duration-200">
-                    <InboxStackIcon className="h-6 w-6" />
+            {(isSuperAdmin || hasPermission("MANAGE_CLUB_MEMBERSHIPS") || hasPermission("MANAGE_REGISTRATIONS")) && (
+              <Link
+                to="/app/admin-requests"
+                className="group relative flex flex-col justify-between rounded-[16px] border border-white/20 bg-[#061D23]/10 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl transition-all duration-300 hover:border-[#4AEEFF] hover:bg-[#061D23]/30"
+              >
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="p-3 rounded-xl bg-[#4AEEFF]/10 border border-[#4AEEFF]/30 text-[#4AEEFF] group-hover:scale-105 transition-transform duration-200">
+                      <InboxStackIcon className="h-6 w-6" />
+                    </div>
+                    {totalPendingRequests > 0 ? (
+                      <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#4AEEFF] text-[#061D23] text-[10px] font-black uppercase tracking-wider shadow-md shadow-[#4AEEFF]/20">
+                        <span className="h-1.5 w-1.5 rounded-full bg-[#061D23] animate-ping"></span>
+                        {totalPendingRequests} Pending
+                      </span>
+                    ) : (
+                      <span className="px-2.5 py-1 rounded-full bg-white/10 text-white/60 border border-white/10 text-[10px] font-mono">
+                        0 Pending
+                      </span>
+                    )}
                   </div>
-                  {totalPendingRequests > 0 ? (
-                    <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#4AEEFF] text-[#061D23] text-[10px] font-black uppercase tracking-wider shadow-md shadow-[#4AEEFF]/20">
-                      <span className="h-1.5 w-1.5 rounded-full bg-[#061D23] animate-ping"></span>
-                      {totalPendingRequests} Pending
+
+                  <h3 className="mb-2 font-black uppercase tracking-wider text-white transition-colors group-hover:text-[#4AEEFF] flex items-center justify-between">
+                    <span>Pending Requests</span>
+                    <span className="text-xs opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all text-[#4AEEFF]">
+                      →
                     </span>
-                  ) : (
-                    <span className="px-2.5 py-1 rounded-full bg-white/10 text-white/60 border border-white/10 text-[10px] font-mono">
-                      0 Pending
-                    </span>
-                  )}
+                  </h3>
+
+                  <p className="text-xs text-white/70 leading-relaxed">
+                    Review membership requests and tournament payment
+                    verifications
+                  </p>
+                  <div className="mt-4 grid grid-cols-2 gap-3">
+                    <div className="rounded-lg border border-white/10 bg-black/20 p-3">
+                      <p className="text-[10px] uppercase tracking-wider text-white/50">
+                        Membership
+                      </p>
+                      <p className="mt-1 text-lg font-black text-[#4AEEFF]">
+                        {pendingMembershipCount}
+                      </p>
+                    </div>
+
+                    <div className="rounded-lg border border-white/10 bg-black/20 p-3">
+                      <p className="text-[10px] uppercase tracking-wider text-white/50">
+                        Payment
+                      </p>
+                      <p className="mt-1 text-lg font-black text-[#4AEEFF]">
+                        {pendingPaymentCount}
+                      </p>
+                    </div>
+                  </div>
                 </div>
 
-                <h3 className="mb-2 font-black uppercase tracking-wider text-white transition-colors group-hover:text-[#4AEEFF] flex items-center justify-between">
-                  <span>Pending Requests</span>
-                  <span className="text-xs opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all text-[#4AEEFF]">
-                    →
-                  </span>
-                </h3>
-
-                <p className="text-xs text-white/70 leading-relaxed">
-                  Review membership requests and tournament payment
-                  verifications
-                </p>
-                <div className="mt-4 grid grid-cols-2 gap-3">
-                  <div className="rounded-lg border border-white/10 bg-black/20 p-3">
-                    <p className="text-[10px] uppercase tracking-wider text-white/50">
-                      Membership
-                    </p>
-                    <p className="mt-1 text-lg font-black text-[#4AEEFF]">
-                      {pendingMembershipCount}
-                    </p>
-                  </div>
-
-                  <div className="rounded-lg border border-white/10 bg-black/20 p-3">
-                    <p className="text-[10px] uppercase tracking-wider text-white/50">
-                      Payment
-                    </p>
-                    <p className="mt-1 text-lg font-black text-[#4AEEFF]">
-                      {pendingPaymentCount}
-                    </p>
-                  </div>
+                <div className="mt-5 pt-3 border-t border-white/10 flex items-center justify-between text-[11px] font-bold text-[#4AEEFF]">
+                  <span>Review Requests</span>
+                  <ChevronRightIcon className="h-4 w-4 transform group-hover:translate-x-1 transition-transform" />
                 </div>
-              </div>
-
-              <div className="mt-5 pt-3 border-t border-white/10 flex items-center justify-between text-[11px] font-bold text-[#4AEEFF]">
-                <span>Review Requests</span>
-                <ChevronRightIcon className="h-4 w-4 transform group-hover:translate-x-1 transition-transform" />
-              </div>
-            </Link>
+              </Link>
+            )}
 
             {/* Player Rankings Button */}
-            <Link
-              to="/app/global-leaderboard"
-              className="group relative flex flex-col justify-between rounded-[16px] border border-white/20 bg-[#061D23]/10 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl transition-all duration-300 hover:border-[#4AEEFF] hover:bg-[#061D23]/30"
-            >
-              <div>
-                <div className="flex items-center justify-between mb-4">
-                  <div className="p-3 rounded-xl bg-[#4AEEFF]/10 border border-[#4AEEFF]/30 text-[#4AEEFF] group-hover:scale-105 transition-transform duration-200">
-                    <ChartBarIcon className="h-6 w-6" />
+            {(isSuperAdmin || hasPermission("MANAGE_RANKINGS")) && (
+              <Link
+                to="/app/global-leaderboard"
+                className="group relative flex flex-col justify-between rounded-[16px] border border-white/20 bg-[#061D23]/10 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl transition-all duration-300 hover:border-[#4AEEFF] hover:bg-[#061D23]/30"
+              >
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="p-3 rounded-xl bg-[#4AEEFF]/10 border border-[#4AEEFF]/30 text-[#4AEEFF] group-hover:scale-105 transition-transform duration-200">
+                      <ChartBarIcon className="h-6 w-6" />
+                    </div>
+                    <span className="px-2.5 py-1 rounded-full bg-[#4AEEFF]/15 text-[#4AEEFF] border border-[#4AEEFF]/30 text-[10px] font-mono">
+                      Global Standings
+                    </span>
                   </div>
-                  <span className="px-2.5 py-1 rounded-full bg-[#4AEEFF]/15 text-[#4AEEFF] border border-[#4AEEFF]/30 text-[10px] font-mono">
-                    Global Standings
-                  </span>
+
+                  <h3 className="mb-2 font-black uppercase tracking-wider text-white transition-colors group-hover:text-[#4AEEFF] flex items-center justify-between">
+                    <span>Player Rankings</span>
+                    <span className="text-xs opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all text-[#4AEEFF]">
+                      →
+                    </span>
+                  </h3>
+
+                  <p className="text-xs text-white/70 leading-relaxed">
+                    Direct view of global player rankings, match stats, and
+                    leaderboards
+                  </p>
                 </div>
 
-                <h3 className="mb-2 font-black uppercase tracking-wider text-white transition-colors group-hover:text-[#4AEEFF] flex items-center justify-between">
-                  <span>Player Rankings</span>
-                  <span className="text-xs opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all text-[#4AEEFF]">
-                    →
-                  </span>
-                </h3>
-
-                <p className="text-xs text-white/70 leading-relaxed">
-                  Direct view of global player rankings, match stats, and
-                  leaderboards
-                </p>
-              </div>
-
-              <div className="mt-5 pt-3 border-t border-white/10 flex items-center justify-between text-[11px] font-bold text-[#4AEEFF]">
-                <span>View Rankings</span>
-                <ChevronRightIcon className="h-4 w-4 transform group-hover:translate-x-1 transition-transform" />
-              </div>
-            </Link>
+                <div className="mt-5 pt-3 border-t border-white/10 flex items-center justify-between text-[11px] font-bold text-[#4AEEFF]">
+                  <span>View Rankings</span>
+                  <ChevronRightIcon className="h-4 w-4 transform group-hover:translate-x-1 transition-transform" />
+                </div>
+              </Link>
+            )}
 
             {/* User Management Button */}
-            <Link
-              to="/app/users"
-              className="group relative flex flex-col justify-between rounded-[16px] border border-white/20 bg-[#061D23]/10 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl transition-all duration-300 hover:border-[#4AEEFF] hover:bg-[#061D23]/30"
-            >
-              <div>
-                <div className="flex items-center justify-between mb-4">
-                  <div className="p-3 rounded-xl bg-[#4AEEFF]/10 border border-[#4AEEFF]/30 text-[#4AEEFF] group-hover:scale-105 transition-transform duration-200">
-                    <UserGroupIcon className="h-6 w-6" />
+            {(isSuperAdmin || hasPermission("MANAGE_USERS")) && (
+              <Link
+                to="/app/users"
+                className="group relative flex flex-col justify-between rounded-[16px] border border-white/20 bg-[#061D23]/10 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl transition-all duration-300 hover:border-[#4AEEFF] hover:bg-[#061D23]/30"
+              >
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="p-3 rounded-xl bg-[#4AEEFF]/10 border border-[#4AEEFF]/30 text-[#4AEEFF] group-hover:scale-105 transition-transform duration-200">
+                      <UserGroupIcon className="h-6 w-6" />
+                    </div>
+                    <span className="px-2.5 py-1 rounded-full bg-[#4AEEFF]/15 text-[#4AEEFF] border border-[#4AEEFF]/30 text-[10px] font-mono">
+                      User Accounts
+                    </span>
                   </div>
-                  <span className="px-2.5 py-1 rounded-full bg-[#4AEEFF]/15 text-[#4AEEFF] border border-[#4AEEFF]/30 text-[10px] font-mono">
-                    User Accounts
-                  </span>
+
+                  <h3 className="mb-2 font-black uppercase tracking-wider text-white transition-colors group-hover:text-[#4AEEFF] flex items-center justify-between">
+                    <span>User Management</span>
+                    <span className="text-xs opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all text-[#4AEEFF]">
+                      →
+                    </span>
+                  </h3>
+
+                  <p className="text-xs text-white/70 leading-relaxed">
+                    Manage registered users, roles, player profiles, and assign
+                    rankings
+                  </p>
                 </div>
 
-                <h3 className="mb-2 font-black uppercase tracking-wider text-white transition-colors group-hover:text-[#4AEEFF] flex items-center justify-between">
-                  <span>User Management</span>
-                  <span className="text-xs opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all text-[#4AEEFF]">
-                    →
-                  </span>
-                </h3>
-
-                <p className="text-xs text-white/70 leading-relaxed">
-                  Manage registered users, roles, player profiles, and assign
-                  rankings
-                </p>
-              </div>
-
-              <div className="mt-5 pt-3 border-t border-white/10 flex items-center justify-between text-[11px] font-bold text-[#4AEEFF]">
-                <span>Manage Users & Ranks</span>
-                <ChevronRightIcon className="h-4 w-4 transform group-hover:translate-x-1 transition-transform" />
-              </div>
-            </Link>
+                <div className="mt-5 pt-3 border-t border-white/10 flex items-center justify-between text-[11px] font-bold text-[#4AEEFF]">
+                  <span>Manage Users & Ranks</span>
+                  <ChevronRightIcon className="h-4 w-4 transform group-hover:translate-x-1 transition-transform" />
+                </div>
+              </Link>
+            )}
           </main>
         </section>
       )}

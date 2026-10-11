@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { authenticate } from '../middleware/auth.middleware';
-import { isAdmin } from '../middleware/role.middleware';
+import { hasPermission } from '../middleware/role.middleware';
 import { validate } from '../middleware/validation.middleware';
 import {
   createTournament,
@@ -10,6 +10,8 @@ import {
   deleteTournament,
   addCategory,
   getTournamentCategories,
+  updateCategory,
+  deleteCategory,
 } from '../controllers/tournament.controller';
 import {
   createTournamentSchema,
@@ -17,22 +19,19 @@ import {
   addCategorySchema,
 } from '../validations/tournament.validation';
 
-import { updateCategory, deleteCategory } from '../controllers/tournament.controller';
-
 const router = Router();
 
-// Public routes (require authentication but not admin)
+// Public routes
 router.get('/', getAllTournaments);
 router.get('/:id', getTournamentById);
 router.get('/:tournamentId/categories', getTournamentCategories);
 
-// Admin only routes
-router.post('/', authenticate, isAdmin, validate(createTournamentSchema), createTournament);
-router.patch('/:id', authenticate, isAdmin, validate(updateTournamentSchema), updateTournament);
-router.delete('/:id', authenticate, isAdmin, deleteTournament);
-router.post('/:tournamentId/categories', authenticate, isAdmin, validate(addCategorySchema), addCategory);
-
-router.patch('/categories/:categoryId', authenticate, isAdmin, updateCategory);
-router.delete('/categories/:categoryId', authenticate, isAdmin, deleteCategory);
+// Protected admin management routes
+router.post('/', authenticate, hasPermission('MANAGE_TOURNAMENTS'), validate(createTournamentSchema), createTournament);
+router.patch('/:id', authenticate, hasPermission('MANAGE_TOURNAMENTS'), validate(updateTournamentSchema), updateTournament);
+router.delete('/:id', authenticate, hasPermission('MANAGE_TOURNAMENTS'), deleteTournament);
+router.post('/:tournamentId/categories', authenticate, hasPermission('MANAGE_TOURNAMENTS'), validate(addCategorySchema), addCategory);
+router.patch('/categories/:categoryId', authenticate, hasPermission('MANAGE_TOURNAMENTS'), updateCategory);
+router.delete('/categories/:categoryId', authenticate, hasPermission('MANAGE_TOURNAMENTS'), deleteCategory);
 
 export default router;

@@ -27,13 +27,8 @@ export const approveAdminRequest = catchAsync(async (req: Request, res: Response
     const { userId } = req.params;
     const adminId = req.user!.id;
 
-    // Verify admin
-    const admin = await prisma.adminProfile.findUnique({
-        where: { userId: adminId },
-    });
-
-    if (!admin) {
-        throw new AppError('Only admins can approve requests', 403);
+    if (req.user!.role !== 'SUPER_ADMIN') {
+        throw new AppError('Only the Super Admin can approve requests', 403);
     }
 
     const user = await prisma.user.findUnique({
@@ -59,13 +54,19 @@ export const approveAdminRequest = catchAsync(async (req: Request, res: Response
         },
     });
 
-    // Create admin profile
-    await prisma.adminProfile.create({
-        data: {
-            userId: userId,
-            department: 'Approved Admin',
-        },
+    // Create admin profile if not already present
+    const existingProfile = await prisma.adminProfile.findUnique({
+        where: { userId: userId },
     });
+
+    if (!existingProfile) {
+        await prisma.adminProfile.create({
+            data: {
+                userId: userId,
+                department: 'Approved Admin',
+            },
+        });
+    }
 
     // Create notification
     await prisma.notification.create({
@@ -73,7 +74,7 @@ export const approveAdminRequest = catchAsync(async (req: Request, res: Response
             userId: userId,
             type: 'ADMIN_APPROVED',
             title: 'Admin Request Approved',
-            message: 'Your request to become an administrator has been approved! You now have full admin access.',
+            message: 'Your request to become an administrator has been approved! You now have admin access assigned by Super Admin.',
         },
     });
 
@@ -86,12 +87,8 @@ export const rejectAdminRequest = catchAsync(async (req: Request, res: Response)
     const { reason } = req.body;
     const adminId = req.user!.id;
 
-    const admin = await prisma.adminProfile.findUnique({
-        where: { userId: adminId },
-    });
-
-    if (!admin) {
-        throw new AppError('Only admins can reject requests', 403);
+    if (req.user!.role !== 'SUPER_ADMIN') {
+        throw new AppError('Only the Super Admin can reject requests', 403);
     }
 
     const user = await prisma.user.findUnique({

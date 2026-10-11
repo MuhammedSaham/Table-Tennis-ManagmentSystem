@@ -295,3 +295,119 @@ export const updatePlayerRanking = catchAsync(async (req: Request, res: Response
 
   sendResponse(res, 200, 'Player ranking updated successfully', updated);
 });
+
+// Get user permissions (Admin / Super Admin)
+export const getUserPermissions = catchAsync(async (req: Request, res: Response) => {
+  const { id } = req.params;
+
+  const targetUser = await prisma.user.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      role: true,
+      adminPermissions: {
+        select: {
+          permission: true,
+        },
+      },
+    },
+  });
+
+  if (!targetUser) {
+    throw new AppError('User not found', 404);
+  }
+
+  const allPermissions = [
+    'MANAGE_USERS',
+    'MANAGE_PLAYERS',
+    'MANAGE_REFEREES',
+    'MANAGE_TOURNAMENTS',
+    'MANAGE_REGISTRATIONS',
+    'MANAGE_MATCHES',
+    'MANAGE_RESULTS',
+    'MANAGE_RANKINGS',
+    'MANAGE_CLUB_MEMBERSHIPS',
+  ];
+
+  let permissions: string[] = [];
+  if (targetUser.role === 'SUPER_ADMIN') {
+    permissions = allPermissions;
+  } else if (targetUser.role === 'ADMIN') {
+    permissions = targetUser.adminPermissions.map((p) => p.permission);
+  }
+
+  sendResponse(res, 200, 'User permissions retrieved', {
+    userId: id,
+    role: targetUser.role,
+    permissions,
+  });
+});
+
+// Assign / Update permissions for an ADMIN user (SUPER_ADMIN only)
+export const updateUserPermissions = catchAsync(async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const { permissions } = req.body; // Array of permission strings
+
+  if (req.user!.role !== 'SUPER_ADMIN') {
+    throw new AppError('Only the Super Admin can assign or change permissions', 403);
+  }
+
+  const targetUser = await prisma.user.findUnique({
+    where: { id },
+  });
+
+  if (!targetUser) {
+    throw new AppError('User not found', 404);
+  }
+
+  if (targetUser.role === 'SUPER_ADMIN') {
+    throw new AppError('SUPER_ADMIN always retains permanent full access and permissions cannot be revoked', 400);
+  }
+
+  if (targetUser.role !== 'ADMIN') {
+    throw new AppError('Permissions can only be assigned to ADMIN users', 400);
+  }
+
+  if (!Array.isArray(permissions)) {
+    throw new AppError('Permissions must be an array of valid permission strings', 400);
+  }
+
+  const validPermissions = [
+    'MANAGE_USERS',
+    'MANAGE_PLAYERS',
+    'MANAGE_REFEREES',
+    'MANAGE_TOURNAMENTS',
+    'MANAGE_REGISTRATIONS',
+    'MANAGE_MATCHES',
+    'MANAGE_RESULTS',
+    'MANAGE_RANKINGS',
+    'MANAGE_CLUB_MEMBERSHIPS',
+  ];
+
+  const filteredPermissions = Array.from(new Set(permissions)).filter((p: string) =>
+    validPermissions.includes(p)
+  );
+
+  // Update permissions in transaction
+  await prisma.$transaction(async (tx) => {
+    // Delete existing permissions for user
+    await tx.adminPermission.deleteMany({
+      where: { userId: id },
+    });
+
+    // Create new permission entries
+    if (filteredPermissions.length > 0) {
+      await tx.adminPermission.createMany({
+        data: filteredPermissions.map((perm) => ({
+          userId: id,
+          permission: perm as any,
+        })),
+      });
+    }
+  });
+
+  sendResponse(res, 200, 'User permissions updated successfully', {
+    userId: id,
+    permissions: filteredPermissions,
+  });
+});

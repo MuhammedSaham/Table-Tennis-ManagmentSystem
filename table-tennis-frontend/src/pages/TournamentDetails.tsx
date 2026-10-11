@@ -108,7 +108,7 @@ interface Tournament {
 
 const TournamentDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const { user } = useAuth();
+  const { user, hasPermission } = useAuth();
   const navigate = useNavigate();
   const [tournament, setTournament] = useState<Tournament | null>(null);
   const [loading, setLoading] = useState(true);
@@ -392,7 +392,7 @@ const TournamentDetails: React.FC = () => {
       const response = await api.get(`/tournaments/${id}`);
       const tournamentData = response.data.data;
 
-      if (user?.role === "ADMIN") {
+      if (user?.role === "SUPER_ADMIN" || user?.role === "ADMIN") {
         const regResponse = await api.get(`/registrations/tournaments/${id}`);
 
         tournamentData.registrations = regResponse.data.data;
@@ -978,8 +978,13 @@ const TournamentDetails: React.FC = () => {
   const isRegistrationOpen =
     tournament.status === "UPCOMING" &&
     new Date() < new Date(tournament.registrationDeadline);
+  const isSuperAdmin = user?.role === "SUPER_ADMIN" || user?.isSuperAdmin;
+  const canManageTournaments = isSuperAdmin || hasPermission("MANAGE_TOURNAMENTS");
+  const canManageMatches = isSuperAdmin || hasPermission("MANAGE_MATCHES");
+  const canManageRegistrations = isSuperAdmin || hasPermission("MANAGE_REGISTRATIONS");
+  const canManageResults = isSuperAdmin || hasPermission("MANAGE_RESULTS");
   const isPlayer = user?.role === "PLAYER";
-  const isAdmin = user?.role === "ADMIN";
+  const isAdmin = isSuperAdmin || user?.role === "ADMIN";
   const isReferee = user?.role === "REFEREE";
 
   const userRegistrations =
@@ -1052,7 +1057,7 @@ const TournamentDetails: React.FC = () => {
           </div>
 
           <div className="flex flex-wrap gap-2.5 items-center">
-            {isAdmin && (
+            {canManageTournaments && (
               <>
                 <button
                   onClick={handleDelete}
@@ -1740,7 +1745,7 @@ const TournamentDetails: React.FC = () => {
                   </div>
 
                   {/* Dedicated Action Button Area */}
-                  {isAdmin &&
+                  {(isSuperAdmin || canManageMatches) &&
                     (category.stageFormat || tournamentType) === "KNOCKOUT" && (
                       <div className="p-3.5 bg-black/25 border-t border-white/10 mt-auto">
                         <button
@@ -1785,7 +1790,7 @@ const TournamentDetails: React.FC = () => {
             </span>
           </h2>
           <div className="flex flex-wrap gap-3 mb-6">
-            {isAdmin && (
+            {(isSuperAdmin || canManageMatches) && (
               <>
                 <button
                   onClick={() => setShowGroupsModal(true)}
@@ -1817,7 +1822,7 @@ const TournamentDetails: React.FC = () => {
           <GroupStandings
             tournamentId={id}
             categoryId={activeCategoryId}
-            isAdminOrReferee={isAdmin}
+            isAdminOrReferee={isSuperAdmin || canManageMatches || canManageResults || isReferee}
             onScoreUpdate={fetchTournamentDetails}
             key={`groups-${activeCategoryId}-${refreshGroups}`}
           />
@@ -1830,7 +1835,7 @@ const TournamentDetails: React.FC = () => {
           className="relative w-full min-w-0 max-w-full mb-8 pt-4 pb-8 bg-transparent"
           style={{ minHeight: 200 }}
         >
-          {isAdmin && activeCategoryFormat === "KNOCKOUT" && (
+          {(isSuperAdmin || canManageMatches) && activeCategoryFormat === "KNOCKOUT" && (
             <div className="flex justify-end mb-4">
               <button
                 onClick={() => setShowResetConfirm(true)}
@@ -2514,7 +2519,7 @@ const TournamentDetails: React.FC = () => {
         )}
 
       {/* Registrations Section */}
-      {(isAdmin || isReferee) && tournament.registrations?.length > 0 && (
+      {((isAdmin && canManageRegistrations) || isSuperAdmin || isReferee) && tournament.registrations?.length > 0 && (
         <div className="rounded-2xl border border-white/20 bg-[#061D23]/25 p-4 sm:p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl mb-6">
           <h2 className="text-xl font-black uppercase tracking-wider text-white mb-4">
             Registrations ({tournament.registrations.length})

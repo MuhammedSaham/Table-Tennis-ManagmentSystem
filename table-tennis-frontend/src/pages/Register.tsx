@@ -401,12 +401,15 @@ const Register: React.FC = () => {
             >
               <option value="PLAYER">🏓 Player - Compete in tournaments</option>
               <option value="REFEREE">👨‍⚖️ Referee - Officiate matches</option>
+              <option value="ADMIN">🛡️ Admin - Request administrator privileges</option>
             </select>
             <p className="mt-1 text-sm font-semibold text-[#0d4a75]">
               {formData.role === "PLAYER" &&
                 "Join tournaments, track your progress, and compete with others!"}
               {formData.role === "REFEREE" &&
                 "Officiate matches, record scores, and manage games."}
+              {formData.role === "ADMIN" &&
+                "Register as Admin. Your request will be sent to the Super Admin for approval."}
             </p>
           </div>
 

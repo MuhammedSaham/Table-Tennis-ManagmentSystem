@@ -26,6 +26,14 @@ interface ClubMembershipRequest {
     };
   };
 }
+
+interface PendingAdminUser {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  adminRequestedAt: string;
+}
 interface PaymentProofRequest {
   id: string;
   tournamentId: string;
@@ -66,7 +74,7 @@ interface PaymentProofRequest {
 }
 
 const AdminRequests: React.FC = () => {
-  const { user } = useAuth();
+  const { user, hasPermission } = useAuth();
 
   const [paymentProofRequests, setPaymentProofRequests] = useState<
     PaymentProofRequest[]
@@ -109,10 +117,72 @@ const AdminRequests: React.FC = () => {
   const [membershipRejectionReason, setMembershipRejectionReason] =
     useState("");
 
+  const isSuperAdmin = user?.role === "SUPER_ADMIN" || user?.isSuperAdmin;
+
+  const [adminRequests, setAdminRequests] = useState<PendingAdminUser[]>([]);
+  const [adminRequestsLoading, setAdminRequestsLoading] = useState(false);
+  const [adminProcessingId, setAdminProcessingId] = useState<string | null>(null);
+  const [showAdminRejectModal, setShowAdminRejectModal] = useState(false);
+  const [selectedAdminId, setSelectedAdminId] = useState<string | null>(null);
+  const [adminRejectionReason, setAdminRejectionReason] = useState("");
+
   useEffect(() => {
     fetchMembershipRequests();
     fetchPaymentProofRequests();
-  }, []);
+    if (isSuperAdmin) {
+      fetchAdminRequests();
+    }
+  }, [isSuperAdmin]);
+
+  const fetchAdminRequests = async () => {
+    try {
+      setAdminRequestsLoading(true);
+      const response = await api.get("/admin-requests/pending");
+      setAdminRequests(response.data.data || []);
+    } catch (error) {
+      console.error("Failed to fetch admin requests", error);
+    } finally {
+      setAdminRequestsLoading(false);
+    }
+  };
+
+  const handleApproveAdmin = async (userId: string) => {
+    setAdminProcessingId(userId);
+    try {
+      await api.post(`/admin-requests/${userId}/approve`);
+      toast.success("Admin request approved! User is now an ADMIN.");
+      await fetchAdminRequests();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Failed to approve admin request");
+    } finally {
+      setAdminProcessingId(null);
+    }
+  };
+
+  const handleRejectAdmin = async () => {
+    if (!selectedAdminId) return;
+    setAdminProcessingId(selectedAdminId);
+    try {
+      await api.post(`/admin-requests/${selectedAdminId}/reject`, {
+        reason: adminRejectionReason.trim() || undefined,
+      });
+      toast.success("Admin request rejected");
+      setShowAdminRejectModal(false);
+      setSelectedAdminId(null);
+      setAdminRejectionReason("");
+      await fetchAdminRequests();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Failed to reject admin request");
+    } finally {
+      setAdminProcessingId(null);
+    }
+  };
+
+  const openAdminRejectModal = (userId: string) => {
+    setSelectedAdminId(userId);
+    setAdminRejectionReason("");
+    setShowAdminRejectModal(true);
+  };
 
   const fetchMembershipRequests = async () => {
     try {
@@ -386,6 +456,16 @@ const AdminRequests: React.FC = () => {
     </div>
   );
 
+  if (!isSuperAdmin && !hasPermission("MANAGE_CLUB_MEMBERSHIPS") && !hasPermission("MANAGE_REGISTRATIONS")) {
+    return wrapInBaseLayout(
+      <div className="rounded-[16px] border border-red-500/30 bg-[#061D23]/40 p-12 text-center backdrop-blur-xl shadow-2xl">
+        <p className="font-black uppercase tracking-widest text-red-400">
+          Access denied. Permission required to view requests.
+        </p>
+      </div>
+    );
+  }
+
   return wrapInBaseLayout(
     <>
       {/* GLASS HEADER */}
@@ -395,9 +475,93 @@ const AdminRequests: React.FC = () => {
           Pending Requests
         </h1>
         <p className="text-xs uppercase tracking-[0.3em] text-[#4AEEFF]/90">
-          Review and manage player requests for official club membership
+          Review and manage administrative, player membership, and payment requests
         </p>
       </header>
+
+      {/* SUPER ADMIN: PENDING ADMIN ACCOUNT REQUESTS */}
+      {isSuperAdmin && (
+        <section className="rounded-[16px] border border-amber-500/30 bg-[#061D23]/25 p-6 shadow-[0_25px_60px_-15px_rgba(245,158,11,0.2)] backdrop-blur-xl">
+          <div className="mb-6 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="rounded-lg bg-amber-500/20 p-2 text-amber-300 border border-amber-500/30">
+                👑
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-lg font-black uppercase tracking-wider text-white">
+                    Administrator Account Requests
+                  </h2>
+                  <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-xs font-black text-amber-300 border border-amber-500/30 font-mono">
+                    SUPER ADMIN EXCLUSIVE
+                  </span>
+                </div>
+                <p className="text-xs text-white/60">
+                  Review and grant administrative roles to requested user accounts
+                </p>
+              </div>
+            </div>
+            <span className="rounded-xl bg-[#061D23] px-3 py-1.5 text-xs font-mono font-bold text-amber-300 border border-amber-500/20">
+              {adminRequests.length} Pending
+            </span>
+          </div>
+
+          {adminRequestsLoading ? (
+            <div className="py-8 text-center">
+              <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-amber-400 mx-auto"></div>
+              <p className="text-xs font-mono text-amber-300 mt-2">Loading admin requests...</p>
+            </div>
+          ) : adminRequests.length === 0 ? (
+            <div className="rounded-xl border border-white/5 bg-[#061D23]/40 p-8 text-center text-white/50 text-sm">
+              No pending administrator requests at this time.
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {adminRequests.map((req) => (
+                <div
+                  key={req.id}
+                  className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-xl border border-white/10 bg-[#061D23]/60 p-4 transition-all hover:border-amber-500/40"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-amber-500/30 bg-amber-500/10 font-bold text-amber-300 text-sm">
+                      {req.firstName?.[0]?.toUpperCase()}
+                      {req.lastName?.[0]?.toUpperCase()}
+                    </div>
+                    <div>
+                      <p className="font-bold text-white text-sm">
+                        {req.firstName} {req.lastName}
+                      </p>
+                      <p className="text-xs font-mono text-white/60">
+                        {req.email}
+                      </p>
+                      <p className="text-[11px] text-white/40 font-mono mt-0.5">
+                        Requested: {new Date(req.adminRequestedAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 self-end sm:self-center">
+                    <button
+                      onClick={() => handleApproveAdmin(req.id)}
+                      disabled={adminProcessingId === req.id}
+                      className="rounded-lg bg-emerald-500/20 hover:bg-emerald-500 text-emerald-300 hover:text-slate-950 border border-emerald-500/40 px-4 py-2 text-xs font-black uppercase tracking-wider transition-all disabled:opacity-50"
+                    >
+                      {adminProcessingId === req.id ? "Approving..." : "✓ Approve Admin"}
+                    </button>
+                    <button
+                      onClick={() => openAdminRejectModal(req.id)}
+                      disabled={adminProcessingId === req.id}
+                      className="rounded-lg bg-red-500/15 hover:bg-red-500 text-red-300 hover:text-white border border-red-500/30 px-3.5 py-2 text-xs font-black uppercase tracking-wider transition-all disabled:opacity-50"
+                    >
+                      ✕ Reject
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
 
       {/* CLUB MEMBERSHIP REQUESTS MAIN CONTAINER */}
       <section className="rounded-[16px] border border-white/20 bg-[#061D23]/10 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl">
@@ -900,6 +1064,49 @@ const AdminRequests: React.FC = () => {
                 {paymentProcessingId !== null
                   ? "Rejecting..."
                   : "Confirm Rejection"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ADMIN REQUEST REJECT MODAL */}
+      {showAdminRejectModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-md animate-fadeIn">
+          <div className="w-full max-w-md rounded-2xl border border-red-500/30 bg-[#061D23]/95 p-6 shadow-2xl space-y-4">
+            <h3 className="text-xl font-black uppercase tracking-wider text-white">
+              Reject Admin Request
+            </h3>
+            <p className="text-xs text-white/70">
+              Provide an optional reason explaining why this administrative access request is being rejected.
+            </p>
+            <textarea
+              value={adminRejectionReason}
+              onChange={(e) => setAdminRejectionReason(e.target.value)}
+              placeholder="Enter rejection reason (optional)..."
+              rows={3}
+              className="w-full rounded-xl border border-white/20 bg-[#061D23] p-3 text-sm text-white placeholder-white/30 focus:border-red-400 focus:outline-none"
+            />
+            <div className="flex gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowAdminRejectModal(false);
+                  setSelectedAdminId(null);
+                  setAdminRejectionReason("");
+                }}
+                disabled={adminProcessingId !== null}
+                className="flex-1 rounded-xl border border-white/20 py-2.5 text-xs font-black uppercase tracking-wider text-white/70 hover:bg-white/10"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleRejectAdmin}
+                disabled={adminProcessingId !== null}
+                className="flex-1 rounded-xl bg-red-500 py-2.5 text-xs font-black uppercase tracking-wider text-white hover:bg-red-600 shadow-lg shadow-red-500/20"
+              >
+                {adminProcessingId !== null ? "Rejecting..." : "Confirm Reject"}
               </button>
             </div>
           </div>

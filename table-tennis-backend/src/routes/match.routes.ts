@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { authenticate } from '../middleware/auth.middleware';
-import { isAdmin, isReferee,isAdminOrReferee, restrictTo } from '../middleware/role.middleware';
+import { isAdmin, isReferee, isAdminOrReferee, restrictTo, hasPermission } from '../middleware/role.middleware';
 import { validate } from '../middleware/validation.middleware';
 import {
   createMatch,
@@ -50,37 +50,36 @@ router.get('/tournaments/:tournamentId', getTournamentMatches);
 // Match by ID
 router.get('/:matchId', getMatchById);
 
-// Admin only routes
-router.post('/', authenticate, isAdmin, validate(createMatchSchema), createMatch);
-router.patch('/:matchId/status', authenticate, restrictTo('ADMIN', 'REFEREE'), validate(updateMatchStatusSchema), updateMatchStatus);
-router.post('/:matchId/assign-referee', authenticate, isAdmin, validate(assignRefereeSchema), assignReferee);
+// Admin / Referee routes
+router.post('/', authenticate, hasPermission('MANAGE_MATCHES'), validate(createMatchSchema), createMatch);
+router.patch('/:matchId/status', authenticate, isAdminOrReferee, validate(updateMatchStatusSchema), updateMatchStatus);
+router.post('/:matchId/assign-referee', authenticate, hasPermission('MANAGE_MATCHES', 'MANAGE_REFEREES'), validate(assignRefereeSchema), assignReferee);
 router.post('/swap-players', authenticate, isAdminOrReferee, swapPlayers);
-// Add these to the existing routes
 
 // Match results and scoring
 router.get('/:matchId/results', getMatchResults);
-router.post('/:matchId/scores', authenticate, restrictTo('ADMIN', 'REFEREE'), recordGameScores);
+router.post('/:matchId/scores', authenticate, isAdminOrReferee, recordGameScores);
 router.get('/my-match-history', authenticate, getMyMatchHistory);
 
 router.get('/my-performance', authenticate, getPlayerPerformanceStats);
 
 router.get('/player-performance/:userId', getPlayerPerformanceStatsById);
 
-router.patch('/:matchId', authenticate, restrictTo('ADMIN', 'REFEREE'), updateMatch);
+router.patch('/:matchId', authenticate, isAdminOrReferee, updateMatch);
 
 router.delete('/tournaments/:tournamentId/categories/:categoryId/knockout', 
   authenticate, 
-  isAdmin, 
+  hasPermission('MANAGE_MATCHES'), 
   deleteKnockoutMatches
 );
 
-router.post('/:matchId/complete', authenticate, restrictTo('ADMIN', 'REFEREE'), updateMatchAndAdvance);
+router.post('/:matchId/complete', authenticate, isAdminOrReferee, updateMatchAndAdvance);
 
 // Admin-only correction of completed knockout match scores
 router.patch(
   '/:matchId/correct-score',
   authenticate,
-  isAdmin,
+  hasPermission('MANAGE_MATCHES'),
   correctCompletedMatch
 );
 

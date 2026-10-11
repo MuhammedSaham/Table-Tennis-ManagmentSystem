@@ -24,13 +24,15 @@ model User {
 
   isSuperAdmin Boolean @default(false)
 
+  adminPermissions AdminPermission[]
+
   // Relations based on role
   playerProfile  PlayerProfile?
   refereeProfile RefereeProfile?
   adminProfile   AdminProfile?
   notifications  Notification[]
 
-  adminRequestStatus   String?   @default("NONE")
+  adminRequestStatus   AdminRequestStatus? @default(NONE)
   adminRequestedAt     DateTime?
   adminApprovedBy      String?
   adminApprovedAt      DateTime?
@@ -59,9 +61,29 @@ model User {
 }
 
 enum UserRole {
+  SUPER_ADMIN
   ADMIN
   REFEREE
   PLAYER
+}
+
+enum AdminRequestStatus {
+  NONE
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum Permission {
+  MANAGE_USERS
+  MANAGE_PLAYERS
+  MANAGE_REFEREES
+  MANAGE_TOURNAMENTS
+  MANAGE_REGISTRATIONS
+  MANAGE_MATCHES
+  MANAGE_RESULTS
+  MANAGE_RANKINGS
+  MANAGE_CLUB_MEMBERSHIPS
 }
 
 // Player specific details
@@ -125,6 +147,17 @@ model AdminProfile {
   userId     String  @unique
   user       User    @relation(fields: [userId], references: [id])
   department String?
+}
+
+model AdminPermission {
+  id         String     @id @default(cuid())
+  userId     String
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  permission Permission
+  createdAt  DateTime   @default(now())
+
+  @@unique([userId, permission])
+  @@index([userId])
 }
 
 // Tournaments

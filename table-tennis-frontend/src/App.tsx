@@ -102,6 +102,25 @@ const PublicGlobalLeaderboardRoute: React.FC = () => {
   return <GlobalLeaderboard />;
 };
 
+const SuperAdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user } = useAuth();
+  if (user?.role !== "SUPER_ADMIN" && !user?.isSuperAdmin) {
+    return <Navigate to="/app/dashboard" replace />;
+  }
+  return <>{children}</>;
+};
+
+const PermissionRoute: React.FC<{ permission: any; children: React.ReactNode }> = ({
+  permission,
+  children,
+}) => {
+  const { user, hasPermission } = useAuth();
+  if (user?.role === "SUPER_ADMIN" || user?.isSuperAdmin || hasPermission(permission)) {
+    return <>{children}</>;
+  }
+  return <Navigate to="/app/dashboard" replace />;
+};
+
 function AppRoutes() {
   return (
     <Routes>
@@ -115,7 +134,6 @@ function AppRoutes() {
         <Route path="global-leaderboard" element={<PublicGlobalLeaderboardRoute />} />
         <Route path="profile/:userId" element={<PublicProfile />} />
         <Route path="players" element={<Players />} />
-        {/*<Route path="verify-email" element={<VerifyEmail />} />*/}
       </Route>
 
       {/* Auth routes */}
@@ -138,13 +156,34 @@ function AppRoutes() {
         <Route path="tournaments/:id" element={<TournamentDetails />} />
         <Route path="leaderboard" element={<Leaderboard />} />
         <Route path="global-leaderboard" element={<GlobalLeaderboard />} />
-        <Route path="create-tournament" element={<CreateTournament />} />
+        <Route
+          path="create-tournament"
+          element={
+            <PermissionRoute permission="MANAGE_TOURNAMENTS">
+              <CreateTournament />
+            </PermissionRoute>
+          }
+        />
         <Route path="my-registrations" element={<MyRegistrations />} />
         <Route path="my-matches" element={<MyMatches />} />
         <Route path="referee/matches" element={<RefereeMatches />} />
         <Route path="profile" element={<Profile />} />
-        <Route path="users" element={<Users />} />
-        <Route path="admin-requests" element={<AdminRequests />} />
+        <Route
+          path="users"
+          element={
+            <PermissionRoute permission="MANAGE_USERS">
+              <Users />
+            </PermissionRoute>
+          }
+        />
+        <Route
+          path="admin-requests"
+          element={
+            <SuperAdminRoute>
+              <AdminRequests />
+            </SuperAdminRoute>
+          }
+        />
       </Route>
     </Routes>
   );

@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { authenticate } from '../middleware/auth.middleware';
-import { isAdmin, isPlayer, restrictTo } from '../middleware/role.middleware';
+import { isPlayer, restrictTo, hasPermission } from '../middleware/role.middleware';
 import { validate } from '../middleware/validation.middleware';
 import {
   registerForTournament,
@@ -25,7 +25,7 @@ router.get('/my-registrations', isPlayer, getMyRegistrations);
 router.delete('/:registrationId/cancel', isPlayer, cancelRegistration);
 
 // Admin/Referee routes
-router.get('/tournaments/:tournamentId', restrictTo('ADMIN', 'REFEREE'), getTournamentRegistrations);
-router.patch('/:registrationId/process', isAdmin, validate(processRegistrationSchema), processRegistration);
+router.get('/tournaments/:tournamentId', restrictTo('ADMIN', 'SUPER_ADMIN', 'REFEREE'), getTournamentRegistrations);
+router.patch('/:registrationId/process', hasPermission('MANAGE_REGISTRATIONS'), validate(processRegistrationSchema), processRegistration);
 
 export default router;
