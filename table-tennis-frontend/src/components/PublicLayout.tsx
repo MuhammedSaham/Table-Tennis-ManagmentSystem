@@ -323,7 +323,7 @@ const PublicLayout: React.FC = () => {
             </div>
             <div className="md:col-span-3 md:pl-6 lg:pl-10">
               <h4 className="font-bold text-lg text-white mb-4">Follow Us</h4>
-              <div className="ml-[5mm] flex items-center gap-4">
+              <div className="flex items-center gap-4">
                 <div>
                   <a
                     href="https://www.facebook.com/profile.php?id=61557498952975"
