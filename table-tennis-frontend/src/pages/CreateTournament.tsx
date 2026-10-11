@@ -249,11 +249,11 @@ const CreateTournament: React.FC = () => {
     </div>
   );
 
-  // Redirect if not admin
-  if (user?.role !== "ADMIN") {
-    navigate("/dashboard");
-    return null;
-  }
+  // Redirect if the user is not an admin or super admin
+if (user?.role !== "ADMIN" && user?.role !== "SUPER_ADMIN") {
+  navigate("/app/dashboard", { replace: true });
+  return null;
+}
 
   return wrapInBaseLayout(
     <>
