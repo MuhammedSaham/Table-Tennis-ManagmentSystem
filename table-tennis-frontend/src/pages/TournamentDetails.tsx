@@ -101,6 +101,10 @@ interface Tournament {
   status: string;
   maxPlayers: number;
   tournamentType?: string;
+  registrationFee?: string | number | null;
+  requirePaymentProofClub?: boolean;
+  requirePaymentProofGuest?: boolean;
+  paymentInstructions?: string | null;
   categories: Category[];
   registrations: Registration[];
   matches?: Match[];
@@ -154,6 +158,10 @@ const TournamentDetails: React.FC = () => {
     endDate: "",
     registrationDeadline: "",
     maxPlayers: "",
+    registrationFee: "",
+    requirePaymentProofClub: false,
+    requirePaymentProofGuest: false,
+    paymentInstructions: "",
   });
   const [editCategories, setEditCategories] = useState<Category[]>([]);
 
@@ -864,6 +872,20 @@ const TournamentDetails: React.FC = () => {
   };
 
   const handleUpdateTournament = async () => {
+    const paymentProofRequired =
+      editFormData.requirePaymentProofClub ||
+      editFormData.requirePaymentProofGuest;
+
+    if (paymentProofRequired) {
+      const fee = Number(editFormData.registrationFee);
+      if (!editFormData.registrationFee || fee <= 0) {
+        toast.error(
+          "Please enter a registration fee when payment proof is required",
+        );
+        return;
+      }
+    }
+
     try {
       await api.patch(`/tournaments/${id}`, {
         name: editFormData.name,
@@ -877,6 +899,12 @@ const TournamentDetails: React.FC = () => {
         maxPlayers: editFormData.maxPlayers
           ? parseInt(editFormData.maxPlayers)
           : null,
+        registrationFee: editFormData.registrationFee
+          ? parseFloat(editFormData.registrationFee)
+          : null,
+        requirePaymentProofClub: editFormData.requirePaymentProofClub,
+        requirePaymentProofGuest: editFormData.requirePaymentProofGuest,
+        paymentInstructions: editFormData.paymentInstructions || null,
       });
       // Get existing categories from backend
       const existingCategories = await api.get(`/tournaments/${id}/categories`);
@@ -1076,6 +1104,14 @@ const TournamentDetails: React.FC = () => {
                       registrationDeadline:
                         tournament.registrationDeadline.slice(0, 16),
                       maxPlayers: tournament.maxPlayers?.toString() || "",
+                      registrationFee:
+                        tournament.registrationFee?.toString() || "",
+                      requirePaymentProofClub:
+                        tournament.requirePaymentProofClub ?? false,
+                      requirePaymentProofGuest:
+                        tournament.requirePaymentProofGuest ?? false,
+                      paymentInstructions:
+                        tournament.paymentInstructions || "",
                     });
                     setEditCategories(
                       tournament.categories?.map((c) => ({
@@ -1361,6 +1397,109 @@ const TournamentDetails: React.FC = () => {
                   className="w-full rounded-lg border border-white/10 bg-[#061D23]/60 p-2.5 text-sm text-white placeholder-white/20 transition focus:border-[#4AEEFF] focus:outline-none"
                   min="2"
                 />
+              </div>
+
+              <div className="mt-4 border-t border-white/10 pt-5">
+                <h3 className="text-base font-black uppercase tracking-wider text-white">
+                  Payment & Registration
+                </h3>
+                <p className="mt-1 text-xs text-white/50">
+                  Configure registration fees and payment proof requirements.
+                </p>
+
+                <div className="mt-4 space-y-4">
+                  <div>
+                    <label className="mb-1.5 block text-xs font-black uppercase tracking-wider text-white/70">
+                      Registration Fee (LKR)
+                    </label>
+                    <input
+                      type="number"
+                      value={editFormData.registrationFee}
+                      onChange={(e) =>
+                        setEditFormData({
+                          ...editFormData,
+                          registrationFee: e.target.value,
+                        })
+                      }
+                      min="0"
+                      step="0.01"
+                      className="w-full rounded-lg border border-white/10 bg-[#061D23]/60 p-2.5 text-sm text-white placeholder-white/20 transition focus:border-[#4AEEFF] focus:outline-none"
+                      placeholder="Leave empty if no payment is required"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-1.5 block text-xs font-black uppercase tracking-wider text-white/70">
+                      Require Payment Proof From
+                    </label>
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                      <label className="flex cursor-pointer items-center gap-3 rounded-lg border border-white/10 bg-[#061D23]/40 p-4 transition-colors hover:border-[#4AEEFF]/40">
+                        <input
+                          type="checkbox"
+                          checked={editFormData.requirePaymentProofClub}
+                          onChange={(e) =>
+                            setEditFormData({
+                              ...editFormData,
+                              requirePaymentProofClub: e.target.checked,
+                            })
+                          }
+                          className="h-4 w-4 accent-[#4AEEFF]"
+                        />
+                        <div>
+                          <p className="text-sm font-bold text-white">
+                            Club Players
+                          </p>
+                          <p className="text-xs text-white/50">
+                            Club members must upload payment proof
+                          </p>
+                        </div>
+                      </label>
+
+                      <label className="flex cursor-pointer items-center gap-3 rounded-lg border border-white/10 bg-[#061D23]/40 p-4 transition-colors hover:border-[#4AEEFF]/40">
+                        <input
+                          type="checkbox"
+                          checked={editFormData.requirePaymentProofGuest}
+                          onChange={(e) =>
+                            setEditFormData({
+                              ...editFormData,
+                              requirePaymentProofGuest: e.target.checked,
+                            })
+                          }
+                          className="h-4 w-4 accent-[#4AEEFF]"
+                        />
+                        <div>
+                          <p className="text-sm font-bold text-white">
+                            Guest Players
+                          </p>
+                          <p className="text-xs text-white/50">
+                            Guest players must upload payment proof
+                          </p>
+                        </div>
+                      </label>
+                    </div>
+                  </div>
+
+                  {(editFormData.requirePaymentProofClub ||
+                    editFormData.requirePaymentProofGuest) && (
+                    <div>
+                      <label className="mb-1.5 block text-xs font-black uppercase tracking-wider text-white/70">
+                        Payment Instructions
+                      </label>
+                      <textarea
+                        value={editFormData.paymentInstructions}
+                        onChange={(e) =>
+                          setEditFormData({
+                            ...editFormData,
+                            paymentInstructions: e.target.value,
+                          })
+                        }
+                        rows={4}
+                        className="w-full rounded-lg border border-white/10 bg-[#061D23]/60 p-2.5 text-sm text-white placeholder-white/20 transition focus:border-[#4AEEFF] focus:outline-none"
+                        placeholder="Explain how players should pay and upload their receipt."
+                      />
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Categories Section */}

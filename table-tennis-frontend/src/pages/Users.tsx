@@ -1413,7 +1413,7 @@ const ManagePermissionsModal: React.FC<ManagePermissionsModalProps> = ({
     try {
       setLoading(true);
       const res = await api.get(`/users/${targetUser.id}/permissions`);
-      setSelectedPermissions(res.data.data || []);
+      setSelectedPermissions(res.data.data?.permissions || []);
     } catch (err: any) {
       toast.error(err.response?.data?.message || "Failed to load permissions");
     } finally {
@@ -1446,20 +1446,23 @@ const ManagePermissionsModal: React.FC<ManagePermissionsModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-md animate-fadeIn">
-      <div className="w-full max-w-xl rounded-2xl border border-[#4AEEFF]/30 bg-[#061D23]/95 p-6 sm:p-8 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.8)] backdrop-blur-2xl space-y-6 max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between border-b border-white/10 pb-4">
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/70 p-4 pt-24 backdrop-blur-sm animate-fadeIn sm:pt-28">
+      <div className="w-full max-w-4xl rounded-2xl border border-white/20 bg-[#061D23]/90 p-6 text-white shadow-[0_25px_60px_-15px_rgba(0,0,0,0.8)] backdrop-blur-2xl sm:p-8">
+        <div className="mb-6 flex items-center justify-between border-b border-white/10 pb-4">
           <div>
-            <h3 className="text-xl font-black uppercase tracking-widest text-white flex items-center gap-2">
-              🔑 Admin Permissions
-            </h3>
-            <p className="text-xs text-[#4AEEFF] font-mono mt-1">
+            <div className="mb-2 flex items-center gap-3">
+              <span className="h-6 w-2.5 rounded-full bg-[#4AEEFF] shadow-[0_0_10px_#4AEEFF]" />
+              <h3 className="text-xl font-black uppercase tracking-widest text-white sm:text-2xl">
+                Admin Permissions
+              </h3>
+            </div>
+            <p className="mt-1 text-xs font-mono text-[#4AEEFF]">
               Configure access scope for: <span className="font-bold text-white">{targetUser.firstName} {targetUser.lastName}</span> ({targetUser.email})
             </p>
           </div>
           <button
             onClick={onClose}
-            className="text-white/50 hover:text-white transition-colors p-1"
+            className="rounded-lg border border-white/10 p-2 text-white/50 transition-colors hover:border-[#4AEEFF]/40 hover:text-white"
           >
             <XMarkIcon className="w-5 h-5" />
           </button>
@@ -1471,22 +1474,27 @@ const ManagePermissionsModal: React.FC<ManagePermissionsModalProps> = ({
             <p className="text-xs font-mono text-[#4AEEFF] mt-3">Loading permissions...</p>
           </div>
         ) : (
-          <div className="space-y-3">
-            <p className="text-xs text-white/70 uppercase tracking-wider font-bold">
-              Select module access permissions:
-            </p>
+          <div className="space-y-5">
+            <div className="rounded-lg border border-[#4AEEFF]/20 bg-[#4AEEFF]/5 p-4">
+              <p className="text-xs font-black uppercase tracking-wider text-[#4AEEFF]">
+                Module Access Configuration
+              </p>
+              <p className="mt-1 text-xs text-white/60">
+                Select the system areas this administrator can manage.
+              </p>
+            </div>
 
-            <div className="grid grid-cols-1 gap-2.5">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               {ALL_PERMISSIONS.map((perm) => {
                 const isChecked = selectedPermissions.includes(perm.id);
                 return (
                   <div
                     key={perm.id}
                     onClick={() => togglePermission(perm.id)}
-                    className={`flex items-start gap-3 p-3 rounded-xl border transition-all cursor-pointer ${
+                    className={`flex cursor-pointer items-start gap-3 rounded-xl border p-4 transition-all ${
                       isChecked
-                        ? "bg-[#4AEEFF]/10 border-[#4AEEFF] text-white"
-                        : "bg-white/5 border-white/10 text-white/60 hover:bg-white/10"
+                        ? "border-[#4AEEFF] bg-[#4AEEFF]/10 text-white"
+                        : "border-white/10 bg-[#061D23]/60 text-white/60 hover:border-[#4AEEFF]/40 hover:bg-[#061D23]/80"
                     }`}
                   >
                     <input
@@ -1496,10 +1504,10 @@ const ManagePermissionsModal: React.FC<ManagePermissionsModalProps> = ({
                       className="mt-0.5 h-4 w-4 rounded border-white/20 bg-transparent text-[#4AEEFF] focus:ring-0 focus:ring-offset-0 cursor-pointer"
                     />
                     <div>
-                      <span className="font-bold text-sm block leading-tight">
+                      <span className="block text-sm font-bold leading-tight">
                         {perm.name}
                       </span>
-                      <span className="text-xs text-white/50 block mt-0.5 font-mono">
+                      <span className="mt-1 block text-xs font-mono text-white/50">
                         {perm.desc}
                       </span>
                     </div>
@@ -1510,12 +1518,12 @@ const ManagePermissionsModal: React.FC<ManagePermissionsModalProps> = ({
           </div>
         )}
 
-        <div className="flex gap-3 pt-2 border-t border-white/10">
+        <div className="mt-6 flex flex-col-reverse gap-3 border-t border-white/10 pt-5 sm:flex-row">
           <button
             type="button"
             onClick={onClose}
             disabled={saving}
-            className="flex-1 rounded-xl border border-white/20 bg-white/5 py-3 text-xs font-black uppercase tracking-wider text-white transition-all hover:bg-white/10 disabled:opacity-50"
+            className="flex-1 rounded-lg border border-white/20 bg-transparent py-3 text-xs font-black uppercase tracking-wider text-[#4AEEFF] transition-all hover:bg-white/5 disabled:opacity-50"
           >
             Cancel
           </button>
@@ -1523,7 +1531,7 @@ const ManagePermissionsModal: React.FC<ManagePermissionsModalProps> = ({
             type="button"
             onClick={handleSave}
             disabled={saving || loading}
-            className="flex-1 rounded-xl bg-[#4AEEFF] py-3 text-xs font-black uppercase tracking-wider text-[#061D23] transition-all hover:bg-white disabled:opacity-50 font-bold shadow-lg"
+            className="flex-1 rounded-lg bg-[#4AEEFF] py-3 text-xs font-black uppercase tracking-wider text-[#061D23] font-bold shadow-lg transition-all hover:bg-white disabled:opacity-50"
           >
             {saving ? "Saving..." : "Save Permissions"}
           </button>

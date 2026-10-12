@@ -369,6 +369,27 @@ if (teamRegistrations.length > 0) {
   });
 }
 
+    try {
+      const admins = await prisma.user.findMany({
+        where: { role: { in: ['SUPER_ADMIN', 'ADMIN'] } },
+        select: { id: true },
+      });
+
+      if (admins.length > 0) {
+        const playerName = `${paymentProof.player.firstName} ${paymentProof.player.lastName}`.trim();
+        await prisma.notification.createMany({
+          data: admins.map((admin) => ({
+            userId: admin.id,
+            type: 'PAYMENT_VERIFICATION_REQUEST',
+            title: 'Payment Verification Request',
+            message: `${playerName} submitted payment proof for ${paymentProof.tournament.name}.`,
+          })),
+        });
+      }
+    } catch (error) {
+      console.error('Failed to notify admins about payment verification request:', error);
+    }
+
     return paymentProof;
   }
   async getPendingPaymentProofs() {

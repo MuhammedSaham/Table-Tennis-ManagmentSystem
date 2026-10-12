@@ -58,6 +58,7 @@ if (existingRequest) {
         },
     });
 
+    await this.notifyAdmins(playerProfile.userId);
     return request;
 }
 
@@ -69,7 +70,37 @@ if (existingRequest) {
             },
         });
 
+        await this.notifyAdmins(playerProfile.userId);
         return request;
+    }
+
+    private async notifyAdmins(playerId: string) {
+        try {
+            const [player, admins] = await Promise.all([
+                prisma.user.findUnique({
+                    where: { id: playerId },
+                    select: { firstName: true, lastName: true },
+                }),
+                prisma.user.findMany({
+                    where: { role: { in: ['SUPER_ADMIN', 'ADMIN'] } },
+                    select: { id: true },
+                }),
+            ]);
+
+            if (admins.length === 0) return;
+
+            const playerName = `${player?.firstName || ''} ${player?.lastName || ''}`.trim();
+            await prisma.notification.createMany({
+                data: admins.map((admin) => ({
+                    userId: admin.id,
+                    type: 'CLUB_MEMBERSHIP_REQUEST',
+                    title: 'New Club Membership Request',
+                    message: `${playerName || 'A player'} has submitted a club membership request.`,
+                })),
+            });
+        } catch (error) {
+            console.error('Failed to notify admins about club membership request:', error);
+        }
     }
         // Player gets their own club membership status
     async getMyMembershipStatus(userId: string) {
