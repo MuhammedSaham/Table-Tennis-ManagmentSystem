@@ -1,7 +1,71 @@
 import prisma from '../config/database';
 import { AppError } from '../utils/AppError';
+import bcrypt from 'bcrypt';
+import { config } from '../config/env';
 
 export class UserService {
+    async createUser(data: {
+        email: string;
+        password: string;
+        firstName: string;
+        lastName: string;
+        phone?: string;
+        role: 'ADMIN' | 'REFEREE' | 'PLAYER';
+        playerProfile?: {
+            dateOfBirth?: Date;
+            skillLevel?: string;
+            clubAffiliation?: string;
+            gender?: 'MALE' | 'FEMALE';
+            isClubMember?: boolean;
+        };
+        refereeProfile?: {
+            certification?: string;
+            experienceYears?: number;
+        };
+        adminProfile?: {
+            department?: string;
+        };
+    }) {
+        const existingUser = await prisma.user.findUnique({ where: { email: data.email } });
+        if (existingUser) {
+            throw new AppError('Email already exists', 400);
+        }
+
+        const password = await bcrypt.hash(data.password, config.BCRYPT_SALT_ROUNDS);
+        const user = await prisma.$transaction(async (tx) => {
+            const createdUser = await tx.user.create({
+                data: {
+                    email: data.email,
+                    password,
+                    firstName: data.firstName,
+                    lastName: data.lastName,
+                    phone: data.phone,
+                    role: data.role,
+                    isSuperAdmin: false,
+                    adminRequestStatus: data.role === 'ADMIN' ? 'APPROVED' : 'NONE',
+                    ...(data.playerProfile
+                        ? { playerProfile: { create: data.playerProfile } }
+                        : {}),
+                    ...(data.refereeProfile
+                        ? { refereeProfile: { create: data.refereeProfile } }
+                        : {}),
+                    ...(data.adminProfile
+                        ? { adminProfile: { create: data.adminProfile } }
+                        : {}),
+                },
+                include: {
+                    playerProfile: true,
+                    refereeProfile: true,
+                    adminProfile: true,
+                },
+            });
+            return createdUser;
+        });
+
+        const { password: _password, ...safeUser } = user;
+        return safeUser;
+    }
+
     // Get user profile by ID
     async getUserProfile(userId: string) {
         const user = await prisma.user.findUnique({

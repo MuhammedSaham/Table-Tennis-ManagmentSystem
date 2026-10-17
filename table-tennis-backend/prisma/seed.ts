@@ -16,6 +16,7 @@ async function main() {
       email: 'admin@tabletennis.com',
     },
     update: {
+      password: adminPassword,
       role: 'SUPER_ADMIN',
       isSuperAdmin: true,
     },
@@ -63,6 +64,7 @@ async function main() {
       email: 'referee@tabletennis.com',
     },
     update: {
+      password: refereePassword,
       role: 'REFEREE',
     },
     create: {

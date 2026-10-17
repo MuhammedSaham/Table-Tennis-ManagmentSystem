@@ -25,6 +25,11 @@ export const getAllUsers = catchAsync(async (req: Request, res: Response) => {
   sendResponse(res, 200, 'Users retrieved successfully', users);
 });
 
+export const createUser = catchAsync(async (req: Request, res: Response) => {
+  const user = await userService.createUser(req.body);
+  sendResponse(res, 201, 'User created successfully', user);
+});
+
 // Get user by ID (Admin only)
 export const getUserById = catchAsync(async (req: Request, res: Response) => {
   const { id } = req.params;

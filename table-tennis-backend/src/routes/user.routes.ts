@@ -6,6 +6,7 @@ import {
     getMyProfile,
     updateMyProfile,
     getAllUsers,
+    createUser,
     getUserById,
     updateUserRole,
     getPublicProfile,
@@ -18,7 +19,7 @@ import {
     getUserPermissions,
     updateUserPermissions,
 } from '../controllers/user.controller';
-import { updateProfileSchema } from '../validations/user.validation';
+import { updateProfileSchema, createUserSchema } from '../validations/user.validation';
 import { upload } from '../middleware/upload.middleware';
 
 const router = Router();
@@ -41,6 +42,7 @@ router.patch('/profile', validate(updateProfileSchema), updateMyProfile);
 
 // User management & permission routes
 router.get('/', hasPermission('MANAGE_USERS'), getAllUsers);
+router.post('/', isSuperAdmin, validate(createUserSchema), createUser);
 router.get('/:id/permissions', isSuperAdmin, getUserPermissions);
 router.put('/:id/permissions', isSuperAdmin, updateUserPermissions);
 router.get('/:id', hasPermission('MANAGE_USERS'), getUserById);

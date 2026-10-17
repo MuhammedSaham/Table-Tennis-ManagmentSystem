@@ -41,6 +41,8 @@ const Users: React.FC = () => {
   const [generatedPassword, setGeneratedPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [newPlayer, setNewPlayer] = useState({
+    role: "PLAYER" as "PLAYER" | "REFEREE" | "ADMIN",
+    isClubMember: true,
     email: "",
     firstName: "",
     lastName: "",
@@ -210,6 +212,8 @@ const Users: React.FC = () => {
     setCreatedPlayerData(null);
     setGeneratedPassword(generateRandomPassword());
     setNewPlayer({
+      role: "PLAYER",
+      isClubMember: true,
       email: "",
       firstName: "",
       lastName: "",
@@ -233,21 +237,27 @@ const Users: React.FC = () => {
         firstName: newPlayer.firstName,
         lastName: newPlayer.lastName,
         phone: newPlayer.phone,
-        role: "PLAYER",
-        playerProfile: {
+        role: newPlayer.role,
+        ...(newPlayer.role === "PLAYER" && { playerProfile: {
           gender: newPlayer.gender,
           skillLevel: newPlayer.skillLevel,
           clubAffiliation: newPlayer.clubAffiliation,
           dateOfBirth: newPlayer.dateOfBirth
             ? new Date(newPlayer.dateOfBirth)
             : undefined,
-          isClubMember: true,
-        },
+          isClubMember: newPlayer.isClubMember,
+        }}),
+        ...(newPlayer.role === "REFEREE" && {
+          refereeProfile: { certification: "National Level", experienceYears: 0 },
+        }),
+        ...(newPlayer.role === "ADMIN" && {
+          adminProfile: { department: "Tournament Management" },
+        }),
       };
 
-      await api.post("/auth/register", playerData);
+      await api.post("/users", playerData);
       toast.success(
-        `Player ${newPlayer.firstName} ${newPlayer.lastName} added successfully!`,
+        `${newPlayer.role === "PLAYER" ? "Player" : newPlayer.role === "REFEREE" ? "Referee" : "Admin"} ${newPlayer.firstName} ${newPlayer.lastName} added successfully!`,
       );
 
       setCreatedPlayerData({
@@ -338,7 +348,7 @@ const Users: React.FC = () => {
           className="flex items-center justify-center gap-2 rounded-lg bg-[#4AEEFF] px-5 py-3 text-xs font-black uppercase tracking-wider text-[#061D23] transition-all duration-200 hover:bg-white self-start sm:self-center"
         >
           <PlusCircleIcon className="w-4 h-4 stroke-[2.5]" />
-          Add Player
+          Add User
         </button>
       </header>
 
@@ -660,9 +670,6 @@ const Users: React.FC = () => {
                             const canChangeRole =
                               currentIsSuperAdmin || userItem.role !== "ADMIN";
 
-                            // Guest players are users who are not club members
-                            const isGuestPlayer = !userItem.isClubMember;
-
                             return canChangeRole ? (
                               <select
                                 value={userItem.role}
@@ -673,7 +680,7 @@ const Users: React.FC = () => {
                               >
                                 <option value="PLAYER">Player</option>
                                 <option value="REFEREE">Referee</option>
-                                {!isGuestPlayer && currentIsSuperAdmin && (
+                                {currentIsSuperAdmin && (
                                   <option value="ADMIN">Admin</option>
                                 )}
                               </select>
@@ -971,10 +978,10 @@ const Users: React.FC = () => {
                 </div>
                 <div>
                   <h2 className="text-2xl font-black uppercase tracking-widest text-white">
-                    Player Created Successfully!
+                    User Created Successfully!
                   </h2>
                   <p className="text-sm text-[#4AEEFF] uppercase tracking-wider mt-1">
-                    Save or share the login credentials with the player
+                    Save or share the login credentials with the new user
                   </p>
                 </div>
 
@@ -1046,14 +1053,46 @@ const Users: React.FC = () => {
             ) : (
               <>
                 <h2 className="text-xl sm:text-2xl font-black uppercase tracking-widest text-white mb-1">
-                  Register Profile
+                  Add User
                 </h2>
                 <p className="text-sm text-[#4AEEFF] uppercase tracking-wider mb-6">
-                  Create an operational table tennis player record
+                  Create a player, referee, or administrator account
                 </p>
 
                 <form onSubmit={handleAddPlayer} className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-black uppercase tracking-wider text-white/70 mb-1.5">
+                        Account Type *
+                      </label>
+                      <select
+                        value={
+                          newPlayer.role === "PLAYER"
+                            ? newPlayer.isClubMember
+                              ? "CLUB_PLAYER"
+                              : "GUEST_PLAYER"
+                            : newPlayer.role
+                        }
+                        onChange={(e) =>
+                          setNewPlayer({
+                            ...newPlayer,
+                            role:
+                              e.target.value === "CLUB_PLAYER" ||
+                              e.target.value === "GUEST_PLAYER"
+                                ? "PLAYER"
+                                : (e.target.value as "REFEREE" | "ADMIN"),
+                            isClubMember: e.target.value === "CLUB_PLAYER",
+                          })
+                        }
+                        className="w-full rounded-lg border border-white/10 bg-[#061D23] p-2.5 text-sm text-white focus:border-[#4AEEFF] focus:outline-none"
+                      >
+                        <option value="CLUB_PLAYER">Club Player</option>
+                        <option value="GUEST_PLAYER">Guest Player</option>
+                        <option value="REFEREE">Referee</option>
+                        <option value="ADMIN">Admin</option>
+                      </select>
+                    </div>
+
                     <div>
                       <label className="block text-xs font-black uppercase tracking-wider text-white/70 mb-1.5">
                         First Name *
@@ -1139,7 +1178,7 @@ const Users: React.FC = () => {
                     </p>
                   </div>
 
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div>
                     <div>
                       <label className="block text-xs font-black uppercase tracking-wider text-white/70 mb-1.5">
                         Phone Number
@@ -1154,7 +1193,9 @@ const Users: React.FC = () => {
                         placeholder="e.g., 071-1234567"
                       />
                     </div>
+                  </div>
 
+                  {newPlayer.role === "PLAYER" && <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div>
                       <label className="block text-xs font-black uppercase tracking-wider text-white/70 mb-1.5">
                         Gender *
@@ -1165,7 +1206,7 @@ const Users: React.FC = () => {
                         onChange={(e) =>
                           setNewPlayer({ ...newPlayer, gender: e.target.value })
                         }
-                        required
+                        required={newPlayer.role === "PLAYER"}
                         className="w-full rounded-lg border border-white/10 bg-[#061D23] p-2.5 text-sm text-white focus:border-[#4AEEFF] focus:outline-none"
                       >
                         <option value="">Select Gender</option>
@@ -1190,9 +1231,9 @@ const Users: React.FC = () => {
                         className="w-full rounded-lg border border-white/10 bg-[#061D23]/60 p-2.5 text-sm text-white focus:border-[#4AEEFF] focus:outline-none [color-scheme:dark]"
                       />
                     </div>
-                  </div>
+                  </div>}
 
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  {newPlayer.role === "PLAYER" && <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div>
                       <label className="block text-xs font-black uppercase tracking-wider text-white/70 mb-1.5">
                         Skill Classification
@@ -1230,7 +1271,7 @@ const Users: React.FC = () => {
                         placeholder="e.g., City Table Tennis Club"
                       />
                     </div>
-                  </div>
+                  </div>}
 
                   <div className="flex gap-3 pt-4">
                     <button
@@ -1238,7 +1279,7 @@ const Users: React.FC = () => {
                       disabled={submitting}
                       className="flex-1 rounded-lg bg-[#4AEEFF] py-3 text-sm font-black uppercase tracking-widest text-[#061D23] transition-all hover:bg-white disabled:opacity-50"
                     >
-                      {submitting ? "Processing..." : "Add Player"}
+                      {submitting ? "Processing..." : "Add User"}
                     </button>
                     <button
                       type="button"
