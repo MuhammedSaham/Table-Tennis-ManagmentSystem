@@ -1626,7 +1626,8 @@ const KnockoutBracket: React.FC<KnockoutBracketProps> = ({
     }
   }, [matches]);
 
-  const isAdmin = user?.role === "ADMIN";
+  const isAdmin =
+    user?.role === "ADMIN" || user?.role === "SUPER_ADMIN";
   const isReferee = user?.role === "REFEREE";
 
   useEffect(() => {

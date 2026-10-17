@@ -36,7 +36,7 @@ export const AssignRefereeModal: React.FC<AssignRefereeModalProps> = ({
       const response = await api.get("/users?role=REFEREE");
       const allUsers = response.data.data.users || response.data.data;
       const filteredReferees = allUsers.filter(
-        (u: any) => u.role === "REFEREE" || u.role === "ADMIN"
+        (u: any) => u.role === "REFEREE"
       );
       setReferees(filteredReferees);
     } catch (error) {

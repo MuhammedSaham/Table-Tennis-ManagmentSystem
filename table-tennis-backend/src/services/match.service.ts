@@ -567,8 +567,13 @@ if (
 
   // Assign referee to match (Admin only)
   async assignReferee(adminId: string, matchId: string, refereeUserId: string) {
-    const admin = await prisma.adminProfile.findUnique({ where: { userId: adminId } });
-    if (!admin) throw new AppError('Only admins can assign referees', 403);
+    const admin = await prisma.user.findUnique({
+      where: { id: adminId },
+      select: { role: true },
+    });
+    if (!admin || (admin.role !== 'ADMIN' && admin.role !== 'SUPER_ADMIN')) {
+      throw new AppError('Only admins can assign referees', 403);
+    }
 
     const match = await prisma.match.findUnique({ where: { id: matchId } });
     if (!match) throw new AppError('Match not found', 404);
