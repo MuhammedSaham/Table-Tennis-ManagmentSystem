@@ -53,42 +53,104 @@ const Dashboard: React.FC = () => {
   const [doublesInvites, setDoublesInvites] = useState<DoublesInvite[]>([]);
   const [pendingMembershipCount, setPendingMembershipCount] =
     useState<number>(0);
-
   const [pendingPaymentCount, setPendingPaymentCount] = useState<number>(0);
-  const totalPendingRequests = pendingMembershipCount + pendingPaymentCount;
-  const [respondingInviteId, setRespondingInviteId] = useState<string | null>(
-    null,
-  );
+  const [pendingAdminCount, setPendingAdminCount] = useState<number>(0);
+
   const isPlayer = user?.role === "PLAYER";
   const isSuperAdmin = user?.role === "SUPER_ADMIN" || user?.isSuperAdmin;
   const isAdmin = isSuperAdmin || user?.role === "ADMIN";
+
+  const totalPendingRequests =
+    pendingMembershipCount +
+    pendingPaymentCount +
+    (isSuperAdmin ? pendingAdminCount : 0);
+
+  const [respondingInviteId, setRespondingInviteId] = useState<string | null>(
+    null,
+  );
 
   useEffect(() => {
     fetchNewTournaments();
     if (isPlayer) {
       fetchDoublesInvites();
     }
-    if (isSuperAdmin || (isAdmin && (hasPermission("MANAGE_CLUB_MEMBERSHIPS") || hasPermission("MANAGE_REGISTRATIONS")))) {
+    if (
+      isSuperAdmin ||
+      (isAdmin &&
+        (hasPermission("MANAGE_CLUB_MEMBERSHIPS") ||
+          hasPermission("MANAGE_REGISTRATIONS")))
+    ) {
       fetchPendingRequestsCount();
     }
   }, [user]);
 
   const fetchPendingRequestsCount = async () => {
     try {
-      const [membershipRes, paymentRes] = await Promise.all([
-        api.get("/club-membership/requests"),
-        api.get("/payment-proofs/pending"),
-      ]);
+      const canManageMemberships =
+        isSuperAdmin ||
+        hasPermission("MANAGE_CLUB_MEMBERSHIPS") ||
+        hasPermission("MANAGE_PLAYERS");
 
-      const pendingMembership =
-        membershipRes.data?.data?.filter(
-          (req: any) => req.status === "PENDING",
-        ) || [];
+      const canManagePayments =
+        isSuperAdmin || hasPermission("MANAGE_REGISTRATIONS");
 
-      const pendingPayments = paymentRes.data?.data || [];
+      const promises: Promise<any>[] = [];
 
-      setPendingMembershipCount(pendingMembership.length);
-      setPendingPaymentCount(pendingPayments.length);
+      if (canManageMemberships) {
+        promises.push(
+          api
+            .get("/club-membership/requests")
+            .then((res) => {
+              const pendingMembership =
+                res.data?.data?.filter(
+                  (req: any) => req.status === "PENDING",
+                ) || [];
+              setPendingMembershipCount(pendingMembership.length);
+            })
+            .catch((err) => {
+              console.error("Failed to fetch membership requests count", err);
+              setPendingMembershipCount(0);
+            }),
+        );
+      } else {
+        setPendingMembershipCount(0);
+      }
+
+      if (canManagePayments) {
+        promises.push(
+          api
+            .get("/payment-proofs/pending")
+            .then((res) => {
+              const pendingPayments = res.data?.data || [];
+              setPendingPaymentCount(pendingPayments.length);
+            })
+            .catch((err) => {
+              console.error("Failed to fetch payment requests count", err);
+              setPendingPaymentCount(0);
+            }),
+        );
+      } else {
+        setPendingPaymentCount(0);
+      }
+
+      if (isSuperAdmin) {
+        promises.push(
+          api
+            .get("/admin-requests/pending")
+            .then((res) => {
+              const pendingAdmins = res.data?.data || [];
+              setPendingAdminCount(pendingAdmins.length);
+            })
+            .catch((err) => {
+              console.error("Failed to fetch admin requests count", err);
+              setPendingAdminCount(0);
+            }),
+        );
+      } else {
+        setPendingAdminCount(0);
+      }
+
+      await Promise.all(promises);
     } catch (err) {
       console.error("Failed to fetch pending requests count", err);
     }
@@ -216,12 +278,17 @@ const Dashboard: React.FC = () => {
                   </h3>
 
                   <p className="text-xs text-white/70 leading-relaxed">
-                    Review membership requests and tournament payment
-                    verifications
+                    {isSuperAdmin
+                      ? "Review membership requests, tournament payments, and admin access requests"
+                      : "Review membership requests and tournament payment verifications"}
                   </p>
-                  <div className="mt-4 grid grid-cols-2 gap-3">
+                  <div
+                    className={`mt-4 grid gap-3 ${
+                      isSuperAdmin ? "grid-cols-3" : "grid-cols-2"
+                    }`}
+                  >
                     <div className="rounded-lg border border-white/10 bg-black/20 p-3">
-                      <p className="text-[10px] uppercase tracking-wider text-white/50">
+                      <p className="text-[10px] uppercase tracking-wider text-white/50 truncate">
                         Membership
                       </p>
                       <p className="mt-1 text-lg font-black text-[#4AEEFF]">
@@ -230,13 +297,24 @@ const Dashboard: React.FC = () => {
                     </div>
 
                     <div className="rounded-lg border border-white/10 bg-black/20 p-3">
-                      <p className="text-[10px] uppercase tracking-wider text-white/50">
+                      <p className="text-[10px] uppercase tracking-wider text-white/50 truncate">
                         Payment
                       </p>
                       <p className="mt-1 text-lg font-black text-[#4AEEFF]">
                         {pendingPaymentCount}
                       </p>
                     </div>
+
+                    {isSuperAdmin && (
+                      <div className="rounded-lg border border-white/10 bg-black/20 p-3">
+                        <p className="text-[10px] uppercase tracking-wider text-white/50 truncate">
+                          Admin
+                        </p>
+                        <p className="mt-1 text-lg font-black text-[#4AEEFF]">
+                          {pendingAdminCount}
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
 
