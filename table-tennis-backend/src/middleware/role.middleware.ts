@@ -73,7 +73,7 @@ export const isSuperAdmin = async (req: Request, res: Response, next: NextFuncti
         return next(new AppError('You are not logged in', 401));
     }
 
-    if (req.user.role === 'SUPER_ADMIN') {
+    if (req.user.role === 'SUPER_ADMIN' || req.user.isSuperAdmin) {
         return next();
     }
 
@@ -127,7 +127,7 @@ export const hasPermission = (...requiredPermissions: Permission[]) => {
         }
 
         // Requirement 1: SUPER_ADMIN must have permanent full access even without any records in AdminPermission
-        if (req.user.role === 'SUPER_ADMIN') {
+        if (req.user.role === 'SUPER_ADMIN' || req.user.isSuperAdmin) {
             return next();
         }
 

@@ -181,7 +181,7 @@ export class AuthService {
 
         // Compute permissions list
         let permissions: string[] = [];
-        if (user.role === 'SUPER_ADMIN') {
+        if (user.role === 'SUPER_ADMIN' || user.isSuperAdmin) {
             permissions = [
                 'MANAGE_USERS',
                 'MANAGE_PLAYERS',
@@ -255,7 +255,7 @@ export class AuthService {
             }
 
             let permissions: string[] = [];
-            if (user.role === 'SUPER_ADMIN') {
+            if (user.role === 'SUPER_ADMIN' || user.isSuperAdmin) {
                 permissions = [
                     'MANAGE_USERS',
                     'MANAGE_PLAYERS',
