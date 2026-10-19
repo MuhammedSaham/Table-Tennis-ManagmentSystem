@@ -6,18 +6,6 @@ import { sendResponse } from '../utils/sendResponse';
 
 // Create tournament (Admin only)
 export const createTournament = catchAsync(async (req: Request, res: Response) => {
-  const adminId = req.user!.id;
-  
-  
-  // Verify admin
-  const admin = await prisma.adminProfile.findUnique({
-    where: { userId: adminId },
-  });
-
-  if (!admin) {
-    throw new AppError('Only admins can create tournaments', 403);
-  }
-
   const { name, description, venue, startDate, endDate, registrationDeadline, maxPlayers,tournamentType,registrationFee,requirePaymentProofClub,requirePaymentProofGuest,paymentInstructions, } = req.body;
 
   // Validate dates
@@ -136,17 +124,7 @@ export const getTournamentById = catchAsync(async (req: Request, res: Response) 
 
 // Update tournament (Admin only)
 export const updateTournament = catchAsync(async (req: Request, res: Response) => {
-  const adminId = req.user!.id;
   const { id } = req.params;
-
-  // Verify admin
-  const admin = await prisma.adminProfile.findUnique({
-    where: { userId: adminId },
-  });
-
-  if (!admin) {
-    throw new AppError('Only admins can update tournaments', 403);
-  }
 
   const tournament = await prisma.tournament.findUnique({
     where: { id },
@@ -181,17 +159,7 @@ export const updateTournament = catchAsync(async (req: Request, res: Response) =
 
 // Delete tournament (Admin only)
 export const deleteTournament = catchAsync(async (req: Request, res: Response) => {
-  const adminId = req.user!.id;
   const { id } = req.params;
-
-  // Verify admin
-  const admin = await prisma.adminProfile.findUnique({
-    where: { userId: adminId },
-  });
-
-  if (!admin) {
-    throw new AppError('Only admins can delete tournaments', 403);
-  }
 
   const tournament = await prisma.tournament.findUnique({
     where: { id },
@@ -211,17 +179,7 @@ export const deleteTournament = catchAsync(async (req: Request, res: Response) =
 
 // Add category to tournament (Admin only)
 export const addCategory = catchAsync(async (req: Request, res: Response) => {
-  const adminId = req.user!.id;
   const { tournamentId } = req.params;
-
-  // Verify admin
-  const admin = await prisma.adminProfile.findUnique({
-    where: { userId: adminId },
-  });
-
-  if (!admin) {
-    throw new AppError('Only admins can add categories', 403);
-  }
 
   const tournament = await prisma.tournament.findUnique({
     where: { id: tournamentId },
@@ -284,17 +242,7 @@ export const getTournamentCategories = catchAsync(async (req: Request, res: Resp
 
 // Update category (Admin only)
 export const updateCategory = catchAsync(async (req: Request, res: Response) => {
-  const adminId = req.user!.id;
   const { categoryId } = req.params;
-
-  // Verify admin
-  const admin = await prisma.adminProfile.findUnique({
-    where: { userId: adminId },
-  });
-
-  if (!admin) {
-    throw new AppError('Only admins can update categories', 403);
-  }
 
   const category = await prisma.category.findUnique({
     where: { id: categoryId },
@@ -324,17 +272,7 @@ export const updateCategory = catchAsync(async (req: Request, res: Response) => 
 
 // Delete category (Admin only)
 export const deleteCategory = catchAsync(async (req: Request, res: Response) => {
-  const adminId = req.user!.id;
   const { categoryId } = req.params;
-
-  // Verify admin
-  const admin = await prisma.adminProfile.findUnique({
-    where: { userId: adminId },
-  });
-
-  if (!admin) {
-    throw new AppError('Only admins can delete categories', 403);
-  }
 
   const category = await prisma.category.findUnique({
     where: { id: categoryId },
