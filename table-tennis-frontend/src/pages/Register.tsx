@@ -141,11 +141,15 @@ const Register: React.FC = () => {
       }
       await register(registerData);
       if (profileImage) {
-        const formDataUpload = new FormData();
-        formDataUpload.append("profileImage", profileImage);
-        await api.post("/users/upload-profile-image", formDataUpload, {
-          headers: { "Content-Type": "multipart/form-data" },
-        });
+        try {
+          const formDataUpload = new FormData();
+          formDataUpload.append("profileImage", profileImage);
+          await api.post("/users/upload-profile-image", formDataUpload, {
+            headers: { "Content-Type": "multipart/form-data" },
+          });
+        } catch (imgErr) {
+          console.error("Profile image upload failed:", imgErr);
+        }
       }
       showSuccess("Welcome! Your account has been created successfully.");
       navigate("/app/dashboard");

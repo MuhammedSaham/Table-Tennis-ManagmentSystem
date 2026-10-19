@@ -22,6 +22,11 @@ model User {
   resetPasswordToken  String?   @unique
   resetPasswordExpiry DateTime?
 
+  // Email verification
+  isEmailVerified         Boolean   @default(false)
+  emailVerificationToken  String?   @unique
+  emailVerificationExpiry DateTime?
+
   isSuperAdmin Boolean @default(false)
 
   adminPermissions AdminPermission[]

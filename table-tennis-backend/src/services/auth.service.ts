@@ -5,7 +5,7 @@ import { Prisma } from '@prisma/client';
 import prisma from '../config/database';
 import { AppError } from '../utils/AppError';
 import { config } from '../config/env';
-import { sendPasswordResetEmail } from './email.service';
+import { sendPasswordResetEmail, sendVerificationEmail } from './email.service';
 
 export class AuthService {
     // Register new user with Admin Approval Workflow
@@ -62,7 +62,7 @@ export class AuthService {
                 finalRole = 'PLAYER'; // Temporarily set as PLAYER until approved
             }
 
-            // Create base user
+            // Create base user (auto-verified so club players can use the system immediately)
             const newUser = await tx.user.create({
                 data: {
                     email: userData.email,
@@ -73,6 +73,7 @@ export class AuthService {
                     role: finalRole as any,
                     adminRequestStatus,
                     adminRequestedAt,
+                    isEmailVerified: true,
                 },
             });
 
@@ -141,7 +142,7 @@ export class AuthService {
                 isEmailVerified: true,
             } as any,
             token,
-            message: 'Registration successful! Please check your email to verify your account.',
+            message: 'Registration successful! You can now log in.',
         };
     }
 
@@ -205,6 +206,7 @@ export class AuthService {
                 role: user.role,
                 adminRequestStatus: user.adminRequestStatus,
                 isSuperAdmin: user.role === 'SUPER_ADMIN' || user.isSuperAdmin,
+                isEmailVerified: user.isEmailVerified,
                 permissions,
                 profile,
             },
@@ -331,5 +333,78 @@ export class AuthService {
         });
 
         return { message: 'Password reset successful. You can now login with your new password.' };
+    }
+
+    // Verify email with token
+    async verifyEmail(token: string) {
+        if (!token) {
+            throw new AppError('Verification token is required', 400);
+        }
+
+        const user = await prisma.user.findFirst({
+            where: {
+                emailVerificationToken: token,
+                OR: [
+                    { emailVerificationExpiry: null },
+                    { emailVerificationExpiry: { gt: new Date() } },
+                ],
+            },
+        });
+
+        if (!user) {
+            throw new AppError('Invalid or expired verification link', 400);
+        }
+
+        const updatedUser = await prisma.user.update({
+            where: { id: user.id },
+            data: {
+                isEmailVerified: true,
+                emailVerificationToken: null,
+                emailVerificationExpiry: null,
+            },
+        });
+
+        return {
+            message: 'Email verified successfully! You can now log in.',
+            user: {
+                id: updatedUser.id,
+                email: updatedUser.email,
+                firstName: updatedUser.firstName,
+                lastName: updatedUser.lastName,
+            },
+        };
+    }
+
+    // Resend verification email
+    async resendVerification(email: string) {
+        if (!email) {
+            throw new AppError('Email is required', 400);
+        }
+
+        const user = await prisma.user.findUnique({
+            where: { email },
+        });
+
+        if (!user) {
+            return { message: 'If that email is registered, a verification link has been sent.' };
+        }
+
+        if (user.isEmailVerified) {
+            throw new AppError('This email is already verified. You can log in directly.', 400);
+        }
+
+        const token = crypto.randomBytes(32).toString('hex');
+        const expiry = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+        await prisma.user.update({
+            where: { id: user.id },
+            data: {
+                emailVerificationToken: token,
+                emailVerificationExpiry: expiry,
+            },
+        });
+
+        await sendVerificationEmail(email, token, user.firstName);
+        return { message: 'Verification email sent! Please check your inbox.' };
     }
 }

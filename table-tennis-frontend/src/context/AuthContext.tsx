@@ -23,6 +23,7 @@ export interface User {
   isSuperAdmin: boolean;
   adminRequestStatus?: string;
   permissions?: Permission[];
+  isEmailVerified?: boolean;
 }
 
 interface AuthContextType {

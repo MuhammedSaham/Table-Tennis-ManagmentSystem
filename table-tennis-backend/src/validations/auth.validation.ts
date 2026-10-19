@@ -77,3 +77,10 @@ export const resetPasswordSchema = z.object({
       .regex(/[0-9]/, 'Password must contain at least one number'),
   }),
 });
+
+// Resend verification validation
+export const resendVerificationSchema = z.object({
+  body: z.object({
+    email: z.string().email('Invalid email format'),
+  }),
+});

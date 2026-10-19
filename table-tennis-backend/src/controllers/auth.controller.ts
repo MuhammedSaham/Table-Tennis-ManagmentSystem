@@ -39,3 +39,17 @@ export const resetPassword = catchAsync(async (req: Request, res: Response) => {
   const result = await authService.resetPassword(token, password);
   sendResponse(res, 200, result.message);
 });
+
+// Verify email
+export const verifyEmail = catchAsync(async (req: Request, res: Response) => {
+  const token = (req.query.token as string) || req.body.token;
+  const result = await authService.verifyEmail(token);
+  sendResponse(res, 200, result.message, result.user);
+});
+
+// Resend verification email
+export const resendVerification = catchAsync(async (req: Request, res: Response) => {
+  const { email } = req.body;
+  const result = await authService.resendVerification(email);
+  sendResponse(res, 200, result.message);
+});
