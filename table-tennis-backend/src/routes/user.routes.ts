@@ -42,7 +42,7 @@ router.patch('/profile', validate(updateProfileSchema), updateMyProfile);
 
 // User management & permission routes
 router.get('/', hasPermission('MANAGE_USERS'), getAllUsers);
-router.post('/', isSuperAdmin, validate(createUserSchema), createUser);
+router.post('/', hasPermission('MANAGE_USERS'), validate(createUserSchema), createUser);
 router.get('/:id/permissions', isSuperAdmin, getUserPermissions);
 router.put('/:id/permissions', isSuperAdmin, updateUserPermissions);
 router.get('/:id', hasPermission('MANAGE_USERS'), getUserById);
