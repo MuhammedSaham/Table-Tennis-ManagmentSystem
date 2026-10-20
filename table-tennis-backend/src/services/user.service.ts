@@ -1,7 +1,71 @@
 import prisma from '../config/database';
 import { AppError } from '../utils/AppError';
+import bcrypt from 'bcrypt';
+import { config } from '../config/env';
 
 export class UserService {
+    async createUser(data: {
+        email: string;
+        password: string;
+        firstName: string;
+        lastName: string;
+        phone?: string;
+        role: 'ADMIN' | 'REFEREE' | 'PLAYER';
+        playerProfile?: {
+            dateOfBirth?: Date;
+            skillLevel?: string;
+            clubAffiliation?: string;
+            gender?: 'MALE' | 'FEMALE';
+            isClubMember?: boolean;
+        };
+        refereeProfile?: {
+            certification?: string;
+            experienceYears?: number;
+        };
+        adminProfile?: {
+            department?: string;
+        };
+    }) {
+        const existingUser = await prisma.user.findUnique({ where: { email: data.email } });
+        if (existingUser) {
+            throw new AppError('Email already exists', 400);
+        }
+
+        const password = await bcrypt.hash(data.password, config.BCRYPT_SALT_ROUNDS);
+        const user = await prisma.$transaction(async (tx) => {
+            const createdUser = await tx.user.create({
+                data: {
+                    email: data.email,
+                    password,
+                    firstName: data.firstName,
+                    lastName: data.lastName,
+                    phone: data.phone,
+                    role: data.role,
+                    isSuperAdmin: false,
+                    adminRequestStatus: data.role === 'ADMIN' ? 'APPROVED' : 'NONE',
+                    ...(data.playerProfile
+                        ? { playerProfile: { create: data.playerProfile } }
+                        : {}),
+                    ...(data.refereeProfile
+                        ? { refereeProfile: { create: data.refereeProfile } }
+                        : {}),
+                    ...(data.adminProfile
+                        ? { adminProfile: { create: data.adminProfile } }
+                        : {}),
+                },
+                include: {
+                    playerProfile: true,
+                    refereeProfile: true,
+                    adminProfile: true,
+                },
+            });
+            return createdUser;
+        });
+
+        const { password: _password, ...safeUser } = user;
+        return safeUser;
+    }
+
     // Get user profile by ID
     async getUserProfile(userId: string) {
         const user = await prisma.user.findUnique({
@@ -10,6 +74,7 @@ export class UserService {
                 playerProfile: true,
                 refereeProfile: true,
                 adminProfile: true,
+                adminPermissions: true,
             },
         });
 
@@ -17,10 +82,32 @@ export class UserService {
             throw new AppError('User not found', 404);
         }
 
+        const allPermissions = [
+            'MANAGE_USERS',
+            'MANAGE_PLAYERS',
+            'MANAGE_REFEREES',
+            'MANAGE_TOURNAMENTS',
+            'MANAGE_REGISTRATIONS',
+            'MANAGE_MATCHES',
+            'MANAGE_RESULTS',
+            'MANAGE_RANKINGS',
+            'MANAGE_CLUB_MEMBERSHIPS',
+        ];
+
+        let permissions: string[] = [];
+        if (user.role === 'SUPER_ADMIN') {
+            permissions = allPermissions;
+        } else if (user.role === 'ADMIN') {
+            permissions = user.adminPermissions?.map((p) => p.permission) || [];
+        }
+
         // Remove password from response
         const { password, ...userWithoutPassword } = user;
 
-        return userWithoutPassword;
+        return {
+            ...userWithoutPassword,
+            permissions,
+        };
     }
 
     // Update user profile
@@ -37,7 +124,7 @@ export class UserService {
         };
     }) {
         // Update base user
-        const updatedUser = await prisma.user.update({
+        await prisma.user.update({
             where: { id: userId },
             data: {
                 firstName: data.firstName,
@@ -71,11 +158,34 @@ export class UserService {
                 playerProfile: true,
                 refereeProfile: true,
                 adminProfile: true,
+                adminPermissions: true,
             },
         });
 
+        const allPermissions = [
+            'MANAGE_USERS',
+            'MANAGE_PLAYERS',
+            'MANAGE_REFEREES',
+            'MANAGE_TOURNAMENTS',
+            'MANAGE_REGISTRATIONS',
+            'MANAGE_MATCHES',
+            'MANAGE_RESULTS',
+            'MANAGE_RANKINGS',
+            'MANAGE_CLUB_MEMBERSHIPS',
+        ];
+
+        let permissions: string[] = [];
+        if (freshUser!.role === 'SUPER_ADMIN') {
+            permissions = allPermissions;
+        } else if (freshUser!.role === 'ADMIN') {
+            permissions = freshUser!.adminPermissions?.map((p) => p.permission) || [];
+        }
+
         const { password, ...userWithoutPassword } = freshUser!;
-        return userWithoutPassword;
+        return {
+            ...userWithoutPassword,
+            permissions,
+        };
     }
 
     // Get all users (Admin only)
@@ -90,6 +200,11 @@ export class UserService {
                 phone: true,
                 createdAt: true,
                 isSuperAdmin: true,
+                adminPermissions: {
+                    select: {
+                        permission: true,
+                    },
+                },
                 playerProfile: {
                     select: {
                         ranking: true,
@@ -106,28 +221,48 @@ export class UserService {
             orderBy: { createdAt: 'desc' },
         });
 
-        // Transform the data to include ranking at root level for easier frontend access
-        const transformedUsers = users.map(user => ({
-            id: user.id,
-            email: user.email,
-            firstName: user.firstName,
-            lastName: user.lastName,
-            role: user.role,
-            phone: user.phone,
-            createdAt: user.createdAt,
-            isSuperAdmin: user.isSuperAdmin,
-            // Include player profile data at root level
-            ranking: user.playerProfile?.ranking || null,
-            rankingNote: user.playerProfile?.rankingNote || null,
-            skillLevel: user.playerProfile?.skillLevel || null,
-            clubAffiliation: user.playerProfile?.clubAffiliation || null,
-            dateOfBirth: user.playerProfile?.dateOfBirth || null,
-            isClubMember: user.playerProfile?.isClubMember ?? false,
-            // Keep original profiles if needed elsewhere
-            playerProfile: user.playerProfile,
-            refereeProfile: user.refereeProfile,
-            adminProfile: user.adminProfile,
-        }));
+        const allPermissions = [
+            'MANAGE_USERS',
+            'MANAGE_PLAYERS',
+            'MANAGE_REFEREES',
+            'MANAGE_TOURNAMENTS',
+            'MANAGE_REGISTRATIONS',
+            'MANAGE_MATCHES',
+            'MANAGE_RESULTS',
+            'MANAGE_RANKINGS',
+            'MANAGE_CLUB_MEMBERSHIPS',
+        ];
+
+        // Transform the data to include ranking and permissions at root level for easier frontend access
+        const transformedUsers = users.map(user => {
+            let permissions: string[] = [];
+            if (user.role === 'SUPER_ADMIN') {
+                permissions = allPermissions;
+            } else if (user.role === 'ADMIN') {
+                permissions = user.adminPermissions.map((p) => p.permission);
+            }
+
+            return {
+                id: user.id,
+                email: user.email,
+                firstName: user.firstName,
+                lastName: user.lastName,
+                role: user.role,
+                phone: user.phone,
+                createdAt: user.createdAt,
+                isSuperAdmin: user.role === 'SUPER_ADMIN' || user.isSuperAdmin,
+                permissions,
+                ranking: user.playerProfile?.ranking || null,
+                rankingNote: user.playerProfile?.rankingNote || null,
+                skillLevel: user.playerProfile?.skillLevel || null,
+                clubAffiliation: user.playerProfile?.clubAffiliation || null,
+                dateOfBirth: user.playerProfile?.dateOfBirth || null,
+                isClubMember: user.playerProfile?.isClubMember ?? false,
+                playerProfile: user.playerProfile,
+                refereeProfile: user.refereeProfile,
+                adminProfile: user.adminProfile,
+            };
+        });
 
         return transformedUsers;
     }
@@ -145,6 +280,11 @@ export class UserService {
                 phone: true,
                 createdAt: true,
                 isSuperAdmin: true,
+                adminPermissions: {
+                    select: {
+                        permission: true,
+                    },
+                },
                 playerProfile: {
                     select: {
                         ranking: true,
@@ -163,7 +303,25 @@ export class UserService {
             throw new AppError('User not found', 404);
         }
 
-        // Transform to include ranking at root level
+        const allPermissions = [
+            'MANAGE_USERS',
+            'MANAGE_PLAYERS',
+            'MANAGE_REFEREES',
+            'MANAGE_TOURNAMENTS',
+            'MANAGE_REGISTRATIONS',
+            'MANAGE_MATCHES',
+            'MANAGE_RESULTS',
+            'MANAGE_RANKINGS',
+            'MANAGE_CLUB_MEMBERSHIPS',
+        ];
+
+        let permissions: string[] = [];
+        if (user.role === 'SUPER_ADMIN') {
+            permissions = allPermissions;
+        } else if (user.role === 'ADMIN') {
+            permissions = user.adminPermissions.map((p) => p.permission);
+        }
+
         const transformedUser = {
             id: user.id,
             email: user.email,
@@ -172,7 +330,8 @@ export class UserService {
             role: user.role,
             phone: user.phone,
             createdAt: user.createdAt,
-            isSuperAdmin: user.isSuperAdmin,
+            isSuperAdmin: user.role === 'SUPER_ADMIN' || user.isSuperAdmin,
+            permissions,
             ranking: user.playerProfile?.ranking || null,
             rankingNote: user.playerProfile?.rankingNote || null,
             skillLevel: user.playerProfile?.skillLevel || null,
@@ -187,7 +346,7 @@ export class UserService {
     }
 
     // Update user role (Admin only)
-    async updateUserRole(userId: string, newRole: 'ADMIN' | 'REFEREE' | 'PLAYER') {
+    async updateUserRole(userId: string, newRole: 'SUPER_ADMIN' | 'ADMIN' | 'REFEREE' | 'PLAYER') {
         const user = await prisma.user.findUnique({
             where: { id: userId },
             include: {
@@ -201,10 +360,15 @@ export class UserService {
             throw new AppError('User not found', 404);
         }
 
+        // Prevent changing SUPER_ADMIN user role away from SUPER_ADMIN
+        if (user.role === 'SUPER_ADMIN' && newRole !== 'SUPER_ADMIN') {
+            throw new AppError('The Super Admin role cannot be changed', 400);
+        }
+
         // Update user role
         const updatedUser = await prisma.user.update({
             where: { id: userId },
-            data: { role: newRole },
+            data: { role: newRole, isSuperAdmin: newRole === 'SUPER_ADMIN' },
             select: {
                 id: true,
                 email: true,
@@ -223,7 +387,7 @@ export class UserService {
             await prisma.refereeProfile.create({
                 data: { userId },
             });
-        } else if (newRole === 'ADMIN' && !user.adminProfile) {
+        } else if ((newRole === 'ADMIN' || newRole === 'SUPER_ADMIN') && !user.adminProfile) {
             await prisma.adminProfile.create({
                 data: { userId, department: 'General' },
             });

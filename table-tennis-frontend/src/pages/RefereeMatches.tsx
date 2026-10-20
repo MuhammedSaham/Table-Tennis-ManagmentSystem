@@ -16,6 +16,8 @@ interface Match {
   round: string;
   matchNumber: number;
   scheduledTime: string;
+  startTime?: string | null;
+  endTime?: string | null;
   status: "SCHEDULED" | "ONGOING" | "COMPLETED" | "CANCELLED" | "WALKOVER";
   score: string | null;
   winnerId: string | null;
@@ -44,11 +46,36 @@ interface Match {
   isGroupMatch?: boolean;
 }
 
+const getMatchDurationMinutes = (match: Match): number | null => {
+  if (!match.startTime || !match.endTime) return null;
+
+  const start = new Date(match.startTime).getTime();
+  const end = new Date(match.endTime).getTime();
+
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end < start) {
+    return null;
+  }
+
+  return Math.round((end - start) / 60000);
+};
+
+const formatDuration = (minutes: number): string => {
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+
+  if (hours === 0) return `${remainingMinutes} min`;
+  if (remainingMinutes === 0) return `${hours} hr`;
+
+  return `${hours} hr ${remainingMinutes} min`;
+};
+
 const RefereeMatches: React.FC = () => {
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
-  const [filter, setFilter] = useState<"all" | "pending" | "completed">("pending");
+  const [filter, setFilter] = useState<"all" | "pending" | "completed">(
+    "pending",
+  );
   const [matchType, setMatchType] = useState<"knockout" | "group">("knockout");
   const [showRulesModal, setShowRulesModal] = useState(false);
 
@@ -67,7 +94,11 @@ const RefereeMatches: React.FC = () => {
     }
   };
 
-  const handleGroupMatchSave = async (matchId: string, games: GameScore[], bestOf: 3 | 5) => {
+  const handleGroupMatchSave = async (
+    matchId: string,
+    games: GameScore[],
+    bestOf: 3 | 5,
+  ) => {
     try {
       await api.patch(`/groups/group-matches/${matchId}`, { games, bestOf });
       toast.success("Score recorded successfully");
@@ -78,9 +109,17 @@ const RefereeMatches: React.FC = () => {
     }
   };
 
-  const handleKnockoutMatchSave = async (matchId: string, games: GameScore[], bestOf: 3 | 5) => {
+  const handleKnockoutMatchSave = async (
+    matchId: string,
+    games: GameScore[],
+    bestOf: 3 | 5,
+    startTime?: string,
+    endTime?: string,
+  ) => {
     const match = matches.find((m) => m.id === matchId);
-    const isDoubles = match?.category?.type === "DOUBLES" || (!!match?.team1 && !match?.player1);
+    const isDoubles =
+      match?.category?.type === "DOUBLES" ||
+      (!!match?.team1 && !match?.player1);
 
     const slot1Filled = isDoubles ? !!match?.team1 : !!match?.player1?.id;
     const slot2Filled = isDoubles ? !!match?.team2 : !!match?.player2?.id;
@@ -90,11 +129,13 @@ const RefereeMatches: React.FC = () => {
     }
 
     const wn = Math.ceil(bestOf / 2);
-    let p1W = 0, p2W = 0;
+    let p1W = 0,
+      p2W = 0;
     const parts: string[] = [];
     for (const g of games) {
       if (!g.p1 || !g.p2) continue;
-      const a = parseInt(g.p1), b = parseInt(g.p2);
+      const a = parseInt(g.p1),
+        b = parseInt(g.p2);
       parts.push(`${a}-${b}`);
       if (a > b) p1W++;
       else p2W++;
@@ -116,15 +157,46 @@ const RefereeMatches: React.FC = () => {
         : match!.team2!.id
       : undefined;
 
+    const matchDate = match?.scheduledTime
+      ? new Date(match.scheduledTime)
+      : new Date();
+
+    const toDateTime = (time?: string) => {
+      if (!time) return undefined;
+
+      const [hours, minutes] = time.split(":").map(Number);
+      const date = new Date(matchDate);
+      date.setHours(hours, minutes, 0, 0);
+
+      return date;
+    };
+
+    const startDate = toDateTime(startTime);
+    const endDate = toDateTime(endTime);
+
+    if (startDate && endDate && endDate < startDate) {
+      endDate.setDate(endDate.getDate() + 1);
+    }
+
+    const durationMinutes =
+      startDate && endDate
+        ? Math.round((endDate.getTime() - startDate.getTime()) / 60000)
+        : null;
+
     try {
       await api.patch(`/matches/${matchId}`, {
         score: parts.join(", "),
         winnerId,
         winnerTeamId,
         status: "COMPLETED",
-        endTime: new Date().toISOString(),
-        resultDetails: { bestOf },
+        ...(startDate ? { startTime: startDate.toISOString() } : {}),
+        ...(endDate ? { endTime: endDate.toISOString() } : {}),
+        resultDetails: {
+          bestOf,
+          ...(durationMinutes !== null ? { durationMinutes } : {}),
+        },
       });
+
       toast.success("Score saved successfully!");
       fetchAssignedMatches();
       setSelectedMatch(null);
@@ -150,9 +222,14 @@ const RefereeMatches: React.FC = () => {
   };
 
   const filteredMatches = matches.filter((m) => {
-    if (filter === "pending" && (m.status !== "SCHEDULED" && m.status !== "ONGOING")) return false;
+    if (
+      filter === "pending" &&
+      m.status !== "SCHEDULED" &&
+      m.status !== "ONGOING"
+    )
+      return false;
     if (filter === "completed" && m.status !== "COMPLETED") return false;
-    
+
     if (matchType === "knockout" && m.isGroupMatch) return false;
     if (matchType === "group" && !m.isGroupMatch) return false;
 
@@ -183,7 +260,7 @@ const RefereeMatches: React.FC = () => {
         <p className="mt-4 text-xs font-black uppercase tracking-[0.2em] text-[#4AEEFF]">
           Loading assigned matches...
         </p>
-      </div>
+      </div>,
     );
   }
 
@@ -200,6 +277,14 @@ const RefereeMatches: React.FC = () => {
     (m) => m.status === "SCHEDULED" || m.status === "ONGOING",
   ).length;
   const completedCount = matches.filter((m) => m.status === "COMPLETED").length;
+
+  const totalOfficiatingMinutes = matches.reduce((total, match) => {
+    if (match.status !== "COMPLETED") return total;
+
+    const duration = getMatchDurationMinutes(match);
+
+    return total + (duration ?? 0);
+  }, 0);
 
   const nextPendingMatch =
     matches.find((m) => m.status === "ONGOING") ||
@@ -235,7 +320,8 @@ const RefereeMatches: React.FC = () => {
             Referee Dashboard
           </h1>
           <p className="mt-1.5 text-xs text-slate-300 max-w-xl">
-            Inspect your assigned matches, manage court schedules, and enter official set scores.
+            Inspect your assigned matches, manage court schedules, and enter
+            official set scores.
           </p>
         </div>
 
@@ -257,16 +343,37 @@ const RefereeMatches: React.FC = () => {
           </button>
           <div className="flex gap-2.5">
             <div className="rounded-xl border border-white/10 bg-black/30 px-3.5 py-2.5 text-center min-w-[70px]">
-              <p className="text-lg sm:text-xl font-black text-[#4AEEFF]">{matches.length}</p>
-              <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Total</p>
+              <p className="text-lg sm:text-xl font-black text-[#4AEEFF]">
+                {matches.length}
+              </p>
+              <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">
+                Total
+              </p>
             </div>
             <div className="rounded-xl border border-amber-400/20 bg-amber-400/5 px-3.5 py-2.5 text-center min-w-[70px]">
-              <p className="text-lg sm:text-xl font-black text-amber-400">{pendingCount}</p>
-              <p className="text-[9px] font-bold uppercase tracking-wider text-amber-300/70">Pending</p>
+              <p className="text-lg sm:text-xl font-black text-amber-400">
+                {pendingCount}
+              </p>
+              <p className="text-[9px] font-bold uppercase tracking-wider text-amber-300/70">
+                Pending
+              </p>
             </div>
             <div className="rounded-xl border border-emerald-400/20 bg-emerald-400/5 px-3.5 py-2.5 text-center min-w-[70px]">
-              <p className="text-lg sm:text-xl font-black text-emerald-400">{completedCount}</p>
-              <p className="text-[9px] font-bold uppercase tracking-wider text-emerald-300/70">Completed</p>
+              <p className="text-lg sm:text-xl font-black text-emerald-400">
+                {completedCount}
+              </p>
+              <p className="text-[9px] font-bold uppercase tracking-wider text-emerald-300/70">
+                Completed
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-[#4AEEFF]/30 bg-[#4AEEFF]/10 px-3.5 py-2.5 text-center min-w-[110px]">
+              <p className="text-lg sm:text-xl font-black text-[#4AEEFF]">
+                {formatDuration(totalOfficiatingMinutes)}
+              </p>
+              <p className="text-[9px] font-bold uppercase tracking-wider text-[#4AEEFF]/80">
+                Officiating Time
+              </p>
             </div>
           </div>
         </div>
@@ -276,7 +383,7 @@ const RefereeMatches: React.FC = () => {
       {nextPendingMatch && (
         <section className="relative overflow-hidden rounded-[20px] border border-[#4AEEFF]/40 bg-gradient-to-r from-[#061D23]/95 via-[#0A2E36]/85 to-[#061D23]/95 p-6 shadow-[0_20px_50px_-10px_rgba(74,238,255,0.2)] backdrop-blur-xl">
           <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-[#4AEEFF] to-transparent shadow-[0_0_10px_#4AEEFF]" />
-          
+
           <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
             <div className="space-y-3 flex-1">
               <div className="flex items-center gap-2.5 flex-wrap">
@@ -285,7 +392,8 @@ const RefereeMatches: React.FC = () => {
                   Next To Officiate
                 </span>
                 <span className="px-2.5 py-0.5 rounded-md bg-white/10 text-white text-[10px] font-mono font-bold uppercase tracking-wider">
-                  Match #{nextPendingMatch.matchNumber} • {nextPendingMatch.round}
+                  Match #{nextPendingMatch.matchNumber} •{" "}
+                  {nextPendingMatch.round}
                 </span>
                 <span className="px-2.5 py-0.5 rounded-md bg-[#4AEEFF]/15 text-[#4AEEFF] text-[10px] font-black uppercase tracking-wider border border-[#4AEEFF]/30">
                   {nextPendingMatch.tournament?.name}
@@ -317,18 +425,26 @@ const RefereeMatches: React.FC = () => {
               </div>
 
               <div className="flex items-center gap-4 text-xs text-slate-300 font-mono flex-wrap">
-                <span>📍 {nextPendingMatch.tournament?.venue || "Main Court"}</span>
+                <span>
+                  📍 {nextPendingMatch.tournament?.venue || "Main Court"}
+                </span>
                 {nextPendingMatch.category && (
                   <>
                     <span>•</span>
-                    <span>{nextPendingMatch.category.name} ({nextPendingMatch.category.type})</span>
+                    <span>
+                      {nextPendingMatch.category.name} (
+                      {nextPendingMatch.category.type})
+                    </span>
                   </>
                 )}
                 {nextPendingMatch.scheduledTime && (
                   <>
                     <span>•</span>
                     <span>
-                      🕐 Scheduled: {new Date(nextPendingMatch.scheduledTime).toLocaleTimeString([], {
+                      🕐 Scheduled:{" "}
+                      {new Date(
+                        nextPendingMatch.scheduledTime,
+                      ).toLocaleTimeString([], {
                         hour: "2-digit",
                         minute: "2-digit",
                       })}
@@ -442,10 +558,15 @@ const RefereeMatches: React.FC = () => {
                   </button>
                 )}
                 <button
-                  onClick={() => setMatchType(matchType === "knockout" ? "group" : "knockout")}
+                  onClick={() =>
+                    setMatchType(
+                      matchType === "knockout" ? "group" : "knockout",
+                    )
+                  }
                   className="rounded-xl border border-[#4AEEFF]/30 bg-[#4AEEFF]/15 px-4 py-2 text-xs font-bold text-[#4AEEFF] hover:bg-[#4AEEFF] hover:text-[#061D23] transition-all"
                 >
-                  Switch to {matchType === "knockout" ? "Group Stage" : "Knockout Stage"}
+                  Switch to{" "}
+                  {matchType === "knockout" ? "Group Stage" : "Knockout Stage"}
                 </button>
               </div>
             )}
@@ -465,12 +586,16 @@ const RefereeMatches: React.FC = () => {
 
             const isP1Winner =
               match.status === "COMPLETED" &&
-              (match.winnerId === match.player1?.id || match.winnerId === match.team1?.id);
+              (match.winnerId === match.player1?.id ||
+                match.winnerId === match.team1?.id);
             const isP2Winner =
               match.status === "COMPLETED" &&
-              (match.winnerId === match.player2?.id || match.winnerId === match.team2?.id);
+              (match.winnerId === match.player2?.id ||
+                match.winnerId === match.team2?.id);
 
-            const scoreParts = match.score ? match.score.split(",").map((s) => s.trim()) : [];
+            const scoreParts = match.score
+              ? match.score.split(",").map((s) => s.trim())
+              : [];
 
             return (
               <section
@@ -563,12 +688,32 @@ const RefereeMatches: React.FC = () => {
                     </div>
                   )}
 
+                  {match.status === "COMPLETED" &&
+                    (() => {
+                      const duration = getMatchDurationMinutes(match);
+
+                      return (
+                        <div className="flex items-center gap-2 flex-wrap text-xs font-mono">
+                          <span className="text-[#4AEEFF] font-bold">
+                            ⏱ Officiating Duration:
+                          </span>
+
+                          <span className="rounded-md border border-[#4AEEFF]/30 bg-[#4AEEFF]/10 px-2.5 py-1 text-[#4AEEFF] font-bold">
+                            {duration !== null
+                              ? formatDuration(duration)
+                              : "Not recorded"}
+                          </span>
+                        </div>
+                      );
+                    })()}
+
                   {match.scheduledTime && (
                     <div className="text-xs font-mono text-slate-400 flex items-center gap-2 flex-wrap">
                       <span>📍 {match.tournament?.venue || "Main Court"}</span>
                       <span>•</span>
                       <span>
-                        🕐 {new Date(match.scheduledTime).toLocaleTimeString([], {
+                        🕐{" "}
+                        {new Date(match.scheduledTime).toLocaleTimeString([], {
                           hour: "2-digit",
                           minute: "2-digit",
                         })}
@@ -586,7 +731,9 @@ const RefereeMatches: React.FC = () => {
                         : "bg-[#4AEEFF] hover:bg-white text-[#061D23] shadow-md shadow-[#4AEEFF]/20"
                     }`}
                   >
-                    {match.status === "COMPLETED" ? "Edit Score" : "Manage Score →"}
+                    {match.status === "COMPLETED"
+                      ? "View Score"
+                      : "Manage Score →"}
                   </button>
                 </div>
               </section>
@@ -620,7 +767,10 @@ const RefereeMatches: React.FC = () => {
                   1. The Service (ITTF Law 2.6)
                 </p>
                 <p>
-                  The ball must rest freely on the palm of the free hand (above table level and behind the end line). It must be thrown near vertically upwards at least 16 cm without adding spin, and struck as it descends.
+                  The ball must rest freely on the palm of the free hand (above
+                  table level and behind the end line). It must be thrown near
+                  vertically upwards at least 16 cm without adding spin, and
+                  struck as it descends.
                 </p>
               </div>
 
@@ -629,7 +779,10 @@ const RefereeMatches: React.FC = () => {
                   2. Scoring & Deuce (ITTF Law 2.11)
                 </p>
                 <p>
-                  A game is won by the first player scoring 11 points, unless both players score 10 points (deuce). At 10-10, the server alternates after every single point, and a player must achieve a 2-point lead to win.
+                  A game is won by the first player scoring 11 points, unless
+                  both players score 10 points (deuce). At 10-10, the server
+                  alternates after every single point, and a player must achieve
+                  a 2-point lead to win.
                 </p>
               </div>
 
@@ -638,7 +791,9 @@ const RefereeMatches: React.FC = () => {
                   3. Change of Ends (ITTF Law 2.13)
                 </p>
                 <p>
-                  Players swap sides after each game. In the deciding final game (Game 3 in best of 3, or Game 5 in best of 5), players must change ends immediately when either player reaches 5 points.
+                  Players swap sides after each game. In the deciding final game
+                  (Game 3 in best of 3, or Game 5 in best of 5), players must
+                  change ends immediately when either player reaches 5 points.
                 </p>
               </div>
 
@@ -647,7 +802,9 @@ const RefereeMatches: React.FC = () => {
                   4. Timeouts & Towelling
                 </p>
                 <p>
-                  Each player is entitled to ONE 1-minute timeout per match. Towelling is permitted only every 6 points from the start of each game, and at the change of ends in the final game.
+                  Each player is entitled to ONE 1-minute timeout per match.
+                  Towelling is permitted only every 6 points from the start of
+                  each game, and at the change of ends in the final game.
                 </p>
               </div>
             </div>
@@ -678,10 +835,10 @@ const RefereeMatches: React.FC = () => {
             match={selectedMatch as any}
             onClose={() => setSelectedMatch(null)}
             onSave={handleKnockoutMatchSave}
-            isAdminOrReferee={true}
+            isAdminOrReferee={selectedMatch.status !== "COMPLETED"}
           />
         ))}
-    </>
+    </>,
   );
 };
 

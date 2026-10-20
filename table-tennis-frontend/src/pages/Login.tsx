@@ -302,8 +302,6 @@ const Login: React.FC = () => {
   const [isResetting, setIsResetting] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
-  const [unverifiedEmail, setUnverifiedEmail] = useState("");
-  const [resending, setResending] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -317,22 +315,9 @@ const Login: React.FC = () => {
         navigate("/app/dashboard");
       }
     } catch (error: any) {
-      if (error.response?.status === 403) setUnverifiedEmail(email);
+      toast.error(error.response?.data?.message || "Invalid email or password");
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const handleResend = async () => {
-    setResending(true);
-    try {
-      await api.post("/auth/resend-verification", { email: unverifiedEmail });
-      toast.success("Verification email sent! Check your inbox.");
-      setUnverifiedEmail("");
-    } catch {
-      toast.error("Failed to resend. Try again.");
-    } finally {
-      setResending(false);
     }
   };
 
@@ -433,15 +418,6 @@ const Login: React.FC = () => {
               And Our{" "}
               <span style={{ color: "#4AEEFF", fontWeight: 700 }}>Privacy Policy</span>.
             </p>
-
-            {unverifiedEmail && (
-              <div style={styles.banner}>
-                <p style={styles.bannerText}>📧 Your email is not verified yet.</p>
-                <button type="button" onClick={handleResend} disabled={resending} style={styles.bannerBtn}>
-                  {resending ? "Sending…" : "Resend verification email"}
-                </button>
-              </div>
-            )}
 
             <hr style={styles.divider} />
 

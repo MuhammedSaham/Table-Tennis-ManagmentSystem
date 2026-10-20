@@ -1,13 +1,29 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import api from "../services/api";
 
-interface User {
+export type UserRole = "SUPER_ADMIN" | "ADMIN" | "REFEREE" | "PLAYER";
+
+export type Permission =
+  | "MANAGE_USERS"
+  | "MANAGE_PLAYERS"
+  | "MANAGE_REFEREES"
+  | "MANAGE_TOURNAMENTS"
+  | "MANAGE_REGISTRATIONS"
+  | "MANAGE_MATCHES"
+  | "MANAGE_RESULTS"
+  | "MANAGE_RANKINGS"
+  | "MANAGE_CLUB_MEMBERSHIPS";
+
+export interface User {
   id: string;
   email: string;
   firstName: string;
   lastName: string;
-  role: "ADMIN" | "REFEREE" | "PLAYER";
+  role: UserRole;
   isSuperAdmin: boolean;
+  adminRequestStatus?: string;
+  permissions?: Permission[];
+  isEmailVerified?: boolean;
 }
 
 interface AuthContextType {
@@ -17,6 +33,8 @@ interface AuthContextType {
   register: (userData: any) => Promise<void>;
   logout: () => void;
   isLoading: boolean;
+  hasPermission: (permission: Permission) => boolean;
+  refetchUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -77,9 +95,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     setUser(null);
   };
 
+  const refetchUser = async () => {
+    try {
+      const response = await api.get("/users/profile");
+      const updatedUser = response.data.data;
+      if (updatedUser) {
+        localStorage.setItem("user", JSON.stringify(updatedUser));
+        setUser(updatedUser);
+      }
+    } catch {
+      // Ignore background refetch failure
+    }
+  };
+
+  const hasPermission = (permission: Permission): boolean => {
+    if (!user) return false;
+    if (user.role === "SUPER_ADMIN" || user.isSuperAdmin) return true;
+    if (user.role === "ADMIN") {
+      return user.permissions?.includes(permission) ?? false;
+    }
+    return false;
+  };
+
   return (
     <AuthContext.Provider
-      value={{ user, token, login, register, logout, isLoading }}
+      value={{ user, token, login, register, logout, isLoading, hasPermission, refetchUser }}
     >
       {children}
     </AuthContext.Provider>

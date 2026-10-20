@@ -141,11 +141,15 @@ const Register: React.FC = () => {
       }
       await register(registerData);
       if (profileImage) {
-        const formDataUpload = new FormData();
-        formDataUpload.append("profileImage", profileImage);
-        await api.post("/users/upload-profile-image", formDataUpload, {
-          headers: { "Content-Type": "multipart/form-data" },
-        });
+        try {
+          const formDataUpload = new FormData();
+          formDataUpload.append("profileImage", profileImage);
+          await api.post("/users/upload-profile-image", formDataUpload, {
+            headers: { "Content-Type": "multipart/form-data" },
+          });
+        } catch (imgErr) {
+          console.error("Profile image upload failed:", imgErr);
+        }
       }
       showSuccess("Welcome! Your account has been created successfully.");
       navigate("/app/dashboard");
@@ -401,7 +405,7 @@ const Register: React.FC = () => {
             >
               <option value="PLAYER">🏓 Player - Compete in tournaments</option>
               <option value="REFEREE">👨‍⚖️ Referee - Officiate matches</option>
-              <option value="ADMIN">👑 Admin - Manage tournaments</option>
+              <option value="ADMIN">🛡️ Admin - Request administrator privileges</option>
             </select>
             <p className="mt-1 text-sm font-semibold text-[#0d4a75]">
               {formData.role === "PLAYER" &&
@@ -409,7 +413,7 @@ const Register: React.FC = () => {
               {formData.role === "REFEREE" &&
                 "Officiate matches, record scores, and manage games."}
               {formData.role === "ADMIN" &&
-                "Create tournaments, manage players, and oversee everything."}
+                "Register as Admin. Your request will be sent to the Super Admin for approval."}
             </p>
           </div>
 
@@ -493,7 +497,6 @@ const Register: React.FC = () => {
                   className="w-full rounded-lg border border-white/60 bg-white/40 px-4 py-3 text-base text-[#061D23] placeholder:text-[#061D23]/40 focus:border-[#4AEEFF] focus:outline-none focus:ring-1 focus:ring-[#4AEEFF]"
                 />
               </div>
-
             </>
           )}
 

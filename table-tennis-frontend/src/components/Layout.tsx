@@ -16,7 +16,7 @@ import {
 } from "@heroicons/react/24/outline";
 
 const Layout: React.FC = () => {
-  const { user, logout } = useAuth();
+  const { user, logout, hasPermission } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -27,8 +27,9 @@ const Layout: React.FC = () => {
   };
 
   const isReferee = user?.role === "REFEREE";
+  const isSuperAdmin = user?.role === "SUPER_ADMIN" || user?.isSuperAdmin;
 
-  // Navigation items based on role
+  // Navigation items based on role and permissions
   const navigation = [
     ...(isReferee
       ? [
@@ -45,24 +46,22 @@ const Layout: React.FC = () => {
             icon: HomeIcon,
           },
         ]),
-    { name: "Tournaments", href: "/app/tournaments", icon: TrophyIcon }, // Keep public
-    /*{
-      name: "My Registrations",
-      href: "/app/my-registrations",
-      icon: CalendarIcon,
-    },
-    { name: "My Matches", href: "/app/my-matches", icon: UserGroupIcon },*/
-    { name: "Leaderboard", href: "/app/leaderboard", icon: ChartBarIcon }, // Keep public
+    { name: "Tournaments", href: "/app/tournaments", icon: TrophyIcon },
+    { name: "Leaderboard", href: "/app/leaderboard", icon: ChartBarIcon },
     {
       name: "Global Rankings",
       href: "/app/global-leaderboard",
       icon: ChartBarIcon,
-    }, // Keep public
+    },
     { name: "Profile", href: "/app/profile", icon: UserCircleIcon },
   ];
 
-  if (user?.role === "ADMIN") {
+  if (isSuperAdmin || hasPermission("MANAGE_USERS")) {
     navigation.push({ name: "Users", href: "/app/users", icon: UserGroupIcon });
+  }
+
+  if (isSuperAdmin || hasPermission("MANAGE_CLUB_MEMBERSHIPS") || hasPermission("MANAGE_REGISTRATIONS")) {
+    navigation.push({ name: "Admin Requests", href: "/app/admin-requests", icon: UserGroupIcon });
   }
   // Pages that should NOT show the navbar
   const isAuthPage = ["/login", "/register", "/reset-password"].includes(
@@ -131,8 +130,12 @@ const Layout: React.FC = () => {
                       <p className="text-sm font-bold text-white leading-tight">
                         {user.firstName}
                       </p>
-                      <span className="inline-block px-2 py-0.5 mt-0.5 text-[10px] font-black uppercase tracking-wider rounded bg-[#4AEEFF]/20 text-[#4AEEFF] border border-[#4AEEFF]/30">
-                        {user.role}
+                      <span className={`inline-block px-2 py-0.5 mt-0.5 text-[10px] font-black uppercase tracking-wider rounded border ${
+                        user.role === "SUPER_ADMIN"
+                          ? "bg-amber-500/20 text-amber-300 border-amber-500/40"
+                          : "bg-[#4AEEFF]/20 text-[#4AEEFF] border-[#4AEEFF]/30"
+                      }`}>
+                        {user.role === "SUPER_ADMIN" ? "SUPER ADMIN" : user.role}
                       </span>
                     </div>
                     <button

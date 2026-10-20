@@ -37,6 +37,8 @@ interface KnockoutMatch {
   score: string | null;
   status: string;
   scheduledTime?: string;
+  startTime?: string | null;
+  endTime?: string | null;
   referee?: {
     id: string;
     user: { firstName: string; lastName: string };
@@ -94,12 +96,29 @@ const LH = 34;
 export const UmpireSheet: React.FC<{
   match: KnockoutMatch;
   onClose: () => void;
-  onSave: (id: string, games: GameScore[], bestOf: 3 | 5) => Promise<void>;
+  onSave: (
+    id: string,
+    games: GameScore[],
+    bestOf: 3 | 5,
+    startTime?: string,
+    endTime?: string,
+  ) => Promise<void>;
   isAdminOrReferee: boolean;
-}> = ({ match, onClose, onSave, isAdminOrReferee }) => {
+  onCorrectScore?: (
+    id: string,
+    games: GameScore[],
+    bestOf: 3 | 5,
+    reason: string,
+  ) => Promise<void>;
+}> = ({ match, onClose, onSave, onCorrectScore, isAdminOrReferee }) => {
   const { user } = useAuth();
   const today = new Date().toLocaleDateString("en-GB");
   const done = match.status === "COMPLETED";
+  // Only admins may edit a completed match.
+  const canEditCompleted = (user?.role === "SUPER_ADMIN" || user?.role === "ADMIN") && done;
+
+  // Referees can only enter scores for unfinished matches.
+  const canEditScore = isAdminOrReferee && (!done || canEditCompleted);
 
   const initBestOf = (): 3 | 5 => {
     if (
@@ -141,7 +160,10 @@ export const UmpireSheet: React.FC<{
             const n = p.split("-");
             return { p1: n[0]?.trim() ?? "", p2: n[1]?.trim() ?? "" };
           }),
-          ...Array(Math.max(0, currentBestOf - parts.length)).fill({ p1: "", p2: "" }),
+          ...Array(Math.max(0, currentBestOf - parts.length)).fill({
+            p1: "",
+            p2: "",
+          }),
         ].slice(0, currentBestOf);
     }
     return Array(currentBestOf)
@@ -149,16 +171,60 @@ export const UmpireSheet: React.FC<{
       .map(() => ({ p1: "", p2: "" }));
   };
 
-  const [games, setGames] = useState<GameScore[]>(() => initGames(initBestOf()));
+  const [games, setGames] = useState<GameScore[]>(() =>
+    initGames(initBestOf()),
+  );
 
   useEffect(() => {
     const bo = initBestOf();
     setBestOf(bo);
     setGames(initGames(bo));
-  }, [match.id, match.score, match.status]);
+
+    setStartTime(formatSavedTime(match.startTime));
+    setEndTime(formatSavedTime(match.endTime));
+  }, [match.id, match.score, match.status, match.startTime, match.endTime]);
   const [saving, setSaving] = useState(false);
+  const [correctionReason, setCorrectionReason] = useState("");
+
+  const formatSavedTime = (value?: string | null) => {
+    if (!value) return "";
+
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) return "";
+
+    const hours = String(date.getHours()).padStart(2, "0");
+    const minutes = String(date.getMinutes()).padStart(2, "0");
+
+    return `${hours}:${minutes}`;
+  };
+
+  const [startTime, setStartTime] = useState(formatSavedTime(match.startTime));
+
+  const [endTime, setEndTime] = useState(formatSavedTime(match.endTime));
+  const calculateDuration = () => {
+    if (!startTime || !endTime) return null;
+
+    const [startHour, startMinute] = startTime.split(":").map(Number);
+    const [endHour, endMinute] = endTime.split(":").map(Number);
+
+    let duration = endHour * 60 + endMinute - (startHour * 60 + startMinute);
+
+    // Support matches ending after midnight
+    if (duration < 0) {
+      duration += 24 * 60;
+    }
+
+    return duration;
+  };
+
+  const matchDuration = calculateDuration();
+
   const [pointsToWin, setPointsToWin] = useState<number>(11);
-  const targetPts = typeof pointsToWin === "number" && !isNaN(pointsToWin) && pointsToWin > 0 ? pointsToWin : 11;
+  const targetPts =
+    typeof pointsToWin === "number" && !isNaN(pointsToWin) && pointsToWin > 0
+      ? pointsToWin
+      : 11;
 
   const getGameWinner = (p1Str: string, p2Str: string): "p1" | "p2" | null => {
     if (p1Str === "" || p2Str === "") return null;
@@ -343,7 +409,11 @@ export const UmpireSheet: React.FC<{
                       setPointsToWin(!isNaN(val) && val > 0 ? val : 11);
                     }}
                     onBlur={() => {
-                      if (!pointsToWin || isNaN(pointsToWin) || pointsToWin < 1) {
+                      if (
+                        !pointsToWin ||
+                        isNaN(pointsToWin) ||
+                        pointsToWin < 1
+                      ) {
                         setPointsToWin(11);
                       }
                     }}
@@ -409,6 +479,62 @@ export const UmpireSheet: React.FC<{
                 Best of {bestOf}
               </span>
             )}
+          </div>
+
+          {/* Optional Match Time */}
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              alignItems: "center",
+              gap: 16,
+              marginBottom: 16,
+              padding: 12,
+              background: "#f8fafc",
+              border: "1px solid #e2e8f0",
+              borderRadius: 10,
+            }}
+          >
+            <label style={{ fontSize: 13, fontWeight: 600 }}>
+              Start Time
+              <input
+                type="time"
+                value={startTime}
+                onChange={(e) => setStartTime(e.target.value)}
+                disabled={done || !canEditScore}
+                style={{
+                  display: "block",
+                  marginTop: 5,
+                  padding: 7,
+                  border: "1px solid #cbd5e1",
+                  borderRadius: 6,
+                }}
+              />
+            </label>
+
+            <label style={{ fontSize: 13, fontWeight: 600 }}>
+              End Time
+              <input
+                type="time"
+                value={endTime}
+                onChange={(e) => setEndTime(e.target.value)}
+                disabled={done || !canEditScore}
+                style={{
+                  display: "block",
+                  marginTop: 5,
+                  padding: 7,
+                  border: "1px solid #cbd5e1",
+                  borderRadius: 6,
+                }}
+              />
+            </label>
+
+            <div style={{ fontSize: 13 }}>
+              <strong>Duration:</strong>{" "}
+              {matchDuration === null
+                ? "Not entered"
+                : `${Math.floor(matchDuration / 60)} hr ${matchDuration % 60} min`}
+            </div>
           </div>
 
           {/* Live progress */}
@@ -550,29 +676,25 @@ export const UmpireSheet: React.FC<{
                             min={0}
                             value={g[side]}
                             onChange={(e) => {
-                              if (!isAdminOrReferee || done || !nd) return;
+                              if (!canEditScore) return;
                               const nx = [...games];
                               nx[i] = { ...nx[i], [side]: e.target.value };
                               setGames(nx);
                             }}
-                            disabled={!isAdminOrReferee || done || !nd}
+                            disabled={!canEditScore}
                             style={{
                               width: 42,
                               height: 36,
                               textAlign: "center",
                               border: "1.5px solid",
                               borderColor:
-                                !isAdminOrReferee || done || !nd
-                                  ? "#e2e8f0"
-                                  : "#cbd5e1",
+                                !canEditScore || !nd ? "#e2e8f0" : "#cbd5e1",
                               borderRadius: 8,
                               fontSize: 15,
                               fontWeight: 700,
                               color: !nd ? "#cbd5e1" : "#0f172a",
                               background:
-                                !isAdminOrReferee || done || !nd
-                                  ? "#f8fafc"
-                                  : "#fff",
+                                !canEditScore || !nd ? "#f8fafc" : "#fff",
                               outline: "none",
                             }}
                             onFocus={(e) => {
@@ -629,12 +751,12 @@ export const UmpireSheet: React.FC<{
                 {match.referee?.user
                   ? `${match.referee.user.firstName} ${match.referee.user.lastName}`
                   : match.resultDetails?.umpireName
-                  ? match.resultDetails.umpireName
-                  : user?.role === "ADMIN"
-                  ? `${user.firstName} ${user.lastName} (Admin)`
-                  : done
-                  ? "Tournament Official"
-                  : "…………………………"}
+                    ? match.resultDetails.umpireName
+                    : user?.role === "ADMIN"
+                      ? `${user.firstName} ${user.lastName} (Admin)`
+                      : done
+                        ? "Tournament Official"
+                        : "…………………………"}
               </span>
             </div>
           </div>
@@ -682,9 +804,80 @@ export const UmpireSheet: React.FC<{
           >
             Close
           </button>
+          {canEditCompleted && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              <input
+                type="text"
+                value={correctionReason}
+                onChange={(e) => setCorrectionReason(e.target.value)}
+                placeholder="Reason for correction"
+                style={{
+                  padding: "9px 12px",
+                  border: "1px solid #cbd5e1",
+                  borderRadius: 8,
+                  fontSize: 13,
+                  color: "#0f172a",
+                }}
+              />
+
+              <button
+                disabled={saving || !over}
+                onClick={async () => {
+                  if (correctionReason.trim().length < 5) {
+                    toast.error(
+                      "Please enter a correction reason (at least 5 characters)",
+                    );
+                    return;
+                  }
+
+                  for (let i = 0; i < games.length; i++) {
+                    const g = games[i];
+
+                    if (g.p1 === "" && g.p2 === "") continue;
+
+                    if (!isGameValid(g.p1, g.p2)) {
+                      toast.error(`Game ${i + 1} has an invalid score`);
+                      return;
+                    }
+                  }
+
+                  setSaving(true);
+                  try {
+                    if (onCorrectScore) {
+                      await onCorrectScore(
+                        match.id,
+                        games,
+                        bestOf,
+                        correctionReason.trim(),
+                      );
+                    }
+                  } finally {
+                    setSaving(false);
+                  }
+                }}
+                style={{
+                  padding: "9px 20px",
+                  border: "none",
+                  borderRadius: 10,
+                  background: saving || !over ? "#94a3b8" : "#0369a1",
+                  color: "#fff",
+                  fontWeight: 700,
+                  cursor: saving || !over ? "default" : "pointer",
+                }}
+              >
+                {saving ? "Saving..." : "Save Correction"}
+              </button>
+            </div>
+          )}
           {isAdminOrReferee && !done && (
             <button
               onClick={async () => {
+                if (Boolean(startTime) !== Boolean(endTime)) {
+                  toast.error(
+                    "Please enter both Start Time and End Time, or leave both empty.",
+                  );
+                  return;
+                }
                 for (let i = 0; i < games.length; i++) {
                   const g = games[i];
                   if (g.p1 === "" && g.p2 === "") continue;
@@ -703,7 +896,7 @@ export const UmpireSheet: React.FC<{
                   return;
                 }
                 setSaving(true);
-                await onSave(match.id, games, bestOf);
+                await onSave(match.id, games, bestOf, startTime, endTime);
                 setSaving(false);
               }}
               disabled={saving || !over}
@@ -757,12 +950,14 @@ const MatchCard: React.FC<{
   const p1Won =
     done &&
     (isDoubles
-      ? match.winnerId === match.team1?.id || match.winnerTeamId === match.team1?.id
+      ? match.winnerId === match.team1?.id ||
+        match.winnerTeamId === match.team1?.id
       : match.winnerId === match.player1?.id);
   const p2Won =
     done &&
     (isDoubles
-      ? match.winnerId === match.team2?.id || match.winnerTeamId === match.team2?.id
+      ? match.winnerId === match.team2?.id ||
+        match.winnerTeamId === match.team2?.id
       : match.winnerId === match.player2?.id);
 
   const gameParts =
@@ -883,7 +1078,9 @@ const MatchCard: React.FC<{
           ) : (
             <>
               {match.scheduledTime && (
-                <span style={{ fontSize: 9, color: "#64748b", fontWeight: 600 }}>
+                <span
+                  style={{ fontSize: 9, color: "#64748b", fontWeight: 600 }}
+                >
                   {fmtTime(match.scheduledTime)}
                 </span>
               )}
@@ -1044,7 +1241,11 @@ const MatchCard: React.FC<{
                       : isFilled
                         ? "#e0f2fe"
                         : "#f1f5f9",
-                    border: won ? "none" : isFilled ? "1px solid #bae6fd" : "1px solid #e2e8f0",
+                    border: won
+                      ? "none"
+                      : isFilled
+                        ? "1px solid #bae6fd"
+                        : "1px solid #e2e8f0",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
@@ -1194,7 +1395,7 @@ const BracketCanvas: React.FC<{
     const mx = lx + HG / 2;
 
     rc.entries.forEach((rEntry, ri) => {
-      const rY = cyMap[ci + 1]?.[ri] ?? (ri * (CH + VGAP) + CH / 2);
+      const rY = cyMap[ci + 1]?.[ri] ?? ri * (CH + VGAP) + CH / 2;
       const p1 = ri * 2;
       const p2 = ri * 2 + 1;
       const prevCY = cyMap[ci] || [];
@@ -1202,8 +1403,16 @@ const BracketCanvas: React.FC<{
       const p1Match = lc.entries[p1]?.match;
       const p2Match = lc.entries[p2]?.match;
 
-      const p1Done = p1Match?.status === "COMPLETED" || p1Match?.status === "WALKOVER" || p1Match?.score === "BYE" || p1Match?.score === "W/O";
-      const p2Done = p2Match?.status === "COMPLETED" || p2Match?.status === "WALKOVER" || p2Match?.score === "BYE" || p2Match?.score === "W/O";
+      const p1Done =
+        p1Match?.status === "COMPLETED" ||
+        p1Match?.status === "WALKOVER" ||
+        p1Match?.score === "BYE" ||
+        p1Match?.score === "W/O";
+      const p2Done =
+        p2Match?.status === "COMPLETED" ||
+        p2Match?.status === "WALKOVER" ||
+        p2Match?.score === "BYE" ||
+        p2Match?.score === "W/O";
 
       // Horizontal line from Parent 1 to midpoint X
       if (p1 < prevCY.length) {
@@ -1258,7 +1467,11 @@ const BracketCanvas: React.FC<{
       }
 
       // Horizontal line from midpoint X into child match
-      const childDone = rEntry.match.status === "COMPLETED" || rEntry.match.status === "WALKOVER" || rEntry.match.score === "BYE" || rEntry.match.score === "W/O";
+      const childDone =
+        rEntry.match.status === "COMPLETED" ||
+        rEntry.match.status === "WALKOVER" ||
+        rEntry.match.score === "BYE" ||
+        rEntry.match.score === "W/O";
       lines.push(
         <line
           key={`rh_${ci}_${ri}`}
@@ -1342,8 +1555,8 @@ const BracketCanvas: React.FC<{
             Boolean(
               (match.referee?.user &&
                 (match.referee.user as any).id === currentUserId) ||
-                (match.referee as any)?.userId === currentUserId ||
-                (match as any).refereeUserId === currentUserId,
+              (match.referee as any)?.userId === currentUserId ||
+              (match as any).refereeUserId === currentUserId,
             );
           const canRecordScore = isAdmin || isAssignedReferee;
 
@@ -1352,7 +1565,7 @@ const BracketCanvas: React.FC<{
           if (isTP) {
             topY = tpCY - CH / 2;
           } else {
-            const cy = cyMap[ci]?.[mi] ?? (mi * (CH + VGAP) + CH / 2);
+            const cy = cyMap[ci]?.[mi] ?? mi * (CH + VGAP) + CH / 2;
             topY = cy - CH / 2;
           }
 
@@ -1413,7 +1626,8 @@ const KnockoutBracket: React.FC<KnockoutBracketProps> = ({
     }
   }, [matches]);
 
-  const isAdmin = user?.role === "ADMIN";
+  const isAdmin =
+    user?.role === "ADMIN" || user?.role === "SUPER_ADMIN";
   const isReferee = user?.role === "REFEREE";
 
   useEffect(() => {
@@ -1471,10 +1685,50 @@ const KnockoutBracket: React.FC<KnockoutBracketProps> = ({
       .filter((m) => m.round === r)
       .sort((a, b) => a.matchNumber - b.matchNumber);
 
+  const handleCorrectScore = async (
+    matchId: string,
+    games: GameScore[],
+    bestOf: 3 | 5,
+    reason: string,
+  ) => {
+    if (user?.role !== "ADMIN") {
+      toast.error("Only admins can correct completed matches");
+      return;
+    }
+
+    const correctedGames = games
+      .filter((g) => g.p1 !== "" && g.p2 !== "")
+      .map((g, index) => ({
+        gameNumber: index + 1,
+        player1Score: Number(g.p1),
+        player2Score: Number(g.p2),
+      }));
+
+    try {
+      await api.patch(`/matches/${matchId}/correct-score`, {
+        games: correctedGames,
+        bestOf,
+        reason,
+      });
+
+      toast.success("Match score corrected successfully!");
+      setSelectedMatch(null);
+      await load();
+      onScoreRecorded?.();
+    } catch (error: any) {
+      toast.error(
+        error.response?.data?.message || "Failed to correct match score",
+      );
+      throw error;
+    }
+  };
+
   const handleSave = async (
     matchId: string,
     games: GameScore[],
     bestOf: 3 | 5,
+    startTime?: string,
+    endTime?: string,
   ) => {
     const match = matches.find((m) => m.id === matchId);
     const isDoubles = match?.matchType === "DOUBLES";
@@ -1519,20 +1773,52 @@ const KnockoutBracket: React.FC<KnockoutBracketProps> = ({
         : match!.team2!.id
       : undefined;
 
+    const matchDate = match?.scheduledTime
+      ? new Date(match.scheduledTime)
+      : new Date();
+
+    const toDateTime = (time?: string) => {
+      if (!time) return undefined;
+
+      const [hours, minutes] = time.split(":").map(Number);
+      const date = new Date(matchDate);
+      date.setHours(hours, minutes, 0, 0);
+
+      return date;
+    };
+
+    const startDate = toDateTime(startTime);
+    const endDate = toDateTime(endTime);
+
+    // A match may finish after midnight.
+    if (startDate && endDate && endDate < startDate) {
+      endDate.setDate(endDate.getDate() + 1);
+    }
+
+    const durationMinutes =
+      startDate && endDate
+        ? Math.round((endDate.getTime() - startDate.getTime()) / 60000)
+        : null;
+
     try {
       const umpireName = match?.referee?.user
         ? `${match.referee.user.firstName} ${match.referee.user.lastName}`
         : user
-        ? `${user.firstName} ${user.lastName} (Admin)`
-        : undefined;
+          ? `${user.firstName} ${user.lastName} (Admin)`
+          : undefined;
 
       await api.patch(`/matches/${matchId}`, {
         score: parts.join(", "),
         winnerId,
         winnerTeamId,
         status: "COMPLETED",
-        endTime: new Date().toISOString(),
-        resultDetails: { bestOf, umpireName },
+        ...(startDate ? { startTime: startDate.toISOString() } : {}),
+        ...(endDate ? { endTime: endDate.toISOString() } : {}),
+        resultDetails: {
+          bestOf,
+          umpireName,
+          ...(durationMinutes !== null ? { durationMinutes } : {}),
+        },
       });
 
       toast.success("Score saved!");
@@ -1560,7 +1846,15 @@ const KnockoutBracket: React.FC<KnockoutBracketProps> = ({
           }}
         />
         <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
-        <p style={{ color: "#4AEEFF", fontSize: 13, fontWeight: 700, letterSpacing: 1, textTransform: "uppercase" }}>
+        <p
+          style={{
+            color: "#4AEEFF",
+            fontSize: 13,
+            fontWeight: 700,
+            letterSpacing: 1,
+            textTransform: "uppercase",
+          }}
+        >
           Loading bracket…
         </p>
       </div>
@@ -1579,10 +1873,24 @@ const KnockoutBracket: React.FC<KnockoutBracketProps> = ({
         }}
       >
         <div style={{ fontSize: 48, marginBottom: 12 }}>🏆</div>
-        <p style={{ fontWeight: 800, color: "#ffffff", fontSize: 18, textTransform: "uppercase", letterSpacing: 0.5 }}>
+        <p
+          style={{
+            fontWeight: 800,
+            color: "#ffffff",
+            fontSize: 18,
+            textTransform: "uppercase",
+            letterSpacing: 0.5,
+          }}
+        >
           No knockout matches yet
         </p>
-        <p style={{ color: "rgba(255, 255, 255, 0.6)", fontSize: 13, marginTop: 4 }}>
+        <p
+          style={{
+            color: "rgba(255, 255, 255, 0.6)",
+            fontSize: 13,
+            marginTop: 4,
+          }}
+        >
           Generate the bracket above to populate this tournament draw.
         </p>
         <button
@@ -1654,7 +1962,15 @@ const KnockoutBracket: React.FC<KnockoutBracketProps> = ({
     });
 
   return (
-    <div style={{ fontFamily: "'Segoe UI',system-ui,sans-serif" }}>
+    <div
+      style={{
+        fontFamily: "'Segoe UI',system-ui,sans-serif",
+        width: "100%",
+        maxWidth: "100%",
+        minWidth: 0,
+        overflow: "visible",
+      }}
+    >
       {/* Header */}
       <div style={{ textAlign: "center", marginBottom: 28 }}>
         <div
@@ -1681,7 +1997,13 @@ const KnockoutBracket: React.FC<KnockoutBracketProps> = ({
         >
           Tournament Bracket
         </h2>
-        <p style={{ margin: "6px 0 0", fontSize: 13, color: "rgba(255, 255, 255, 0.6)" }}>
+        <p
+          style={{
+            margin: "6px 0 0",
+            fontSize: 13,
+            color: "rgba(255, 255, 255, 0.6)",
+          }}
+        >
           All matches best of 5 games · Click any match to record score
         </p>
       </div>
@@ -1697,7 +2019,14 @@ const KnockoutBracket: React.FC<KnockoutBracketProps> = ({
           flexWrap: "wrap",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            flexWrap: "wrap",
+          }}
+        >
           {isAdmin && (
             <span
               style={{
@@ -1706,7 +2035,8 @@ const KnockoutBracket: React.FC<KnockoutBracketProps> = ({
                 fontWeight: 600,
               }}
             >
-              💡 Click any match card to open umpire sheet · ✏️ Edit to change players
+              💡 Click any match card to open umpire sheet · ✏️ Edit to change
+              players
             </span>
           )}
           {isReferee && (
@@ -1721,7 +2051,14 @@ const KnockoutBracket: React.FC<KnockoutBracketProps> = ({
             </span>
           )}
           {/* Quick jump pills */}
-          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+          <div
+            style={{
+              display: "flex",
+              gap: 6,
+              flexWrap: "wrap",
+              alignItems: "center",
+            }}
+          >
             <span
               style={{
                 fontSize: 10,
@@ -1739,13 +2076,19 @@ const KnockoutBracket: React.FC<KnockoutBracketProps> = ({
                 onClick={() => {
                   const el = document.getElementById(`bracket-col-${idx}`);
                   if (el) {
-                    el.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+                    el.scrollIntoView({
+                      behavior: "smooth",
+                      inline: "center",
+                      block: "nearest",
+                    });
                   }
                 }}
                 style={{
                   padding: "4px 10px",
                   borderRadius: 16,
-                  background: c.accent ? `${c.accent}25` : "rgba(255, 255, 255, 0.08)",
+                  background: c.accent
+                    ? `${c.accent}25`
+                    : "rgba(255, 255, 255, 0.08)",
                   border: `1px solid ${c.accent ? `${c.accent}70` : "rgba(255, 255, 255, 0.2)"}`,
                   color: c.accent ?? "#4AEEFF",
                   fontSize: 11,
@@ -1792,19 +2135,24 @@ const KnockoutBracket: React.FC<KnockoutBracketProps> = ({
       {/* Bracket */}
       <div
         style={{
+          width: "100%",
+          maxWidth: "100%",
+          minWidth: 0,
           overflowX: "auto",
           WebkitOverflowScrolling: "touch",
           paddingBottom: 16,
           scrollbarWidth: "thin",
-          scrollbarColor: "rgba(74, 238, 255, 0.4) transparent",
+          scrollbarColor: "rgba(74, 238, 255, 0.6) transparent",
         }}
       >
         <div
           style={{
             display: "flex",
-            justifyContent: "center",
+            justifyContent: "flex-start",
+            width: "max-content",
+            minWidth: "100%",
             padding: "8px 24px 20px 24px",
-            minWidth: "max-content",
+            boxSizing: "border-box",
           }}
         >
           <BracketCanvas
@@ -1814,9 +2162,7 @@ const KnockoutBracket: React.FC<KnockoutBracketProps> = ({
             currentUserId={user?.id}
             onOpen={setSelectedMatch}
             onEdit={setEditingMatch}
-            onAssignReferee={
-              isAdmin ? setAssignRefereeMatch : undefined
-            }
+            onAssignReferee={isAdmin ? setAssignRefereeMatch : undefined}
           />
         </div>
       </div>
@@ -1869,14 +2215,15 @@ const KnockoutBracket: React.FC<KnockoutBracketProps> = ({
           match={selectedMatch}
           onClose={() => setSelectedMatch(null)}
           onSave={handleSave}
+          onCorrectScore={handleCorrectScore}
           isAdminOrReferee={
             isAdmin ||
             (isReferee &&
               Boolean(
                 (selectedMatch.referee?.user &&
                   (selectedMatch.referee.user as any).id === user?.id) ||
-                  (selectedMatch.referee as any)?.userId === user?.id ||
-                  (selectedMatch as any).refereeUserId === user?.id,
+                (selectedMatch.referee as any)?.userId === user?.id ||
+                (selectedMatch as any).refereeUserId === user?.id,
               ))
           }
         />

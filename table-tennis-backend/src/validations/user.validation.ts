@@ -23,3 +23,28 @@ export const updateUserRoleSchema = z.object({
         role: z.enum(['ADMIN', 'REFEREE', 'PLAYER']),
     }),
 });
+
+export const createUserSchema = z.object({
+    body: z.object({
+        email: z.string().email(),
+        password: z.string().min(8).regex(/[A-Z]/).regex(/[a-z]/).regex(/[0-9]/),
+        firstName: z.string().min(2),
+        lastName: z.string().min(2),
+        phone: z.string().optional(),
+        role: z.enum(['ADMIN', 'REFEREE', 'PLAYER']),
+        playerProfile: z.object({
+            dateOfBirth: z.coerce.date().optional(),
+            skillLevel: z.enum(['Beginner', 'Intermediate', 'Advanced']).optional(),
+            clubAffiliation: z.string().optional(),
+            gender: z.enum(['MALE', 'FEMALE']).optional(),
+            isClubMember: z.boolean().optional(),
+        }).optional(),
+        refereeProfile: z.object({
+            certification: z.string().optional(),
+            experienceYears: z.number().int().min(0).optional(),
+        }).optional(),
+        adminProfile: z.object({
+            department: z.string().optional(),
+        }).optional(),
+    }),
+});

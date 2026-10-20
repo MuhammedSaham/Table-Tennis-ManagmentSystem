@@ -6,6 +6,11 @@ import toast from "react-hot-toast";
 import {
   TrophyIcon,
   CalendarIcon,
+  ChartBarIcon,
+  UserGroupIcon,
+  InboxStackIcon,
+  ChevronRightIcon,
+  ShieldCheckIcon,
 } from "@heroicons/react/24/outline";
 
 interface Tournament {
@@ -43,18 +48,113 @@ interface DoublesInvite {
 }
 
 const Dashboard: React.FC = () => {
-  const { user } = useAuth();
+  const { user, hasPermission } = useAuth();
   const [newTournaments, setNewTournaments] = useState<Tournament[]>([]);
   const [doublesInvites, setDoublesInvites] = useState<DoublesInvite[]>([]);
-  const [respondingInviteId, setRespondingInviteId] = useState<string | null>(null);
+  const [pendingMembershipCount, setPendingMembershipCount] =
+    useState<number>(0);
+  const [pendingPaymentCount, setPendingPaymentCount] = useState<number>(0);
+  const [pendingAdminCount, setPendingAdminCount] = useState<number>(0);
+
   const isPlayer = user?.role === "PLAYER";
+  const isSuperAdmin = user?.role === "SUPER_ADMIN" || user?.isSuperAdmin;
+  const isAdmin = isSuperAdmin || user?.role === "ADMIN";
+
+  const totalPendingRequests =
+    pendingMembershipCount +
+    pendingPaymentCount +
+    (isSuperAdmin ? pendingAdminCount : 0);
+
+  const [respondingInviteId, setRespondingInviteId] = useState<string | null>(
+    null,
+  );
 
   useEffect(() => {
     fetchNewTournaments();
     if (isPlayer) {
       fetchDoublesInvites();
     }
+    if (
+      isSuperAdmin ||
+      (isAdmin &&
+        (hasPermission("MANAGE_CLUB_MEMBERSHIPS") ||
+          hasPermission("MANAGE_REGISTRATIONS")))
+    ) {
+      fetchPendingRequestsCount();
+    }
   }, [user]);
+
+  const fetchPendingRequestsCount = async () => {
+    try {
+      const canManageMemberships =
+        isSuperAdmin ||
+        hasPermission("MANAGE_CLUB_MEMBERSHIPS") ||
+        hasPermission("MANAGE_PLAYERS");
+
+      const canManagePayments =
+        isSuperAdmin || hasPermission("MANAGE_REGISTRATIONS");
+
+      const promises: Promise<any>[] = [];
+
+      if (canManageMemberships) {
+        promises.push(
+          api
+            .get("/club-membership/requests")
+            .then((res) => {
+              const pendingMembership =
+                res.data?.data?.filter(
+                  (req: any) => req.status === "PENDING",
+                ) || [];
+              setPendingMembershipCount(pendingMembership.length);
+            })
+            .catch((err) => {
+              console.error("Failed to fetch membership requests count", err);
+              setPendingMembershipCount(0);
+            }),
+        );
+      } else {
+        setPendingMembershipCount(0);
+      }
+
+      if (canManagePayments) {
+        promises.push(
+          api
+            .get("/payment-proofs/pending")
+            .then((res) => {
+              const pendingPayments = res.data?.data || [];
+              setPendingPaymentCount(pendingPayments.length);
+            })
+            .catch((err) => {
+              console.error("Failed to fetch payment requests count", err);
+              setPendingPaymentCount(0);
+            }),
+        );
+      } else {
+        setPendingPaymentCount(0);
+      }
+
+      if (isSuperAdmin) {
+        promises.push(
+          api
+            .get("/admin-requests/pending")
+            .then((res) => {
+              const pendingAdmins = res.data?.data || [];
+              setPendingAdminCount(pendingAdmins.length);
+            })
+            .catch((err) => {
+              console.error("Failed to fetch admin requests count", err);
+              setPendingAdminCount(0);
+            }),
+        );
+      } else {
+        setPendingAdminCount(0);
+      }
+
+      await Promise.all(promises);
+    } catch (err) {
+      console.error("Failed to fetch pending requests count", err);
+    }
+  };
 
   const fetchDoublesInvites = async () => {
     if (!isPlayer) return;
@@ -136,6 +236,170 @@ const Dashboard: React.FC = () => {
         </p>
       </header>
 
+      {/* ADMIN CONTROL HUB & BUTTONS (PROMINENT TOP POSITION FOR ADMIN) */}
+      {isAdmin && (
+        <section className="space-y-4">
+          <div className="flex items-center gap-2">
+            <ShieldCheckIcon className="h-5 w-5 text-[#4AEEFF] shrink-0" />
+            <h2 className="text-xs font-black uppercase tracking-widest text-[#4AEEFF]">
+              Admin Control Hub
+            </h2>
+          </div>
+
+          <main className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {/* Requests Button */}
+            {(isSuperAdmin || hasPermission("MANAGE_CLUB_MEMBERSHIPS") || hasPermission("MANAGE_REGISTRATIONS")) && (
+              <Link
+                to="/app/admin-requests"
+                className="group relative flex flex-col justify-between rounded-[16px] border border-white/20 bg-[#061D23]/10 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl transition-all duration-300 hover:border-[#4AEEFF] hover:bg-[#061D23]/30"
+              >
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="p-3 rounded-xl bg-[#4AEEFF]/10 border border-[#4AEEFF]/30 text-[#4AEEFF] group-hover:scale-105 transition-transform duration-200">
+                      <InboxStackIcon className="h-6 w-6" />
+                    </div>
+                    {totalPendingRequests > 0 ? (
+                      <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#4AEEFF] text-[#061D23] text-[10px] font-black uppercase tracking-wider shadow-md shadow-[#4AEEFF]/20">
+                        <span className="h-1.5 w-1.5 rounded-full bg-[#061D23] animate-ping"></span>
+                        {totalPendingRequests} Pending
+                      </span>
+                    ) : (
+                      <span className="px-2.5 py-1 rounded-full bg-white/10 text-white/60 border border-white/10 text-[10px] font-mono">
+                        0 Pending
+                      </span>
+                    )}
+                  </div>
+
+                  <h3 className="mb-2 font-black uppercase tracking-wider text-white transition-colors group-hover:text-[#4AEEFF] flex items-center justify-between">
+                    <span>Pending Requests</span>
+                    <span className="text-xs opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all text-[#4AEEFF]">
+                      →
+                    </span>
+                  </h3>
+
+                  <p className="text-xs text-white/70 leading-relaxed">
+                    {isSuperAdmin
+                      ? "Review membership requests, tournament payments, and admin access requests"
+                      : "Review membership requests and tournament payment verifications"}
+                  </p>
+                  <div
+                    className={`mt-4 grid gap-3 ${
+                      isSuperAdmin ? "grid-cols-3" : "grid-cols-2"
+                    }`}
+                  >
+                    <div className="rounded-lg border border-white/10 bg-black/20 p-3">
+                      <p className="text-[10px] uppercase tracking-wider text-white/50 truncate">
+                        Membership
+                      </p>
+                      <p className="mt-1 text-lg font-black text-[#4AEEFF]">
+                        {pendingMembershipCount}
+                      </p>
+                    </div>
+
+                    <div className="rounded-lg border border-white/10 bg-black/20 p-3">
+                      <p className="text-[10px] uppercase tracking-wider text-white/50 truncate">
+                        Payment
+                      </p>
+                      <p className="mt-1 text-lg font-black text-[#4AEEFF]">
+                        {pendingPaymentCount}
+                      </p>
+                    </div>
+
+                    {isSuperAdmin && (
+                      <div className="rounded-lg border border-white/10 bg-black/20 p-3">
+                        <p className="text-[10px] uppercase tracking-wider text-white/50 truncate">
+                          Admin
+                        </p>
+                        <p className="mt-1 text-lg font-black text-[#4AEEFF]">
+                          {pendingAdminCount}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="mt-5 pt-3 border-t border-white/10 flex items-center justify-between text-[11px] font-bold text-[#4AEEFF]">
+                  <span>Review Requests</span>
+                  <ChevronRightIcon className="h-4 w-4 transform group-hover:translate-x-1 transition-transform" />
+                </div>
+              </Link>
+            )}
+
+            {/* Player Rankings Button */}
+            {(isSuperAdmin || hasPermission("MANAGE_RANKINGS")) && (
+              <Link
+                to="/app/global-leaderboard"
+                className="group relative flex flex-col justify-between rounded-[16px] border border-white/20 bg-[#061D23]/10 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl transition-all duration-300 hover:border-[#4AEEFF] hover:bg-[#061D23]/30"
+              >
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="p-3 rounded-xl bg-[#4AEEFF]/10 border border-[#4AEEFF]/30 text-[#4AEEFF] group-hover:scale-105 transition-transform duration-200">
+                      <ChartBarIcon className="h-6 w-6" />
+                    </div>
+                    <span className="px-2.5 py-1 rounded-full bg-[#4AEEFF]/15 text-[#4AEEFF] border border-[#4AEEFF]/30 text-[10px] font-mono">
+                      Global Standings
+                    </span>
+                  </div>
+
+                  <h3 className="mb-2 font-black uppercase tracking-wider text-white transition-colors group-hover:text-[#4AEEFF] flex items-center justify-between">
+                    <span>Player Rankings</span>
+                    <span className="text-xs opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all text-[#4AEEFF]">
+                      →
+                    </span>
+                  </h3>
+
+                  <p className="text-xs text-white/70 leading-relaxed">
+                    Direct view of global player rankings, match stats, and
+                    leaderboards
+                  </p>
+                </div>
+
+                <div className="mt-5 pt-3 border-t border-white/10 flex items-center justify-between text-[11px] font-bold text-[#4AEEFF]">
+                  <span>View Rankings</span>
+                  <ChevronRightIcon className="h-4 w-4 transform group-hover:translate-x-1 transition-transform" />
+                </div>
+              </Link>
+            )}
+
+            {/* User Management Button */}
+            {(isSuperAdmin || hasPermission("MANAGE_USERS")) && (
+              <Link
+                to="/app/users"
+                className="group relative flex flex-col justify-between rounded-[16px] border border-white/20 bg-[#061D23]/10 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl transition-all duration-300 hover:border-[#4AEEFF] hover:bg-[#061D23]/30"
+              >
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="p-3 rounded-xl bg-[#4AEEFF]/10 border border-[#4AEEFF]/30 text-[#4AEEFF] group-hover:scale-105 transition-transform duration-200">
+                      <UserGroupIcon className="h-6 w-6" />
+                    </div>
+                    <span className="px-2.5 py-1 rounded-full bg-[#4AEEFF]/15 text-[#4AEEFF] border border-[#4AEEFF]/30 text-[10px] font-mono">
+                      User Accounts
+                    </span>
+                  </div>
+
+                  <h3 className="mb-2 font-black uppercase tracking-wider text-white transition-colors group-hover:text-[#4AEEFF] flex items-center justify-between">
+                    <span>User Management</span>
+                    <span className="text-xs opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all text-[#4AEEFF]">
+                      →
+                    </span>
+                  </h3>
+
+                  <p className="text-xs text-white/70 leading-relaxed">
+                    Manage registered users, roles, player profiles, and assign
+                    rankings
+                  </p>
+                </div>
+
+                <div className="mt-5 pt-3 border-t border-white/10 flex items-center justify-between text-[11px] font-bold text-[#4AEEFF]">
+                  <span>Manage Users & Ranks</span>
+                  <ChevronRightIcon className="h-4 w-4 transform group-hover:translate-x-1 transition-transform" />
+                </div>
+              </Link>
+            )}
+          </main>
+        </section>
+      )}
+
       {/* PENDING DOUBLES INVITATIONS ACTION BANNER */}
       {doublesInvites.length > 0 && (
         <section className="rounded-2xl border border-cyan-400/40 bg-gradient-to-r from-[#072d36]/90 via-[#062027]/95 to-[#04151a] p-4 sm:p-6 shadow-[0_20px_50px_-10px_rgba(74,238,255,0.25)] backdrop-blur-xl animate-in fade-in">
@@ -146,7 +410,8 @@ const Dashboard: React.FC = () => {
                 <span className="relative inline-flex rounded-full h-3 w-3 bg-[#4AEEFF]"></span>
               </span>
               <h2 className="text-[11px] sm:text-xs font-black uppercase tracking-[0.15em] sm:tracking-[0.2em] text-[#4AEEFF]">
-                Action Required • Doubles Partner Invitations ({doublesInvites.length})
+                Action Required • Doubles Partner Invitations (
+                {doublesInvites.length})
               </h2>
             </div>
             <span className="text-[10px] sm:text-[11px] font-mono text-cyan-200/70">
@@ -174,9 +439,19 @@ const Dashboard: React.FC = () => {
                       </span>
                     </p>
                     <div className="flex items-center gap-2 mt-1 text-xs text-white/60 flex-wrap">
-                      <span className="truncate">Event: <strong className="text-white">{inv.tournament?.name}</strong></span>
+                      <span className="truncate">
+                        Event:{" "}
+                        <strong className="text-white">
+                          {inv.tournament?.name}
+                        </strong>
+                      </span>
                       <span>•</span>
-                      <span>Division: <span className="px-2 py-0.5 rounded bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 text-[10px] font-bold uppercase">{inv.category?.name}</span></span>
+                      <span>
+                        Division:{" "}
+                        <span className="px-2 py-0.5 rounded bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 text-[10px] font-bold uppercase">
+                          {inv.category?.name}
+                        </span>
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -193,7 +468,9 @@ const Dashboard: React.FC = () => {
                     disabled={respondingInviteId === inv.id}
                     className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-cyan-400 to-teal-400 text-slate-950 text-xs font-black uppercase tracking-wider shadow-[0_4px_14px_rgba(74,238,255,0.3)] hover:brightness-110 active:scale-95 disabled:opacity-50 transition-all flex items-center justify-center gap-1.5"
                   >
-                    {respondingInviteId === inv.id ? "Confirming..." : "✓ Accept & Confirm Team"}
+                    {respondingInviteId === inv.id
+                      ? "Confirming..."
+                      : "✓ Accept & Confirm Team"}
                   </button>
                   <button
                     onClick={() => handleDeclineInvite(inv.id)}
@@ -209,8 +486,8 @@ const Dashboard: React.FC = () => {
         </section>
       )}
 
-      {/* NEW TOURNAMENTS MODULE */}
-      {newTournaments.length > 0 && (
+      {/* NEW TOURNAMENTS MODULE (ONLY FOR PLAYERS / REFEREES) */}
+      {!isAdmin && newTournaments.length > 0 && (
         <section className="rounded-2xl border border-white/20 bg-[#061D23]/10 p-4 sm:p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl">
           <div className="mb-4 flex items-center gap-2">
             <TrophyIcon className="h-5 w-5 text-[#4AEEFF] shrink-0" />
@@ -230,19 +507,25 @@ const Dashboard: React.FC = () => {
                     {tournament.name}
                   </h3>
                   <p className="mt-2 text-xs text-white/70 font-mono flex items-center gap-1.5 truncate">
-                    <span>📍</span> <span className="truncate">{tournament.venue}</span>
+                    <span>📍</span>{" "}
+                    <span className="truncate">{tournament.venue}</span>
                   </p>
                   <p className="mt-1.5 text-xs text-white/50 font-mono">
                     Register by:{" "}
-                    {new Date(tournament.registrationDeadline).toLocaleDateString(
-                      undefined,
-                      { year: "numeric", month: "short", day: "numeric" },
-                    )}
+                    {new Date(
+                      tournament.registrationDeadline,
+                    ).toLocaleDateString(undefined, {
+                      year: "numeric",
+                      month: "short",
+                      day: "numeric",
+                    })}
                   </p>
                 </div>
                 <div className="mt-4 pt-3 border-t border-white/10 flex items-center justify-between">
                   <span className="w-full sm:w-auto text-center rounded-xl bg-[#4AEEFF] px-4 py-2 text-xs font-black uppercase tracking-wider text-[#061D23] transition-all group-hover:bg-white shadow-md shadow-[#4AEEFF]/20">
-                    {user?.role === "ADMIN" ? "Manage Tournament →" : user?.role === "REFEREE" ? "View Tournament →" : "Register Now →"}
+                    {user?.role === "REFEREE"
+                      ? "View Tournament →"
+                      : "Register Now →"}
                   </span>
                 </div>
               </Link>
@@ -279,7 +562,7 @@ const Dashboard: React.FC = () => {
           </Link>
         </main>
       )}
-    </>
+    </>,
   );
 };
 

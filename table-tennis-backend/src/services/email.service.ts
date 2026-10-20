@@ -1,60 +1,94 @@
 import nodemailer from 'nodemailer';
 import { config } from '../config/env';
+import { AppError } from '../utils/AppError';
 
-// Check if email is configured
-const isEmailConfigured = () => {
-  return process.env.EMAIL_HOST && 
-         process.env.EMAIL_USER && 
-         process.env.EMAIL_PASS && 
-         process.env.EMAIL_USER !== 'your-email@gmail.com';
+// Check if a string is a placeholder or empty
+const isPlaceholder = (val?: string) => {
+  if (!val) return true;
+  const lower = val.toLowerCase().trim();
+  return (
+    lower === '' ||
+    lower.includes('your-email') ||
+    lower.includes('your-gmail') ||
+    lower.includes('your-16-character') ||
+    lower.includes('example.com')
+  );
+};
+
+// Check if email is configured with real non-placeholder credentials
+export const isEmailConfigured = () => {
+  return Boolean(
+    process.env.EMAIL_HOST && 
+    process.env.EMAIL_USER && 
+    process.env.EMAIL_PASS && 
+    !isPlaceholder(process.env.EMAIL_USER) &&
+    !isPlaceholder(process.env.EMAIL_PASS)
+  );
 };
 
 // Create transporter only if email is configured
 let transporter: nodemailer.Transporter | null = null;
+let isSmtpVerified = false;
 
 if (isEmailConfigured()) {
+  const isSslPort = Number(process.env.EMAIL_PORT) === 465;
   transporter = nodemailer.createTransport({
     host: process.env.EMAIL_HOST,
-    port: Number(process.env.EMAIL_PORT),
-    secure: false,
+    port: Number(process.env.EMAIL_PORT) || 587,
+    secure: isSslPort,
     auth: {
       user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS,
+      // Strip any whitespace from copy-pasting the 16-character Google App Password
+      pass: process.env.EMAIL_PASS ? process.env.EMAIL_PASS.replace(/\s+/g, '') : '',
     },
     tls: {
       rejectUnauthorized: false,
     },
   });
-}
-// Verify connection on startup
-if (transporter) {
+
+  // Verify connection on startup
   transporter.verify((error) => {
     if (error) {
-      console.error('❌ Email service error:', error.message);
-      console.log('💡 Check EMAIL_HOST, EMAIL_USER, EMAIL_PASS in .env');
+      isSmtpVerified = false;
+      console.error('\n' + '='.repeat(70));
+      console.error('❌ EMAIL SERVICE SMTP ERROR:');
+      console.error(`Reason: ${error.message}`);
+      console.error('\n💡 Why this happens with Gmail (Error 535):');
+      console.error('   Google does NOT allow your regular Gmail password for SMTP.');
+      console.error('   You must use a 16-character Google App Password:');
+      console.error('   1. Go to https://myaccount.google.com/security');
+      console.error('   2. Ensure "2-Step Verification" is ON');
+      console.error('   3. Go to https://myaccount.google.com/apppasswords');
+      console.error('   4. Generate an app password (e.g. name it "TableTennis")');
+      console.error('   5. Paste the 16 letters into EMAIL_PASS in table-tennis-backend/.env');
+      console.error('\n⚠️ App will continue running: verification & reset links are logged to console.');
+      console.error('='.repeat(70) + '\n');
     } else {
+      isSmtpVerified = true;
       console.log('✅ Email service ready — using', process.env.EMAIL_USER);
     }
   });
+} else {
+  console.log('\nℹ️ Email service in Development Mode (placeholder credentials in .env).');
+  console.log('💡 Verification and password reset links will be printed to the terminal console.');
+  console.log('💡 To send real Gmail emails, set EMAIL_USER and a 16-char App Password in .env\n');
 }
 
 export const sendPasswordResetEmail = async (email: string, resetToken: string) => {
   const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password?token=${resetToken}`;
-  
-  // Always log to console for development/demo
+
+  // Always log for development
   console.log('\n' + '='.repeat(70));
-  console.log('🔐 PASSWORD RESET REQUEST');
+  console.log('🔑 PASSWORD RESET REQUEST');
   console.log('='.repeat(70));
-  console.log(`📧 To: ${email}`);
-  console.log(`🔗 Reset Link: ${resetUrl}`);
-  console.log(`⏰ Expires: 1 hour`);
+  console.log(`To: ${email}`);
+  console.log(`Reset Link: ${resetUrl}`);
   console.log('='.repeat(70) + '\n');
-  
-  // Try to send real email if configured
+
   if (transporter && isEmailConfigured()) {
     try {
-      const mailOptions = {
-        from: process.env.EMAIL_FROM || 'noreply@tabletennis.com',
+      await transporter.sendMail({
+        from: process.env.EMAIL_FROM || process.env.EMAIL_USER || 'noreply@tabletennis.com',
         to: email,
         subject: 'Password Reset Request - Table Tennis Tournament System',
         html: `
@@ -71,21 +105,14 @@ export const sendPasswordResetEmail = async (email: string, resetToken: string) 
             <p style="font-size: 12px; color: #666;">Table Tennis Tournament Management System</p>
           </div>
         `,
-      };
-
-      await transporter.sendMail(mailOptions);
-      console.log(`✅ Email sent successfully to ${email}`);
+      });
+      console.log(`✅ Password reset email sent successfully to ${email}`);
     } catch (error) {
-      console.error('❌ Failed to send email:', error);
-      console.log('📝 Reset link is still available in the console above');
+      console.error('❌ Failed to dispatch password reset email via SMTP, link printed above:', error);
     }
-  } else {
-    console.log('📧 Email service not configured. Using console log only.');
-    console.log('💡 To enable real email, configure EMAIL_HOST, EMAIL_USER, and EMAIL_PASS in .env');
   }
-  
-  return { message: 'Password reset link generated (check console for link)' };
 };
+
 export const sendVerificationEmail = async (email: string, token: string, firstName: string) => {
   const verifyUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/verify-email?token=${token}`;
 
@@ -100,7 +127,7 @@ export const sendVerificationEmail = async (email: string, token: string, firstN
   if (transporter && isEmailConfigured()) {
     try {
       await transporter.sendMail({
-        from: process.env.EMAIL_FROM || 'noreply@tabletennis.com',
+        from: process.env.EMAIL_FROM || process.env.EMAIL_USER || 'noreply@tabletennis.com',
         to: email,
         subject: 'Verify your email — Table Tennis Tournament',
         html: `
@@ -128,7 +155,7 @@ export const sendVerificationEmail = async (email: string, token: string, firstN
       });
       console.log(`✅ Verification email sent to ${email}`);
     } catch (error) {
-      console.error('❌ Failed to send verification email:', error);
+      console.error('❌ Failed to dispatch verification email via SMTP, link printed above:', error);
     }
   }
 };

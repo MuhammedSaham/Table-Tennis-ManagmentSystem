@@ -679,8 +679,8 @@ export const UmpireSheet: React.FC<UmpireSheetProps> = ({
               <span style={{ color: "#0f172a", fontWeight: 700 }}>
                 {match.referee?.user
                   ? `${match.referee.user.firstName} ${match.referee.user.lastName}`
-                  : user?.role === "ADMIN"
-                  ? `${user.firstName} ${user.lastName} (Admin)`
+                  : (user?.role === "SUPER_ADMIN" || user?.role === "ADMIN")
+                  ? `${user.firstName} ${user.lastName} (${user.role === "SUPER_ADMIN" ? "Super Admin" : "Admin"})`
                   : isCompleted
                   ? "Tournament Official"
                   : "…………………………"}
@@ -732,7 +732,7 @@ export const UmpireSheet: React.FC<UmpireSheetProps> = ({
           >
             Close
           </button>
-          {user?.role === "ADMIN" && !isCompleted && onAssignReferee && (
+          {(user?.role === "SUPER_ADMIN" || user?.role === "ADMIN") && !isCompleted && onAssignReferee && (
             <button
               onClick={() => onAssignReferee(match)}
               style={{
@@ -789,8 +789,9 @@ const GroupStandings: React.FC<Props> = ({
   isAdminOrReferee: _isAdminOrReferee = false,
   onScoreUpdate,
 }) => {
-  const { user } = useAuth();
-  const isAdmin = user?.role === "ADMIN";
+  const { user, hasPermission } = useAuth();
+  const isSuperAdmin = user?.role === "SUPER_ADMIN" || user?.isSuperAdmin;
+  const isAdmin = isSuperAdmin || (user?.role === "ADMIN" && (hasPermission("MANAGE_MATCHES") || hasPermission("MANAGE_RESULTS")));
   const isReferee = user?.role === "REFEREE";
   const [groups, setGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(true);

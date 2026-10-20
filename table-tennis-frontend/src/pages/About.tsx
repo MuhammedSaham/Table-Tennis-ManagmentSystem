@@ -177,16 +177,25 @@ const About: React.FC = () => (
         </div>
         <div className="grid gap-4 sm:gap-5 sm:grid-cols-2 xl:grid-cols-4">
           {trainingCentres.map((centre) => (
-            <article key={centre.name} className="group relative rounded-[16px] border border-white/20 bg-[#061D23]/25 p-5 sm:p-6 text-white shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl transition duration-200 hover:-translate-y-1 hover:border-[#4AEEFF]/60 hover:shadow-xl">
+            <a
+              key={centre.name}
+              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${centre.name}, ${centre.address.replace(/\n/g, ", ")}`)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={`Open ${centre.name} in Google Maps`}
+              className="group relative block rounded-[16px] border border-white/20 bg-[#061D23]/25 p-5 text-white shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl transition duration-200 hover:-translate-y-1 hover:border-[#4AEEFF]/60 hover:shadow-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-[#4AEEFF] sm:p-6"
+            >
               <div className="flex items-center justify-between mb-4">
                 <MapPinIcon className="h-7 w-7 text-[#4AEEFF]" aria-hidden="true" />
                 <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-white/10 text-white/70 border border-white/10 group-hover:border-[#4AEEFF]/40 group-hover:text-[#4AEEFF] transition-colors">
                   {centre.tag}
                 </span>
               </div>
-              <h3 className="text-lg sm:text-xl font-bold text-white group-hover:text-[#4AEEFF] transition-colors">{centre.name}</h3>
+              <h3 className="text-lg sm:text-xl font-bold text-white transition-colors">
+                <span className="group-hover:text-[#4AEEFF]">{centre.name}</span>
+              </h3>
               <p className="mt-2.5 whitespace-pre-line text-xs sm:text-sm leading-relaxed text-white/70">{centre.address}</p>
-            </article>
+            </a>
           ))}
         </div>
       </section>

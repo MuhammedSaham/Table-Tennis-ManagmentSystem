@@ -159,8 +159,12 @@ const NotificationBell: React.FC = () => {
     // Navigate based on notification type
     if (notif.type === "TOURNAMENT_CREATED") {
       window.location.href = "/tournaments";
-    } else if (notif.type === "NEW_ADMIN_REQUEST") {
-      window.location.href = "/admin-requests";
+    } else if (
+      notif.type === "CLUB_MEMBERSHIP_REQUEST" ||
+      notif.type === "NEW_ADMIN_REQUEST" ||
+      notif.type === "PAYMENT_VERIFICATION_REQUEST"
+    ) {
+      window.location.href = "/app/admin-requests";
     } else if (notif.type === "DOUBLES_INVITE" || notif.type.includes("DOUBLES")) {
       window.location.href = "/app/dashboard";
     }

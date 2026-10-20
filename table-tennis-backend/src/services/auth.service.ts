@@ -1,11 +1,11 @@
 import bcrypt from 'bcrypt';
+import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import { Prisma } from '@prisma/client';
 import prisma from '../config/database';
 import { AppError } from '../utils/AppError';
 import { config } from '../config/env';
-//import crypto from 'crypto';
-//import { sendPasswordResetEmail, sendVerificationEmail } from './email.service';
+import { sendPasswordResetEmail, sendVerificationEmail } from './email.service';
 
 export class AuthService {
     // Register new user with Admin Approval Workflow
@@ -15,7 +15,7 @@ export class AuthService {
         firstName: string;
         lastName: string;
         phone?: string;
-        role: 'ADMIN' | 'REFEREE' | 'PLAYER';
+        role: 'SUPER_ADMIN' | 'ADMIN' | 'REFEREE' | 'PLAYER';
         adminRequestReason?: string;
         playerProfile?: {
             dateOfBirth?: Date;
@@ -32,6 +32,11 @@ export class AuthService {
             department?: string;
         };
     }) {
+        // Prevent public registration as SUPER_ADMIN
+        if ((userData.role as string) === 'SUPER_ADMIN') {
+            throw new AppError('Public registration as SUPER_ADMIN is prohibited', 400);
+        }
+
         // Check if user already exists
         const existingUser = await prisma.user.findUnique({
             where: { email: userData.email },
@@ -47,7 +52,7 @@ export class AuthService {
         // Create user with role-specific profile in a transaction
         const user = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
             // Set admin request status if registering as ADMIN
-            let adminRequestStatus = 'NONE';
+            let adminRequestStatus: any = 'NONE';
             let adminRequestedAt = null;
             let finalRole = userData.role;
             
@@ -57,7 +62,7 @@ export class AuthService {
                 finalRole = 'PLAYER'; // Temporarily set as PLAYER until approved
             }
 
-            // Create base user
+            // Create base user (auto-verified so club players can use the system immediately)
             const newUser = await tx.user.create({
                 data: {
                     email: userData.email,
@@ -65,9 +70,10 @@ export class AuthService {
                     firstName: userData.firstName,
                     lastName: userData.lastName,
                     phone: userData.phone,
-                    role: finalRole,
+                    role: finalRole as any,
                     adminRequestStatus,
                     adminRequestedAt,
+                    isEmailVerified: true,
                 },
             });
 
@@ -92,21 +98,19 @@ export class AuthService {
                     },
                 });
             }
-            // DO NOT create AdminProfile here - it will be created after approval
 
             return newUser;
         });
 
-        // NOTIFY EXISTING ADMINS ABOUT NEW ADMIN REQUEST
+        // NOTIFY EXISTING SUPER ADMINS AND ADMINS ABOUT NEW ADMIN REQUEST
         if (userData.role === 'ADMIN') {
             try {
-                // Get all existing admins
+                // Get all existing super admins and admins
                 const existingAdmins: Array<{ id: string }> = await prisma.user.findMany({
-                    where: { role: 'ADMIN' },
+                    where: { role: { in: ['SUPER_ADMIN', 'ADMIN'] } },
                     select: { id: true },
                 });
 
-                // Create notifications for all admins
                 if (existingAdmins.length > 0) {
                     await prisma.notification.createMany({
                         data: existingAdmins.map((admin: { id: string }) => ({
@@ -117,25 +121,15 @@ export class AuthService {
                             createdAt: new Date(),
                         })),
                     });
-                    console.log(`📧 Notified ${existingAdmins.length} admin(s) about new request`);
                 }
             } catch (error) {
                 console.error('Failed to notify admins:', error);
             }
         }
-        /*const verificationToken = crypto.randomBytes(32).toString('hex');
-
-        await prisma.user.update({
-        where: { id: user.id },
-        data: { emailVerificationToken: verificationToken },
-        });
-
-        sendVerificationEmail(userData.email, verificationToken, userData.firstName).catch(console.error);*/
 
         // Generate JWT token
         const token = this.generateToken(user.id);
 
-        // Return user without password
         return {
             user: {
                 id: user.id,
@@ -144,10 +138,11 @@ export class AuthService {
                 lastName: user.lastName,
                 role: userData.role === 'ADMIN' ? 'PENDING_ADMIN' : user.role,
                 adminRequestStatus: user.adminRequestStatus,
+                permissions: [],
                 isEmailVerified: true,
             } as any,
             token,
-            message: 'Registration successful! Please check your email to verify your account.',
+            message: 'Registration successful! You can now log in.',
         };
     }
 
@@ -160,6 +155,7 @@ export class AuthService {
                 playerProfile: true,
                 refereeProfile: true,
                 adminProfile: true,
+                adminPermissions: true,
             },
         });
 
@@ -170,15 +166,9 @@ export class AuthService {
         // Check password
         const isPasswordValid = await bcrypt.compare(password, user.password);
 
-        /*if (!isPasswordValid) {
+        if (!isPasswordValid) {
             throw new AppError('Invalid email or password', 401);
         }
-        if (!user.isEmailVerified) {
-  throw new AppError(
-    'Please verify your email address before logging in. Check your inbox for the verification link.',
-    403
-  );
-}*/
 
         // Generate token
         const token = this.generateToken(user.id);
@@ -187,9 +177,26 @@ export class AuthService {
         let profile = null;
         if (user.role === 'PLAYER') profile = user.playerProfile;
         else if (user.role === 'REFEREE') profile = user.refereeProfile;
-        else if (user.role === 'ADMIN') profile = user.adminProfile;
+        else if (user.role === 'ADMIN' || user.role === 'SUPER_ADMIN') profile = user.adminProfile;
 
-        // Return user without password
+        // Compute permissions list
+        let permissions: string[] = [];
+        if (user.role === 'SUPER_ADMIN' || user.isSuperAdmin) {
+            permissions = [
+                'MANAGE_USERS',
+                'MANAGE_PLAYERS',
+                'MANAGE_REFEREES',
+                'MANAGE_TOURNAMENTS',
+                'MANAGE_REGISTRATIONS',
+                'MANAGE_MATCHES',
+                'MANAGE_RESULTS',
+                'MANAGE_RANKINGS',
+                'MANAGE_CLUB_MEMBERSHIPS',
+            ];
+        } else if (user.role === 'ADMIN') {
+            permissions = user.adminPermissions.map((p) => p.permission);
+        }
+
         return {
             user: {
                 id: user.id,
@@ -198,7 +205,9 @@ export class AuthService {
                 lastName: user.lastName,
                 role: user.role,
                 adminRequestStatus: user.adminRequestStatus,
-                isSuperAdmin: user.isSuperAdmin ?? false,
+                isSuperAdmin: user.role === 'SUPER_ADMIN' || user.isSuperAdmin,
+                isEmailVerified: user.isEmailVerified,
+                permissions,
                 profile,
             },
             token,
@@ -233,6 +242,11 @@ export class AuthService {
                     role: true,
                     adminRequestStatus: true,
                     isSuperAdmin: true,
+                    adminPermissions: {
+                        select: {
+                            permission: true,
+                        },
+                    },
                 },
             });
 
@@ -240,14 +254,35 @@ export class AuthService {
                 throw new AppError('User not found', 401);
             }
 
-            return user;
+            let permissions: string[] = [];
+            if (user.role === 'SUPER_ADMIN' || user.isSuperAdmin) {
+                permissions = [
+                    'MANAGE_USERS',
+                    'MANAGE_PLAYERS',
+                    'MANAGE_REFEREES',
+                    'MANAGE_TOURNAMENTS',
+                    'MANAGE_REGISTRATIONS',
+                    'MANAGE_MATCHES',
+                    'MANAGE_RESULTS',
+                    'MANAGE_RANKINGS',
+                    'MANAGE_CLUB_MEMBERSHIPS',
+                ];
+            } else if (user.role === 'ADMIN') {
+                permissions = user.adminPermissions.map((p) => p.permission);
+            }
+
+            return {
+                ...user,
+                isSuperAdmin: user.role === 'SUPER_ADMIN' || user.isSuperAdmin,
+                permissions,
+            };
         } catch (error) {
             throw new AppError('Invalid token', 401);
         }
     }
 
-    // Forgot password - generate reset token
-    /*async forgotPassword(email: string) {
+    // Forgot password - generate a single-use reset token and email it to the user.
+    async forgotPassword(email: string) {
         const user = await prisma.user.findUnique({
             where: { email },
         });
@@ -259,6 +294,7 @@ export class AuthService {
         const resetToken = crypto.randomBytes(32).toString('hex');
         const resetTokenExpiry = new Date(Date.now() + 3600000);
 
+        await sendPasswordResetEmail(email, resetToken);
         await prisma.user.update({
             where: { email },
             data: {
@@ -267,14 +303,8 @@ export class AuthService {
             },
         });
 
-        try {
-            await sendPasswordResetEmail(email, resetToken);
-            return { message: 'Password reset link sent to your email.' };
-        } catch (error) {
-            console.error('Email sending failed:', error);
-            return { message: 'Failed to send reset email. Please try again later.' };
-        }
-    }*/
+        return { message: 'If your email is registered, you will receive a reset link.' };
+    }
 
     // Reset password - verify token and set new password
     async resetPassword(token: string, newPassword: string) {
@@ -304,54 +334,77 @@ export class AuthService {
 
         return { message: 'Password reset successful. You can now login with your new password.' };
     }
-    /*async verifyEmail(token: string) {
-  const user = await prisma.user.findFirst({
-    where: { emailVerificationToken: token },
-  });
 
-  if (!user) {
-    throw new AppError('Invalid or expired verification link', 400);
-  }
+    // Verify email with token
+    async verifyEmail(token: string) {
+        if (!token) {
+            throw new AppError('Verification token is required', 400);
+        }
 
-  await prisma.user.update({
-    where: { id: user.id },
-    data: {
-      isEmailVerified: true,
-      emailVerificationToken: null,
-    },
-  });
+        const user = await prisma.user.findFirst({
+            where: {
+                emailVerificationToken: token,
+                OR: [
+                    { emailVerificationExpiry: null },
+                    { emailVerificationExpiry: { gt: new Date() } },
+                ],
+            },
+        });
 
-  return {
-    message: 'Email verified successfully! You can now log in.',
-    user: {
-      id: user.id,
-      email: user.email,
-      firstName: user.firstName,
-      lastName: user.lastName,
-    },
-  };
-}
+        if (!user) {
+            throw new AppError('Invalid or expired verification link', 400);
+        }
 
-// Resend verification email
-async resendVerification(email: string) {
-  const user = await prisma.user.findUnique({ where: { email } });
+        const updatedUser = await prisma.user.update({
+            where: { id: user.id },
+            data: {
+                isEmailVerified: true,
+                emailVerificationToken: null,
+                emailVerificationExpiry: null,
+            },
+        });
 
-  if (!user) {
-    return { message: 'If that email is registered, a verification link has been sent.' };
-  }
+        return {
+            message: 'Email verified successfully! You can now log in.',
+            user: {
+                id: updatedUser.id,
+                email: updatedUser.email,
+                firstName: updatedUser.firstName,
+                lastName: updatedUser.lastName,
+            },
+        };
+    }
 
-  if (user.isEmailVerified) {
-    throw new AppError('This email is already verified.', 400);
-  }
+    // Resend verification email
+    async resendVerification(email: string) {
+        if (!email) {
+            throw new AppError('Email is required', 400);
+        }
 
-  const token = crypto.randomBytes(32).toString('hex');
+        const user = await prisma.user.findUnique({
+            where: { email },
+        });
 
-  await prisma.user.update({
-    where: { id: user.id },
-    data: { emailVerificationToken: token },
-  });
+        if (!user) {
+            return { message: 'If that email is registered, a verification link has been sent.' };
+        }
 
-  await sendVerificationEmail(email, token, user.firstName);
-  return { message: 'Verification email sent! Please check your inbox.' };
-}*/
+        if (user.isEmailVerified) {
+            throw new AppError('This email is already verified. You can log in directly.', 400);
+        }
+
+        const token = crypto.randomBytes(32).toString('hex');
+        const expiry = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+        await prisma.user.update({
+            where: { id: user.id },
+            data: {
+                emailVerificationToken: token,
+                emailVerificationExpiry: expiry,
+            },
+        });
+
+        await sendVerificationEmail(email, token, user.firstName);
+        return { message: 'Verification email sent! Please check your inbox.' };
+    }
 }

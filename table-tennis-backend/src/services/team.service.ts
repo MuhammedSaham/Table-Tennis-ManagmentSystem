@@ -513,6 +513,33 @@ export class TeamService {
         );
       }
     }
+    // Check whether payment proof is required for the inviter/captain
+const inviterProfile = await prisma.playerProfile.findUnique({
+  where: { userId: invite.inviterId },
+  select: { isClubMember: true },
+});
+
+const tournamentPaymentSettings = await prisma.tournament.findUnique({
+  where: { id: invite.tournamentId },
+  select: {
+    requirePaymentProofClub: true,
+    requirePaymentProofGuest: true,
+  },
+});
+
+if (!tournamentPaymentSettings) {
+  throw new AppError('Tournament not found', 404);
+}
+
+const isClubMember = inviterProfile?.isClubMember === true;
+
+const paymentProofRequired = isClubMember
+  ? tournamentPaymentSettings.requirePaymentProofClub
+  : tournamentPaymentSettings.requirePaymentProofGuest;
+
+const initialRegistrationStatus = paymentProofRequired
+  ? 'PENDING'
+  : 'APPROVED';
 
     // ACCEPT — create team + 2 members + registration
     const teamName = `${invite.inviter.firstName} & ${invite.invitee.firstName}`;
@@ -542,15 +569,23 @@ export class TeamService {
           categoryId: invite.categoryId,
           playerId: invite.inviterId,
           teamId: team.id,
-          status: 'APPROVED',
+          status: initialRegistrationStatus,
         },
       });
 
-      // Update currentParticipants count on category
-      await tx.category.update({
-        where: { id: invite.categoryId },
-        data: { currentParticipants: { increment: 1 } },
-      });
+      
+      // Only count the team if the registration is immediately APPROVED.
+
+if (initialRegistrationStatus === 'APPROVED') {
+  await tx.category.update({
+    where: { id: invite.categoryId },
+    data: {
+      currentParticipants: {
+        increment: 1,
+      },
+    },
+  });
+}
 
       // Mark invite as ACCEPTED with teamId
       await tx.doublesInvite.update({
