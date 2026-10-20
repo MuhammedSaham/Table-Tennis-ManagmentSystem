@@ -24,7 +24,7 @@ import { upload } from '../middleware/upload.middleware';
 
 const router = Router();
 
-router.get('/public/players', getPublicPlayers);
+router.get('/public/players', optionalAuthenticate, getPublicPlayers);
 router.get('/public/:id', optionalAuthenticate, getPublicProfile);
 
 // All routes require authentication

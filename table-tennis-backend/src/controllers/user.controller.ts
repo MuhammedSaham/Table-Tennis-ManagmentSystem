@@ -155,8 +155,16 @@ export const getPublicProfile = catchAsync(async (req: Request, res: Response) =
 });
 
 export const getPublicPlayers = catchAsync(async (req: Request, res: Response) => {
+
+  const isLoggedIn = !!req.user;
+
   const players = await prisma.user.findMany({
-    where: { role: 'PLAYER' },
+    where: {
+      role: 'PLAYER',
+      ...(isLoggedIn
+        ? {}
+        : { playerProfile: { is: { isClubMember: true } } }),
+    },
     select: {
       id: true,
       firstName: true,

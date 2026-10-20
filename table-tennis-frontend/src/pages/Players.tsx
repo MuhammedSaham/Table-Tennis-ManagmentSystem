@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import api, { getProfileImageUrl } from "../services/api";
+import { useAuth } from "../context/AuthContext";
 
 interface Player {
   id: string;
@@ -21,8 +22,12 @@ interface Player {
 const skillColors: Record<string, { badge: string }> = {
   BEGINNER: { badge: "border-sky-400/40 bg-sky-400/10 text-sky-300" },
   INTERMEDIATE: { badge: "border-amber-400/40 bg-amber-400/10 text-amber-300" },
-  ADVANCED: { badge: "border-emerald-400/40 bg-emerald-400/10 text-emerald-300" },
-  PROFESSIONAL: { badge: "border-purple-400/40 bg-purple-400/10 text-purple-300" },
+  ADVANCED: {
+    badge: "border-emerald-400/40 bg-emerald-400/10 text-emerald-300",
+  },
+  PROFESSIONAL: {
+    badge: "border-purple-400/40 bg-purple-400/10 text-purple-300",
+  },
 };
 
 const calculateAge = (dob: string) => {
@@ -52,6 +57,8 @@ const formatDateOfBirth = (dob: string) => {
 type TabType = "CLUB" | "GUEST";
 
 const Players: React.FC = () => {
+  const { user, isLoading } = useAuth();
+  const isLoggedIn = !!user;
   const [players, setPlayers] = useState<Player[]>([]);
   const [filtered, setFiltered] = useState<Player[]>([]);
   const [loading, setLoading] = useState(true);
@@ -79,11 +86,18 @@ const Players: React.FC = () => {
   useEffect(() => {
     fetchPlayers();
   }, []);
+  useEffect(() => {
+    if (!isLoggedIn) {
+      setActiveTab("CLUB");
+    }
+  }, [isLoggedIn]);
 
   // Split players by tab — use isClubMember set by admin on creation
   const clubPlayers = players.filter((p) => p.isClubMember === true);
   const guestPlayers = players.filter((p) => !p.isClubMember);
-  const tabPlayers = activeTab === "CLUB" ? clubPlayers : guestPlayers;
+
+  const tabPlayers =
+    isLoggedIn && activeTab === "GUEST" ? guestPlayers : clubPlayers;
 
   useEffect(() => {
     let result = tabPlayers;
@@ -93,12 +107,12 @@ const Players: React.FC = () => {
         (p) =>
           p.firstName.toLowerCase().includes(q) ||
           p.lastName.toLowerCase().includes(q) ||
-          p.playerProfile?.clubAffiliation?.toLowerCase().includes(q)
+          p.playerProfile?.clubAffiliation?.toLowerCase().includes(q),
       );
     }
     if (skillFilter !== "ALL") {
       result = result.filter(
-        (p) => p.playerProfile?.skillLevel?.toUpperCase() === skillFilter
+        (p) => p.playerProfile?.skillLevel?.toUpperCase() === skillFilter,
       );
     }
     setFiltered(result);
@@ -136,10 +150,16 @@ const Players: React.FC = () => {
         </header>
 
         {/* ── TABS MODULE (Side-by-side on mobile & desktop) ── */}
-        <div className="grid grid-cols-2 gap-2 sm:flex sm:gap-3">
+        <div
+          className={`grid ${isLoggedIn ? "grid-cols-2" : "grid-cols-1"} gap-2 sm:flex sm:gap-3`}
+        >
           <button
             id="tab-club-members"
-            onClick={() => { setActiveTab("CLUB"); setSearch(""); setSkillFilter("ALL"); }}
+            onClick={() => {
+              setActiveTab("CLUB");
+              setSearch("");
+              setSkillFilter("ALL");
+            }}
             className={`flex items-center justify-center gap-2 px-3 sm:px-6 py-2.5 sm:py-3 rounded-xl font-black text-xs uppercase tracking-wider transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#4AEEFF] ${
               activeTab === "CLUB"
                 ? "bg-[#4AEEFF] text-[#061D23] shadow-lg shadow-[#4AEEFF]/25 scale-[1.01]"
@@ -157,40 +177,50 @@ const Players: React.FC = () => {
               {clubPlayers.length}
             </span>
           </button>
-
-          <button
-            id="tab-guest-players"
-            onClick={() => { setActiveTab("GUEST"); setSearch(""); setSkillFilter("ALL"); }}
-            className={`flex items-center justify-center gap-2 px-3 sm:px-6 py-2.5 sm:py-3 rounded-xl font-black text-xs uppercase tracking-wider transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#4AEEFF] ${
-              activeTab === "GUEST"
-                ? "bg-[#4AEEFF] text-[#061D23] shadow-lg shadow-[#4AEEFF]/25 scale-[1.01]"
-                : "bg-[#061D23]/40 text-white/80 border border-white/15 hover:border-[#4AEEFF]/50 hover:text-white"
-            }`}
-          >
-            <span className="truncate">👤 Guest Players</span>
-            <span
-              className={`px-2 py-0.5 rounded-full text-[11px] font-bold shrink-0 ${
+          {isLoggedIn && (
+            <button
+              id="tab-guest-players"
+              onClick={() => {
+                setActiveTab("GUEST");
+                setSearch("");
+                setSkillFilter("ALL");
+              }}
+              className={`flex items-center justify-center gap-2 px-3 sm:px-6 py-2.5 sm:py-3 rounded-xl font-black text-xs uppercase tracking-wider transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#4AEEFF] ${
                 activeTab === "GUEST"
-                  ? "bg-[#061D23]/25 text-[#061D23]"
-                  : "bg-white/10 text-[#4AEEFF]"
+                  ? "bg-[#4AEEFF] text-[#061D23] shadow-lg shadow-[#4AEEFF]/25 scale-[1.01]"
+                  : "bg-[#061D23]/40 text-white/80 border border-white/15 hover:border-[#4AEEFF]/50 hover:text-white"
               }`}
             >
-              {guestPlayers.length}
-            </span>
-          </button>
+              <span className="truncate">👤 Guest Players</span>
+              <span
+                className={`px-2 py-0.5 rounded-full text-[11px] font-bold shrink-0 ${
+                  activeTab === "GUEST"
+                    ? "bg-[#061D23]/25 text-[#061D23]"
+                    : "bg-white/10 text-[#4AEEFF]"
+                }`}
+              >
+                {guestPlayers.length}
+              </span>
+            </button>
+          )}
         </div>
 
         {/* Tab description pill */}
         <div className="rounded-xl border border-white/10 bg-[#061D23]/30 px-3.5 py-2 text-xs text-white/75 backdrop-blur-md flex items-center gap-2">
-          <span className="text-sm shrink-0">{activeTab === "CLUB" ? "🏅" : "👤"}</span>
+          <span className="text-sm shrink-0">
+            {activeTab === "CLUB" ? "🏅" : "👤"}
+          </span>
           <p className="leading-snug">
             {activeTab === "CLUB" ? (
               <>
-                <strong className="text-white">Club Members:</strong> Officially registered players with assigned club rankings.
+                <strong className="text-white">Club Members:</strong> Officially
+                registered players with assigned club rankings.
               </>
             ) : (
               <>
-                <strong className="text-white">Guest Players:</strong> Self-registered community players without an official ranking yet.
+                <strong className="text-white">Guest Players:</strong>{" "}
+                Self-registered community players without an official ranking
+                yet.
               </>
             )}
           </p>
@@ -201,7 +231,9 @@ const Players: React.FC = () => {
           <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center">
             {/* Search */}
             <div className="relative flex-1 w-full">
-              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm text-white/40">🔍</span>
+              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm text-white/40">
+                🔍
+              </span>
               <input
                 type="text"
                 placeholder="Search by name or club..."
@@ -223,7 +255,13 @@ const Players: React.FC = () => {
             {/* Skill filter pills & View Switcher */}
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-1.5 overflow-x-auto pb-1 pt-0.5 no-scrollbar flex-1 min-w-0">
-                {["ALL", "BEGINNER", "INTERMEDIATE", "ADVANCED", "PROFESSIONAL"].map((s) => (
+                {[
+                  "ALL",
+                  "BEGINNER",
+                  "INTERMEDIATE",
+                  "ADVANCED",
+                  "PROFESSIONAL",
+                ].map((s) => (
                   <button
                     key={s}
                     onClick={() => setSkillFilter(s)}
@@ -233,7 +271,9 @@ const Players: React.FC = () => {
                         : "bg-[#061D23]/50 text-white/70 border border-white/10 hover:border-[#4AEEFF]/40 hover:text-white"
                     }`}
                   >
-                    {s === "ALL" ? "All Levels" : s.charAt(0) + s.slice(1).toLowerCase()}
+                    {s === "ALL"
+                      ? "All Levels"
+                      : s.charAt(0) + s.slice(1).toLowerCase()}
                   </button>
                 ))}
               </div>
@@ -250,8 +290,18 @@ const Players: React.FC = () => {
                       : "text-white/60 hover:text-white"
                   }`}
                 >
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M4 6h16M4 12h16M4 18h16" />
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2.2}
+                      d="M4 6h16M4 12h16M4 18h16"
+                    />
                   </svg>
                 </button>
                 <button
@@ -264,8 +314,18 @@ const Players: React.FC = () => {
                       : "text-white/60 hover:text-white"
                   }`}
                 >
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2.2}
+                      d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"
+                    />
                   </svg>
                 </button>
               </div>
@@ -300,7 +360,9 @@ const Players: React.FC = () => {
         {/* Empty */}
         {!loading && filtered.length === 0 && (
           <div className="flex flex-col items-center justify-center rounded-[16px] border border-white/20 bg-[#061D23]/15 p-12 text-center backdrop-blur-xl">
-            <div className="text-4xl mb-3">{activeTab === "CLUB" ? "🏅" : "👤"}</div>
+            <div className="text-4xl mb-3">
+              {activeTab === "CLUB" ? "🏅" : "👤"}
+            </div>
             <h3 className="text-sm sm:text-base font-black uppercase tracking-wider text-white">
               No {activeTab === "CLUB" ? "club members" : "guest players"} found
             </h3>
@@ -319,10 +381,9 @@ const Players: React.FC = () => {
                 skill && skillColors[skill]
                   ? skillColors[skill].badge
                   : "border-white/20 bg-white/5 text-white/60";
-              const age =
-                player.playerProfile?.dateOfBirth
-                  ? calculateAge(player.playerProfile.dateOfBirth)
-                  : null;
+              const age = player.playerProfile?.dateOfBirth
+                ? calculateAge(player.playerProfile.dateOfBirth)
+                : null;
               const isClubMember = player.isClubMember === true;
 
               return (
@@ -387,7 +448,9 @@ const Players: React.FC = () => {
                         )}
 
                         {player.playerProfile?.skillLevel && (
-                          <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase border ${skillBadgeClass}`}>
+                          <span
+                            className={`px-2 py-0.5 rounded text-[10px] font-black uppercase border ${skillBadgeClass}`}
+                          >
                             {player.playerProfile.skillLevel}
                           </span>
                         )}
@@ -402,7 +465,9 @@ const Players: React.FC = () => {
                       {player.playerProfile?.clubAffiliation && (
                         <p className="text-[11px] text-white/60 truncate mt-1 flex items-center gap-1">
                           <span>🏛️</span>
-                          <span className="truncate">{player.playerProfile.clubAffiliation}</span>
+                          <span className="truncate">
+                            {player.playerProfile.clubAffiliation}
+                          </span>
                         </p>
                       )}
                     </div>
@@ -430,10 +495,9 @@ const Players: React.FC = () => {
                 skill && skillColors[skill]
                   ? skillColors[skill].badge
                   : "border-white/20 bg-white/5 text-white/60";
-              const age =
-                player.playerProfile?.dateOfBirth
-                  ? calculateAge(player.playerProfile.dateOfBirth)
-                  : null;
+              const age = player.playerProfile?.dateOfBirth
+                ? calculateAge(player.playerProfile.dateOfBirth)
+                : null;
               const isClubMember = player.isClubMember === true;
 
               return (
@@ -508,7 +572,8 @@ const Players: React.FC = () => {
                       )}
                       {player.playerProfile?.dateOfBirth && (
                         <p className="text-white/50 text-[11px] sm:text-xs mt-1">
-                          DOB: {formatDateOfBirth(player.playerProfile.dateOfBirth)}
+                          DOB:{" "}
+                          {formatDateOfBirth(player.playerProfile.dateOfBirth)}
                           {age !== null ? ` (${age} yrs)` : ""}
                         </p>
                       )}
@@ -518,14 +583,18 @@ const Players: React.FC = () => {
                     {player.playerProfile?.clubAffiliation && (
                       <div className="mt-1.5 sm:mt-2 pt-2.5 sm:pt-3 border-t border-white/10 text-center text-xs text-white/80 flex items-center justify-center gap-1.5 font-medium truncate">
                         <span>🏛️</span>
-                        <span className="truncate">{player.playerProfile.clubAffiliation}</span>
+                        <span className="truncate">
+                          {player.playerProfile.clubAffiliation}
+                        </span>
                       </div>
                     )}
                   </div>
 
                   {/* Skill Badge & Profile Link */}
                   <div className="mt-3 sm:mt-5 pt-2.5 sm:pt-3 border-t border-white/10 flex items-center justify-between">
-                    <span className={`px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md text-[9px] sm:text-[10px] font-black uppercase tracking-wider border ${skillBadgeClass}`}>
+                    <span
+                      className={`px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md text-[9px] sm:text-[10px] font-black uppercase tracking-wider border ${skillBadgeClass}`}
+                    >
                       {player.playerProfile?.skillLevel || "NO LEVEL SET"}
                     </span>
                     <span className="text-xs font-black uppercase tracking-wider text-[#4AEEFF] flex items-center gap-1 group-hover:translate-x-1 transition-transform">
