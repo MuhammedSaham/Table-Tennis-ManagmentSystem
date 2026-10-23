@@ -277,6 +277,9 @@ export class AuthService {
                 permissions,
             };
         } catch (error) {
+            if (error instanceof AppError) {
+                throw error;
+            }
             throw new AppError('Invalid token', 401);
         }
     }

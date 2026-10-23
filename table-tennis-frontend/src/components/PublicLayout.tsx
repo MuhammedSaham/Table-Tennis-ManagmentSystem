@@ -60,18 +60,18 @@ const PublicLayout: React.FC = () => {
               </span>
             </Link>
 
-            {/* Desktop Navigation */}
-            <div className="hidden lg:flex items-center gap-2">
+            {/* Desktop Navigation matching Figma reference */}
+            <div className="hidden lg:flex items-center gap-6 xl:gap-8">
               {navigation.map((item) => {
                 const isActive = isItemActive(item.href);
                 return (
                   <Link
                     key={item.name}
                     to={item.href}
-                    className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 border ${
+                    className={`text-sm transition-colors duration-200 ${
                       isActive
-                        ? "bg-[#4AEEFF]/15 text-[#4AEEFF] border-[#4AEEFF]/40 font-bold shadow-[0_0_15px_rgba(74,238,255,0.15)]"
-                        : "text-white/80 hover:bg-white/10 hover:text-white border-transparent"
+                        ? "text-white font-bold"
+                        : "text-slate-300 hover:text-white font-medium"
                     }`}
                   >
                     {item.name}
@@ -80,48 +80,50 @@ const PublicLayout: React.FC = () => {
               })}
             </div>
 
-            {/* Right section */}
-            <div className="flex items-center gap-2 sm:gap-3">
+            {/* Right section matching Figma reference */}
+            <div className="flex items-center gap-4 sm:gap-6">
               {user ? (
                 <Link
                   to="/app/dashboard"
-                  className="inline-flex items-center justify-center rounded-xl bg-[#4AEEFF] px-4 py-2 text-xs sm:text-sm font-bold text-[#061D23] shadow-md shadow-[#4AEEFF]/20 hover:bg-[#80ffff] transition-all"
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-white/20 bg-white/5 hover:bg-white/10 px-4 py-2 text-xs sm:text-sm font-medium text-white transition-all"
                 >
-                  Dashboard
+                  <span>Dashboard</span>
+                  <span>→</span>
                 </Link>
               ) : (
-                <div className="hidden sm:flex items-center gap-2.5">
+                <div className="hidden sm:flex items-center gap-5">
                   <Link
                     to="/login"
-                    className="inline-flex items-center justify-center rounded-xl border border-white/20 bg-white/5 px-4 py-2 text-xs sm:text-sm font-semibold text-white transition hover:bg-white/10"
+                    className="text-slate-300 hover:text-white text-xs sm:text-sm font-medium transition-colors"
                   >
-                    Sign In
+                    Sign in
                   </Link>
                   <Link
                     to="/register"
-                    className="inline-flex items-center justify-center rounded-xl bg-[#4AEEFF] px-4 py-2 text-xs sm:text-sm font-black text-[#061D23] shadow-md shadow-[#4AEEFF]/20 transition hover:bg-[#80ffff]"
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-white/20 bg-white/5 hover:bg-white/10 px-4 py-2 text-xs sm:text-sm font-medium text-white transition-all"
                   >
-                    Get Started
+                    <span>Get Started</span>
+                    <span>→</span>
                   </Link>
                 </div>
               )}
 
-              {/* Mobile menu button */}
+              {/* Mobile menu button matching Figma mobile reference */}
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="lg:hidden p-2 rounded-xl text-white/80 hover:text-[#4AEEFF] hover:bg-white/10 border border-white/15 active:scale-95 transition-all"
+                className="lg:hidden flex items-center gap-1.5 text-white/90 hover:text-white text-sm font-medium p-1.5"
                 aria-label="Toggle menu"
               >
+                <span>Menu</span>
                 {mobileMenuOpen ? (
-                  <XMarkIcon className="w-6 h-6" />
+                  <XMarkIcon className="w-5 h-5" />
                 ) : (
-                  <Bars3Icon className="w-6 h-6" />
+                  <Bars3Icon className="w-5 h-5" />
                 )}
               </button>
             </div>
           </div>
         </div>
-
       </nav>
 
       {/* Mobile Slide-in Side Drawer (LMS Style) */}

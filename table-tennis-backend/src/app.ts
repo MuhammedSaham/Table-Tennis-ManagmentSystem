@@ -76,7 +76,11 @@ app.use((err: any, req: Request, res: Response, next: NextFunction) => {
     const statusCode = err.statusCode || 500;
     const message = err.isOperational ? err.message : 'Something went wrong';
 
-    console.error('Error:', err);
+    if (statusCode >= 500 || !err.isOperational) {
+        console.error('Unhandled Error:', err);
+    } else {
+        console.warn(`[${req.method} ${req.originalUrl}] ${statusCode} - ${message}`);
+    }
 
     if (process.env.NODE_ENV === 'development') {
         sendResponse(res, statusCode, message, null, [{ stack: err.stack }]);
