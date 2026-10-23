@@ -44,6 +44,65 @@
     @apply bg-gradient-to-b from-slate-50 via-white to-cyan-50/40;
   }
 
+  .register-login-style label {
+    color: #4AEEFF !important;
+  }
+
+  .register-login-style h1 {
+    color: #FFFFFF !important;
+    font-size: 25px !important;
+    font-weight: 900 !important;
+    letter-spacing: 2px !important;
+    margin: 0 0 24px !important;
+    text-shadow: 0 1px 8px rgba(0, 0, 0, 0.5);
+  }
+
+  .register-login-style h1 + p {
+    color: #4AEEFF !important;
+    font-size: 12px !important;
+    letter-spacing: 2px !important;
+    margin: -16px 0 24px !important;
+  }
+
+  .register-login-style input,
+  .register-login-style select {
+    background: rgba(6, 29, 35, 0.45) !important;
+    border-color: rgba(255, 255, 255, 0.25) !important;
+    border-radius: 3px !important;
+    color: #FFFFFF !important;
+  }
+
+  .register-login-style input::placeholder {
+    color: rgba(255, 255, 255, 0.6) !important;
+  }
+
+  .register-login-style input:focus,
+  .register-login-style select:focus {
+    border-color: #4AEEFF !important;
+    background: rgba(6, 29, 35, 0.55) !important;
+    box-shadow: none !important;
+  }
+
+  .register-login-style p {
+    color: rgba(255, 255, 255, 0.8) !important;
+  }
+
+  .register-login-style button[type="submit"] {
+    background: #FFFFFF !important;
+    border: none !important;
+    border-radius: 3px !important;
+    color: #061D23 !important;
+  }
+
+  .register-login-style button[type="submit"]:hover {
+    background: #FFFFFF !important;
+    color: #061D23 !important;
+  }
+
+  .register-login-style a {
+    color: #4AEEFF !important;
+  }
+
   .btn-primary {
     @apply bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white font-semibold px-6 py-2.5 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none;
   }

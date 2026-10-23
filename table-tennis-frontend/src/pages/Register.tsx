@@ -16,6 +16,89 @@ interface FormErrors {
   profileImage?: string;
 }
 
+const styles: Record<string, React.CSSProperties> = {
+  root: {
+    minHeight: "100vh",
+    height: "100vh",
+    overflow: "hidden",
+    fontFamily: "'Segoe UI', Arial, sans-serif",
+    position: "relative",
+    display: "flex",
+    alignItems: "flex-start",
+    justifyContent: "flex-end",
+  },
+  bgImage: {
+    position: "fixed",
+    inset: 0,
+    backgroundImage: "url('/tablenew.png')",
+    backgroundSize: "cover",
+    backgroundPosition: "center center",
+    backgroundRepeat: "no-repeat",
+    zIndex: 0,
+  },
+  bgOverlay: {
+    position: "fixed",
+    inset: 10,
+    background: "#061D23",
+    opacity: 0.2,
+    zIndex: 1,
+  },
+  geo1: {
+    position: "fixed",
+    top: 0,
+    left: "-50px",
+    width: "200px",
+    height: "100%",
+    background: "#12679E",
+    opacity: 0.6,
+    zIndex: 2,
+    transform: "skewX(-30deg)",
+    transformOrigin: "left",
+  },
+  geo2: {
+    position: "fixed",
+    top: 0,
+    left: "120px",
+    width: "200px",
+    height: "100%",
+    background: "#4AEEFF",
+    opacity: 0.5,
+    zIndex: 2,
+    transform: "skewX(-30deg)",
+    transformOrigin: "left",
+  },
+  leftBrand: {
+    position: "fixed",
+    top: "40%",
+    left: "1%",
+    transform: "translateY(-50%)",
+    zIndex: 5,
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "flex-start",
+  },
+  card: {
+    position: "fixed",
+    top: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 20,
+    width: 520,
+    height: "100vh",
+    maxHeight: "100vh",
+    overflowY: "auto",
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "flex-start",
+    padding: "52px 44px",
+    boxSizing: "border-box",
+    background: "rgba(6, 29, 35, 0.30)",
+    backdropFilter: "blur(8px)",
+    WebkitBackdropFilter: "blur(10px)",
+    borderLeft: "1px solid rgba(255,255,255,0.15)",
+  },
+};
+
 const Register: React.FC = () => {
   const [formData, setFormData] = useState({
     email: "",
@@ -189,50 +272,27 @@ const Register: React.FC = () => {
     passwordValid.number;
 
   return (
-    /* ─── Full-screen background ─── */
-    <div
-      className="relative flex w-full items-start justify-center overflow-x-hidden overflow-y-auto"
-      style={{
-        minHeight: "100vh",
-      }}
-    >
-      {/* Fixed full-viewport background image — always covers the screen regardless of card height */}
-      <div
-        className="fixed inset-0 -z-10"
-        style={{
-          backgroundImage: "url('/register1.png')",
-          backgroundSize: "cover",
-          backgroundPosition: "center center",
-          backgroundRepeat: "no-repeat",
-        }}
-      />
+    <div style={styles.root}>
+      <div style={styles.bgImage} />
+      <div style={styles.bgOverlay} />
+      <div style={styles.geo1} />
+      <div style={styles.geo2} />
 
-      {/* Darkened overlay to reduce brightness */}
-      <div className="fixed inset-0 bg-black/35 -z-10" />
+      <div style={styles.leftBrand}>
+        <img
+          src="/Logo__with_Name.png"
+          alt="Sam's College"
+          style={{ width: 350, maxWidth: "90%", display: "block" }}
+        />
+      </div>
 
-      {/* ─── Centered glass card (reduced brightness) ─── */}
-      <div
-        className="relative z-10 my-8 w-[58%] min-w-[340px] max-w-2xl rounded-2xl px-8 py-8 shadow-2xl"
-        style={{
-          background: "rgba(255, 255, 255, 0.07)",
-          backdropFilter: "blur(24px)",
-          WebkitBackdropFilter: "blur(24px)",
-          border: "1.5px solid rgba(255, 255, 255, 0.25)",
-          boxShadow:
-            "0 0 14px rgba(74, 238, 255, 0.10), 0 8px 32px rgba(0,0,0,0.18), 0 25px 50px rgba(0,0,0,0.35)",
-        }}
-      >
+      <div className="register-login-style" style={styles.card}>
         {/* ── Logo + heading ── */}
-        <div className="mb-7 flex flex-col items-center text-center">
-          <img
-            src="/LOGO.png"
-            alt="Sam's College"
-            className="mb-3 h-16 w-auto object-contain"
-          />
-          <h1 className="text-3xl font-black uppercase tracking-[0.25em] text-[#061D23]">
+        <div className="mb-7 flex flex-col items-start text-left">
+          <h1 className="text-3xl font-black uppercase tracking-[0.25em] text-white">
             Create Account
           </h1>
-          <p className="mt-1.5 text-base font-black uppercase tracking-[0.18em] text-[#0d4a75]">
+          <p className="mt-1.5 text-base font-black uppercase tracking-[0.18em] text-[#4AEEFF]">
             Join the tournament platform
           </p>
           {/* Decorative accent line — single clean underline, no Gemini-style double diagonal */}
