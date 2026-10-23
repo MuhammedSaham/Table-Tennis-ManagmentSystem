@@ -1,11 +1,16 @@
 import { Request, Response } from 'express';
 import { MatchService } from '../services/match.service';
+import { GroupService } from '../services/group.service';
+import { BracketService } from '../services/bracket.service';
 import { catchAsync } from '../utils/catchAsync';
 import { sendResponse } from '../utils/sendResponse';
 import prisma from '../config/database';
+import { Prisma } from '@prisma/client';
 import { AppError } from '../utils/AppError';
 
 const matchService = new MatchService();
+const groupService = new GroupService();
+const bracketService = new BracketService();
 
 // Create match (Admin only)
 export const createMatch = catchAsync(async (req: Request, res: Response) => {
@@ -263,28 +268,7 @@ if (isMatchFinished && endTime === undefined) {
             });
           }
           
-          // Fill 3rd Place Playoff with the loser
-          if (nextRound === 'Final') {
-            const thirdPlaceMatch = await prisma.match.findFirst({
-              where: { tournamentId: match.tournamentId, categoryId: match.categoryId, round: '3rd Place Playoff' }
-            });
-            if (thirdPlaceMatch) {
-              if (isDoubles) {
-                // loserId = the team that is NOT the winner
-                const loserTeamId = match.team1Id === winnerTeamId ? match.team2Id : match.team1Id;
-                await prisma.match.update({
-                  where: { id: thirdPlaceMatch.id },
-                  data: isSlot1 ? { team1Id: loserTeamId } : { team2Id: loserTeamId }
-                });
-              } else {
-                const loserId = match.player1Id === winnerId ? match.player2Id : match.player1Id;
-                await prisma.match.update({
-                  where: { id: thirdPlaceMatch.id },
-                  data: isSlot1 ? { player1Id: loserId } : { player2Id: loserId }
-                });
-              }
-            }
-          }
+
         }
       }
     }
@@ -294,51 +278,213 @@ if (isMatchFinished && endTime === undefined) {
   
   sendResponse(res, 200, 'Match updated successfully', match);
 });
-// Delete all knockout matches for a category
+
+// Reset knockout matches while preserving the original draw
 export const deleteKnockoutMatches = catchAsync(async (req: Request, res: Response) => {
   const { tournamentId, categoryId } = req.params;
 
-  console.log(`Deleting knockout matches for tournament ${tournamentId}, category ${categoryId}`);
-  
-  // Delete games first (due to foreign key constraints)
+  const category = await prisma.category.findFirst({
+    where: { id: categoryId, tournamentId },
+  });
+
+  if (!category) {
+    throw new AppError('Category not found in this tournament', 404);
+  }
+
+  const knockoutRounds = [
+    'Round of 128',
+    'Round of 64',
+    'Round of 32',
+    'Round of 16',
+    'Quarter-Finals',
+    'Quarter-final',
+    'Semi-Finals',
+    'Semi-final',
+    'Final',
+    'Finals',
+  ];
+
   const knockoutMatches = await prisma.match.findMany({
     where: {
       tournamentId,
       categoryId,
-      round: { in: ['Quarter-final', 'Semi-final', 'Final'] },
+      round: { in: knockoutRounds },
     },
-    select: { id: true },
+    orderBy: { matchNumber: 'asc' },
   });
 
-  let deletedCount = 0;
-  
-  if (knockoutMatches.length > 0) {
-    const matchIds = knockoutMatches.map(m => m.id);
-    
-    // Delete games
-    const deletedGames = await prisma.game.deleteMany({
-      where: { matchId: { in: matchIds } },
-    });
-    console.log(`Deleted ${deletedGames.count} games`);
+  if (knockoutMatches.length === 0) {
+    throw new AppError('No knockout bracket found to reset', 400);
+  }
 
-    
-    // Delete matches
-    const deletedMatches = await prisma.match.deleteMany({
+  // The reset should not silently leave an incomplete bracket.
+  const finals = knockoutMatches.filter(
+    m => m.round === 'Final' || m.round === 'Finals'
+  );
+
+  if (finals.length !== 1) {
+    throw new AppError(
+      'Knockout bracket is incomplete: expected exactly one Final. Regenerate or repair the bracket before resetting.',
+      400
+    );
+  }
+
+  const roundOrder = (round: string): number => {
+    if (round === 'Final' || round === 'Finals') return 1000;
+    if (round === 'Semi-Finals' || round === 'Semi-final') return 999;
+    if (round === 'Quarter-Finals' || round === 'Quarter-final') return 998;
+
+    const match = round.match(/^Round of (\d+)$/);
+    if (match) {
+      return 1000 - Number(match[1]);
+    }
+
+    return -1;
+  };
+
+  const firstRoundRank = Math.min(
+    ...knockoutMatches.map(m => roundOrder(m.round))
+  );
+
+  const firstRoundMatches = knockoutMatches.filter(
+    m => roundOrder(m.round) === firstRoundRank
+  );
+
+  const isDoubles =
+    category.type === 'DOUBLES' ||
+    category.type === 'MIXED_DOUBLES';
+
+  // Capture initial participants and BYE winners before clearing results.
+  const byeMatches = firstRoundMatches.filter(m =>
+    m.score === 'BYE' ||
+    (
+      m.status === 'COMPLETED' &&
+      (isDoubles
+        ? Boolean(m.team1Id) !== Boolean(m.team2Id)
+        : Boolean(m.player1Id) !== Boolean(m.player2Id))
+    )
+  );
+
+  const byeIds = new Set(byeMatches.map(m => m.id));
+
+  const rounds = [...new Set(knockoutMatches.map(m => m.round))]
+    .sort((a, b) => roundOrder(a) - roundOrder(b));
+
+  await prisma.$transaction(async tx => {
+    // Only delete games belonging to knockout matches.
+    await tx.game.deleteMany({
+      where: {
+        matchId: { in: knockoutMatches.map(m => m.id) },
+      },
+    });
+
+    // Remove old third-place playoff matches and their games.
+    const playoffs = await tx.match.findMany({
       where: {
         tournamentId,
         categoryId,
-        round: { in: ['Quarter-final', 'Semi-final', 'Final'] },
+        round: '3rd Place Playoff',
       },
+      select: { id: true },
     });
-    deletedCount =  deletedMatches.count;
 
-    console.log(`Deleted ${deletedCount} knockout matches for category ${categoryId}`);
-  } else {
-    console.log(`No knockout matches found for category ${categoryId}`);
-  }
+    if (playoffs.length > 0) {
+      await tx.game.deleteMany({
+        where: { matchId: { in: playoffs.map(m => m.id) } },
+      });
 
-  sendResponse(res, 200, `Deleted ${knockoutMatches.length} knockout matches`);
+      await tx.match.deleteMany({
+        where: { id: { in: playoffs.map(m => m.id) } },
+      });
+    }
+
+    // Reset every knockout match.
+    for (const match of knockoutMatches) {
+      const isFirstRound =
+        roundOrder(match.round) === firstRoundRank;
+      const isBye = byeIds.has(match.id);
+
+      const byeWinnerId = isBye
+        ? (match.player1Id ?? match.player2Id)
+        : null;
+
+      const byeWinnerTeamId = isBye
+        ? (match.team1Id ?? match.team2Id)
+        : null;
+
+      await tx.match.update({
+        where: { id: match.id },
+        data: {
+          status: isBye ? 'COMPLETED' : 'SCHEDULED',
+          score: isBye ? 'BYE' : null,
+          winnerId: isBye ? byeWinnerId : null,
+          winnerTeamId: isBye ? byeWinnerTeamId : null,
+          startTime: null,
+          endTime: null,
+          resultDetails: Prisma.DbNull,
+          ...(isFirstRound
+            ? {}
+            : {
+                player1Id: null,
+                player2Id: null,
+                team1Id: null,
+                team2Id: null,
+              }),
+        },
+      });
+    }
+
+    // Restore BYE winners into the next round.
+    if (rounds.length > 1 && byeMatches.length > 0) {
+      const firstRound = rounds[0];
+      const nextRound = rounds[1];
+
+      const orderedFirstRound = knockoutMatches
+        .filter(m => m.round === firstRound)
+        .sort((a, b) => a.matchNumber - b.matchNumber);
+
+      const orderedNextRound = knockoutMatches
+        .filter(m => m.round === nextRound)
+        .sort((a, b) => a.matchNumber - b.matchNumber);
+
+      for (const bye of byeMatches) {
+        const matchIndex = orderedFirstRound.findIndex(
+          m => m.id === bye.id
+        );
+
+        if (matchIndex === -1) continue;
+
+        const nextMatch = orderedNextRound[Math.floor(matchIndex / 2)];
+        if (!nextMatch) continue;
+
+        const firstSlot = matchIndex % 2 === 0;
+
+        if (isDoubles) {
+          const winnerTeamId = bye.team1Id ?? bye.team2Id;
+
+          await tx.match.update({
+            where: { id: nextMatch.id },
+            data: firstSlot
+              ? { team1Id: winnerTeamId }
+              : { team2Id: winnerTeamId },
+          });
+        } else {
+          const winnerId = bye.player1Id ?? bye.player2Id;
+
+          await tx.match.update({
+            where: { id: nextMatch.id },
+            data: firstSlot
+              ? { player1Id: winnerId }
+              : { player2Id: winnerId },
+          });
+        }
+      }
+    }
+  });
+
+  sendResponse(res, 200, 'Knockout stage reset successfully');
 });
+
 // Update match and automatically advance winner to next round
 export const updateMatchAndAdvance = catchAsync(async (req: Request, res: Response) => {
   const { matchId } = req.params;

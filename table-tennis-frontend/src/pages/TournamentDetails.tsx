@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
@@ -144,11 +144,14 @@ const TournamentDetails: React.FC = () => {
   const [playerAge, setPlayerAge] = useState<number | null>(null);
   const [playerGender, setPlayerGender] = useState<string | null>(null);
   const [winners, setWinners] = useState<{
+    categoryId?: string;
+    categoryName?: string;
     first: any;
     second: any;
     jointThird: any[];
   } | null>(null);
   const [showWinners, setShowWinners] = useState(false);
+  const winnersRequestId = useRef(0);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editFormData, setEditFormData] = useState({
     name: "",
@@ -217,10 +220,20 @@ const TournamentDetails: React.FC = () => {
   }, [tournament?.categories, activeCategoryId]);
 
   useEffect(() => {
-    if (tournament?.status === "COMPLETED") {
-      fetchWinners();
+    if (
+      activeCategoryId &&
+      (showWinners || tournament?.status === "COMPLETED")
+    ) {
+      fetchWinners(activeCategoryId);
+    } else {
+      winnersRequestId.current++;
+      setWinners(null);
     }
-  }, [tournament?.status]);
+
+    return () => {
+      winnersRequestId.current++;
+    };
+  }, [activeCategoryId, showWinners, tournament?.status, id]);
 
   const calculateAge = (dateOfBirth: string | Date): number => {
     const birthDate = new Date(dateOfBirth);
@@ -723,36 +736,47 @@ const TournamentDetails: React.FC = () => {
     }
   };
 
-  const fetchWinners = async () => {
-    if (!activeCategoryId) {
-      toast.error("Please select a category first.");
+  const fetchWinners = async (categoryIdToFetch?: string) => {
+    const targetCategoryId =
+      categoryIdToFetch || activeCategoryId || tournament?.categories?.[0]?.id;
+
+    if (!targetCategoryId) {
       return;
     }
 
+    // Each new request invalidates earlier requests.
+    const requestId = ++winnersRequestId.current;
+
+    // Clear winners from the previously selected category.
+    setWinners(null);
+
+    const currentCat = tournament?.categories?.find(
+      (c) => c.id === targetCategoryId,
+    );
+
     try {
       const matchesResponse = await api.get(
-        `/matches/tournaments/${id}?categoryId=${activeCategoryId}`,
+        `/matches/tournaments/${id}?categoryId=${targetCategoryId}`,
       );
 
-      const allMatches = matchesResponse.data.data;
-      /*console.table(
-        allMatches.map((m: any) => ({
-          round: m.round,
-          status: m.status,
-          winnerId: m.winnerId,
-          winnerTeamId: m.winnerTeamId,
-          player1Id: m.player1Id,
-          player2Id: m.player2Id,
-          score: m.score,
-          isWalkover: m.isWalkover,
-          walkoverWinnerId: m.walkoverWinnerId,
-        })),
-      );*/
+      // Ignore responses from an older category request.
+      if (requestId !== winnersRequestId.current) return;
 
-      const finalMatch = allMatches.find(
-        (m: any) =>
-          m.round && ["final", "finals"].includes(m.round.trim().toLowerCase()),
-      );
+      const allMatches = matchesResponse.data.data || [];
+
+      const isSemiFinal = (round: string) => {
+        const norm = (round || "").toLowerCase().replace(/[^a-z]/g, "");
+
+        return norm === "semifinals" || norm === "semifinal";
+      };
+
+      const isFinal = (round: string) => {
+        const norm = (round || "").toLowerCase().replace(/[^a-z]/g, "");
+
+        return norm === "final" || norm === "finals";
+      };
+
+      const finalMatch = allMatches.find((match: any) => isFinal(match.round));
 
       let champion = null;
       let runnerUp = null;
@@ -762,31 +786,47 @@ const TournamentDetails: React.FC = () => {
         if (!match || !["COMPLETED", "WALKOVER"].includes(match.status)) {
           return { winner: null, loser: null };
         }
-        const winnerId = match.winnerTeamId || match.winnerId;
-        const isDoubles = !!(
-          match.team1 ||
-          match.team2 ||
-          match.team1Id ||
-          match.team2Id
-        );
+
+        const isDoubles =
+          currentCat?.type === "DOUBLES" ||
+          currentCat?.type === "MIXED_DOUBLES" ||
+          Boolean(match.team1Id || match.team2Id);
+
+        const winnerId = isDoubles
+          ? (match.winnerTeamId ?? match.winnerId)
+          : match.winnerId;
 
         if (!winnerId) {
           return { winner: null, loser: null };
         }
 
         const slot1Id = isDoubles
-          ? match.team1Id || match.team1?.id
-          : match.player1Id || match.player1?.id;
+          ? (match.team1Id ?? match.team1?.id)
+          : (match.player1Id ?? match.player1?.id);
 
         const slot2Id = isDoubles
-          ? match.team2Id || match.team2?.id
-          : match.player2Id || match.player2?.id;
+          ? (match.team2Id ?? match.team2?.id)
+          : (match.player2Id ?? match.player2?.id);
 
-        if (winnerId !== slot1Id && winnerId !== slot2Id) {
+        const isSlot1Winner =
+          winnerId === slot1Id ||
+          (isDoubles &&
+            match.team1?.members?.some(
+              (member: any) =>
+                member.playerId === winnerId || member.player?.id === winnerId,
+            ));
+
+        const isSlot2Winner =
+          winnerId === slot2Id ||
+          (isDoubles &&
+            match.team2?.members?.some(
+              (member: any) =>
+                member.playerId === winnerId || member.player?.id === winnerId,
+            ));
+
+        if (isSlot1Winner === isSlot2Winner) {
           return { winner: null, loser: null };
         }
-
-        const isSlot1Winner = winnerId === slot1Id;
 
         return {
           winner: getMatchParticipantDetails(match, isSlot1Winner ? 1 : 2),
@@ -796,14 +836,15 @@ const TournamentDetails: React.FC = () => {
 
       if (finalMatch) {
         const { winner, loser } = resolveMatchWinners(finalMatch);
+
         champion = winner;
         runnerUp = loser;
       }
 
       const semifinalMatches = allMatches.filter(
-        (m: any) =>
-          m.round?.trim().toLowerCase() === "semi-finals" &&
-          ["COMPLETED", "WALKOVER"].includes(m.status),
+        (match: any) =>
+          isSemiFinal(match.round) &&
+          ["COMPLETED", "WALKOVER"].includes(match.status),
       );
 
       for (const match of semifinalMatches) {
@@ -814,7 +855,11 @@ const TournamentDetails: React.FC = () => {
         }
       }
 
+      if (requestId !== winnersRequestId.current) return;
+
       setWinners({
+        categoryId: targetCategoryId,
+        categoryName: currentCat?.name || "Category",
         first: champion,
         second: runnerUp,
         jointThird:
@@ -822,16 +867,11 @@ const TournamentDetails: React.FC = () => {
             ? jointThird
             : [],
       });
-
-      setShowWinners(true);
-
-      setTimeout(() => {
-        document
-          .getElementById("winners-section")
-          ?.scrollIntoView({ behavior: "smooth" });
-      }, 100);
     } catch (error) {
+      if (requestId !== winnersRequestId.current) return;
+
       console.error("Failed to fetch winners", error);
+      setWinners(null);
       toast.error("Failed to fetch tournament winners");
     }
   };
@@ -1007,9 +1047,11 @@ const TournamentDetails: React.FC = () => {
     tournament.status === "UPCOMING" &&
     new Date() < new Date(tournament.registrationDeadline);
   const isSuperAdmin = user?.role === "SUPER_ADMIN" || user?.isSuperAdmin;
-  const canManageTournaments = isSuperAdmin || hasPermission("MANAGE_TOURNAMENTS");
+  const canManageTournaments =
+    isSuperAdmin || hasPermission("MANAGE_TOURNAMENTS");
   const canManageMatches = isSuperAdmin || hasPermission("MANAGE_MATCHES");
-  const canManageRegistrations = isSuperAdmin || hasPermission("MANAGE_REGISTRATIONS");
+  const canManageRegistrations =
+    isSuperAdmin || hasPermission("MANAGE_REGISTRATIONS");
   const canManageResults = isSuperAdmin || hasPermission("MANAGE_RESULTS");
   const isPlayer = user?.role === "PLAYER";
   const isAdmin = isSuperAdmin || user?.role === "ADMIN";
@@ -1110,8 +1152,7 @@ const TournamentDetails: React.FC = () => {
                         tournament.requirePaymentProofClub ?? false,
                       requirePaymentProofGuest:
                         tournament.requirePaymentProofGuest ?? false,
-                      paymentInstructions:
-                        tournament.paymentInstructions || "",
+                      paymentInstructions: tournament.paymentInstructions || "",
                     });
                     setEditCategories(
                       tournament.categories?.map((c) => ({
@@ -1124,6 +1165,7 @@ const TournamentDetails: React.FC = () => {
                 >
                   Edit Tournament
                 </button>
+
                 {tournament.status !== "COMPLETED" && (
                   <button
                     onClick={async () => {
@@ -1131,9 +1173,14 @@ const TournamentDetails: React.FC = () => {
                         await api.patch(`/tournaments/${id}`, {
                           status: "COMPLETED",
                         });
+
                         toast.success("Tournament marked as completed!");
+
                         fetchTournamentDetails();
-                        setTimeout(() => fetchWinners(), 500);
+
+                        // Show Champions section.
+                        // The useEffect will fetch the selected category's winners.
+                        setShowWinners(true);
                       } catch {
                         toast.error("Failed to update status");
                       }
@@ -1145,8 +1192,17 @@ const TournamentDetails: React.FC = () => {
                 )}
               </>
             )}
+
             <button
-              onClick={fetchWinners}
+              onClick={() => {
+                setShowWinners(true);
+
+                setTimeout(() => {
+                  document
+                    .getElementById("winners-section")
+                    ?.scrollIntoView({ behavior: "smooth" });
+                }, 100);
+              }}
               className="rounded-xl border border-amber-400/40 bg-amber-400/15 px-4 py-2.5 text-xs font-black uppercase tracking-wider text-amber-300 hover:bg-amber-400 hover:text-[#061D23] transition-all shadow-md shadow-amber-400/10 active:scale-95"
             >
               🏆 Champions
@@ -1737,7 +1793,13 @@ const TournamentDetails: React.FC = () => {
               </span>
               <select
                 value={activeCategoryId}
-                onChange={(e) => setActiveCategoryId(e.target.value)}
+                onChange={(e) => {
+                  const newCatId = e.target.value;
+                  setActiveCategoryId(newCatId);
+                  if (showWinners) {
+                    fetchWinners(newCatId);
+                  }
+                }}
                 className="w-full sm:w-auto rounded-lg border border-white/15 bg-[#061D23] px-3 py-1.5 text-xs font-bold text-white outline-none focus:border-[#4AEEFF] cursor-pointer"
               >
                 {tournament.categories.map((category) => (
@@ -1777,7 +1839,9 @@ const TournamentDetails: React.FC = () => {
               return (
                 <div
                   key={category.id}
-                  onClick={() => setActiveCategoryId(category.id)}
+                  onClick={() => {
+                    setActiveCategoryId(category.id);
+                  }}
                   className={`group relative cursor-pointer rounded-2xl border transition-all duration-300 backdrop-blur-md flex flex-col justify-between overflow-hidden ${
                     isActive
                       ? "border-[#4AEEFF] bg-gradient-to-b from-[#4AEEFF]/15 via-[#061D23]/90 to-[#061D23]/95 shadow-[0_12px_35px_-8px_rgba(74,238,255,0.25)] ring-1 ring-[#4AEEFF]/40 -translate-y-0.5"
@@ -1961,7 +2025,9 @@ const TournamentDetails: React.FC = () => {
           <GroupStandings
             tournamentId={id}
             categoryId={activeCategoryId}
-            isAdminOrReferee={isSuperAdmin || canManageMatches || canManageResults || isReferee}
+            isAdminOrReferee={
+              isSuperAdmin || canManageMatches || canManageResults || isReferee
+            }
             onScoreUpdate={fetchTournamentDetails}
             key={`groups-${activeCategoryId}-${refreshGroups}`}
           />
@@ -1974,16 +2040,17 @@ const TournamentDetails: React.FC = () => {
           className="relative w-full min-w-0 max-w-full mb-8 pt-4 pb-8 bg-transparent"
           style={{ minHeight: 200 }}
         >
-          {(isSuperAdmin || canManageMatches) && activeCategoryFormat === "KNOCKOUT" && (
-            <div className="flex justify-end mb-4">
-              <button
-                onClick={() => setShowResetConfirm(true)}
-                className="rounded-xl border border-red-500/40 bg-red-500/15 px-4 py-2 text-xs font-black uppercase tracking-wider text-red-300 hover:bg-red-500 hover:text-white transition-all shadow-md shadow-red-500/10"
-              >
-                Reset Bracket
-              </button>
-            </div>
-          )}
+          {(isSuperAdmin || canManageMatches) &&
+            activeCategoryFormat === "KNOCKOUT" && (
+              <div className="flex justify-end mb-4">
+                <button
+                  onClick={() => setShowResetConfirm(true)}
+                  className="rounded-xl border border-red-500/40 bg-red-500/15 px-4 py-2 text-xs font-black uppercase tracking-wider text-red-300 hover:bg-red-500 hover:text-white transition-all shadow-md shadow-red-500/10"
+                >
+                  Reset Bracket
+                </button>
+              </div>
+            )}
           <KnockoutBracket
             tournamentId={id}
             categoryId={activeCategoryId}
@@ -1995,62 +2062,132 @@ const TournamentDetails: React.FC = () => {
       )}
 
       {/* Winners Section */}
-      {showWinners && winners && (
+      {showWinners && (
         <div
           id="winners-section"
           className="rounded-[16px] border border-amber-400/30 bg-[#061D23]/35 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl mb-6"
         >
-          <h2 className="text-2xl font-black uppercase tracking-widest text-amber-300 mb-6 text-center">
-            🏆 Tournament Champions 🏆
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
-            <div className="rounded-2xl border border-yellow-400/40 bg-yellow-400/10 p-6 backdrop-blur-md">
-              <div className="text-5xl mb-2">🥇</div>
-              <h3 className="font-black text-xs uppercase tracking-wider text-yellow-300">
-                Champion
-              </h3>
-              <p className="text-xl font-bold text-white mt-1">
-                {winners.first?.name ||
-                  `${winners.first?.firstName || ""} ${winners.first?.lastName || ""}`.trim() ||
-                  "TBD"}
+          {/* Heading and Category Selector */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6 pb-4 border-b border-white/10">
+            <div className="text-center sm:text-left">
+              <h2 className="text-2xl font-black uppercase tracking-widest text-amber-300">
+                🏆{" "}
+                {winners?.categoryId === activeCategoryId
+                  ? winners.categoryName
+                  : tournament?.categories?.find(
+                      (c) => c.id === activeCategoryId,
+                    )?.name || "Category"}{" "}
+                Champions 🏆
+              </h2>
+
+              <p className="text-xs text-white/60 mt-0.5">
+                Official podium and results for this category
               </p>
             </div>
-            <div className="rounded-2xl border border-slate-300/40 bg-slate-300/10 p-6 backdrop-blur-md">
-              <div className="text-5xl mb-2">🥈</div>
-              <h3 className="font-black text-xs uppercase tracking-wider text-slate-300">
-                Runner-up
-              </h3>
-              <p className="text-xl font-bold text-white mt-1">
-                {winners.second?.name ||
-                  `${winners.second?.firstName || ""} ${winners.second?.lastName || ""}`.trim() ||
-                  "TBD"}
-              </p>
-            </div>
-            <div className="rounded-2xl border border-amber-600/40 bg-amber-600/10 p-6 backdrop-blur-md">
-              <div className="text-5xl mb-2">🥉</div>
-              <h3 className="font-black text-xs uppercase tracking-wider text-amber-400">
-                Joint 3rd Place
-              </h3>
-              <div className="mt-3 space-y-2">
-                {winners.jointThird.length === 2 ? (
-                  winners.jointThird.map((participant: any, index: number) => (
-                    <p
-                      key={participant.id || index}
-                      className="text-lg font-bold text-white"
-                    >
-                      🥉{" "}
-                      {participant.name ||
-                        `${participant.firstName || ""} ${participant.lastName || ""}`.trim()}
+
+            {/* Category Dropdown */}
+            {tournament && tournament.categories.length > 1 && (
+              <div className="flex items-center gap-2 bg-black/40 border border-white/10 px-3 py-1.5 rounded-xl">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-[#4AEEFF]">
+                  Category:
+                </span>
+
+                <select
+                  value={activeCategoryId}
+                  onChange={(e) => {
+                    setActiveCategoryId(e.target.value);
+                  }}
+                  className="rounded-lg border border-white/15 bg-[#061D23] px-2.5 py-1 text-xs font-bold text-white outline-none focus:border-amber-400 cursor-pointer"
+                >
+                  {tournament.categories.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name} ({c.type})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
+
+          {/* Show results only for the selected category */}
+          {winners?.categoryId === activeCategoryId ? (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
+              {/* Champion */}
+              <div className="rounded-2xl border border-yellow-400/40 bg-yellow-400/10 p-6 backdrop-blur-md">
+                <div className="text-5xl mb-2">🥇</div>
+
+                <h3 className="font-black text-xs uppercase tracking-wider text-yellow-300">
+                  Champion
+                </h3>
+
+                <p className="text-xl font-bold text-white mt-1">
+                  {winners.first?.name ||
+                    `${winners.first?.firstName || ""} ${
+                      winners.first?.lastName || ""
+                    }`.trim() ||
+                    "In Progress (TBD)"}
+                </p>
+              </div>
+
+              {/* Runner-up */}
+              <div className="rounded-2xl border border-slate-300/40 bg-slate-300/10 p-6 backdrop-blur-md">
+                <div className="text-5xl mb-2">🥈</div>
+
+                <h3 className="font-black text-xs uppercase tracking-wider text-slate-300">
+                  Runner-up
+                </h3>
+
+                <p className="text-xl font-bold text-white mt-1">
+                  {winners.second?.name ||
+                    `${winners.second?.firstName || ""} ${
+                      winners.second?.lastName || ""
+                    }`.trim() ||
+                    "In Progress (TBD)"}
+                </p>
+              </div>
+
+              {/* Joint Third Place */}
+              <div className="rounded-2xl border border-amber-600/40 bg-amber-600/10 p-6 backdrop-blur-md">
+                <div className="text-5xl mb-2">🥉</div>
+
+                <h3 className="font-black text-xs uppercase tracking-wider text-amber-400">
+                  Joint 3rd Place
+                </h3>
+
+                <div className="mt-3 space-y-2">
+                  {winners.jointThird.length === 2 ? (
+                    winners.jointThird.map(
+                      (participant: any, index: number) => (
+                        <p
+                          key={participant.id || index}
+                          className="text-lg font-bold text-white"
+                        >
+                          🥉{" "}
+                          {participant.name ||
+                            `${participant.firstName || ""} ${
+                              participant.lastName || ""
+                            }`.trim()}
+                        </p>
+                      ),
+                    )
+                  ) : (
+                    <p className="text-lg font-bold text-white/60">
+                      Awaiting semifinal results
                     </p>
-                  ))
-                ) : (
-                  <p className="text-lg font-bold text-white/60">
-                    Awaiting semifinal results
-                  </p>
-                )}
+                  )}
+                </div>
               </div>
             </div>
-          </div>
+          ) : (
+            /* Loading State */
+            <div className="flex flex-col items-center justify-center py-12">
+              <div className="h-9 w-9 animate-spin rounded-full border-4 border-amber-400/20 border-t-amber-400 mb-4" />
+
+              <p className="text-sm font-semibold text-amber-300">
+                Loading champions for the selected category...
+              </p>
+            </div>
+          )}
         </div>
       )}
 
@@ -2525,7 +2662,9 @@ const TournamentDetails: React.FC = () => {
                 <div className="flex flex-wrap gap-3 mt-4">
                   {/* View Proof */}
                   <a
-                    href={getProfileImageUrl(paymentProofInfo.paymentProof.proofUrl)}
+                    href={getProfileImageUrl(
+                      paymentProofInfo.paymentProof.proofUrl,
+                    )}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="rounded-xl border border-[#4AEEFF]/40 bg-[#4AEEFF]/15 px-4 py-2.5 text-xs font-black uppercase tracking-wider text-[#4AEEFF] transition-all hover:bg-[#4AEEFF] hover:text-[#061D23]"
@@ -2560,7 +2699,9 @@ const TournamentDetails: React.FC = () => {
 
                 <div className="flex flex-wrap gap-3 mt-4">
                   <a
-                    href={getProfileImageUrl(paymentProofInfo.paymentProof.proofUrl)}
+                    href={getProfileImageUrl(
+                      paymentProofInfo.paymentProof.proofUrl,
+                    )}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="rounded-xl border border-[#4AEEFF]/40 bg-[#4AEEFF]/15 px-4 py-2.5 text-xs font-black uppercase tracking-wider text-[#4AEEFF] transition-all hover:bg-[#4AEEFF] hover:text-[#061D23]"
@@ -2593,7 +2734,9 @@ const TournamentDetails: React.FC = () => {
                   <div className="flex flex-wrap gap-3">
                     {/* View Rejected Proof */}
                     <a
-                      href={getProfileImageUrl(paymentProofInfo.paymentProof.proofUrl)}
+                      href={getProfileImageUrl(
+                        paymentProofInfo.paymentProof.proofUrl,
+                      )}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="rounded-xl border border-[#4AEEFF]/40 bg-[#4AEEFF]/15 px-4 py-2.5 text-xs font-black uppercase tracking-wider text-[#4AEEFF] transition-all hover:bg-[#4AEEFF] hover:text-[#061D23]"
@@ -2658,99 +2801,102 @@ const TournamentDetails: React.FC = () => {
         )}
 
       {/* Registrations Section */}
-      {((isAdmin && canManageRegistrations) || isSuperAdmin || isReferee) && tournament.registrations?.length > 0 && (
-        <div className="rounded-2xl border border-white/20 bg-[#061D23]/25 p-4 sm:p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl mb-6">
-          <h2 className="text-xl font-black uppercase tracking-wider text-white mb-4">
-            Registrations ({tournament.registrations.length})
-          </h2>
-          <div
-            className="overflow-x-auto"
-            style={{ WebkitOverflowScrolling: "touch" }}
-          >
-            <table className="min-w-full divide-y divide-white/10">
-              <thead>
-                <tr className="border-b border-white/10">
-                  <th className="px-6 py-3 text-left text-xs font-black uppercase tracking-wider text-[#4AEEFF]">
-                    Player
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-black uppercase tracking-wider text-[#4AEEFF]">
-                    Category
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-black uppercase tracking-wider text-[#4AEEFF]">
-                    Email
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-black uppercase tracking-wider text-[#4AEEFF]">
-                    Registered On
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-black uppercase tracking-wider text-[#4AEEFF]">
-                    Status
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/5">
-                {tournament.registrations.map((registration) => (
-                  <tr
-                    key={registration.id}
-                    className="hover:bg-white/5 transition-colors"
-                  >
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {registration.team?.members &&
-                      registration.team.members.length > 0 ? (
-                        <div className="flex flex-col">
-                          <span className="text-white font-bold text-sm">
-                            {registration.team.members
-                              .map((m) =>
-                                `${m.player?.firstName || ""} ${m.player?.lastName || ""}`.trim(),
-                              )
-                              .filter(Boolean)
-                              .join(" & ") ||
-                              `${registration.player?.firstName || ""} ${registration.player?.lastName || ""}`}
-                          </span>
-                          <span className="text-[10px] uppercase font-bold text-[#4AEEFF]">
-                            Doubles Pair
-                          </span>
-                        </div>
-                      ) : (
-                        <Link
-                          to={`/profile/${registration.player?.id}`}
-                          className="text-white hover:text-[#4AEEFF] font-bold text-sm transition-colors"
-                        >
-                          {registration.player?.firstName}{" "}
-                          {registration.player?.lastName}
-                        </Link>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="px-2.5 py-1 text-xs font-black uppercase tracking-wider rounded-md bg-[#4AEEFF]/15 text-[#4AEEFF] border border-[#4AEEFF]/30">
-                        {registration.category?.name || "N/A"}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-white/70">
-                      {registration.team?.members &&
-                      registration.team.members.length > 0
-                        ? registration.team.members
-                            .map((m) => m.player?.email)
-                            .filter(Boolean)
-                            .join(", ")
-                        : registration.player?.email}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-xs text-white/50 font-mono">
-                      {new Date(registration.registeredAt).toLocaleDateString()}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span
-                        className={`px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-md border ${getRegistrationStatusColor(registration.status)}`}
-                      >
-                        {registration.status}
-                      </span>
-                    </td>
+      {((isAdmin && canManageRegistrations) || isSuperAdmin || isReferee) &&
+        tournament.registrations?.length > 0 && (
+          <div className="rounded-2xl border border-white/20 bg-[#061D23]/25 p-4 sm:p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl mb-6">
+            <h2 className="text-xl font-black uppercase tracking-wider text-white mb-4">
+              Registrations ({tournament.registrations.length})
+            </h2>
+            <div
+              className="overflow-x-auto"
+              style={{ WebkitOverflowScrolling: "touch" }}
+            >
+              <table className="min-w-full divide-y divide-white/10">
+                <thead>
+                  <tr className="border-b border-white/10">
+                    <th className="px-6 py-3 text-left text-xs font-black uppercase tracking-wider text-[#4AEEFF]">
+                      Player
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-black uppercase tracking-wider text-[#4AEEFF]">
+                      Category
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-black uppercase tracking-wider text-[#4AEEFF]">
+                      Email
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-black uppercase tracking-wider text-[#4AEEFF]">
+                      Registered On
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-black uppercase tracking-wider text-[#4AEEFF]">
+                      Status
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-white/5">
+                  {tournament.registrations.map((registration) => (
+                    <tr
+                      key={registration.id}
+                      className="hover:bg-white/5 transition-colors"
+                    >
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {registration.team?.members &&
+                        registration.team.members.length > 0 ? (
+                          <div className="flex flex-col">
+                            <span className="text-white font-bold text-sm">
+                              {registration.team.members
+                                .map((m) =>
+                                  `${m.player?.firstName || ""} ${m.player?.lastName || ""}`.trim(),
+                                )
+                                .filter(Boolean)
+                                .join(" & ") ||
+                                `${registration.player?.firstName || ""} ${registration.player?.lastName || ""}`}
+                            </span>
+                            <span className="text-[10px] uppercase font-bold text-[#4AEEFF]">
+                              Doubles Pair
+                            </span>
+                          </div>
+                        ) : (
+                          <Link
+                            to={`/profile/${registration.player?.id}`}
+                            className="text-white hover:text-[#4AEEFF] font-bold text-sm transition-colors"
+                          >
+                            {registration.player?.firstName}{" "}
+                            {registration.player?.lastName}
+                          </Link>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className="px-2.5 py-1 text-xs font-black uppercase tracking-wider rounded-md bg-[#4AEEFF]/15 text-[#4AEEFF] border border-[#4AEEFF]/30">
+                          {registration.category?.name || "N/A"}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-white/70">
+                        {registration.team?.members &&
+                        registration.team.members.length > 0
+                          ? registration.team.members
+                              .map((m) => m.player?.email)
+                              .filter(Boolean)
+                              .join(", ")
+                          : registration.player?.email}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-xs text-white/50 font-mono">
+                        {new Date(
+                          registration.registeredAt,
+                        ).toLocaleDateString()}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span
+                          className={`px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-md border ${getRegistrationStatusColor(registration.status)}`}
+                        >
+                          {registration.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
-      )}
+        )}
       {/* Modals */}
       {showGroupsModal && (
         <CreateGroupsModal
@@ -2893,9 +3039,10 @@ const TournamentDetails: React.FC = () => {
                     lineHeight: 1.6,
                   }}
                 >
-                  This will permanently delete{" "}
+                  This will reset{" "}
                   <strong style={{ color: "#fff" }}>
-                    all knockout matches and recorded scores
+                    all knockout matches and scores back to the initial bracket
+                    state
                   </strong>
                   . Group stage results will remain intact.
                 </p>
@@ -2909,8 +3056,7 @@ const TournamentDetails: React.FC = () => {
                     color: "#fca5a5",
                   }}
                 >
-                  You will need to regenerate the knockout bracket after
-                  resetting.
+                  All knockout stages will appear fresh and ready to play.
                 </div>
               </div>
 

@@ -172,7 +172,7 @@ async getCategoryWinners(tournamentId: string) {
         include: {
           matches: {
             where: {
-              round: { in: ['Final', 'Semi-Finals'] },
+              round: { in: ['Final', 'Finals', 'Semi-Finals', 'Semi-final', 'Semifinals', 'Semifinal'] },
             },
             include: {
               player1: {
@@ -229,24 +229,29 @@ async getCategoryWinners(tournamentId: string) {
       'MIXED_DOUBLES',
     ].includes(category.type);
 
-    const finalMatch = category.matches.find(
-  m =>
-    m.round === 'Final' &&
-    ['COMPLETED', 'WALKOVER'].includes(m.status),
-);
+    const isSemiFinal = (r: string) => {
+      const norm = (r || '').toLowerCase().replace(/[^a-z]/g, '');
+      return norm === 'semifinals' || norm === 'semifinal';
+    };
+    const isFinal = (r: string) => {
+      const norm = (r || '').toLowerCase().replace(/[^a-z]/g, '');
+      return norm === 'final' || norm === 'finals';
+    };
 
-    const semifinals = category.matches.filter(
-      m => m.round === 'Semi-Finals',
+    const finalMatch = category.matches.find(
+      m => isFinal(m.round) && ['COMPLETED', 'WALKOVER'].includes(m.status),
     );
+
+    const semifinals = category.matches.filter(m => isSemiFinal(m.round));
 
     const getParticipants = (match: typeof category.matches[number]) => {
       if (isDoubles) {
         return {
           first: match.team1,
           second: match.team2,
-          winnerId: match.winnerTeamId,
-          firstId: match.team1Id,
-          secondId: match.team2Id,
+          winnerId: match.winnerTeamId || match.winnerId,
+          firstId: match.team1Id || match.team1?.id,
+          secondId: match.team2Id || match.team2?.id,
         };
       }
 
@@ -254,8 +259,8 @@ async getCategoryWinners(tournamentId: string) {
         first: match.player1,
         second: match.player2,
         winnerId: match.winnerId,
-        firstId: match.player1Id,
-        secondId: match.player2Id,
+        firstId: match.player1Id || match.player1?.id,
+        secondId: match.player2Id || match.player2?.id,
       };
     };
 
@@ -265,15 +270,24 @@ async getCategoryWinners(tournamentId: string) {
     if (finalMatch) {
       const participants = getParticipants(finalMatch);
 
-      if (
-        participants.winnerId &&
-        participants.firstId &&
-        participants.secondId
-      ) {
-        if (participants.winnerId === participants.firstId) {
+      if (participants.winnerId) {
+        const isFirstWinner =
+          participants.winnerId === participants.firstId ||
+          (isDoubles &&
+            (participants.first as any)?.members?.some(
+              (m: any) => m.playerId === participants.winnerId || m.player?.id === participants.winnerId,
+            ));
+        const isSecondWinner =
+          participants.winnerId === participants.secondId ||
+          (isDoubles &&
+            (participants.second as any)?.members?.some(
+              (m: any) => m.playerId === participants.winnerId || m.player?.id === participants.winnerId,
+            ));
+
+        if (isFirstWinner) {
           winner = participants.first;
           runnerUp = participants.second;
-        } else if (participants.winnerId === participants.secondId) {
+        } else if (isSecondWinner) {
           winner = participants.second;
           runnerUp = participants.first;
         }
@@ -283,19 +297,30 @@ async getCategoryWinners(tournamentId: string) {
     const jointThird: any[] = [];
 
     if (
-  semifinals.length === 2 &&
-  semifinals.every(
-    match => ['COMPLETED', 'WALKOVER'].includes(match.status),
-  )
-){
+      semifinals.length === 2 &&
+      semifinals.every(match => ['COMPLETED', 'WALKOVER'].includes(match.status))
+    ) {
       for (const match of semifinals) {
         const participants = getParticipants(match);
 
-        if (participants.winnerId === participants.firstId) {
+        const isFirstWinner =
+          participants.winnerId === participants.firstId ||
+          (isDoubles &&
+            (participants.first as any)?.members?.some(
+              (m: any) => m.playerId === participants.winnerId || m.player?.id === participants.winnerId,
+            ));
+        const isSecondWinner =
+          participants.winnerId === participants.secondId ||
+          (isDoubles &&
+            (participants.second as any)?.members?.some(
+              (m: any) => m.playerId === participants.winnerId || m.player?.id === participants.winnerId,
+            ));
+
+        if (isFirstWinner) {
           if (participants.second) {
             jointThird.push(participants.second);
           }
-        } else if (participants.winnerId === participants.secondId) {
+        } else if (isSecondWinner) {
           if (participants.first) {
             jointThird.push(participants.first);
           }

@@ -1680,10 +1680,21 @@ const KnockoutBracket: React.FC<KnockoutBracketProps> = ({
     }
   };
 
-  const round = (r: string) =>
-    matches
-      .filter((m) => m.round === r)
+  const round = (r: string) => {
+    const normTarget = (r || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+    return matches
+      .filter((m) => {
+        const normMatch = (m.round || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+        if (normTarget === "semifinals" || normTarget === "semifinal") {
+          return normMatch === "semifinals" || normMatch === "semifinal";
+        }
+        if (normTarget === "quarterfinals" || normTarget === "quarterfinal") {
+          return normMatch === "quarterfinals" || normMatch === "quarterfinal";
+        }
+        return normMatch === normTarget;
+      })
       .sort((a, b) => a.matchNumber - b.matchNumber);
+  };
 
   const handleCorrectScore = async (
     matchId: string,
@@ -1954,12 +1965,6 @@ const KnockoutBracket: React.FC<KnockoutBracketProps> = ({
       accent: "#22c55e",
       entries: [{ match: fn, tag: "F" }],
     });
-  if (tp)
-    cols.push({
-      label: "3rd Place Playoff",
-      accent: "#f59e0b",
-      entries: [{ match: tp, tag: "3RD" }],
-    });
 
   return (
     <div
@@ -2097,11 +2102,7 @@ const KnockoutBracket: React.FC<KnockoutBracketProps> = ({
                   transition: "all 0.15s ease",
                 }}
               >
-                {c.label === "Final"
-                  ? "🏆 Final"
-                  : c.label === "3rd Place Playoff"
-                    ? "🥉 3rd Place"
-                    : c.label}
+                {c.label === "Final" ? "🏆 Final" : c.label}
               </button>
             ))}
           </div>

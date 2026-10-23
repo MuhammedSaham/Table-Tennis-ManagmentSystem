@@ -419,14 +419,19 @@ async recordGroupScore(
       throw new AppError('Not enough players qualified for knockout stage', 400);
     }
 
-    // ── 2. Delete existing knockout matches ──────────────────────────────────
-    await prisma.match.deleteMany({
-      where: {
-        tournamentId,
-        categoryId,
-        round: { in: ['Quarter-Finals', 'Semi-Finals', 'Final', '3rd Place Playoff'] },
-      },
+    // ── 2. Delete existing knockout matches and their games ───────────────────
+    const existingMatches = await prisma.match.findMany({
+      where: { tournamentId, categoryId },
+      select: { id: true },
     });
+    if (existingMatches.length > 0) {
+      await prisma.game.deleteMany({
+        where: { matchId: { in: existingMatches.map(m => m.id) } },
+      });
+      await prisma.match.deleteMany({
+        where: { tournamentId, categoryId },
+      });
+    }
 
     // ── 3. Determine bracket structure dynamically ───────────────────────────
     const bracketSize = this.nextPowerOfTwo(totalPlayers); // 4, 8, 16
@@ -504,20 +509,7 @@ async recordGroupScore(
       });
       allMatches.push(finalMatch);
 
-      const thirdPlaceMatch = await prisma.match.create({
-        data: {
-          tournamentId,
-          categoryId,
-          matchType: 'SINGLES',
-          player1Id: null,
-          player2Id: null,
-          round: '3rd Place Playoff',
-          matchNumber: matchNumber++,
-          scheduledTime: new Date(),
-          status: 'SCHEDULED',
-        },
-      });
-      allMatches.push(thirdPlaceMatch);
+
     }
 
     // ── 4b. CASE: bracketSize >= 8 (e.g. 5-8 players with QF, or 9-16 with R16) ──
@@ -608,23 +600,7 @@ async recordGroupScore(
         matchesInNextRound = Math.floor(matchesInNextRound / 2);
       }
 
-      // Create 3rd Place Playoff
-      if (bracketSize >= 4) {
-        const thirdPlaceMatch = await prisma.match.create({
-          data: {
-            tournamentId,
-            categoryId,
-            matchType: 'SINGLES',
-            player1Id: null,
-            player2Id: null,
-            round: '3rd Place Playoff',
-            matchNumber: matchNumber++,
-            scheduledTime: new Date(),
-            status: 'SCHEDULED',
-          },
-        });
-        allMatches.push(thirdPlaceMatch);
-      }
+
     }
 
     // ── 5. Summary ───────────────────────────────────────────────────────────
@@ -876,7 +852,18 @@ async updateGroupMembers(
         where: {
           tournamentId,
           categoryId,
-          round: { in: ['Quarter-Finals', 'Semi-Finals', 'Final', '3rd Place Playoff'] },
+          round: {
+  in: [
+    'Round of 128',
+    'Round of 64',
+    'Round of 32',
+    'Round of 16',
+    'Quarter-Finals',
+    'Semi-Finals',
+    'Final',
+    '3rd Place Playoff',
+  ],
+},
         },
       });
     }
@@ -1238,14 +1225,19 @@ async updateGroupMembers(
       throw new AppError('Not enough teams qualified for knockout stage', 400);
     }
 
-    // Delete existing knockout matches for this category
-    await prisma.match.deleteMany({
-      where: {
-        tournamentId,
-        categoryId,
-        round: { in: ['Quarter-Finals', 'Semi-Finals', 'Final', '3rd Place Playoff'] },
-      },
+    // Delete existing knockout matches and their games for this category
+    const existingMatches = await prisma.match.findMany({
+      where: { tournamentId, categoryId },
+      select: { id: true },
     });
+    if (existingMatches.length > 0) {
+      await prisma.game.deleteMany({
+        where: { matchId: { in: existingMatches.map(m => m.id) } },
+      });
+      await prisma.match.deleteMany({
+        where: { tournamentId, categoryId },
+      });
+    }
 
     const bracketSize = this.nextPowerOfTwo(totalTeams);
     const byes = bracketSize - totalTeams;
@@ -1315,20 +1307,7 @@ async updateGroupMembers(
       });
       allMatches.push(finalMatch);
 
-      const thirdPlaceMatch = await prisma.match.create({
-        data: {
-          tournamentId,
-          categoryId,
-          matchType: 'DOUBLES',
-          team1Id: null,
-          team2Id: null,
-          round: '3rd Place Playoff',
-          matchNumber: matchNumber++,
-          scheduledTime: new Date(),
-          status: 'SCHEDULED',
-        },
-      });
-      allMatches.push(thirdPlaceMatch);
+
     } else {
       const firstRoundMatchCount = bracketSize / 2;
       const randomized = this.shuffleArray([...seededTeams]);
@@ -1412,22 +1391,7 @@ async updateGroupMembers(
         matchesInNextRound = Math.floor(matchesInNextRound / 2);
       }
 
-      if (bracketSize >= 4) {
-        const thirdPlaceMatch = await prisma.match.create({
-          data: {
-            tournamentId,
-            categoryId,
-            matchType: 'DOUBLES',
-            team1Id: null,
-            team2Id: null,
-            round: '3rd Place Playoff',
-            matchNumber: matchNumber++,
-            scheduledTime: new Date(),
-            status: 'SCHEDULED',
-          },
-        });
-        allMatches.push(thirdPlaceMatch);
-      }
+
     }
 
     const qfCount = allMatches.filter(
