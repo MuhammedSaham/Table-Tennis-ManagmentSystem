@@ -44,8 +44,8 @@ const PublicLayout: React.FC = () => {
 
   return (
     <div className={`min-h-screen flex flex-col ${wrapperBgClass} w-full overflow-x-hidden max-w-full`}>
-      {/* Navbar */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-[#061D23] shadow-lg transition-all duration-300 w-full">
+      {/* Navbar - Solid Consistent Dark Petrol Teal */}
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-[#0D3843] border-b border-white/10 shadow-md transition-all duration-300 w-full">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-20">
             {/* Logo */}
@@ -136,16 +136,16 @@ const PublicLayout: React.FC = () => {
           onClick={() => setMobileMenuOpen(false)}
         />
 
-        {/* Side Drawer Panel (Slides from Left - 100% Solid Opaque Background) */}
+        {/* Side Drawer Panel (Slides from Left - Solid #0D3843 matching Desktop Navbar) */}
         <div
-          style={{ backgroundColor: "#061D23" }}
-          className={`fixed inset-y-0 left-0 z-[90] w-72 sm:w-80 bg-[#061D23] border-r border-white/20 shadow-[0_0_50px_rgba(0,0,0,0.9)] flex flex-col justify-between transition-transform duration-300 ease-in-out lg:hidden ${
+          style={{ backgroundColor: "#0D3843" }}
+          className={`fixed inset-y-0 left-0 z-[90] w-72 sm:w-80 bg-[#0D3843] border-r border-white/15 shadow-[0_0_50px_rgba(0,0,0,0.9)] flex flex-col justify-between transition-transform duration-300 ease-in-out lg:hidden ${
             mobileMenuOpen ? "translate-x-0" : "-translate-x-full"
           }`}
         >
           {/* Drawer Top Header with Close Button */}
           <div className="flex flex-col">
-            <div className="flex items-center justify-between p-4 border-b border-white/10 bg-[#04151a]">
+            <div className="flex items-center justify-between p-4 border-b border-white/10 bg-[#0B313B]">
               <div className="flex items-center gap-2">
                 <img
                   src={Logo}
@@ -158,7 +158,7 @@ const PublicLayout: React.FC = () => {
               </div>
               <button
                 onClick={() => setMobileMenuOpen(false)}
-                className="p-2 rounded-xl border border-white/15 bg-white/5 text-white/80 hover:text-[#4AEEFF] hover:border-[#4AEEFF]/40 hover:bg-[#4AEEFF]/10 active:scale-95 transition-all"
+                className="p-2 rounded-xl border border-white/15 bg-white/5 text-white/80 hover:text-[#7DC6C7] hover:border-[#7DC6C7]/40 hover:bg-[#7DC6C7]/10 active:scale-95 transition-all"
                 title="Close drawer"
               >
                 <XMarkIcon className="w-5 h-5" />
@@ -177,18 +177,18 @@ const PublicLayout: React.FC = () => {
                     onClick={() => setMobileMenuOpen(false)}
                     className={`group flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-sm transition-all border ${
                       active
-                        ? "bg-[#4AEEFF]/15 border-[#4AEEFF]/40 text-[#4AEEFF] font-bold shadow-[0_0_15px_rgba(74,238,255,0.15)]"
-                        : "border-transparent text-white/80 hover:bg-white/5 hover:text-white hover:border-white/10 font-medium"
+                        ? "bg-[#7DC6C7]/20 border-[#7DC6C7]/45 text-[#7DC6C7] font-bold shadow-[0_0_15px_rgba(125,198,199,0.18)]"
+                        : "border-transparent text-slate-200 hover:bg-white/10 hover:text-white hover:border-white/10 font-medium"
                     }`}
                   >
                     <div className="flex items-center gap-3">
-                      <Icon className={`w-5 h-5 transition-colors ${active ? "text-[#4AEEFF]" : "text-white/60 group-hover:text-white"}`} />
+                      <Icon className={`w-5 h-5 transition-colors ${active ? "text-[#7DC6C7]" : "text-white/70 group-hover:text-white"}`} />
                       <span>{item.name}</span>
                     </div>
                     {active ? (
-                      <span className="w-1.5 h-1.5 rounded-full bg-[#4AEEFF] shadow-[0_0_8px_#4AEEFF]" />
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#7DC6C7] shadow-[0_0_8px_#7DC6C7]" />
                     ) : (
-                      <ChevronRightIcon className="w-4 h-4 text-white/20 group-hover:text-white/60 transition-transform group-hover:translate-x-0.5" />
+                      <ChevronRightIcon className="w-4 h-4 text-white/30 group-hover:text-white/70 transition-transform group-hover:translate-x-0.5" />
                     )}
                   </Link>
                 );
@@ -196,13 +196,13 @@ const PublicLayout: React.FC = () => {
             </div>
           </div>
 
-          {/* Bottom Actions (Sign In / Register or Dashboard matching Screenshot 2) */}
-          <div className="p-4 border-t border-white/10 bg-[#04151a]">
+          {/* Bottom Actions (Sign In / Register or Dashboard matching Desktop Navbar) */}
+          <div className="p-4 border-t border-white/10 bg-[#0B313B]">
             {user ? (
               <Link
                 to="/app/dashboard"
                 onClick={() => setMobileMenuOpen(false)}
-                className="block w-full rounded-2xl bg-[#4AEEFF] px-4 py-3 text-sm font-black text-[#061D23] text-center shadow-lg shadow-[#4AEEFF]/25 hover:bg-[#80ffff] transition-all"
+                className="block w-full rounded-2xl bg-[#7DC6C7] px-4 py-3 text-sm font-black text-[#0A262D] text-center shadow-lg shadow-black/20 hover:bg-[#8ee1e2] transition-all"
               >
                 Go to Dashboard
               </Link>
@@ -211,14 +211,14 @@ const PublicLayout: React.FC = () => {
                 <Link
                   to="/login"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="block rounded-2xl border border-white/20 bg-[#09252c] px-4 py-3 text-sm font-bold text-white text-center hover:bg-white/10 transition-all"
+                  className="block rounded-2xl border border-white/20 bg-[#104350] hover:bg-[#154f5f] px-4 py-3 text-sm font-bold text-white text-center transition-all"
                 >
                   Sign In
                 </Link>
                 <Link
                   to="/register"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="block rounded-2xl bg-[#4AEEFF] px-4 py-3 text-sm font-black text-[#061D23] text-center shadow-lg shadow-[#4AEEFF]/25 hover:bg-[#80ffff] transition-all"
+                  className="block rounded-2xl bg-[#7DC6C7] px-4 py-3 text-sm font-black text-[#0A262D] text-center shadow-lg shadow-black/20 hover:bg-[#8ee1e2] transition-all"
                 >
                   Get Started
                 </Link>

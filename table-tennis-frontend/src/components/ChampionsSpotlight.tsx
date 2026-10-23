@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { Link } from "react-router-dom";
 import api from "../services/api";
 import { TrophyIcon } from "@heroicons/react/24/outline";
@@ -30,10 +30,37 @@ interface Winner {
 const ChampionsSpotlight: React.FC = () => {
   const [recentWinners, setRecentWinners] = useState<Winner[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isVisible, setIsVisible] = useState(false);
+  const sectionRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetchRecentWinners();
   }, []);
+
+  useEffect(() => {
+    if (loading || recentWinners.length === 0) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+          observer.disconnect();
+        }
+      },
+      {
+        threshold: 0.12,
+        rootMargin: "0px 0px -40px 0px",
+      }
+    );
+
+    if (sectionRef.current) {
+      observer.observe(sectionRef.current);
+    }
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [loading, recentWinners.length]);
 
   const fetchRecentWinners = async () => {
     try {
@@ -91,17 +118,27 @@ const ChampionsSpotlight: React.FC = () => {
   }
 
   return (
-    <div className="bg-[#061D23] py-20 relative border-t border-white/5 overflow-hidden w-full">
+    <div
+      ref={sectionRef}
+      className="bg-[#0D3039] py-20 relative border-t border-white/10 overflow-hidden w-full"
+    >
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-14">
-          <div className="inline-flex items-center gap-2 bg-[#12679E]/20 border border-[#4AEEFF]/30 backdrop-blur-sm rounded-full px-4 py-1 mb-4 shadow-[0_0_15px_rgba(74,238,255,0.12)]">
+        <div
+          className={`text-center mb-14 scroll-fade-up ${
+            isVisible ? "is-visible" : ""
+          }`}
+          style={{
+            transitionDelay: isVisible ? "0ms" : "0ms",
+          }}
+        >
+          <div className="inline-flex items-center gap-2 bg-[#7DC6C7]/10 border border-[#7DC6C7]/25 rounded-full px-4 py-1 mb-4">
             <TrophyIcon className="w-4 h-4 text-yellow-400" />
-            <span className="text-xs font-semibold text-[#4AEEFF] uppercase tracking-wider">Champions Spotlight</span>
+            <span className="text-xs font-semibold text-[#7DC6C7] uppercase tracking-wider">Champions Spotlight</span>
           </div>
           <h2 className="text-3xl md:text-5xl font-extrabold text-white tracking-tight mb-4 font-display">
             Recent Tournament <span className="bg-gradient-to-r from-yellow-400 via-amber-200 to-white bg-clip-text text-transparent">Champions</span>
           </h2>
-          <p className="text-gray-300 text-base sm:text-lg max-w-2xl mx-auto">
+          <p className="text-slate-200 text-base sm:text-lg max-w-2xl mx-auto">
             Celebrating the winners of our recent championship tournaments
           </p>
         </div>
@@ -111,9 +148,14 @@ const ChampionsSpotlight: React.FC = () => {
             <Link
               key={`${winner.tournamentId}-${winner.categoryName}`}
               to={`/tournaments/${winner.tournamentId}`}
-              className="group"
+              className={`group block scroll-fade-up ${
+                isVisible ? "is-visible" : ""
+              }`}
+              style={{
+                transitionDelay: isVisible ? `${(index + 1) * 160}ms` : "0ms",
+              }}
             >
-              <div className="bg-[#08232B]/90 hover:bg-[#0C2F3A] border border-[#12679E]/40 hover:border-[#4AEEFF]/70 rounded-2xl overflow-hidden shadow-xl hover:shadow-[0_12px_35px_rgba(74,238,255,0.15)] transition-all duration-300 transform hover:-translate-y-1.5 backdrop-blur-md">
+              <div className="bg-[#113842]/90 hover:bg-[#15434F] border border-white/10 hover:border-white/25 rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
                 {/* Medal Color Header */}
                 <div
                   className={`h-2 ${
