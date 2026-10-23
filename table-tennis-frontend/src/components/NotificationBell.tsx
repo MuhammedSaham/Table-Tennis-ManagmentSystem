@@ -60,13 +60,17 @@ const NotificationBell: React.FC = () => {
   }, [showDropdown]);
 
   useEffect(() => {
+    if (!user) return;
     fetchNotifications();
-    // Poll for new notifications every 10 seconds
-    const interval = setInterval(fetchNotifications, 10000);
+    // Poll for new notifications every 15 seconds
+    const interval = setInterval(fetchNotifications, 15000);
     return () => clearInterval(interval);
   }, [user]);
 
   const fetchNotifications = async () => {
+    const token = localStorage.getItem("token");
+    if (!user || !token) return;
+
     try {
       const response = await api.get("/notifications");
       const data = response.data.data;
@@ -85,8 +89,10 @@ const NotificationBell: React.FC = () => {
       } else {
         setPendingInvites([]);
       }
-    } catch (error) {
-      console.error("Failed to fetch notifications:", error);
+    } catch (error: any) {
+      if (error?.response?.status !== 401) {
+        console.error("Failed to fetch notifications:", error);
+      }
     }
   };
 

@@ -43,10 +43,15 @@ api.interceptors.response.use(
     
     // Handle specific error codes with user-friendly messages
     if (error.response?.status === 401) {
+      const hadToken = !!localStorage.getItem('token');
       localStorage.removeItem('token');
       localStorage.removeItem('user');
-      window.location.href = '/login';
-      toast.error('Your session has expired. Please login again.');
+
+      const isAuthPage = ['/login', '/register', '/reset-password', '/verify-email'].includes(window.location.pathname);
+      if (hadToken && !isAuthPage) {
+        toast.error('Your session has expired. Please login again.', { id: 'session-expired' });
+        window.location.href = '/login';
+      }
     } else if (error.response?.status === 403) {
       toast.error("You don't have permission to do that.");
     } else if (error.response?.status === 404) {

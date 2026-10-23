@@ -13,6 +13,8 @@ import {
   ChartBarIcon,
   GlobeAltIcon,
   ChevronRightIcon,
+  MapPinIcon,
+  PhoneIcon,
 } from "@heroicons/react/24/outline";
 
 const PublicLayout: React.FC = () => {
@@ -44,8 +46,8 @@ const PublicLayout: React.FC = () => {
 
   return (
     <div className={`min-h-screen flex flex-col ${wrapperBgClass} w-full overflow-x-hidden max-w-full`}>
-      {/* Navbar */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-[#061D23] shadow-lg transition-all duration-300 w-full">
+      {/* Navbar - Solid Consistent Dark Petrol Teal */}
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-[#0D3843] border-b border-white/10 shadow-md transition-all duration-300 w-full">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-20">
             {/* Logo */}
@@ -60,18 +62,18 @@ const PublicLayout: React.FC = () => {
               </span>
             </Link>
 
-            {/* Desktop Navigation */}
-            <div className="hidden lg:flex items-center gap-2">
+            {/* Desktop Navigation matching Figma reference */}
+            <div className="hidden lg:flex items-center gap-6 xl:gap-8">
               {navigation.map((item) => {
                 const isActive = isItemActive(item.href);
                 return (
                   <Link
                     key={item.name}
                     to={item.href}
-                    className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 border ${
+                    className={`text-sm transition-colors duration-200 ${
                       isActive
-                        ? "bg-[#4AEEFF]/15 text-[#4AEEFF] border-[#4AEEFF]/40 font-bold shadow-[0_0_15px_rgba(74,238,255,0.15)]"
-                        : "text-white/80 hover:bg-white/10 hover:text-white border-transparent"
+                        ? "text-white font-bold"
+                        : "text-slate-300 hover:text-white font-medium"
                     }`}
                   >
                     {item.name}
@@ -80,48 +82,50 @@ const PublicLayout: React.FC = () => {
               })}
             </div>
 
-            {/* Right section */}
-            <div className="flex items-center gap-2 sm:gap-3">
+            {/* Right section matching Figma reference */}
+            <div className="flex items-center gap-4 sm:gap-6">
               {user ? (
                 <Link
                   to="/app/dashboard"
-                  className="inline-flex items-center justify-center rounded-xl bg-[#4AEEFF] px-4 py-2 text-xs sm:text-sm font-bold text-[#061D23] shadow-md shadow-[#4AEEFF]/20 hover:bg-[#80ffff] transition-all"
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-white/20 bg-white/5 hover:bg-white/10 px-4 py-2 text-xs sm:text-sm font-medium text-white transition-all"
                 >
-                  Dashboard
+                  <span>Dashboard</span>
+                  <span>→</span>
                 </Link>
               ) : (
-                <div className="hidden sm:flex items-center gap-2.5">
+                <div className="hidden sm:flex items-center gap-5">
                   <Link
                     to="/login"
-                    className="inline-flex items-center justify-center rounded-xl border border-white/20 bg-white/5 px-4 py-2 text-xs sm:text-sm font-semibold text-white transition hover:bg-white/10"
+                    className="text-slate-300 hover:text-white text-xs sm:text-sm font-medium transition-colors"
                   >
-                    Sign In
+                    Sign in
                   </Link>
                   <Link
                     to="/register"
-                    className="inline-flex items-center justify-center rounded-xl bg-[#4AEEFF] px-4 py-2 text-xs sm:text-sm font-black text-[#061D23] shadow-md shadow-[#4AEEFF]/20 transition hover:bg-[#80ffff]"
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-white/20 bg-white/5 hover:bg-white/10 px-4 py-2 text-xs sm:text-sm font-medium text-white transition-all"
                   >
-                    Get Started
+                    <span>Get Started</span>
+                    <span>→</span>
                   </Link>
                 </div>
               )}
 
-              {/* Mobile menu button */}
+              {/* Mobile menu button matching Figma mobile reference */}
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="lg:hidden p-2 rounded-xl text-white/80 hover:text-[#4AEEFF] hover:bg-white/10 border border-white/15 active:scale-95 transition-all"
+                className="lg:hidden flex items-center gap-1.5 text-white/90 hover:text-white text-sm font-medium p-1.5"
                 aria-label="Toggle menu"
               >
+                <span>Menu</span>
                 {mobileMenuOpen ? (
-                  <XMarkIcon className="w-6 h-6" />
+                  <XMarkIcon className="w-5 h-5" />
                 ) : (
-                  <Bars3Icon className="w-6 h-6" />
+                  <Bars3Icon className="w-5 h-5" />
                 )}
               </button>
             </div>
           </div>
         </div>
-
       </nav>
 
       {/* Mobile Slide-in Side Drawer (LMS Style) */}
@@ -134,16 +138,16 @@ const PublicLayout: React.FC = () => {
           onClick={() => setMobileMenuOpen(false)}
         />
 
-        {/* Side Drawer Panel (Slides from Left - 100% Solid Opaque Background) */}
+        {/* Side Drawer Panel (Slides from Left - Solid #0D3843 matching Desktop Navbar) */}
         <div
-          style={{ backgroundColor: "#061D23" }}
-          className={`fixed inset-y-0 left-0 z-[90] w-72 sm:w-80 bg-[#061D23] border-r border-white/20 shadow-[0_0_50px_rgba(0,0,0,0.9)] flex flex-col justify-between transition-transform duration-300 ease-in-out lg:hidden ${
+          style={{ backgroundColor: "#0D3843" }}
+          className={`fixed inset-y-0 left-0 z-[90] w-72 sm:w-80 bg-[#0D3843] border-r border-white/15 shadow-[0_0_50px_rgba(0,0,0,0.9)] flex flex-col justify-between transition-transform duration-300 ease-in-out lg:hidden ${
             mobileMenuOpen ? "translate-x-0" : "-translate-x-full"
           }`}
         >
           {/* Drawer Top Header with Close Button */}
           <div className="flex flex-col">
-            <div className="flex items-center justify-between p-4 border-b border-white/10 bg-[#04151a]">
+            <div className="flex items-center justify-between p-4 border-b border-white/10 bg-[#0B313B]">
               <div className="flex items-center gap-2">
                 <img
                   src={Logo}
@@ -156,7 +160,7 @@ const PublicLayout: React.FC = () => {
               </div>
               <button
                 onClick={() => setMobileMenuOpen(false)}
-                className="p-2 rounded-xl border border-white/15 bg-white/5 text-white/80 hover:text-[#4AEEFF] hover:border-[#4AEEFF]/40 hover:bg-[#4AEEFF]/10 active:scale-95 transition-all"
+                className="p-2 rounded-xl border border-white/15 bg-white/5 text-white/80 hover:text-[#7DC6C7] hover:border-[#7DC6C7]/40 hover:bg-[#7DC6C7]/10 active:scale-95 transition-all"
                 title="Close drawer"
               >
                 <XMarkIcon className="w-5 h-5" />
@@ -175,18 +179,18 @@ const PublicLayout: React.FC = () => {
                     onClick={() => setMobileMenuOpen(false)}
                     className={`group flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-sm transition-all border ${
                       active
-                        ? "bg-[#4AEEFF]/15 border-[#4AEEFF]/40 text-[#4AEEFF] font-bold shadow-[0_0_15px_rgba(74,238,255,0.15)]"
-                        : "border-transparent text-white/80 hover:bg-white/5 hover:text-white hover:border-white/10 font-medium"
+                        ? "bg-[#7DC6C7]/20 border-[#7DC6C7]/45 text-[#7DC6C7] font-bold shadow-[0_0_15px_rgba(125,198,199,0.18)]"
+                        : "border-transparent text-slate-200 hover:bg-white/10 hover:text-white hover:border-white/10 font-medium"
                     }`}
                   >
                     <div className="flex items-center gap-3">
-                      <Icon className={`w-5 h-5 transition-colors ${active ? "text-[#4AEEFF]" : "text-white/60 group-hover:text-white"}`} />
+                      <Icon className={`w-5 h-5 transition-colors ${active ? "text-[#7DC6C7]" : "text-white/70 group-hover:text-white"}`} />
                       <span>{item.name}</span>
                     </div>
                     {active ? (
-                      <span className="w-1.5 h-1.5 rounded-full bg-[#4AEEFF] shadow-[0_0_8px_#4AEEFF]" />
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#7DC6C7] shadow-[0_0_8px_#7DC6C7]" />
                     ) : (
-                      <ChevronRightIcon className="w-4 h-4 text-white/20 group-hover:text-white/60 transition-transform group-hover:translate-x-0.5" />
+                      <ChevronRightIcon className="w-4 h-4 text-white/30 group-hover:text-white/70 transition-transform group-hover:translate-x-0.5" />
                     )}
                   </Link>
                 );
@@ -194,13 +198,13 @@ const PublicLayout: React.FC = () => {
             </div>
           </div>
 
-          {/* Bottom Actions (Sign In / Register or Dashboard matching Screenshot 2) */}
-          <div className="p-4 border-t border-white/10 bg-[#04151a]">
+          {/* Bottom Actions (Sign In / Register or Dashboard matching Desktop Navbar) */}
+          <div className="p-4 border-t border-white/10 bg-[#0B313B]">
             {user ? (
               <Link
                 to="/app/dashboard"
                 onClick={() => setMobileMenuOpen(false)}
-                className="block w-full rounded-2xl bg-[#4AEEFF] px-4 py-3 text-sm font-black text-[#061D23] text-center shadow-lg shadow-[#4AEEFF]/25 hover:bg-[#80ffff] transition-all"
+                className="block w-full rounded-2xl bg-[#7DC6C7] px-4 py-3 text-sm font-black text-[#0A262D] text-center shadow-lg shadow-black/20 hover:bg-[#8ee1e2] transition-all"
               >
                 Go to Dashboard
               </Link>
@@ -209,14 +213,14 @@ const PublicLayout: React.FC = () => {
                 <Link
                   to="/login"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="block rounded-2xl border border-white/20 bg-[#09252c] px-4 py-3 text-sm font-bold text-white text-center hover:bg-white/10 transition-all"
+                  className="block rounded-2xl border border-white/20 bg-[#104350] hover:bg-[#154f5f] px-4 py-3 text-sm font-bold text-white text-center transition-all"
                 >
                   Sign In
                 </Link>
                 <Link
                   to="/register"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="block rounded-2xl bg-[#4AEEFF] px-4 py-3 text-sm font-black text-[#061D23] text-center shadow-lg shadow-[#4AEEFF]/25 hover:bg-[#80ffff] transition-all"
+                  className="block rounded-2xl bg-[#7DC6C7] px-4 py-3 text-sm font-black text-[#0A262D] text-center shadow-lg shadow-black/20 hover:bg-[#8ee1e2] transition-all"
                 >
                   Get Started
                 </Link>
@@ -298,12 +302,16 @@ const PublicLayout: React.FC = () => {
             <div className="md:col-span-3">
               <h4 className="font-bold text-lg text-white mb-4">Contact</h4>
               <ul className="space-y-2 text-sm text-white">
-                <li className="text-xs leading-relaxed text-white">
-                  📍 Broody front lane, Jaffna, Sri Lanka, 40000
+                <li className="flex items-start gap-3 text-xs leading-relaxed text-white">
+                  <MapPinIcon className="h-5 w-5 shrink-0 text-white" aria-hidden="true" />
+                  <span>Broody front lane, Jaffna, Sri Lanka, 40000</span>
                 </li>
                 <li>
                   <a href="tel:+94755711174" className="text-white hover:text-[#4AEEFF] transition">
-                    📞 +94 75 571 1174
+                    <span className="flex items-center gap-3">
+                      <PhoneIcon className="h-5 w-5 shrink-0 text-white" aria-hidden="true" />
+                      <span>+94 75 571 1174</span>
+                    </span>
                   </a>
                 </li>
                 <li>
@@ -318,19 +326,19 @@ const PublicLayout: React.FC = () => {
             </div>
             <div className="md:col-span-3 md:pl-6 lg:pl-10">
               <h4 className="font-bold text-lg text-white mb-4">Follow Us</h4>
-              <div className="space-y-3">
+              <div className="flex items-center gap-4">
                 <div>
                   <a
                     href="https://www.facebook.com/profile.php?id=61557498952975"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-3 text-white hover:text-[#4AEEFF] transition-colors"
+                    aria-label="Facebook"
+                    className="flex items-center text-white hover:text-[#4AEEFF] transition-colors"
                   >
                     <img src="/facebook-logo.png" alt="" className="h-5 w-5 object-contain" />
                     <svg className="hidden" fill="currentColor" viewBox="0 0 24 24">
                       <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
                     </svg>
-                    <span className="text-sm">Facebook</span>
                   </a>
                 </div>
                 <div>
@@ -338,7 +346,8 @@ const PublicLayout: React.FC = () => {
                     href="https://www.instagram.com/samscollege_official?igsh=NHR2cmk0a29nNDB3"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-3 text-white hover:text-[#4AEEFF] transition-colors"
+                    aria-label="Instagram"
+                    className="flex items-center text-white hover:text-[#4AEEFF] transition-colors"
                   >
                     <img src="/instagram-logo-png.png" alt="" className="h-5 w-5 object-contain" />
                     <svg className="hidden" fill="currentColor" viewBox="0 0 24 24">
@@ -346,7 +355,6 @@ const PublicLayout: React.FC = () => {
                       <circle cx="12" cy="12" r="3.305" />
                       <circle cx="18.513" cy="5.487" r=".773" />
                     </svg>
-                    <span className="text-sm">Instagram</span>
                   </a>
                 </div>
                 <div>
@@ -354,13 +362,13 @@ const PublicLayout: React.FC = () => {
                     href="https://wa.me/94755711174"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-3 text-white hover:text-[#4AEEFF] transition-colors"
+                    aria-label="WhatsApp"
+                    className="flex items-center text-white hover:text-[#4AEEFF] transition-colors"
                   >
                     <img src="/whatsApp-logo-1.png" alt="" className="h-5 w-5 object-contain" />
                     <svg className="hidden" fill="currentColor" viewBox="0 0 24 24">
                       <path d="M17.6915026,13.4744748 C17.5157041,13.4744748 17.3399056,13.4744748 17.1424051,13.3968957 C16.6291024,13.2640027 16.1158007,13.0685848 15.602298,12.5592849 C15.3385941,12.3274922 15.0749903,12.0956995 14.8113864,11.8639068 C14.1305673,11.2406722 13.4497483,10.6174376 12.8359148,9.90477573 C12.7025385,9.75150862 12.6357972,9.53572205 12.7691735,9.35519975 C12.9449721,9.13604949 13.1207706,8.94337449 13.2633337,8.75069948 C13.5269335,8.37900411 13.7905335,8.00730874 13.8573765,7.56574359 C13.9242199,7.05204654 13.6605201,6.65028015 13.3401759,6.16914082 C13.1276316,5.84687696 12.9150875,5.50149476 12.6348069,5.2437622 C12.0877148,4.69899462 11.4066985,4.69899462 10.8595956,5.2437622 C10.3456908,5.74812181 10.1331493,6.53969766 10.1331493,7.28597827 C10.1331493,8.56191565 10.5600308,9.8376225 11.3451359,10.9345729 C12.0209166,11.8302094 12.8359148,12.4535187 13.7907264,13.0768497 C14.7455168,13.7001806 15.8007165,14.1082739 16.9231556,14.2411669 C17.3502742,14.3187889 17.7773926,14.3187889 18.2047085,14.2411669 C19.0196977,14.1082739 19.8015082,13.8700127 20.4478251,13.2772739 C20.8747337,12.9318869 21.0571312,12.3823151 20.8449196,11.8984359 C20.7782827,11.7218134 20.6450055,11.6130104 20.4951893,11.5342054 L20.4951893,11.5342054 C20.2984842,11.4240859 20.0351295,11.2815961 19.72456,11.5350068 C19.2579389,11.9834032 18.9375205,12.0829196 18.3903969,12.0829196 C17.4340161,12.0829196 16.5127894,11.5074275 15.9657042,10.8584153 C15.4185836,10.2094032 14.9316639,9.67813865 14.8643108,8.75069948 C14.797053,7.7748566 15.4187661,6.79346444 16.4610778,6.79346444 C16.8882259,6.79346444 17.3151075,6.87408537 17.675721,7.05204654 C17.9393211,7.17000947 18.2028205,7.28905509 18.4003326,7.36977055 C18.7207024,7.53148882 19.0411707,7.76314126 19.2987827,7.43932161 C19.4077934,7.30903775 19.4746344,7.17865402 19.5414753,7.04827 C19.7390845,6.66530898 19.936694,6.29160883 20.066953,5.82181694 C20.235253,5.12320633 20.4130124,4.29635993 19.8659048,3.70268046 C19.3190015,3.14124822 18.2755768,2.87352491 17.5896509,2.73618039 C16.5139396,2.52038381 15.4383345,2.49999923 14.3625169,2.60000876 C12.3758858,2.80812995 10.4214706,3.68023823 9.06841624,5.23253018 C7.71504948,6.78482214 6.95640755,8.87815905 6.95640755,11.021501 C6.95640755,12.8139861 7.49322226,14.4844221 8.36826147,15.8734908 C9.24330068,17.2625595 10.5262819,18.2991191 12.0481833,18.8815281 C12.7313025,19.1392606 13.4145214,19.3009496 14.0975328,19.3936937 C14.7802317,19.4865377 15.4630262,19.5103223 16.1457251,19.4645328 C18.1323562,19.3297797 20.0871689,18.5087249 21.4406275,17.1655925 C22.7940861,15.82246 23.5527485,14.0301657 23.6199027,12.2376741 C23.6537797,11.3461812 23.5202062,10.454688 23.2223155,9.6137701 C22.9915407,8.99156127 22.6373511,8.41926238 22.1568563,7.98508192 C21.3417668,7.20898204 20.2654429,6.69528497 19.1891192,6.69528497 C18.3066139,6.69528497 17.4242097,6.96300829 16.8135614,7.66346256" />
                     </svg>
-                    <span className="text-sm">WhatsApp</span>
                   </a>
                 </div>
               </div>

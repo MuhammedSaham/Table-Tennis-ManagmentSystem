@@ -1,194 +1,94 @@
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import heroBg from "../assets/hero_bg.jpg";
-
-// Smooth animated count-up hook for stats
-const useCounter = (target: number, duration: number = 1400) => {
-  const [count, setCount] = useState(0);
-
-  useEffect(() => {
-    let startTimestamp: number | null = null;
-    let frameId: number;
-
-    const step = (timestamp: number) => {
-      if (!startTimestamp) startTimestamp = timestamp;
-      const progress = Math.min((timestamp - startTimestamp) / duration, 1);
-      // smooth ease-out curve
-      const ease = progress === 1 ? 1 : 1 - Math.pow(2, -10 * progress);
-      setCount(Math.floor(ease * target));
-      if (progress < 1) {
-        frameId = requestAnimationFrame(step);
-      }
-    };
-
-    frameId = requestAnimationFrame(step);
-    return () => cancelAnimationFrame(frameId);
-  }, [target, duration]);
-
-  return count;
-};
+import heroBgDesktop from "../assets/hero_bg_desktop.png";
+import heroBgMobile from "../assets/hero_bg_mobile.png";
+import { ArrowRightIcon } from "@heroicons/react/24/outline";
 
 const Hero: React.FC = () => {
   const { user } = useAuth();
 
-  // Smooth live numbers
-  const tournamentsCount = useCounter(50);
-  const playersCount = useCounter(200);
-  const matchesCount = useCounter(1000);
-
   return (
-    <div className="relative h-[calc(100dvh-5rem)] sm:h-[calc(100vh-5rem)] sm:min-h-[560px] bg-[#061D23] overflow-hidden flex items-center w-full">
-      {/* 1. Background Image with Racket on the right */}
-      <div style={{ position: "absolute", inset: 0, zIndex: 0 }}>
-        <div
-          style={{
-            position: "absolute",
-            inset: 0,
-            backgroundImage: `url(${heroBg})`,
-            backgroundSize: "cover",
-            backgroundPosition: "75% center",
-            zIndex: 0,
-          }}
-        />
-        {/* Responsive dark vignette: full dark wash on mobile for 100% legibility, smooth fade to right on desktop */}
-        <div
-          className="absolute inset-0 z-[1]"
-          style={{
-            background:
-              "linear-gradient(to right, rgba(6, 29, 35, 0.96) 0%, rgba(6, 29, 35, 0.90) 45%, rgba(6, 29, 35, 0.40) 80%, rgba(6, 29, 35, 0.20) 100%)",
-          }}
-        />
-        {/* Additional mobile-only subtle dark tint for ultra-sharp text on small screens */}
-        <div className="absolute inset-0 bg-[#061D23]/40 sm:hidden z-[1]" />
-
-        {/* Brand diagonal accent lines (hidden on very small screens to avoid visual noise) */}
-        <div
-          className="hidden sm:block"
-          style={{
-            position: "absolute",
-            inset: 0,
-            background: "#12679E",
-            clipPath: "polygon(0 0, 14% 0, 7% 100%, 0 100%)",
-            opacity: 0.22,
-            zIndex: 2,
-          }}
-        />
-        <div
-          className="hidden sm:block"
-          style={{
-            position: "absolute",
-            inset: 0,
-            background: "#4AEEFF",
-            clipPath: "polygon(12% 0, 18% 0, 11% 100%, 5% 100%)",
-            opacity: 0.16,
-            zIndex: 2,
-          }}
-        />
+    <div className="relative w-full min-h-[calc(100dvh-5rem)] sm:min-h-[calc(100vh-5rem)] bg-[#0D3039] overflow-hidden flex items-center">
+      {/* Full-Bleed Responsive Background Image matching About page vibrant brightness */}
+      <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
+        <picture>
+          <source media="(max-width: 639px)" srcSet={heroBgMobile} />
+          <source media="(min-width: 640px)" srcSet={heroBgDesktop} />
+          <img
+            src={heroBgDesktop}
+            alt="Table Tennis Championship Arena"
+            className="w-full h-full object-cover object-center"
+          />
+        </picture>
+        {/* Soft, light tint matching the About page brightness while keeping text crisp */}
+        <div className="absolute inset-0 bg-gradient-to-b sm:bg-gradient-to-r from-[#061D23]/35 via-[#061D23]/15 to-transparent" />
+        <div className="absolute inset-0 bg-[#061D23]/10" />
       </div>
 
-      {/* 2. Left-Aligned Content Container (Fully Responsive) */}
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-10 md:py-12 lg:py-14 w-full">
-        <div className="max-w-xl text-left">
-          {/* Top Badge with College Name, live radar dot, and continuous gentle float */}
-          <div className="animate-fade-up-1 inline-flex items-center gap-2 bg-[#12679E]/30 border border-[#4AEEFF]/40 backdrop-blur-md rounded-full px-3 py-0.5 sm:px-3.5 sm:py-1 mb-2.5 sm:mb-5 shadow-[0_0_15px_rgba(74,238,255,0.15)] animate-gentle-float">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#4AEEFF] opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-[#4AEEFF]"></span>
-            </span>
-            <span className="text-[11px] sm:text-xs font-bold tracking-wider text-[#4AEEFF] uppercase">
-              Sam's College TT League
-            </span>
-          </div>
-
-          {/* Solid Headline with Continuous Metallic Light Sweep & Neon Glow */}
-          <h1 className="animate-fade-up-2 text-[26px] sm:text-5xl lg:text-6xl font-black text-white tracking-tight leading-[1.08] mb-2 sm:mb-4 font-display">
-            <span className="block animate-light-sweep font-black">
-              RULE THE ARENA.
-            </span>
-            <div className="relative inline-block w-full">
-              <span className="block text-lg sm:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-[#4AEEFF] via-cyan-100 to-white bg-clip-text text-transparent mt-1 sm:mt-2 animate-gradient-flow animate-neon-breathe">
-                Table Tennis Championship
-              </span>
-              {/* Continuous Flowing Laser Underline */}
-              <div className="h-[2px] sm:h-[2.5px] w-28 sm:w-52 bg-gradient-to-r from-[#4AEEFF] via-cyan-300 to-transparent rounded-full mt-1.5 sm:mt-2 shadow-[0_0_12px_rgba(74,238,255,0.7)] animate-laser-flow" />
+      {/* 3. Main Content Container */}
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-14 lg:py-20 w-full flex flex-col justify-center">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+          
+          {/* Left Column: Heading, Copy, Buttons, Tagline */}
+          <div className="lg:col-span-7 text-left max-w-2xl">
+            {/* Small Label */}
+            <div className="animate-fade-up-1 text-xs sm:text-sm font-semibold tracking-wider text-[#7DC6C7] uppercase mb-3 sm:mb-6 drop-shadow-[0_1px_2px_rgba(0,0,0,0.5)]">
+              SAM&apos;S COLLEGE TABLE TENNIS
             </div>
-          </h1>
 
-          {/* Crisp 1-line Subtitle */}
-          <p className="animate-fade-up-3 text-xs sm:text-base lg:text-lg text-gray-300 font-normal leading-relaxed mb-3.5 sm:mb-8 max-w-md">
-            Live tournament brackets, instant match scores, and official rankings.
-          </p>
+            {/* Main Headline */}
+            <h1 className="animate-fade-up-2 font-jakarta text-4xl sm:text-6xl lg:text-7xl xl:text-8xl font-black text-white tracking-tight leading-[1.05] mb-3 sm:mb-6 drop-shadow-[0_2px_8px_rgba(0,0,0,0.4)]">
+              The art of
+              <span className="block text-[#A5F3FC] mt-1 sm:mt-2 drop-shadow-[0_2px_8px_rgba(0,0,0,0.4)]">
+                the next point.
+              </span>
+            </h1>
 
-          {/* Action Buttons (Compact, elegant side-by-side pills with continuous aura & arrow micro-interaction) */}
-          <div className="animate-fade-up-4 flex flex-row items-center gap-2.5 sm:gap-3.5 mb-4 sm:mb-9">
-            {!user ? (
-              <>
-                <Link
-                  to="/register"
-                  className="group inline-flex items-center gap-1.5 bg-gradient-to-r from-[#4AEEFF] to-[#12679E] text-[#061D23] hover:brightness-110 font-extrabold text-xs sm:text-sm px-4 py-2 sm:px-5 sm:py-3 rounded-full animate-button-aura transition-all duration-300 transform active:scale-95 sm:hover:scale-105 whitespace-nowrap"
-                >
-                  <span>Get Started</span>
-                  <span className="text-xs transition-transform duration-200 group-hover:translate-x-1">→</span>
-                </Link>
-                <Link
-                  to="/login"
-                  className="inline-flex items-center justify-center bg-[#061D23]/60 hover:bg-[#12679E]/30 border border-white/20 hover:border-[#4AEEFF]/40 text-white font-semibold text-xs sm:text-sm px-4 py-2 sm:px-5 sm:py-3 rounded-full backdrop-blur-md transition-all duration-300 active:scale-95 whitespace-nowrap"
-                >
-                  Sign In
-                </Link>
-              </>
-            ) : (
+            {/* Description Paragraph */}
+            <p className="animate-fade-up-3 text-slate-100 text-sm sm:text-base lg:text-lg font-normal leading-relaxed max-w-xl mb-6 sm:mb-10 drop-shadow-[0_1px_3px_rgba(0,0,0,0.5)]">
+              Discover tournaments, connect with fellow players, and take your game further.
+            </p>
+
+            {/* Action Buttons */}
+            <div className="animate-fade-up-4 flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-6">
               <Link
                 to="/tournaments"
-                className="group inline-flex items-center gap-1.5 bg-gradient-to-r from-[#4AEEFF] to-[#12679E] text-[#061D23] hover:brightness-110 font-extrabold text-xs sm:text-sm px-4 py-2 sm:px-5 sm:py-3 rounded-full animate-button-aura transition-all duration-300 transform active:scale-95 sm:hover:scale-105 whitespace-nowrap"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-[#7DC6C7] hover:bg-[#8ee1e2] text-[#0A262D] font-bold text-sm sm:text-base px-7 py-3.5 rounded-xl transition-all duration-200 transform hover:-translate-y-0.5 shadow-md shadow-black/25 text-center"
               >
-                <span>Browse Tournaments</span>
-                <span className="text-xs transition-transform duration-200 group-hover:translate-x-1">→</span>
+                <span>Explore Tournaments</span>
+                <ArrowRightIcon className="w-4 h-4" />
               </Link>
-            )}
+
+              <Link
+                to={user ? "/tournaments" : "/register"}
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 text-white hover:text-[#7DC6C7] font-semibold text-sm sm:text-base px-3 py-3 sm:py-3.5 transition-colors text-center"
+              >
+                <span>Join the Club</span>
+                <ArrowRightIcon className="w-4 h-4" />
+              </Link>
+            </div>
+
           </div>
 
-          {/* Clean Responsive Stats Row (Live Count-Up Numbers - Screenshot 2 style) */}
-          <div className="animate-fade-up-5 grid grid-cols-3 gap-2 sm:flex sm:items-center sm:gap-8 pt-2.5 sm:pt-5 border-t border-white/10 text-center sm:text-left">
-            <div>
-              <div className="text-base sm:text-2xl font-black text-white tabular-nums">{tournamentsCount}+</div>
-              <div className="text-[10px] sm:text-[11px] uppercase tracking-wider text-[#4AEEFF]/80 font-medium">Tournaments</div>
-            </div>
-            <div className="hidden sm:block w-px h-8 bg-white/10" />
-            <div>
-              <div className="text-base sm:text-2xl font-black text-white tabular-nums">{playersCount}+</div>
-              <div className="text-[10px] sm:text-[11px] uppercase tracking-wider text-[#4AEEFF]/80 font-medium">Players</div>
-            </div>
-            <div className="hidden sm:block w-px h-8 bg-white/10" />
-            <div>
-              <div className="text-base sm:text-2xl font-black text-white tabular-nums">{matchesCount.toLocaleString()}+</div>
-              <div className="text-[10px] sm:text-[11px] uppercase tracking-wider text-[#4AEEFF]/80 font-medium">Matches</div>
+          {/* Right Column (Desktop Floating Editorial Caption over the supplied asset) */}
+          <div className="hidden lg:flex lg:col-span-5 flex-col justify-end h-[420px] xl:h-[480px] pointer-events-none">
+            {/* Bottom Right Club Tag */}
+            <div className="animate-fade-up-5 self-end text-left pl-6 drop-shadow-[0_2px_6px_rgba(0,0,0,0.5)]">
+              <div className="text-[11px] text-[#7DC6C7] font-semibold tracking-wider uppercase mb-1">
+                SAM&apos;S COLLEGE &nbsp;/&nbsp; TABLE TENNIS
+              </div>
+              <div className="text-xl xl:text-2xl font-bold text-white leading-snug">
+                One club.
+              </div>
+              <div className="text-xl xl:text-2xl font-bold text-white leading-snug">
+                A shared passion.
+              </div>
             </div>
           </div>
+
         </div>
       </div>
-
-      {/* 3. Interactive See More Button (Mobile Only) */}
-      <div className="sm:hidden absolute bottom-2.5 inset-x-0 flex justify-center z-20">
-        <button
-          onClick={() => {
-            window.scrollBy({ top: window.innerHeight - 80, behavior: "smooth" });
-          }}
-          className="inline-flex items-center gap-1.5 bg-[#061D23]/85 hover:bg-[#12679E]/40 border border-[#4AEEFF]/40 text-[#4AEEFF] backdrop-blur-md px-3.5 py-1.5 rounded-full text-[11px] font-bold tracking-wider uppercase shadow-[0_0_15px_rgba(74,238,255,0.25)] active:scale-95 transition-all animate-pulse"
-        >
-          <span>See More</span>
-          <span className="text-xs font-black animate-bounce">↓</span>
-        </button>
-      </div>
-
-      {/* 4. Smooth blend to following dark section */}
-      <div
-        className="absolute bottom-0 inset-x-0 h-16 pointer-events-none"
-        style={{
-          background: "linear-gradient(to top, #061D23 0%, transparent 100%)",
-        }}
-      />
     </div>
   );
 };
