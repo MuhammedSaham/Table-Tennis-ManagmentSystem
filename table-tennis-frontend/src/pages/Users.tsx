@@ -24,6 +24,7 @@ interface User {
   isSuperAdmin: boolean;
   ranking?: number | null;
   rankingNote?: string | null;
+  gender?: "MALE" | "FEMALE" | null;
   isClubMember?: boolean;
 }
 
@@ -58,6 +59,7 @@ const Users: React.FC = () => {
   const [activeTab, setActiveTab] = useState<
     "CLUB" | "GUEST" | "REFEREE" | "ADMIN"
   >("CLUB");
+  const [clubGenderTab, setClubGenderTab] = useState<"MALE" | "FEMALE">("MALE");
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
   const [deleting, setDeleting] = useState(false);
 
@@ -114,6 +116,11 @@ const Users: React.FC = () => {
     const email = (u.email || "").toLowerCase();
     return fullName.includes(q) || email.includes(q);
   });
+
+  const usersForDisplay =
+    (activeTab === "CLUB" || activeTab === "GUEST")
+      ? displayedUsers.filter((userItem) => userItem.gender === clubGenderTab)
+      : displayedUsers;
 
   const confirmDeleteUser = async () => {
     if (!userToDelete) return;
@@ -477,6 +484,40 @@ const Users: React.FC = () => {
         </div>
       </div>
 
+      {(activeTab === "CLUB" || activeTab === "GUEST") && (
+        <div className="flex items-center gap-3">
+          {(["MALE", "FEMALE"] as const).map((gender) => {
+            const genderCount = displayedUsers.filter(
+              (userItem) => userItem.gender === gender,
+            ).length;
+            const isActive = clubGenderTab === gender;
+
+            return (
+              <button
+                key={gender}
+                onClick={() => setClubGenderTab(gender)}
+                className={`flex items-center gap-2 rounded-lg px-5 py-2.5 text-xs font-black uppercase tracking-wider transition-all ${
+                  isActive
+                    ? "bg-[#4AEEFF] text-[#061D23] shadow-lg"
+                    : "border border-white/10 bg-white/5 text-white/70 hover:bg-white/10"
+                }`}
+              >
+                {gender === "MALE" ? "Men" : "Women"}
+                <span
+                  className={`rounded-full px-1.5 py-0.5 text-[10px] font-black ${
+                    isActive
+                      ? "bg-[#061D23]/30 text-[#061D23]"
+                      : "bg-[#4AEEFF]/20 text-[#4AEEFF]"
+                  }`}
+                >
+                  {genderCount}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       {/* CORE INDUSTRIAL DATA LAYER */}
       <main className="rounded-[16px] border border-white/20 bg-[#061D23]/10 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl overflow-hidden">
         {/* DESKTOP TABLE VIEW (Visible on tablet and desktop screens) */}
@@ -495,7 +536,7 @@ const Users: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5 text-base">
-              {displayedUsers.length === 0 ? (
+              {usersForDisplay.length === 0 ? (
                 <tr>
                   <td
                     colSpan={activeTab === "CLUB" ? 6 : 5}
@@ -522,11 +563,11 @@ const Users: React.FC = () => {
                   </td>
                 </tr>
               ) : (
-                displayedUsers.map((userItem) => (
-                  <tr
-                    key={userItem.id}
-                    className="group hover:bg-[#12679E]/10 transition-colors duration-200"
-                  >
+                usersForDisplay.map((userItem) => (
+                  <React.Fragment key={userItem.id}>
+                    <tr
+                      className="group hover:bg-[#12679E]/10 transition-colors duration-200"
+                    >
                     <td className="px-6 py-4">
                       <Link
                         to={`/profile/${userItem.id}`}
@@ -736,7 +777,8 @@ const Users: React.FC = () => {
                         )}
                       </div>
                     </td>
-                  </tr>
+                    </tr>
+                  </React.Fragment>
                 ))
               )}
             </tbody>
@@ -745,11 +787,11 @@ const Users: React.FC = () => {
 
         {/* MOBILE CARDS VIEW (Visible exclusively on mobile screens) */}
         <div className="block md:hidden divide-y divide-white/10">
-          {displayedUsers.map((userItem) => (
-            <div
-              key={userItem.id}
-              className="p-4 bg-[#061D23]/30 hover:bg-[#12679E]/10 transition-colors space-y-3"
-            >
+          {usersForDisplay.map((userItem) => (
+            <React.Fragment key={userItem.id}>
+              <div
+                className="p-4 bg-[#061D23]/30 hover:bg-[#12679E]/10 transition-colors space-y-3"
+              >
               {/* Top: Avatar, Name & Role Badge */}
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-center gap-3 min-w-0">
@@ -962,7 +1004,8 @@ const Users: React.FC = () => {
                   )}
                 </div>
               </div>
-            </div>
+              </div>
+            </React.Fragment>
           ))}
         </div>
       </main>

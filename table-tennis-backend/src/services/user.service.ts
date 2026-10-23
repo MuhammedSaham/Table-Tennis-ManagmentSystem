@@ -212,6 +212,7 @@ export class UserService {
                         skillLevel: true,
                         clubAffiliation: true,
                         dateOfBirth: true,
+                        gender: true,
                         isClubMember: true,
                     }
                 },
@@ -257,6 +258,7 @@ export class UserService {
                 skillLevel: user.playerProfile?.skillLevel || null,
                 clubAffiliation: user.playerProfile?.clubAffiliation || null,
                 dateOfBirth: user.playerProfile?.dateOfBirth || null,
+                gender: user.playerProfile?.gender || null,
                 isClubMember: user.playerProfile?.isClubMember ?? false,
                 playerProfile: user.playerProfile,
                 refereeProfile: user.refereeProfile,
