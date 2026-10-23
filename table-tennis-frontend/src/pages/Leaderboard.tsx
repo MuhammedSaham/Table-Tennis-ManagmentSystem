@@ -13,6 +13,12 @@ interface Tournament {
 interface Standing {
   playerId: string;
   playerName: string;
+  teamId?: string | null;
+  participantType?: "PLAYER" | "TEAM";
+  members?: {
+    playerId: string;
+    playerName: string;
+  }[];
   matchesPlayed: number;
   wins: number;
   losses: number;
@@ -100,11 +106,13 @@ const Leaderboard: React.FC = () => {
         <p className="mt-4 text-xs font-black uppercase tracking-[0.2em] text-[#4AEEFF]">
           Loading tournaments...
         </p>
-      </div>
+      </div>,
     );
   }
 
-  const selectedTourneyObj = tournaments.find((t) => t.id === selectedTournament);
+  const selectedTourneyObj = tournaments.find(
+    (t) => t.id === selectedTournament,
+  );
   const displayedStandings =
     selectedCategory === "ALL"
       ? standings
@@ -131,7 +139,9 @@ const Leaderboard: React.FC = () => {
             <span className="inline-block px-2 py-0.5 text-[10px] font-black uppercase tracking-wider rounded bg-[#4AEEFF]/20 text-[#4AEEFF] border border-[#4AEEFF]/30 mb-1">
               {selectedTourneyObj.status}
             </span>
-            <p className="text-sm sm:text-base font-black text-white">{selectedTourneyObj.name}</p>
+            <p className="text-sm sm:text-base font-black text-white">
+              {selectedTourneyObj.name}
+            </p>
           </div>
         )}
       </header>
@@ -151,13 +161,18 @@ const Leaderboard: React.FC = () => {
             className="w-full max-w-md rounded-xl border border-white/20 bg-[#061D23]/80 px-4 py-2.5 sm:py-3 text-sm font-medium text-white shadow-inner focus:border-[#4AEEFF] focus:outline-none focus:ring-1 focus:ring-[#4AEEFF]"
           >
             {tournaments.map((tournament) => (
-              <option key={tournament.id} value={tournament.id} className="bg-[#061D23] text-white">
+              <option
+                key={tournament.id}
+                value={tournament.id}
+                className="bg-[#061D23] text-white"
+              >
                 {tournament.name} ({tournament.status})
               </option>
             ))}
           </select>
           <span className="text-xs font-mono uppercase tracking-wider text-white/60">
-            {standings.length} {standings.length === 1 ? "category" : "categories"} available
+            {standings.length}{" "}
+            {standings.length === 1 ? "category" : "categories"} available
           </span>
         </div>
 
@@ -270,7 +285,9 @@ const Leaderboard: React.FC = () => {
               </div>
 
               {category.standings.length === 0 ? (
-                <p className="text-xs text-white/50 font-mono py-4">No completed fixtures in this category yet.</p>
+                <p className="text-xs text-white/50 font-mono py-4">
+                  No completed fixtures in this category yet.
+                </p>
               ) : (
                 <>
                   {/* Mobile Standings Cards */}
@@ -283,37 +300,67 @@ const Leaderboard: React.FC = () => {
                         <div className="flex items-center justify-between gap-3">
                           <div className="flex items-center gap-2.5 min-w-0">
                             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/5 font-black text-sm">
-                              {index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : `#${index + 1}`}
+                              {index === 0
+                                ? "🥇"
+                                : index === 1
+                                  ? "🥈"
+                                  : index === 2
+                                    ? "🥉"
+                                    : `#${index + 1}`}
                             </div>
-                            <Link
-                              to={`/profile/${player.playerId}`}
-                              className="truncate font-sans font-bold text-sm text-white capitalize hover:text-[#4AEEFF] transition-colors"
-                            >
-                              {player.playerName}
-                            </Link>
+                            {player.participantType === "TEAM" ? (
+                              <span className="font-sans font-bold text-sm text-white capitalize">
+                                {player.playerName}
+                              </span>
+                            ) : (
+                              <Link
+                                to={`/profile/${player.playerId}`}
+                                className="truncate font-sans font-bold text-sm text-white capitalize hover:text-[#4AEEFF] transition-colors"
+                              >
+                                {player.playerName}
+                              </Link>
+                            )}
                           </div>
                           <div className="shrink-0 rounded-lg border border-[#4AEEFF]/30 bg-[#4AEEFF]/10 px-2.5 py-1 text-right">
-                            <span className="font-mono text-sm font-black text-[#4AEEFF]">{player.points}</span>
-                            <span className="ml-1 text-[9px] font-bold uppercase tracking-wider text-[#4AEEFF]/70">PTS</span>
+                            <span className="font-mono text-sm font-black text-[#4AEEFF]">
+                              {player.points}
+                            </span>
+                            <span className="ml-1 text-[9px] font-bold uppercase tracking-wider text-[#4AEEFF]/70">
+                              PTS
+                            </span>
                           </div>
                         </div>
 
                         <div className="mt-2.5 grid grid-cols-3 gap-2 rounded-lg border border-white/5 bg-white/[0.02] p-2 text-center font-mono text-xs">
                           <div>
-                            <span className="block text-[9px] uppercase tracking-wider text-white/50">Played</span>
-                            <span className="font-semibold text-white/90">{player.matchesPlayed}</span>
-                          </div>
-                          <div>
-                            <span className="block text-[9px] uppercase tracking-wider text-white/50">W - L</span>
-                            <span className="font-semibold">
-                              <span className="text-emerald-400">{player.wins}</span>
-                              <span className="text-white/40"> - </span>
-                              <span className="text-rose-400">{player.losses}</span>
+                            <span className="block text-[9px] uppercase tracking-wider text-white/50">
+                              Played
+                            </span>
+                            <span className="font-semibold text-white/90">
+                              {player.matchesPlayed}
                             </span>
                           </div>
                           <div>
-                            <span className="block text-[9px] uppercase tracking-wider text-white/50">Games</span>
-                            <span className="font-semibold text-white/80">{player.gamesWon}-{player.gamesLost}</span>
+                            <span className="block text-[9px] uppercase tracking-wider text-white/50">
+                              W - L
+                            </span>
+                            <span className="font-semibold">
+                              <span className="text-emerald-400">
+                                {player.wins}
+                              </span>
+                              <span className="text-white/40"> - </span>
+                              <span className="text-rose-400">
+                                {player.losses}
+                              </span>
+                            </span>
+                          </div>
+                          <div>
+                            <span className="block text-[9px] uppercase tracking-wider text-white/50">
+                              Games
+                            </span>
+                            <span className="font-semibold text-white/80">
+                              {player.gamesWon}-{player.gamesLost}
+                            </span>
                           </div>
                         </div>
                       </div>
@@ -336,7 +383,10 @@ const Leaderboard: React.FC = () => {
                       </thead>
                       <tbody className="divide-y divide-white/5 font-mono text-sm">
                         {category.standings.map((player, index) => (
-                          <tr key={player.playerId} className="hover:bg-white/5 transition-colors">
+                          <tr
+                            key={player.playerId}
+                            className="hover:bg-white/5 transition-colors"
+                          >
                             <td className="px-5 py-4 text-center font-black">
                               {index === 0 ? (
                                 <span className="text-xl">🥇</span>
@@ -345,16 +395,24 @@ const Leaderboard: React.FC = () => {
                               ) : index === 2 ? (
                                 <span className="text-xl">🥉</span>
                               ) : (
-                                <span className="text-white/60 font-bold">{index + 1}</span>
+                                <span className="text-white/60 font-bold">
+                                  {index + 1}
+                                </span>
                               )}
                             </td>
                             <td className="px-5 py-4 font-sans font-bold capitalize">
-                              <Link
-                                to={`/profile/${player.playerId}`}
-                                className="text-white hover:text-[#4AEEFF] transition-colors"
-                              >
-                                {player.playerName}
-                              </Link>
+                              {player.participantType === "TEAM" ? (
+                                <span className="text-white">
+                                  {player.playerName}
+                                </span>
+                              ) : (
+                                <Link
+                                  to={`/profile/${player.playerId}`}
+                                  className="text-white hover:text-[#4AEEFF] transition-colors"
+                                >
+                                  {player.playerName}
+                                </Link>
+                              )}
                             </td>
                             <td className="px-5 py-4 text-center text-white/80">
                               {player.matchesPlayed}
@@ -382,7 +440,7 @@ const Leaderboard: React.FC = () => {
           ))}
         </div>
       )}
-    </>
+    </>,
   );
 };
 

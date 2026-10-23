@@ -3,128 +3,248 @@ import { AppError } from '../utils/AppError';
 
 export class ResultsService {
   // Get tournament standings by category
-  async getTournamentStandings(tournamentId: string, categoryId?: string) {
-    const whereClause: any = { tournamentId };
-    if (categoryId) {
-      whereClause.id = categoryId;
-    }
-
-    const categories = await prisma.category.findMany({
-      where: whereClause,
-      include: {
-        matches: {
-          where: { status: 'COMPLETED' },
-          include: {
-            player1: { select: { id: true, firstName: true, lastName: true } },
-            player2: { select: { id: true, firstName: true, lastName: true } },
-          },
-        },
-        groups: {
-          include: {
-            matches: {
-              where: { status: 'COMPLETED' },
-              include: {
-                player1: { select: { id: true, firstName: true, lastName: true } },
-                player2: { select: { id: true, firstName: true, lastName: true } },
-              },
+  
+async getTournamentStandings(tournamentId: string, categoryId?: string) {
+  const categories = await prisma.category.findMany({
+    where: {
+      tournamentId,
+      ...(categoryId ? { id: categoryId } : {}),
+    },
+    include: {
+      registrations: {
+        where: { status: 'APPROVED' },
+        include: {
+          player: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
             },
-            players: {
-              include: {
-                player: {
-                  select: {
-                    id: true,
-                    firstName: true,
-                    lastName: true,
-                    playerProfile: true,
+          },
+          team: {
+            include: {
+              members: {
+                include: {
+                  player: {
+                    select: {
+                      id: true,
+                      firstName: true,
+                      lastName: true,
+                    },
                   },
                 },
               },
             },
           },
         },
-        registrations: {
-          where: { status: 'APPROVED' },
-          include: {
-            player: {
-              select: {
-                id: true,
-                firstName: true,
-                lastName: true,
-                playerProfile: true,
-              },
-            },
+      },
+      matches: {
+        where: { status: 'COMPLETED' },
+      },
+      groups: {
+        include: {
+          matches: {
+            where: { status: 'COMPLETED' },
           },
         },
       },
+    },
+  });
+
+  return categories.map((category) => {
+    const isDoubles =
+      category.type === 'DOUBLES' ||
+      category.type === 'MIXED_DOUBLES';
+
+    const stats = new Map<string, any>();
+
+    const createStats = (
+      id: string,
+      name: string,
+      members: { playerId: string; playerName: string }[] = []
+    ) => ({
+      playerId: id,
+      playerName: name,
+      teamId: isDoubles ? id : null,
+      participantType: isDoubles ? 'TEAM' : 'PLAYER',
+      members,
+      matchesPlayed: 0,
+      wins: 0,
+      losses: 0,
+      gamesWon: 0,
+      gamesLost: 0,
+      points: 0,
     });
 
-    const standings = categories.map(category => {
-      const playerStats = new Map();
+    // Initialize approved participants.
+    for (const registration of category.registrations) {
+      if (isDoubles) {
+        const team = registration.team;
 
-      // Initialize all registered players
-      category.registrations.forEach(reg => {
-        playerStats.set(reg.player.id, {
-          playerId: reg.player.id,
-          playerName: `${reg.player.firstName} ${reg.player.lastName}`,
-          matchesPlayed: 0,
-          wins: 0,
-          losses: 0,
-          gamesWon: 0,
-          gamesLost: 0,
-          points: 0,
-        });
-      });
+        if (!team) continue;
 
-      // Process knockout matches
-      category.matches.forEach(match => {
-        if (match.player1Id && match.player2Id) {
-          let p1score = 0, p2score = 0;
-          if (match.score) {
-            const scores = match.score.split('-').map(Number);
-            p1score = scores[0] || 0;
-            p2score = scores[1] || 0;
-          }
-          this.updatePlayerStats(playerStats, match.player1Id, match.player2Id, match.winnerId, p1score, p2score);
+        const members = team.members.map((member) => ({
+          playerId: member.player.id,
+          playerName:
+            `${member.player.firstName} ${member.player.lastName}`,
+        }));
+
+        const teamName =
+          members.length > 0
+            ? members.map((member) => member.playerName).join(' & ')
+            : team.name;
+
+        if (!stats.has(team.id)) {
+          stats.set(
+            team.id,
+            createStats(team.id, teamName, members)
+          );
         }
-      });
+      } else {
+        const player = registration.player;
 
-      // Process group stage matches
-      for (const group of category.groups) {
-        for (const match of group.matches as any[]) {
-          if (match.player1Id && match.player2Id) {
-            this.updatePlayerStats(
-              playerStats, 
-              match.player1Id, 
-              match.player2Id, 
-              match.winnerId, 
-              match.player1Score || 0, 
-              match.player2Score || 0
-            );
+        if (!stats.has(player.id)) {
+          stats.set(
+            player.id,
+            createStats(
+              player.id,
+              `${player.firstName} ${player.lastName}`
+            )
+          );
+        }
+      }
+    }
+
+    // Update standings for one completed match.
+    const processMatch = (
+      participant1Id: string | null,
+      participant2Id: string | null,
+      winnerId: string | null,
+      score1: number,
+      score2: number
+    ) => {
+      if (!participant1Id || !participant2Id || !winnerId) {
+        return;
+      }
+
+      const first = stats.get(participant1Id);
+      const second = stats.get(participant2Id);
+
+      if (!first || !second) return;
+
+      if (
+        winnerId !== participant1Id &&
+        winnerId !== participant2Id
+      ) {
+        return;
+      }
+
+      first.matchesPlayed++;
+      second.matchesPlayed++;
+
+      if (winnerId === participant1Id) {
+        first.wins++;
+        second.losses++;
+        first.points += 2;
+      } else {
+        second.wins++;
+        first.losses++;
+        second.points += 2;
+      }
+
+      first.gamesWon += score1;
+      first.gamesLost += score2;
+
+      second.gamesWon += score2;
+      second.gamesLost += score1;
+    };
+
+    // Knockout stage.
+    for (const match of category.matches) {
+      let score1 = 0;
+      let score2 = 0;
+
+      if (match.score) {
+        // Supports "3-1" and "11-8, 9-11, 11-7".
+        const scoreParts = match.score.split(',');
+
+        if (scoreParts.length === 1) {
+          const scores = scoreParts[0].trim().split('-').map(Number);
+
+          if (scores.length === 2 && scores.every(Number.isFinite)) {
+            score1 = scores[0];
+            score2 = scores[1];
+          }
+        } else {
+          for (const part of scoreParts) {
+            const scores = part.trim().split('-').map(Number);
+
+            if (scores.length !== 2 || !scores.every(Number.isFinite)) {
+              continue;
+            }
+
+            if (scores[0] > scores[1]) score1++;
+            else if (scores[1] > scores[0]) score2++;
           }
         }
       }
 
-      const sortedStats = Array.from(playerStats.values())
-        .sort((a, b) => {
-          if (a.points !== b.points) return b.points - a.points;
-          if (a.wins !== b.wins) return b.wins - a.wins;
-          const aDiff = a.gamesWon - a.gamesLost;
-          const bDiff = b.gamesWon - b.gamesLost;
-          return bDiff - aDiff;
-        });
+      processMatch(
+        isDoubles ? match.team1Id : match.player1Id,
+        isDoubles ? match.team2Id : match.player2Id,
+        isDoubles
+          ? match.winnerTeamId
+          : match.winnerId,
+        score1,
+        score2
+      );
+    }
 
-      return {
-        categoryId: category.id,
-        categoryName: category.name,
-        categoryType: category.type,
-        totalPlayers: category.registrations.length,
-        completedMatches: category.matches.length + category.groups.reduce((sum, g) => sum + g.matches.length, 0),
-        standings: sortedStats,
-      };
+    // Group stage.
+    for (const group of category.groups) {
+      for (const match of group.matches) {
+        processMatch(
+          isDoubles ? match.team1Id : match.player1Id,
+          isDoubles ? match.team2Id : match.player2Id,
+          isDoubles
+            ? match.winnerTeamId
+            : match.winnerId,
+          match.player1Score ?? 0,
+          match.player2Score ?? 0
+        );
+      }
+    }
+
+    const sortedStats = Array.from(stats.values()).sort((a, b) => {
+      if (a.points !== b.points) {
+        return b.points - a.points;
+      }
+
+      if (a.wins !== b.wins) {
+        return b.wins - a.wins;
+      }
+
+      const aDiff = a.gamesWon - a.gamesLost;
+      const bDiff = b.gamesWon - b.gamesLost;
+
+      return bDiff - aDiff;
     });
 
-    return standings;
-  }
+    return {
+      categoryId: category.id,
+      categoryName: category.name,
+      categoryType: category.type,
+      totalPlayers: stats.size,
+      completedMatches:
+        category.matches.length +
+        category.groups.reduce(
+          (total, group) => total + group.matches.length,
+          0
+        ),
+      standings: sortedStats,
+    };
+  });
+}
 
   // Helper method to update player statistics
   private updatePlayerStats(
@@ -549,90 +669,320 @@ for (const category of categoryResults.winners) {
     };
   }
   // Add this method to the ResultsService class
-async getGlobalCategoryStandings(categoryName: string, limit: number = 50) {
-  // Get all knockout matches for this exact category
+
+async getGlobalCategoryStandings(
+  categoryName: string,
+  limit: number = 50
+) {
+  const categories = await prisma.category.findMany({
+    where: { name: categoryName },
+    select: { type: true },
+  });
+
+  const isDoubles = categories.some(
+    (category) =>
+      category.type === 'DOUBLES' ||
+      category.type === 'MIXED_DOUBLES'
+  );
+
+  // Preserve the existing singles ranking calculation.
+  if (!isDoubles) {
+    const knockoutMatches = await prisma.match.findMany({
+      where: {
+        category: { name: categoryName },
+        status: 'COMPLETED',
+      },
+      include: {
+        player1: {
+          select: { id: true, firstName: true, lastName: true },
+        },
+        player2: {
+          select: { id: true, firstName: true, lastName: true },
+        },
+        tournament: { select: { id: true, name: true } },
+        category: { select: { name: true } },
+      },
+    });
+
+    const groupMatches = await prisma.groupMatch.findMany({
+      where: {
+        group: {
+          category: { name: categoryName },
+        },
+        status: 'COMPLETED',
+      },
+      include: {
+        player1: {
+          select: { id: true, firstName: true, lastName: true },
+        },
+        player2: {
+          select: { id: true, firstName: true, lastName: true },
+        },
+        group: {
+          include: {
+            tournament: { select: { name: true } },
+            category: { select: { name: true } },
+          },
+        },
+      },
+    });
+
+    const playerStats = new Map<string, any>();
+
+    for (const match of knockoutMatches) {
+      if (match.player1Id && match.player2Id && match.winnerId) {
+        this.updateGlobalPlayerStats(playerStats, match);
+      }
+    }
+
+    for (const match of groupMatches) {
+      if (match.player1Id && match.player2Id && match.winnerId) {
+        this.updateGlobalPlayerStatsFromGroup(playerStats, match);
+      }
+    }
+
+    const sortedStats = Array.from(playerStats.values())
+      .sort((a, b) => {
+        if (a.points !== b.points) return b.points - a.points;
+        if (a.wins !== b.wins) return b.wins - a.wins;
+
+        return (
+          b.gamesWon - b.gamesLost -
+          (a.gamesWon - a.gamesLost)
+        );
+      })
+      .slice(0, limit);
+
+    for (const player of sortedStats) {
+      const user = await prisma.user.findUnique({
+        where: { id: player.playerId },
+        select: { firstName: true, lastName: true },
+      });
+
+      if (user) {
+        player.playerName =
+          `${user.firstName} ${user.lastName}`;
+      }
+
+      player.participantType = 'PLAYER';
+    }
+
+    return {
+      categoryName,
+      totalPlayers: playerStats.size,
+      standings: sortedStats,
+      lastUpdated: new Date(),
+    };
+  }
+
+  // DOUBLES / MIXED DOUBLES
+  const teamInclude = {
+    members: {
+      include: {
+        player: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
+      },
+    },
+  };
+
   const knockoutMatches = await prisma.match.findMany({
     where: {
       category: {
-        name: categoryName  // Exact match
+        name: categoryName,
+        type: { in: ['DOUBLES', 'MIXED_DOUBLES'] },
       },
       status: 'COMPLETED',
     },
     include: {
-      player1: { select: { id: true, firstName: true, lastName: true } },
-      player2: { select: { id: true, firstName: true, lastName: true } },
-      tournament: { select: { id: true, name: true } },
-      category: { select: { name: true } },
+      team1: { include: teamInclude },
+      team2: { include: teamInclude },
     },
   });
 
-  // Get all group stage matches for this exact category
   const groupMatches = await prisma.groupMatch.findMany({
     where: {
       group: {
         category: {
-          name: categoryName  // Exact match
-        }
+          name: categoryName,
+          type: { in: ['DOUBLES', 'MIXED_DOUBLES'] },
+        },
       },
       status: 'COMPLETED',
     },
     include: {
-      player1: { select: { id: true, firstName: true, lastName: true } },
-      player2: { select: { id: true, firstName: true, lastName: true } },
-      group: {
-        include: {
-          tournament: { select: { name: true } },
-          category: { select: { name: true } },
-        }
-      },
+      team1: { include: teamInclude },
+      team2: { include: teamInclude },
     },
   });
 
-  const playerStats = new Map();
+  const teamStats = new Map<string, any>();
 
-  // Process knockout matches
+  const getPartnershipKey = (team: any): string | null => {
+  if (!team) return null;
+
+  const playerIds = team.members
+    .map((member: any) => member.playerId)
+    .sort();
+
+  if (playerIds.length !== 2) return null;
+
+  return JSON.stringify(playerIds);
+};
+
+  const initializeTeam = (team: any) => {
+  const partnershipKey = getPartnershipKey(team);
+
+  if (!partnershipKey || teamStats.has(partnershipKey)) return;
+
+  const members = team.members
+    .map((member: any) => ({
+      playerId: member.player.id,
+      playerName:
+        `${member.player.firstName} ${member.player.lastName}`,
+    }))
+    .sort((a: any, b: any) =>
+      a.playerId.localeCompare(b.playerId)
+    );
+
+  teamStats.set(partnershipKey, {
+    playerId: partnershipKey,
+    teamId: team.id,
+    playerName: members
+      .map((member: any) => member.playerName)
+      .join(' & '),
+    participantType: 'TEAM',
+    members,
+    matchesPlayed: 0,
+    wins: 0,
+    losses: 0,
+    gamesWon: 0,
+    gamesLost: 0,
+    points: 0,
+  });
+};
+
+  const processTeamMatch = (
+    team1: any,
+    team2: any,
+    winnerTeamId: string | null,
+    score1: number,
+    score2: number
+  ) => {
+    if (
+      !team1 ||
+      !team2 ||
+      !winnerTeamId ||
+      (winnerTeamId !== team1.id && winnerTeamId !== team2.id)
+    ) {
+      return;
+    }
+
+    const key1 = getPartnershipKey(team1);
+const key2 = getPartnershipKey(team2);
+
+if (!key1 || !key2 || key1 === key2) return;
+
+initializeTeam(team1);
+initializeTeam(team2);
+
+const first = teamStats.get(key1);
+const second = teamStats.get(key2);
+
+if (!first || !second) return;
+
+    first.matchesPlayed++;
+    second.matchesPlayed++;
+
+    if (winnerTeamId === team1.id) {
+      first.wins++;
+      second.losses++;
+      first.points += 2;
+    } else {
+      second.wins++;
+      first.losses++;
+      second.points += 2;
+    }
+
+    first.gamesWon += score1;
+    first.gamesLost += score2;
+    second.gamesWon += score2;
+    second.gamesLost += score1;
+  };
+
+  // Knockout results
   for (const match of knockoutMatches) {
-    if (match.player1Id && match.player2Id && match.winnerId) {
-      this.updateGlobalPlayerStats(playerStats, match);
+    let score1 = 0;
+    let score2 = 0;
+
+    if (match.score) {
+      const scoreParts = match.score.split(',');
+
+      if (scoreParts.length === 1) {
+        const scores = scoreParts[0].trim().split('-').map(Number);
+
+        if (scores.length === 2 && scores.every(Number.isFinite)) {
+          score1 = scores[0];
+          score2 = scores[1];
+        }
+      } else {
+        for (const part of scoreParts) {
+          const scores = part.trim().split('-').map(Number);
+
+          if (scores.length !== 2 || !scores.every(Number.isFinite)) {
+            continue;
+          }
+
+          if (scores[0] > scores[1]) score1++;
+          else if (scores[1] > scores[0]) score2++;
+        }
+      }
     }
+
+    processTeamMatch(
+      match.team1,
+      match.team2,
+      match.winnerTeamId,
+      score1,
+      score2
+    );
   }
 
-  // Process group matches
+  // Group stage results
   for (const match of groupMatches) {
-    if (match.player1Id && match.player2Id && match.winnerId) {
-      this.updateGlobalPlayerStatsFromGroup(playerStats, match);
-    }
+    processTeamMatch(
+      match.team1,
+      match.team2,
+      match.winnerTeamId,
+      match.player1Score ?? 0,
+      match.player2Score ?? 0
+    );
   }
 
-  // Convert to array and sort
-  const sortedStats = Array.from(playerStats.values())
+  const sortedStats = Array.from(teamStats.values())
     .sort((a, b) => {
       if (a.points !== b.points) return b.points - a.points;
       if (a.wins !== b.wins) return b.wins - a.wins;
-      const aDiff = a.gamesWon - a.gamesLost;
-      const bDiff = b.gamesWon - b.gamesLost;
-      return bDiff - aDiff;
+
+      return (
+        b.gamesWon - b.gamesLost -
+        (a.gamesWon - a.gamesLost)
+      );
     })
     .slice(0, limit);
 
-  // Fetch player names
-  for (const player of sortedStats) {
-    const user = await prisma.user.findUnique({
-      where: { id: player.playerId },
-      select: { firstName: true, lastName: true }
-    });
-    if (user) {
-      player.playerName = `${user.firstName} ${user.lastName}`;
-    }
-  }
-
   return {
     categoryName,
-    totalPlayers: playerStats.size,
+    totalPlayers: teamStats.size,
     standings: sortedStats,
     lastUpdated: new Date(),
   };
 }
+
 
 // Helper method for knockout matches
 private updateGlobalPlayerStats(playerStats: Map<string, any>, match: any) {

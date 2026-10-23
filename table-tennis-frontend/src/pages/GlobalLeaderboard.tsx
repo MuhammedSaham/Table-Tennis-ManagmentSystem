@@ -7,6 +7,12 @@ import { TrophyIcon, ChartBarIcon } from "@heroicons/react/24/outline";
 interface Player {
   playerId: string;
   playerName: string;
+  teamId?: string | null;
+  participantType?: "PLAYER" | "TEAM";
+  members?: {
+    playerId: string;
+    playerName: string;
+  }[];
   matchesPlayed: number;
   wins: number;
   losses: number;
@@ -113,12 +119,20 @@ const GlobalLeaderboard: React.FC = () => {
         </div>
         <div className="flex gap-4 text-left sm:text-right">
           <div className="rounded-xl border border-white/10 bg-[#061D23]/40 px-4 py-3">
-            <p className="text-xl font-black text-[#4AEEFF]">{categories.length}</p>
-            <p className="text-[10px] font-bold uppercase tracking-wider text-white/60">Categories</p>
+            <p className="text-xl font-black text-[#4AEEFF]">
+              {categories.length}
+            </p>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-white/60">
+              Categories
+            </p>
           </div>
           <div className="rounded-xl border border-white/10 bg-[#061D23]/40 px-4 py-3">
-            <p className="text-xl font-black text-[#4AEEFF]">{standings.length}</p>
-            <p className="text-[10px] font-bold uppercase tracking-wider text-white/60">Ranked</p>
+            <p className="text-xl font-black text-[#4AEEFF]">
+              {standings.length}
+            </p>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-white/60">
+              Ranked
+            </p>
           </div>
         </div>
       </header>
@@ -132,7 +146,9 @@ const GlobalLeaderboard: React.FC = () => {
           </h2>
         </div>
         {loadingCategories ? (
-          <p className="text-sm font-semibold text-[#4AEEFF] animate-pulse">Loading categories...</p>
+          <p className="text-sm font-semibold text-[#4AEEFF] animate-pulse">
+            Loading categories...
+          </p>
         ) : (
           <div className="flex flex-col sm:flex-row sm:items-center gap-4">
             <select
@@ -140,9 +156,15 @@ const GlobalLeaderboard: React.FC = () => {
               onChange={(e) => setSelectedCategory(e.target.value)}
               className="w-full max-w-md rounded-xl border border-white/20 bg-[#061D23]/80 px-4 py-3 text-sm font-medium text-white shadow-inner focus:border-[#4AEEFF] focus:outline-none focus:ring-1 focus:ring-[#4AEEFF]"
             >
-              <option value="" className="bg-[#061D23] text-white">-- Select a category --</option>
+              <option value="" className="bg-[#061D23] text-white">
+                -- Select a category --
+              </option>
               {categories.map((category) => (
-                <option key={category.id} value={category.name} className="bg-[#061D23] text-white">
+                <option
+                  key={category.id}
+                  value={category.name}
+                  className="bg-[#061D23] text-white"
+                >
                   {category.name} ({category.type})
                 </option>
               ))}
@@ -162,14 +184,22 @@ const GlobalLeaderboard: React.FC = () => {
               {selectedCategory} — Overall Rankings
             </h2>
             <span className="self-start sm:self-auto rounded-md border border-[#4AEEFF]/30 bg-[#4AEEFF]/10 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-[#4AEEFF]">
-              {standings.length} Players
+              {standings.length}{" "}
+              {categories.find((category) => category.name === selectedCategory)
+                ?.type === "DOUBLES" ||
+              categories.find((category) => category.name === selectedCategory)
+                ?.type === "MIXED_DOUBLES"
+                ? "Teams"
+                : "Players"}
             </span>
           </div>
 
           {loading ? (
             <div className="flex flex-col items-center justify-center py-16">
               <div className="w-10 h-10 border-4 border-white/20 border-t-[#4AEEFF] rounded-full animate-spin" />
-              <p className="mt-3 text-xs font-black uppercase tracking-widest text-[#4AEEFF]">Loading rankings...</p>
+              <p className="mt-3 text-xs font-black uppercase tracking-widest text-[#4AEEFF]">
+                Loading rankings...
+              </p>
             </div>
           ) : standings.length === 0 ? (
             <div className="rounded-xl border border-white/10 bg-[#061D23]/30 p-12 text-center">
@@ -193,37 +223,65 @@ const GlobalLeaderboard: React.FC = () => {
                     <div className="flex items-center justify-between gap-3">
                       <div className="flex items-center gap-3 min-w-0">
                         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/5 font-black text-sm">
-                          {index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : `#${index + 1}`}
+                          {index === 0
+                            ? "🥇"
+                            : index === 1
+                              ? "🥈"
+                              : index === 2
+                                ? "🥉"
+                                : `#${index + 1}`}
                         </div>
-                        <Link
-                          to={`/profile/${player.playerId}`}
-                          className="truncate font-sans font-bold text-white hover:text-[#4AEEFF] transition-colors"
-                        >
-                          {player.playerName}
-                        </Link>
+                        {player.participantType === "TEAM" ? (
+                          <span className="font-sans font-bold text-white">
+                            {player.playerName}
+                          </span>
+                        ) : (
+                          <Link
+                            to={`/profile/${player.playerId}`}
+                            className="truncate font-sans font-bold text-white hover:text-[#4AEEFF] transition-colors"
+                          >
+                            {player.playerName}
+                          </Link>
+                        )}
                       </div>
                       <div className="shrink-0 rounded-lg border border-[#4AEEFF]/30 bg-[#4AEEFF]/10 px-2.5 py-1 text-right">
-                        <span className="font-mono text-sm font-black text-[#4AEEFF]">{player.points}</span>
-                        <span className="ml-1 text-[9px] font-bold uppercase tracking-wider text-[#4AEEFF]/70">PTS</span>
+                        <span className="font-mono text-sm font-black text-[#4AEEFF]">
+                          {player.points}
+                        </span>
+                        <span className="ml-1 text-[9px] font-bold uppercase tracking-wider text-[#4AEEFF]/70">
+                          PTS
+                        </span>
                       </div>
                     </div>
 
                     <div className="mt-3 grid grid-cols-3 gap-2 rounded-lg border border-white/5 bg-white/[0.02] p-2 text-center font-mono text-xs">
                       <div>
-                        <span className="block text-[9px] uppercase tracking-wider text-white/50">Matches</span>
-                        <span className="font-semibold text-white/90">{player.matchesPlayed}</span>
+                        <span className="block text-[9px] uppercase tracking-wider text-white/50">
+                          Matches
+                        </span>
+                        <span className="font-semibold text-white/90">
+                          {player.matchesPlayed}
+                        </span>
                       </div>
                       <div>
-                        <span className="block text-[9px] uppercase tracking-wider text-white/50">W - L</span>
+                        <span className="block text-[9px] uppercase tracking-wider text-white/50">
+                          W - L
+                        </span>
                         <span className="font-semibold">
-                          <span className="text-emerald-400">{player.wins}</span>
+                          <span className="text-emerald-400">
+                            {player.wins}
+                          </span>
                           <span className="text-white/40"> - </span>
                           <span className="text-rose-400">{player.losses}</span>
                         </span>
                       </div>
                       <div>
-                        <span className="block text-[9px] uppercase tracking-wider text-white/50">Games</span>
-                        <span className="font-semibold text-white/80">{player.gamesWon}-{player.gamesLost}</span>
+                        <span className="block text-[9px] uppercase tracking-wider text-white/50">
+                          Games
+                        </span>
+                        <span className="font-semibold text-white/80">
+                          {player.gamesWon}-{player.gamesLost}
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -236,7 +294,7 @@ const GlobalLeaderboard: React.FC = () => {
                   <thead className="border-b border-white/15 bg-white/5 text-left text-xs font-black uppercase tracking-wider text-[#4AEEFF]">
                     <tr>
                       <th className="px-5 py-3.5 text-center w-16">Rank</th>
-                      <th className="px-5 py-3.5">Player</th>
+                      <th className="px-5 py-3.5">Player / Team</th>
                       <th className="px-5 py-3.5 text-center">Matches</th>
                       <th className="px-5 py-3.5 text-center">Wins</th>
                       <th className="px-5 py-3.5 text-center">Losses</th>
@@ -246,7 +304,10 @@ const GlobalLeaderboard: React.FC = () => {
                   </thead>
                   <tbody className="divide-y divide-white/5 font-mono text-sm">
                     {standings.map((player, index) => (
-                      <tr key={player.playerId} className="hover:bg-white/5 transition-colors">
+                      <tr
+                        key={player.playerId}
+                        className="hover:bg-white/5 transition-colors"
+                      >
                         <td className="px-5 py-4 text-center font-black">
                           {index === 0 ? (
                             <span className="text-xl">🥇</span>
@@ -255,16 +316,26 @@ const GlobalLeaderboard: React.FC = () => {
                           ) : index === 2 ? (
                             <span className="text-xl">🥉</span>
                           ) : (
-                            <span className="text-white/60 font-bold">{index + 1}</span>
+                            <span className="text-white/60 font-bold">
+                              {index + 1}
+                            </span>
                           )}
                         </td>
                         <td className="px-5 py-4 font-sans font-bold">
-                          <Link
-                            to={`/profile/${player.playerId}`}
-                            className="text-white hover:text-[#4AEEFF] transition-colors"
-                          >
-                            {player.playerName}
-                          </Link>
+                          <td className="px-5 py-4 font-sans font-bold">
+                            {player.participantType === "TEAM" ? (
+                              <span className="text-white">
+                                {player.playerName}
+                              </span>
+                            ) : (
+                              <Link
+                                to={`/profile/${player.playerId}`}
+                                className="text-white hover:text-[#4AEEFF] transition-colors"
+                              >
+                                {player.playerName}
+                              </Link>
+                            )}
+                          </td>
                         </td>
                         <td className="px-5 py-4 text-center text-white/80">
                           {player.matchesPlayed}
@@ -290,7 +361,7 @@ const GlobalLeaderboard: React.FC = () => {
           )}
         </section>
       )}
-    </>
+    </>,
   );
 };
 
