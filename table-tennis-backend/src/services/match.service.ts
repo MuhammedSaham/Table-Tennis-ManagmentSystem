@@ -420,18 +420,60 @@ export class MatchService {
     });
 
     const groupMatches = await prisma.groupMatch.findMany({
-      where: { refereeId: referee.id },
-      include: {
-        player1: { select: { id: true, firstName: true, lastName: true } },
-        player2: { select: { id: true, firstName: true, lastName: true } },
-        group: {
+  where: { refereeId: referee.id },
+  include: {
+    player1: {
+      select: { id: true, firstName: true, lastName: true },
+    },
+    player2: {
+      select: { id: true, firstName: true, lastName: true },
+    },
+    team1: {
+      select: {
+        id: true,
+        name: true,
+        members: {
           include: {
-            tournament: { select: { id: true, name: true, venue: true } },
-            category: { select: { name: true, type: true } },
+            player: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+              },
+            },
           },
         },
       },
-    });
+    },
+    team2: {
+      select: {
+        id: true,
+        name: true,
+        members: {
+          include: {
+            player: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+              },
+            },
+          },
+        },
+      },
+    },
+    group: {
+      include: {
+        tournament: {
+          select: { id: true, name: true, venue: true },
+        },
+        category: {
+          select: { name: true, type: true },
+        },
+      },
+    },
+  },
+});
 
     const normalizedKnockout: NormalizedMatch[] = matches.map((match) => ({
       id: match.id,
@@ -458,10 +500,19 @@ export class MatchService {
       isGroupMatch: false,
     }));
 
+   const groupMatchNumbers = new Map<string, number>();
+const matchNumbersById = new Map<string, number>();
+
+for (const match of groupMatches) {
+  const number = (groupMatchNumbers.get(match.groupId) ?? 0) + 1;
+  groupMatchNumbers.set(match.groupId, number);
+  matchNumbersById.set(match.id, number);
+}
+
     const normalizedGroup: NormalizedMatch[] = groupMatches.map((match: any) => ({
       id: match.id,
       round: `Group Stage - ${match.group?.name ?? ''}`,
-      matchNumber: match.round ?? 1,
+      matchNumber: matchNumbersById.get(match.id) ?? 1,
       scheduledTime: match.scheduledTime,
       status: match.status,
       score: match.player1Score !== null && match.player2Score !== null
@@ -474,6 +525,11 @@ export class MatchService {
       player2: match.player2
         ? { id: match.player2.id, firstName: match.player2.firstName, lastName: match.player2.lastName }
         : null,
+
+      team1: match.team1,
+      team2: match.team2,
+      startTime: match.startTime,
+      endTime: match.endTime,
       tournament: match.group?.tournament ?? { id: '', name: '', venue: '' },
       category: match.group?.category ?? { name: '', type: '' },
       isGroupMatch: true,

@@ -57,7 +57,7 @@ const formatDateOfBirth = (dob: string) => {
 type TabType = "CLUB" | "GUEST";
 
 const Players: React.FC = () => {
-  const { user, isLoading } = useAuth();
+  const { user } = useAuth();
   const isLoggedIn = !!user;
   const [players, setPlayers] = useState<Player[]>([]);
   const [filtered, setFiltered] = useState<Player[]>([]);

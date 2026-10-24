@@ -115,7 +115,8 @@ export const UmpireSheet: React.FC<{
   const today = new Date().toLocaleDateString("en-GB");
   const done = match.status === "COMPLETED";
   // Only admins may edit a completed match.
-  const canEditCompleted = (user?.role === "SUPER_ADMIN" || user?.role === "ADMIN") && done;
+  const canEditCompleted =
+    (user?.role === "SUPER_ADMIN" || user?.role === "ADMIN") && done;
 
   // Referees can only enter scores for unfinished matches.
   const canEditScore = isAdminOrReferee && (!done || canEditCompleted);
@@ -328,7 +329,15 @@ export const UmpireSheet: React.FC<{
                 fontSize: 22,
               }}
             >
-              🏓
+              <img
+                src="/club-logo.png"
+                alt="Table Tennis Club Logo"
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "contain",
+                }}
+              />
             </div>
             <div>
               <div
@@ -1626,8 +1635,7 @@ const KnockoutBracket: React.FC<KnockoutBracketProps> = ({
     }
   }, [matches]);
 
-  const isAdmin =
-    user?.role === "ADMIN" || user?.role === "SUPER_ADMIN";
+  const isAdmin = user?.role === "ADMIN" || user?.role === "SUPER_ADMIN";
   const isReferee = user?.role === "REFEREE";
 
   useEffect(() => {
@@ -1684,7 +1692,9 @@ const KnockoutBracket: React.FC<KnockoutBracketProps> = ({
     const normTarget = (r || "").toLowerCase().replace(/[^a-z0-9]/g, "");
     return matches
       .filter((m) => {
-        const normMatch = (m.round || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+        const normMatch = (m.round || "")
+          .toLowerCase()
+          .replace(/[^a-z0-9]/g, "");
         if (normTarget === "semifinals" || normTarget === "semifinal") {
           return normMatch === "semifinals" || normMatch === "semifinal";
         }
@@ -1936,7 +1946,7 @@ const KnockoutBracket: React.FC<KnockoutBracketProps> = ({
         m.round.trim().toLowerCase() === "final" ||
         m.round.trim().toLowerCase() === "finals",
     ) ?? null;
-  const tp = round("3rd Place Playoff")[0] ?? null;
+  //const tp = round("3rd Place Playoff")[0] ?? null;
 
   const cols: ColDef[] = [];
   if (r32.length)

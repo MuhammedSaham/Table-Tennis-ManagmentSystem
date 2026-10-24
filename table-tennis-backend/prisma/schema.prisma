@@ -596,6 +596,8 @@ model GroupMatch {
 
   round         Int       @default(1)
   scheduledTime DateTime
+  startTime     DateTime?
+  endTime       DateTime?
   completedAt   DateTime?
 
   createdAt DateTime @default(now())
