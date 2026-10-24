@@ -401,7 +401,7 @@ const PublicProfile: React.FC = () => {
       {stats && (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
           {/* Win Rate */}
-          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 backdrop-blur-md hover:bg-white/[0.05] hover:border-white/20 transition-all text-center group">
+          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 backdrop-blur-md text-center">
             <div className="text-2xl sm:text-3xl font-black text-[#4AEEFF] tracking-tight">
               {stats.winRate}
             </div>
@@ -411,7 +411,7 @@ const PublicProfile: React.FC = () => {
           </div>
 
           {/* Matches */}
-          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 backdrop-blur-md hover:bg-white/[0.05] hover:border-white/20 transition-all text-center group">
+          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 backdrop-blur-md text-center">
             <div className="text-2xl sm:text-3xl font-black text-white tracking-tight">
               {stats.totalMatches}
             </div>
@@ -421,7 +421,7 @@ const PublicProfile: React.FC = () => {
           </div>
 
           {/* Wins */}
-          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 backdrop-blur-md hover:bg-white/[0.05] hover:border-white/20 transition-all text-center group">
+          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 backdrop-blur-md text-center">
             <div className="text-2xl sm:text-3xl font-black text-emerald-400 tracking-tight">
               {stats.wins}
             </div>
@@ -431,7 +431,7 @@ const PublicProfile: React.FC = () => {
           </div>
 
           {/* Losses */}
-          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 backdrop-blur-md hover:bg-white/[0.05] hover:border-white/20 transition-all text-center group">
+          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 backdrop-blur-md text-center">
             <div className="text-2xl sm:text-3xl font-black text-rose-400 tracking-tight">
               {stats.losses}
             </div>
@@ -441,7 +441,7 @@ const PublicProfile: React.FC = () => {
           </div>
 
           {/* Games Won / Total */}
-          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 backdrop-blur-md hover:bg-white/[0.05] hover:border-white/20 transition-all text-center group col-span-2 sm:col-span-1">
+          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 backdrop-blur-md text-center col-span-2 sm:col-span-1">
             <div className="text-2xl sm:text-3xl font-black text-white tracking-tight">
               {stats.gamesStats.won}
               <span className="text-base text-white/40 font-normal"> / {stats.gamesStats.total}</span>

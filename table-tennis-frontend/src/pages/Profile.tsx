@@ -560,7 +560,7 @@ const Profile: React.FC = () => {
           )}
 
           {/* ─── CLUB MEMBERSHIP ─── */}
-          {profile.role === "PLAYER" && (
+          {profile.role === "PLAYER" && profile.playerProfile && (
             <section className="rounded-[16px] border border-white/20 bg-[#061D23]/5 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl">
               <div className="mb-5 flex items-center gap-3">
                 <div className="rounded-lg bg-[#4AEEFF]/20 p-2 text-[#4AEEFF]">

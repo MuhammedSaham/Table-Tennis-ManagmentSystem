@@ -41,6 +41,9 @@ export const getUserById = catchAsync(async (req: Request, res: Response) => {
 export const updateUserRole = catchAsync(async (req: Request, res: Response) => {
   const { id } = req.params;
   const { role } = req.body;
+  if (role === 'SUPER_ADMIN' && req.user!.role !== 'SUPER_ADMIN') {
+    throw new AppError('Only the Super Admin can assign the Super Admin role', 403);
+  }
   const updatedUser = await userService.updateUserRole(id, role);
   sendResponse(res, 200, 'User role updated successfully', updatedUser);
 });

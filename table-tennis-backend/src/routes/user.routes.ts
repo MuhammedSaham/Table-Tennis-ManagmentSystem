@@ -46,7 +46,7 @@ router.post('/', hasPermission('MANAGE_USERS'), validate(createUserSchema), crea
 router.get('/:id/permissions', isSuperAdmin, getUserPermissions);
 router.put('/:id/permissions', isSuperAdmin, updateUserPermissions);
 router.get('/:id', hasPermission('MANAGE_USERS'), getUserById);
-router.patch('/:id/role', isSuperAdmin, updateUserRole);
+router.patch('/:id/role', hasPermission('MANAGE_USERS'), updateUserRole);
 router.delete('/:id', isSuperAdmin, deleteUser);
 router.patch('/:id/ranking', hasPermission('MANAGE_RANKINGS', 'MANAGE_PLAYERS'), updatePlayerRanking);
 router.post('/:userId/profile-view', recordProfileView);

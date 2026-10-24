@@ -200,6 +200,7 @@ export class UserService {
                 phone: true,
                 createdAt: true,
                 isSuperAdmin: true,
+                profileImage: true,
                 adminPermissions: {
                     select: {
                         permission: true,
@@ -282,6 +283,7 @@ export class UserService {
                 phone: true,
                 createdAt: true,
                 isSuperAdmin: true,
+                profileImage: true,
                 adminPermissions: {
                     select: {
                         permission: true,
@@ -296,7 +298,37 @@ export class UserService {
                         dateOfBirth: true,
                     }
                 },
-                refereeProfile: true,
+                refereeProfile: {
+                    include: {
+                        matches: {
+                            select: {
+                                id: true,
+                                round: true,
+                                matchNumber: true,
+                                status: true,
+                                score: true,
+                                scheduledTime: true,
+                                tournament: { select: { id: true, name: true } },
+                                category: { select: { id: true, name: true } },
+                            },
+                            orderBy: { scheduledTime: 'desc' },
+                        },
+                        groupMatches: {
+                            select: {
+                                id: true,
+                                status: true,
+                                scheduledTime: true,
+                                group: {
+                                    select: {
+                                        tournament: { select: { id: true, name: true } },
+                                        category: { select: { id: true, name: true } },
+                                    },
+                                },
+                            },
+                            orderBy: { scheduledTime: 'desc' },
+                        },
+                    },
+                },
                 adminProfile: true,
             },
         });
@@ -333,6 +365,7 @@ export class UserService {
             phone: user.phone,
             createdAt: user.createdAt,
             isSuperAdmin: user.role === 'SUPER_ADMIN' || user.isSuperAdmin,
+            profileImage: user.profileImage,
             permissions,
             ranking: user.playerProfile?.ranking || null,
             rankingNote: user.playerProfile?.rankingNote || null,

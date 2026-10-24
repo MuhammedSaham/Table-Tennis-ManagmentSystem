@@ -59,7 +59,9 @@ const Users: React.FC = () => {
   const [activeTab, setActiveTab] = useState<
     "CLUB" | "GUEST" | "REFEREE" | "ADMIN"
   >("CLUB");
-  const [clubGenderTab, setClubGenderTab] = useState<"MALE" | "FEMALE">("MALE");
+  const [clubGenderTab, setClubGenderTab] = useState<
+    "ALL" | "MALE" | "FEMALE"
+  >("ALL");
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
   const [deleting, setDeleting] = useState(false);
 
@@ -118,9 +120,17 @@ const Users: React.FC = () => {
   });
 
   const usersForDisplay =
-    (activeTab === "CLUB" || activeTab === "GUEST")
+    (activeTab === "CLUB" || activeTab === "GUEST") &&
+    clubGenderTab !== "ALL"
       ? displayedUsers.filter((userItem) => userItem.gender === clubGenderTab)
       : displayedUsers;
+
+  const getUserDetailsPath = (userItem: User) =>
+    userItem.role === "ADMIN" ||
+    userItem.role === "SUPER_ADMIN" ||
+    userItem.role === "REFEREE"
+      ? `/app/users/${userItem.id}`
+      : `/profile/${userItem.id}`;
 
   const confirmDeleteUser = async () => {
     if (!userToDelete) return;
@@ -365,7 +375,10 @@ const Users: React.FC = () => {
         <div className="flex flex-wrap items-center gap-3">
           <button
             id="tab-club-members-admin"
-            onClick={() => setActiveTab("CLUB")}
+            onClick={() => {
+              setActiveTab("CLUB");
+              setClubGenderTab("ALL");
+            }}
             className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-black text-xs uppercase tracking-wider transition-all duration-200 focus:outline-none ${
               activeTab === "CLUB"
                 ? "bg-[#4AEEFF] text-[#061D23] shadow-lg"
@@ -386,7 +399,10 @@ const Users: React.FC = () => {
 
           <button
             id="tab-guest-players-admin"
-            onClick={() => setActiveTab("GUEST")}
+            onClick={() => {
+              setActiveTab("GUEST");
+              setClubGenderTab("ALL");
+            }}
             className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-black text-xs uppercase tracking-wider transition-all duration-200 focus:outline-none ${
               activeTab === "GUEST"
                 ? "bg-[#4AEEFF] text-[#061D23] shadow-lg"
@@ -570,9 +586,13 @@ const Users: React.FC = () => {
                     >
                     <td className="px-6 py-4">
                       <Link
-                        to={`/profile/${userItem.id}`}
+                        to={getUserDetailsPath(userItem)}
                         className="flex items-center gap-3 group/player cursor-pointer"
-                        title="Click to view player profile"
+                        title={
+                          userItem.role === "PLAYER"
+                            ? "Click to view player profile"
+                            : "Click to view user profile"
+                        }
                       >
                         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-[#061D23]/60 font-bold text-[#4AEEFF] group-hover/player:border-[#4AEEFF] transition-colors tracking-tighter">
                           {userItem.firstName[0].toUpperCase()}
@@ -709,7 +729,7 @@ const Users: React.FC = () => {
                             const currentIsSuperAdmin =
                               (user as any)?.isSuperAdmin ?? false;
                             const canChangeRole =
-                              currentIsSuperAdmin || userItem.role !== "ADMIN";
+                              currentIsSuperAdmin || hasPermission("MANAGE_USERS");
 
                             return canChangeRole ? (
                               <select
@@ -794,7 +814,15 @@ const Users: React.FC = () => {
               >
               {/* Top: Avatar, Name & Role Badge */}
               <div className="flex items-start justify-between gap-3">
-                <div className="flex items-center gap-3 min-w-0">
+                <Link
+                  to={getUserDetailsPath(userItem)}
+                  className="flex items-center gap-3 min-w-0"
+                  title={
+                    userItem.role === "PLAYER"
+                      ? "Click to view player profile"
+                      : "Click to view user profile"
+                  }
+                >
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#4AEEFF]/30 bg-[#061D23] font-bold text-white shadow-sm text-sm">
                     {userItem.firstName[0].toUpperCase()}
                     {userItem.lastName[0].toUpperCase()}
@@ -809,7 +837,7 @@ const Users: React.FC = () => {
                       </p>
                     )}
                   </div>
-                </div>
+                </Link>
 
                 <div className="flex items-center gap-1.5 shrink-0">
                   <span
@@ -918,7 +946,7 @@ const Users: React.FC = () => {
               {/* Mobile Actions Toolbar */}
               <div className="flex items-center justify-between gap-2 pt-1">
                 <Link
-                  to={`/profile/${userItem.id}`}
+                  to={getUserDetailsPath(userItem)}
                   className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-white/80 border border-white/10 bg-[#061D23]/60 hover:border-[#4AEEFF] hover:text-[#4AEEFF]"
                 >
                   <EyeIcon className="w-3.5 h-3.5" />
@@ -949,7 +977,7 @@ const Users: React.FC = () => {
                       const currentIsSuperAdmin =
                         (user as any)?.isSuperAdmin ?? false;
                       const canChangeRole =
-                        currentIsSuperAdmin || userItem.role !== "ADMIN";
+                        currentIsSuperAdmin || hasPermission("MANAGE_USERS");
 
                       return canChangeRole ? (
                         <select

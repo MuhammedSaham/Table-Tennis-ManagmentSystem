@@ -249,7 +249,20 @@ export class MatchService {
             },
           },
         },
-        referee: { include: { user: { select: { id: true, firstName: true, lastName: true } } } },
+        referee: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                email: true,
+                phone: true,
+                profileImage: true,
+              },
+            },
+          },
+        },
         category: { select: { name: true, type: true } },
       },
       orderBy: { scheduledTime: 'asc' },
@@ -513,7 +526,20 @@ export class MatchService {
             members: { include: { player: { select: { firstName: true, lastName: true } } } },
           },
         },
-        referee: { include: { user: { select: { firstName: true, lastName: true, email: true } } } },
+        referee: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                email: true,
+                phone: true,
+                profileImage: true,
+              },
+            },
+          },
+        },
         tournament: true,
         category: true,
         games: { orderBy: { gameNumber: 'asc' } },

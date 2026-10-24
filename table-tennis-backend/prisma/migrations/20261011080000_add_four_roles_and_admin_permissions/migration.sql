@@ -38,5 +38,3 @@ CREATE UNIQUE INDEX "AdminPermission_userId_permission_key" ON "AdminPermission"
 -- AddForeignKey
 ALTER TABLE "AdminPermission" ADD CONSTRAINT "AdminPermission_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
--- Data Migration: Update existing Super Admin users to SUPER_ADMIN role
-UPDATE "User" SET "role" = 'SUPER_ADMIN' WHERE "isSuperAdmin" = true;

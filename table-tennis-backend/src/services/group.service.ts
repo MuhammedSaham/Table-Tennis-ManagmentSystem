@@ -333,7 +333,20 @@ async recordGroupScore(
                 },
               },
             },
-            referee: { include: { user: { select: { id: true, firstName: true, lastName: true } } } },
+            referee: {
+              include: {
+                user: {
+                  select: {
+                    id: true,
+                    firstName: true,
+                    lastName: true,
+                    email: true,
+                    phone: true,
+                    profileImage: true,
+                  },
+                },
+              },
+            },
           },
         },
       },
@@ -1419,4 +1432,3 @@ async updateGroupMembers(
     };
   }
 }
-

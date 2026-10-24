@@ -4,6 +4,7 @@ import { useAuth } from "../context/AuthContext";
 import toast from "react-hot-toast";
 import EditKnockoutModal from "./EditKnockoutMatchModal";
 import { AssignRefereeModal } from "./AssignRefereeModal";
+import RefereeProfileCard from "./RefereeProfileCard";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Player {
@@ -41,7 +42,14 @@ interface KnockoutMatch {
   endTime?: string | null;
   referee?: {
     id: string;
-    user: { firstName: string; lastName: string };
+    user: {
+      id?: string;
+      firstName: string;
+      lastName: string;
+      email?: string | null;
+      phone?: string | null;
+      profileImage?: string | null;
+    };
   } | null;
   resultDetails?: any;
 }
@@ -745,19 +753,11 @@ export const UmpireSheet: React.FC<{
                 <span style={{ color: "#94a3b8" }}>…………………………</span>
               )}
             </div>
-            <div style={{ fontSize: 13, color: "#475569" }}>
-              <strong>Umpire:</strong>{" "}
-              <span style={{ color: "#0f172a", fontWeight: 700 }}>
-                {match.referee?.user
-                  ? `${match.referee.user.firstName} ${match.referee.user.lastName}`
-                  : match.resultDetails?.umpireName
-                    ? match.resultDetails.umpireName
-                    : user?.role === "ADMIN"
-                      ? `${user.firstName} ${user.lastName} (Admin)`
-                      : done
-                        ? "Tournament Official"
-                        : "…………………………"}
-              </span>
+            <div>
+              <p className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-500">
+                Scoring Referee
+              </p>
+              <RefereeProfileCard referee={match.referee?.user} />
             </div>
           </div>
           {done && (

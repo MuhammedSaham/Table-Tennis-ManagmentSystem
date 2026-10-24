@@ -32,6 +32,7 @@ import About from "./pages/About";
 import ErrorBoundary from "./components/ErrorBoundary";
 import ScrollToTop from "./components/ScrollToTop";
 import VerifyEmail from "./pages/VerifyEmail";
+import UserDetails from "./pages/UserDetails";
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({
   children,
@@ -180,6 +181,14 @@ function AppRoutes() {
           element={
             <PermissionRoute permission="MANAGE_USERS">
               <Users />
+            </PermissionRoute>
+          }
+        />
+        <Route
+          path="users/:userId"
+          element={
+            <PermissionRoute permission="MANAGE_USERS">
+              <UserDetails />
             </PermissionRoute>
           }
         />

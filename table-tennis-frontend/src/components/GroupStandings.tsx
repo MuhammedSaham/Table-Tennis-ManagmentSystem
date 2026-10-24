@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import toast from "react-hot-toast";
+import RefereeProfileCard from "./RefereeProfileCard";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -69,7 +70,17 @@ export interface GroupMatch {
   game4player2?: number | null;
   game5player1?: number | null;
   game5player2?: number | null;
-  referee?: { id: string; user: { id?: string; firstName: string; lastName: string; } } | null;
+  referee?: {
+    id: string;
+    user: {
+      id?: string;
+      firstName: string;
+      lastName: string;
+      email?: string | null;
+      phone?: string | null;
+      profileImage?: string | null;
+    };
+  } | null;
 }
 
 interface Group {
@@ -674,17 +685,11 @@ export const UmpireSheet: React.FC<UmpireSheetProps> = ({
                 <span style={{ color: "#94a3b8" }}>…………………………</span>
               )}
             </div>
-            <div style={{ fontSize: 13, color: "#475569" }}>
-              <strong>Umpire:</strong>{" "}
-              <span style={{ color: "#0f172a", fontWeight: 700 }}>
-                {match.referee?.user
-                  ? `${match.referee.user.firstName} ${match.referee.user.lastName}`
-                  : (user?.role === "SUPER_ADMIN" || user?.role === "ADMIN")
-                  ? `${user.firstName} ${user.lastName} (${user.role === "SUPER_ADMIN" ? "Super Admin" : "Admin"})`
-                  : isCompleted
-                  ? "Tournament Official"
-                  : "…………………………"}
-              </span>
+            <div>
+              <p className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-500">
+                Scoring Referee
+              </p>
+              <RefereeProfileCard referee={match.referee?.user} />
             </div>
           </div>
 
