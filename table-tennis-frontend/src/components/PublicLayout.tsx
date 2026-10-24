@@ -128,47 +128,27 @@ const PublicLayout: React.FC = () => {
         </div>
       </nav>
 
-      {/* Mobile Slide-in Side Drawer (LMS Style) */}
+      {/* Modern Compact Mobile Navigation (Attached directly to top navbar) */}
       <>
         {/* Backdrop Overlay */}
         <div
-          className={`fixed inset-0 z-[80] bg-black/80 backdrop-blur-md transition-opacity duration-300 lg:hidden ${
+          className={`fixed inset-0 top-20 z-40 bg-black/60 backdrop-blur-sm transition-opacity duration-200 lg:hidden ${
             mobileMenuOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
           }`}
           onClick={() => setMobileMenuOpen(false)}
         />
 
-        {/* Side Drawer Panel (Slides from Left - Solid #0D3843 matching Desktop Navbar) */}
+        {/* Modern Dropdown Panel */}
         <div
-          style={{ backgroundColor: "#0D3843" }}
-          className={`fixed inset-y-0 left-0 z-[90] w-72 sm:w-80 bg-[#0D3843] border-r border-white/15 shadow-[0_0_50px_rgba(0,0,0,0.9)] flex flex-col justify-between transition-transform duration-300 ease-in-out lg:hidden ${
-            mobileMenuOpen ? "translate-x-0" : "-translate-x-full"
+          className={`fixed top-20 left-0 right-0 z-50 bg-[#0D3843]/95 backdrop-blur-xl border-b border-white/15 shadow-2xl transition-all duration-300 ease-in-out lg:hidden origin-top overflow-hidden ${
+            mobileMenuOpen
+              ? "max-h-[540px] opacity-100 translate-y-0"
+              : "max-h-0 opacity-0 -translate-y-2 pointer-events-none"
           }`}
         >
-          {/* Drawer Top Header with Close Button */}
-          <div className="flex flex-col">
-            <div className="flex items-center justify-between p-4 border-b border-white/10 bg-[#0B313B]">
-              <div className="flex items-center gap-2">
-                <img
-                  src={Logo}
-                  alt="Sam's College"
-                  className="w-8 h-8 object-contain rounded-md"
-                />
-                <span className="font-bold text-base text-white tracking-wide">
-                  SAM'S COLLEGE
-                </span>
-              </div>
-              <button
-                onClick={() => setMobileMenuOpen(false)}
-                className="p-2 rounded-xl border border-white/15 bg-white/5 text-white/80 hover:text-[#7DC6C7] hover:border-[#7DC6C7]/40 hover:bg-[#7DC6C7]/10 active:scale-95 transition-all"
-                title="Close drawer"
-              >
-                <XMarkIcon className="w-5 h-5" />
-              </button>
-            </div>
-
+          <div className="max-w-md mx-auto px-4 py-3.5 sm:px-6">
             {/* Navigation links with icons & active indicators */}
-            <div className="p-3 space-y-1.5 overflow-y-auto max-h-[calc(100vh-16rem)]">
+            <div className="space-y-1">
               {navigation.map((item) => {
                 const active = isItemActive(item.href);
                 const Icon = item.icon;
@@ -177,55 +157,55 @@ const PublicLayout: React.FC = () => {
                     key={item.name}
                     to={item.href}
                     onClick={() => setMobileMenuOpen(false)}
-                    className={`group flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-sm transition-all border ${
+                    className={`group flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm transition-all border ${
                       active
-                        ? "bg-[#7DC6C7]/20 border-[#7DC6C7]/45 text-[#7DC6C7] font-bold shadow-[0_0_15px_rgba(125,198,199,0.18)]"
-                        : "border-transparent text-slate-200 hover:bg-white/10 hover:text-white hover:border-white/10 font-medium"
+                        ? "bg-[#7DC6C7]/20 border-[#7DC6C7]/40 text-[#7DC6C7] font-bold shadow-[0_0_12px_rgba(125,198,199,0.15)]"
+                        : "border-transparent text-slate-200 hover:bg-white/10 hover:text-white font-medium"
                     }`}
                   >
                     <div className="flex items-center gap-3">
-                      <Icon className={`w-5 h-5 transition-colors ${active ? "text-[#7DC6C7]" : "text-white/70 group-hover:text-white"}`} />
+                      <Icon className={`w-4 h-4 transition-colors ${active ? "text-[#7DC6C7]" : "text-white/70 group-hover:text-white"}`} />
                       <span>{item.name}</span>
                     </div>
                     {active ? (
                       <span className="w-1.5 h-1.5 rounded-full bg-[#7DC6C7] shadow-[0_0_8px_#7DC6C7]" />
                     ) : (
-                      <ChevronRightIcon className="w-4 h-4 text-white/30 group-hover:text-white/70 transition-transform group-hover:translate-x-0.5" />
+                      <ChevronRightIcon className="w-3.5 h-3.5 text-white/30 group-hover:text-white/70 transition-transform group-hover:translate-x-0.5" />
                     )}
                   </Link>
                 );
               })}
             </div>
-          </div>
 
-          {/* Bottom Actions (Sign In / Register or Dashboard matching Desktop Navbar) */}
-          <div className="p-4 border-t border-white/10 bg-[#0B313B]">
-            {user ? (
-              <Link
-                to="/app/dashboard"
-                onClick={() => setMobileMenuOpen(false)}
-                className="block w-full rounded-2xl bg-[#7DC6C7] px-4 py-3 text-sm font-black text-[#0A262D] text-center shadow-lg shadow-black/20 hover:bg-[#8ee1e2] transition-all"
-              >
-                Go to Dashboard
-              </Link>
-            ) : (
-              <div className="flex flex-col gap-3">
+            {/* Bottom Actions - compact grid right below links */}
+            <div className="pt-3 mt-2 border-t border-white/10">
+              {user ? (
                 <Link
-                  to="/login"
+                  to="/app/dashboard"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="block rounded-2xl border border-white/20 bg-[#104350] hover:bg-[#154f5f] px-4 py-3 text-sm font-bold text-white text-center transition-all"
+                  className="block w-full rounded-xl bg-[#7DC6C7] px-4 py-2.5 text-sm font-black text-[#0A262D] text-center shadow-md shadow-black/20 hover:bg-[#8ee1e2] transition-all"
                 >
-                  Sign In
+                  Go to Dashboard →
                 </Link>
-                <Link
-                  to="/register"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="block rounded-2xl bg-[#7DC6C7] px-4 py-3 text-sm font-black text-[#0A262D] text-center shadow-lg shadow-black/20 hover:bg-[#8ee1e2] transition-all"
-                >
-                  Get Started
-                </Link>
-              </div>
-            )}
+              ) : (
+                <div className="grid grid-cols-2 gap-2.5">
+                  <Link
+                    to="/login"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="block rounded-xl border border-white/20 bg-[#104350] hover:bg-[#154f5f] px-3 py-2.5 text-xs sm:text-sm font-bold text-white text-center transition-all"
+                  >
+                    Sign In
+                  </Link>
+                  <Link
+                    to="/register"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="block rounded-xl bg-[#7DC6C7] hover:bg-[#8ee1e2] px-3 py-2.5 text-xs sm:text-sm font-black text-[#0A262D] text-center shadow-md shadow-black/20 transition-all"
+                  >
+                    Get Started
+                  </Link>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </>
