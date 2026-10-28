@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import api, { getProfileImageUrl } from "../services/api";
 import { useAuth } from "../context/AuthContext";
+import ScrollReveal from "../components/ScrollReveal";
 
 interface Player {
   id: string;
@@ -134,13 +135,13 @@ const Players: React.FC = () => {
 
       <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-7xl flex-col space-y-4 sm:space-y-6 px-3.5 sm:px-6 lg:px-8 py-6 sm:py-8">
         {/* HEADER MODULE */}
-        <header className="flex flex-col justify-between gap-3 rounded-[16px] border border-white/20 bg-[#061D23]/15 p-4 sm:p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl sm:flex-row sm:items-center">
+        <header className="animate-fade-up-1 flex flex-col justify-between gap-3 rounded-[16px] border border-white/20 bg-[#061D23]/15 p-4 sm:p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl sm:flex-row sm:items-center">
           <div>
-            <div className="mb-2 sm:mb-3 h-[3px] w-12 sm:w-16 bg-[#4AEEFF]" />
+            <div className="mb-2 sm:mb-3 h-[3px] w-12 sm:w-16 bg-[#4AEEFF] animate-laser-flow" />
             <span className="inline-block px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-md bg-[#4AEEFF]/20 text-[#4AEEFF] border border-[#4AEEFF]/40 align-middle mb-1.5">
               Community Directory
             </span>
-            <h1 className="text-2xl font-black uppercase tracking-[0.15em] sm:tracking-[0.2em] text-white sm:text-4xl">
+            <h1 className="text-2xl font-black uppercase tracking-[0.15em] sm:tracking-[0.2em] text-white sm:text-4xl animate-light-sweep">
               Players
             </h1>
             <p className="mt-1 text-xs uppercase tracking-[0.15em] sm:tracking-[0.3em] text-[#4AEEFF]/90">
@@ -149,85 +150,87 @@ const Players: React.FC = () => {
           </div>
         </header>
 
-        {/* ── TABS MODULE (Side-by-side on mobile & desktop) ── */}
-        <div
-          className={`grid ${isLoggedIn ? "grid-cols-2" : "grid-cols-1"} gap-2 sm:flex sm:gap-3`}
-        >
-          <button
-            id="tab-club-members"
-            onClick={() => {
-              setActiveTab("CLUB");
-              setSearch("");
-              setSkillFilter("ALL");
-            }}
-            className={`flex items-center justify-center gap-2 px-3 sm:px-6 py-2.5 sm:py-3 rounded-xl font-black text-xs uppercase tracking-wider transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#4AEEFF] ${
-              activeTab === "CLUB"
-                ? "bg-[#4AEEFF] text-[#061D23] shadow-lg shadow-[#4AEEFF]/25 scale-[1.01]"
-                : "bg-[#061D23]/40 text-white/80 border border-white/15 hover:border-[#4AEEFF]/50 hover:text-white"
-            }`}
+        {/* ── CONTROLS & FILTERS MODULE (Scroll Animated) ── */}
+        <ScrollReveal delay={100} className="space-y-4">
+          {/* ── TABS MODULE (Side-by-side on mobile & desktop) ── */}
+          <div
+            className={`grid ${isLoggedIn ? "grid-cols-2" : "grid-cols-1"} gap-2 sm:flex sm:gap-3`}
           >
-            <span className="truncate">🏅 Club Members</span>
-            <span
-              className={`px-2 py-0.5 rounded-full text-[11px] font-bold shrink-0 ${
-                activeTab === "CLUB"
-                  ? "bg-[#061D23]/25 text-[#061D23]"
-                  : "bg-white/10 text-[#4AEEFF]"
-              }`}
-            >
-              {clubPlayers.length}
-            </span>
-          </button>
-          {isLoggedIn && (
             <button
-              id="tab-guest-players"
+              id="tab-club-members"
               onClick={() => {
-                setActiveTab("GUEST");
+                setActiveTab("CLUB");
                 setSearch("");
                 setSkillFilter("ALL");
               }}
               className={`flex items-center justify-center gap-2 px-3 sm:px-6 py-2.5 sm:py-3 rounded-xl font-black text-xs uppercase tracking-wider transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#4AEEFF] ${
-                activeTab === "GUEST"
+                activeTab === "CLUB"
                   ? "bg-[#4AEEFF] text-[#061D23] shadow-lg shadow-[#4AEEFF]/25 scale-[1.01]"
                   : "bg-[#061D23]/40 text-white/80 border border-white/15 hover:border-[#4AEEFF]/50 hover:text-white"
               }`}
             >
-              <span className="truncate">👤 Guest Players</span>
+              <span className="truncate">🏅 Club Members</span>
               <span
                 className={`px-2 py-0.5 rounded-full text-[11px] font-bold shrink-0 ${
-                  activeTab === "GUEST"
+                  activeTab === "CLUB"
                     ? "bg-[#061D23]/25 text-[#061D23]"
                     : "bg-white/10 text-[#4AEEFF]"
                 }`}
               >
-                {guestPlayers.length}
+                {clubPlayers.length}
               </span>
             </button>
-          )}
-        </div>
-
-        {/* Tab description pill */}
-        <div className="rounded-xl border border-white/10 bg-[#061D23]/30 px-3.5 py-2 text-xs text-white/75 backdrop-blur-md flex items-center gap-2">
-          <span className="text-sm shrink-0">
-            {activeTab === "CLUB" ? "🏅" : "👤"}
-          </span>
-          <p className="leading-snug">
-            {activeTab === "CLUB" ? (
-              <>
-                <strong className="text-white">Club Members:</strong> Officially
-                registered players with assigned club rankings.
-              </>
-            ) : (
-              <>
-                <strong className="text-white">Guest Players:</strong>{" "}
-                Self-registered community players without an official ranking
-                yet.
-              </>
+            {isLoggedIn && (
+              <button
+                id="tab-guest-players"
+                onClick={() => {
+                  setActiveTab("GUEST");
+                  setSearch("");
+                  setSkillFilter("ALL");
+                }}
+                className={`flex items-center justify-center gap-2 px-3 sm:px-6 py-2.5 sm:py-3 rounded-xl font-black text-xs uppercase tracking-wider transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#4AEEFF] ${
+                  activeTab === "GUEST"
+                    ? "bg-[#4AEEFF] text-[#061D23] shadow-lg shadow-[#4AEEFF]/25 scale-[1.01]"
+                    : "bg-[#061D23]/40 text-white/80 border border-white/15 hover:border-[#4AEEFF]/50 hover:text-white"
+                }`}
+              >
+                <span className="truncate">👤 Guest Players</span>
+                <span
+                  className={`px-2 py-0.5 rounded-full text-[11px] font-bold shrink-0 ${
+                    activeTab === "GUEST"
+                      ? "bg-[#061D23]/25 text-[#061D23]"
+                      : "bg-white/10 text-[#4AEEFF]"
+                  }`}
+                >
+                  {guestPlayers.length}
+                </span>
+              </button>
             )}
-          </p>
-        </div>
+          </div>
 
-        {/* Filters & Search */}
-        <div className="rounded-[16px] border border-white/20 bg-[#061D23]/15 p-4 sm:p-5 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl space-y-3">
+          {/* Tab description pill */}
+          <div className="rounded-xl border border-white/10 bg-[#061D23]/30 px-3.5 py-2 text-xs text-white/75 backdrop-blur-md flex items-center gap-2">
+            <span className="text-sm shrink-0">
+              {activeTab === "CLUB" ? "🏅" : "👤"}
+            </span>
+            <p className="leading-snug">
+              {activeTab === "CLUB" ? (
+                <>
+                  <strong className="text-white">Club Members:</strong> Officially
+                  registered players with assigned club rankings.
+                </>
+              ) : (
+                <>
+                  <strong className="text-white">Guest Players:</strong>{" "}
+                  Self-registered community players without an official ranking
+                  yet.
+                </>
+              )}
+            </p>
+          </div>
+
+          {/* Filters & Search */}
+          <div className="rounded-[16px] border border-white/20 bg-[#061D23]/15 p-4 sm:p-5 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl space-y-3">
           <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center">
             {/* Search */}
             <div className="relative flex-1 w-full">
@@ -346,6 +349,7 @@ const Players: React.FC = () => {
             )}
           </div>
         </div>
+      </ScrollReveal>
 
         {/* Loading */}
         {loading && (
@@ -374,7 +378,8 @@ const Players: React.FC = () => {
 
         {/* Player Roster: LIST VIEW (Sleek, High-Density for Mobile & Desktop) */}
         {!loading && filtered.length > 0 && viewMode === "list" && (
-          <div className="flex flex-col gap-2.5 sm:gap-3 pb-8">
+          <ScrollReveal delay={120}>
+            <div className="flex flex-col gap-2.5 sm:gap-3 pb-8">
             {filtered.map((player) => {
               const skill = player.playerProfile?.skillLevel?.toUpperCase();
               const skillBadgeClass =
@@ -484,11 +489,13 @@ const Players: React.FC = () => {
               );
             })}
           </div>
+        </ScrollReveal>
         )}
 
         {/* Player Roster: GRID VIEW (Compact & Balanced for Mobile & Desktop) */}
         {!loading && filtered.length > 0 && viewMode === "grid" && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-6 pb-8">
+          <ScrollReveal delay={120}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-6 pb-8">
             {filtered.map((player) => {
               const skill = player.playerProfile?.skillLevel?.toUpperCase();
               const skillBadgeClass =
@@ -605,6 +612,7 @@ const Players: React.FC = () => {
               );
             })}
           </div>
+        </ScrollReveal>
         )}
       </div>
     </div>
