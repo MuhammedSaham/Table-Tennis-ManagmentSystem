@@ -339,36 +339,65 @@ const AdminRequests: React.FC = () => {
     ).values(),
   );
 
-  // Apply payment verification filters
-  const filteredPaymentProofRequests = paymentProofRequests.filter((proof) => {
-    const profile = proof.player.playerProfile;
+  // Identify the event type for payment filtering.
+  const getPaymentCategoryEventType = (
+    category: PaymentProofRequest["registrations"][number]["category"],
+  ): "SINGLES" | "DOUBLES" | "MIXED_DOUBLES" | null => {
+    if (!category) return null;
 
-    // Membership filter
-    const matchesMembership =
-      paymentMembershipFilter === "ALL" ||
-      (paymentMembershipFilter === "CLUB" && profile?.isClubMember === true) ||
-      (paymentMembershipFilter === "GUEST" && profile?.isClubMember === false);
+    const type = category.type.toUpperCase().replace(/[\s-]+/g, "_");
+    const name = category.name.toUpperCase();
 
-    // Gender filter: based on the payment proof uploader
-    const matchesGender =
-      paymentGenderFilter === "ALL" || profile?.gender === paymentGenderFilter;
+    if (type === "MIXED_DOUBLES" || name.includes("MIXED")) {
+      return "MIXED_DOUBLES";
+    }
 
-    // Tournament filter
-    const matchesTournament =
-      paymentTournamentFilter === "ALL" ||
-      proof.tournamentId === paymentTournamentFilter;
+    if (type === "SINGLES") return "SINGLES";
+    if (type === "DOUBLES") return "DOUBLES";
 
-    // Event type filter
-    const matchesEvent =
-      paymentEventFilter === "ALL" ||
-      proof.registrations.some(
-        (registration) => registration.category?.type === paymentEventFilter,
+    return null;
+  };
+
+  // Filter both payment proof cards and their individual categories.
+  const filteredPaymentProofRequests = paymentProofRequests
+    .map((proof) => {
+      const profile = proof.player.playerProfile;
+
+      const matchesMembership =
+        paymentMembershipFilter === "ALL" ||
+        (paymentMembershipFilter === "CLUB" &&
+          profile?.isClubMember === true) ||
+        (paymentMembershipFilter === "GUEST" &&
+          profile?.isClubMember === false);
+
+      const matchesGender =
+        paymentGenderFilter === "ALL" ||
+        profile?.gender === paymentGenderFilter;
+
+      const matchesTournament =
+        paymentTournamentFilter === "ALL" ||
+        proof.tournamentId === paymentTournamentFilter;
+
+      if (!matchesMembership || !matchesGender || !matchesTournament) {
+        return null;
+      }
+
+      const matchingRegistrations = proof.registrations.filter(
+        (registration) =>
+          registration.verificationStatus === "PENDING" &&
+          (paymentEventFilter === "ALL" ||
+            getPaymentCategoryEventType(registration.category) ===
+              paymentEventFilter),
       );
 
-    return (
-      matchesMembership && matchesGender && matchesTournament && matchesEvent
-    );
-  });
+      if (matchingRegistrations.length === 0) return null;
+
+      return {
+        ...proof,
+        registrations: matchingRegistrations,
+      };
+    })
+    .filter((proof): proof is PaymentProofRequest => proof !== null);
 
   const fetchPaymentProofRequests = async () => {
     try {

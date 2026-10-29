@@ -741,7 +741,27 @@ async getGlobalCategoryStandings(
       }
     }
 
+    
+    // Only Club Players are eligible for the Global Leaderboard.
+    // Match statistics still include results against Guest Players.
+    const clubPlayers = await prisma.playerProfile.findMany({
+      where: {
+        isClubMember: true,
+        userId: {
+          in: Array.from(playerStats.keys()),
+        },
+      },
+      select: {
+        userId: true,
+      },
+    });
+
+    const clubPlayerIds = new Set(
+      clubPlayers.map((player) => player.userId)
+    );
+
     const sortedStats = Array.from(playerStats.values())
+      .filter((player) => clubPlayerIds.has(player.playerId))
       .sort((a, b) => {
         if (a.points !== b.points) return b.points - a.points;
         if (a.wins !== b.wins) return b.wins - a.wins;
@@ -752,6 +772,7 @@ async getGlobalCategoryStandings(
         );
       })
       .slice(0, limit);
+
 
     for (const player of sortedStats) {
       const user = await prisma.user.findUnique({
@@ -769,7 +790,7 @@ async getGlobalCategoryStandings(
 
     return {
       categoryName,
-      totalPlayers: playerStats.size,
+      totalPlayers: clubPlayerIds.size,
       standings: sortedStats,
       lastUpdated: new Date(),
     };
@@ -822,6 +843,38 @@ async getGlobalCategoryStandings(
 
   const teamStats = new Map<string, any>();
 
+  
+  // Only teams with two active Club Players are eligible
+  // for the Global Doubles and Mixed Doubles Leaderboards.
+  const clubMemberProfiles = await prisma.playerProfile.findMany({
+    where: {
+      isClubMember: true,
+    },
+    select: {
+      userId: true,
+    },
+  });
+
+  const clubMemberIds = new Set(
+    clubMemberProfiles.map((profile) => profile.userId)
+  );
+
+  const isClubTeam = (team: any): boolean => {
+    if (!team) return false;
+
+    const activeMembers = team.members.filter(
+      (member: any) => member.isActive === true
+    );
+
+    return (
+      activeMembers.length === 2 &&
+      activeMembers.every((member: any) =>
+        clubMemberIds.has(member.playerId)
+      )
+    );
+  };
+
+
   const getPartnershipKey = (team: any): string | null => {
   if (!team) return null;
 
@@ -835,6 +888,8 @@ async getGlobalCategoryStandings(
 };
 
   const initializeTeam = (team: any) => {
+  if (!isClubTeam(team)) return;
+
   const partnershipKey = getPartnershipKey(team);
 
   if (!partnershipKey || teamStats.has(partnershipKey)) return;
@@ -963,7 +1018,25 @@ if (!first || !second) return;
     );
   }
 
+  
+  const eligiblePartnershipKeys = new Set<string>();
+
+  for (const match of [...knockoutMatches, ...groupMatches]) {
+    for (const team of [match.team1, match.team2]) {
+      if (isClubTeam(team)) {
+        const key = getPartnershipKey(team);
+
+        if (key) {
+          eligiblePartnershipKeys.add(key);
+        }
+      }
+    }
+  }
+
   const sortedStats = Array.from(teamStats.values())
+    .filter((team) =>
+      eligiblePartnershipKeys.has(team.playerId)
+    )
     .sort((a, b) => {
       if (a.points !== b.points) return b.points - a.points;
       if (a.wins !== b.wins) return b.wins - a.wins;
@@ -975,9 +1048,10 @@ if (!first || !second) return;
     })
     .slice(0, limit);
 
+
   return {
     categoryName,
-    totalPlayers: teamStats.size,
+    totalPlayers: eligiblePartnershipKeys.size,
     standings: sortedStats,
     lastUpdated: new Date(),
   };

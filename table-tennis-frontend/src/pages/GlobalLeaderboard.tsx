@@ -117,24 +117,6 @@ const GlobalLeaderboard: React.FC = () => {
             Player rankings and cross-tournament performance
           </p>
         </div>
-        <div className="flex gap-4 text-left sm:text-right">
-          <div className="rounded-xl border border-white/10 bg-[#061D23]/40 px-4 py-3">
-            <p className="text-xl font-black text-[#4AEEFF]">
-              {categories.length}
-            </p>
-            <p className="text-[10px] font-bold uppercase tracking-wider text-white/60">
-              Categories
-            </p>
-          </div>
-          <div className="rounded-xl border border-white/10 bg-[#061D23]/40 px-4 py-3">
-            <p className="text-xl font-black text-[#4AEEFF]">
-              {standings.length}
-            </p>
-            <p className="text-[10px] font-bold uppercase tracking-wider text-white/60">
-              Ranked
-            </p>
-          </div>
-        </div>
       </header>
 
       {/* CATEGORY SELECTOR MODULE */}
