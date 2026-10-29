@@ -199,49 +199,168 @@ export class DashboardService {
   }
 
   // Get referee dashboard
-  async getRefereeDashboard(refereeUserId: string) {
-    const referee = await prisma.refereeProfile.findUnique({
-      where: { userId: refereeUserId },
-    });
+async getRefereeDashboard(refereeUserId: string) {
+  const referee = await prisma.refereeProfile.findUnique({
+    where: { userId: refereeUserId },
+  });
 
-    if (!referee) {
-      throw new Error('Referee profile not found');
-    }
-
-    const [assignedMatches, completedMatches, upcomingMatches] = await Promise.all([
-      prisma.match.count({ where: { refereeId: referee.id } }),
-      prisma.match.count({ where: { refereeId: referee.id, status: 'COMPLETED' } }),
-      prisma.match.findMany({
-        where: {
-          refereeId: referee.id,
-          scheduledTime: { gt: new Date() },
-          status: 'SCHEDULED',
-        },
-        take: 5,
-        include: {
-          tournament: { select: { name: true, venue: true } },
-          player1: { select: { firstName: true, lastName: true } },
-          player2: { select: { firstName: true, lastName: true } },
-        },
-        orderBy: { scheduledTime: 'asc' },
-      }),
-    ]);
-
-    return {
-      referee: {
-        ...referee,
-        user: await prisma.user.findUnique({
-          where: { id: refereeUserId },
-          select: { firstName: true, lastName: true, email: true },
-        }),
-      },
-      statistics: {
-        totalAssigned: assignedMatches,
-        completedMatches,
-        pendingMatches: assignedMatches - completedMatches,
-        completionRate: assignedMatches > 0 ? ((completedMatches / assignedMatches) * 100).toFixed(1) : '0',
-      },
-      upcomingMatches,
-    };
+  if (!referee) {
+    throw new Error('Referee profile not found');
   }
+
+  const [
+    knockoutAssigned,
+    knockoutCompleted,
+    groupAssigned,
+    groupCompleted,
+    upcomingMatches,
+    knockoutTimeMatches,
+    groupTimeMatches,
+  ] = await Promise.all([
+    // Knockout Stage counts
+    prisma.match.count({
+      where: { refereeId: referee.id },
+    }),
+
+    prisma.match.count({
+      where: {
+        refereeId: referee.id,
+        status: 'COMPLETED',
+      },
+    }),
+
+    // Group Stage counts
+    prisma.groupMatch.count({
+      where: { refereeId: referee.id },
+    }),
+
+    prisma.groupMatch.count({
+      where: {
+        refereeId: referee.id,
+        status: 'COMPLETED',
+      },
+    }),
+
+    // Existing upcoming Knockout Stage matches
+    prisma.match.findMany({
+      where: {
+        refereeId: referee.id,
+        scheduledTime: { gt: new Date() },
+        status: 'SCHEDULED',
+      },
+      take: 5,
+      include: {
+        tournament: {
+          select: { name: true, venue: true },
+        },
+        player1: {
+          select: { firstName: true, lastName: true },
+        },
+        player2: {
+          select: { firstName: true, lastName: true },
+        },
+      },
+      orderBy: { scheduledTime: 'asc' },
+    }),
+
+    // Completed Knockout Stage match times
+    prisma.match.findMany({
+      where: {
+        refereeId: referee.id,
+        status: 'COMPLETED',
+        startTime: { not: null },
+        endTime: { not: null },
+      },
+      select: {
+        startTime: true,
+        endTime: true,
+      },
+    }),
+
+    // Completed Group Stage match times
+    prisma.groupMatch.findMany({
+      where: {
+        refereeId: referee.id,
+        status: 'COMPLETED',
+        startTime: { not: null },
+        endTime: { not: null },
+      },
+      select: {
+        startTime: true,
+        endTime: true,
+      },
+    }),
+  ]);
+
+  // Calculate match duration in minutes
+  const calculateMinutes = (
+    matches: {
+      startTime: Date | null;
+      endTime: Date | null;
+    }[]
+  ) => {
+    return matches.reduce((total, match) => {
+      if (!match.startTime || !match.endTime) {
+        return total;
+      }
+
+      const duration =
+        (match.endTime.getTime() -
+          match.startTime.getTime()) / 60000;
+
+      return total + (duration > 0 ? duration : 0);
+    }, 0);
+  };
+
+  const groupMinutes = Math.round(
+    calculateMinutes(groupTimeMatches)
+  );
+
+  const knockoutMinutes = Math.round(
+    calculateMinutes(knockoutTimeMatches)
+  );
+
+  const totalMinutes = groupMinutes + knockoutMinutes;
+
+  const totalAssigned = groupAssigned + knockoutAssigned;
+  const completedMatches = groupCompleted + knockoutCompleted;
+
+  return {
+    referee: {
+      ...referee,
+      user: await prisma.user.findUnique({
+        where: { id: refereeUserId },
+        select: {
+          firstName: true,
+          lastName: true,
+          email: true,
+        },
+      }),
+    },
+
+    statistics: {
+      totalAssigned,
+      completedMatches,
+      pendingMatches: totalAssigned - completedMatches,
+
+      completionRate:
+        totalAssigned > 0
+          ? ((completedMatches / totalAssigned) * 100).toFixed(1)
+          : '0',
+
+      // New working-hours statistics
+      groupStageMinutes: groupMinutes,
+      knockoutStageMinutes: knockoutMinutes,
+      totalWorkingMinutes: totalMinutes,
+
+      totalWorkingHours: Number(
+        (totalMinutes / 60).toFixed(2)
+      ),
+
+      totalWorkingTime: `${Math.floor(totalMinutes / 60)}h ${totalMinutes % 60}m`,
+    },
+
+    upcomingMatches,
+  };
+}
 }

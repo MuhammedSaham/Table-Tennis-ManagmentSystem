@@ -2,6 +2,23 @@ import prisma from '../config/database';
 import { AppError } from '../utils/AppError';
 import { MatchType, MatchStatus } from '@prisma/client';
 
+// Convert score to an integer or null
+const toNullableScore = (
+  value: string | number | null | undefined
+): number | null => {
+  if (value === null || value === undefined || value === "") {
+    return null;
+  }
+
+  const score = Number(value);
+
+  if (!Number.isInteger(score) || score < 0) {
+    throw new AppError("Invalid game score", 400);
+  }
+
+  return score;
+};
+
 export class GroupService {
   // Create groups and assign players
   async createGroups(adminId: string, tournamentId: string, categoryId: string, numberOfGroups: number) {
@@ -158,7 +175,9 @@ async recordGroupScore(
   games: { p1: number | null; p2: number | null }[],  // array of up to 5 games
   adminId: string,
   bestOf: 3 | 5 = 5,
-  userRole?: string
+  userRole?: string,
+  startTime?: string,
+  endTime?: string
 ) {
   const existingMatch = await prisma.groupMatch.findUnique({
     where: { id: matchId },
@@ -167,8 +186,35 @@ async recordGroupScore(
 
   if (!existingMatch) throw new AppError('Match not found', 404);
 
+  // Start Time and End Time are optional
+if (Boolean(startTime) !== Boolean(endTime)) {
+  throw new AppError(
+    "Please provide both Start Time and End Time, or leave both empty",
+    400
+  );
+}
+
+let parsedStartTime: Date | undefined;
+let parsedEndTime: Date | undefined;
+
+if (startTime && endTime) {
+  parsedStartTime = new Date(startTime);
+  parsedEndTime = new Date(endTime);
+
+  if (
+    Number.isNaN(parsedStartTime.getTime()) ||
+    Number.isNaN(parsedEndTime.getTime())
+  ) {
+    throw new AppError("Invalid match time", 400);
+  }
+
+  if (parsedEndTime <= parsedStartTime) {
+    throw new AppError("End Time must be after Start Time", 400);
+  }
+}
+
   if (existingMatch.team1Id && existingMatch.team2Id) {
-    return this.recordDoublesGroupScore(matchId, games, adminId, bestOf, userRole);
+    return this.recordDoublesGroupScore(matchId, games, adminId, bestOf, userRole, startTime, endTime);
   }
 
   if (userRole === 'REFEREE') {
@@ -224,16 +270,22 @@ async recordGroupScore(
       bestOf,
       status: 'COMPLETED',
       completedAt: new Date(),
-      game1player1: games[0]?.p1 ?? null,
-      game1player2: games[0]?.p2 ?? null,
-      game2player1: games[1]?.p1 ?? null,
-      game2player2: games[1]?.p2 ?? null,
-      game3player1: games[2]?.p1 ?? null,
-      game3player2: games[2]?.p2 ?? null,
-      game4player1: games[3]?.p1 ?? null,
-      game4player2: games[3]?.p2 ?? null,
-      game5player1: games[4]?.p1 ?? null,
-      game5player2: games[4]?.p2 ?? null,
+      startTime: parsedStartTime,
+      endTime: parsedEndTime,
+      game1player1: toNullableScore(games[0]?.p1),
+game1player2: toNullableScore(games[0]?.p2),
+
+game2player1: toNullableScore(games[1]?.p1),
+game2player2: toNullableScore(games[1]?.p2),
+
+game3player1: toNullableScore(games[2]?.p1),
+game3player2: toNullableScore(games[2]?.p2),
+
+game4player1: toNullableScore(games[3]?.p1),
+game4player2: toNullableScore(games[3]?.p2),
+
+game5player1: toNullableScore(games[4]?.p1),
+game5player2: toNullableScore(games[4]?.p2),
     },
   });
 
@@ -1003,7 +1055,9 @@ async updateGroupMembers(
     games: { p1: number | null; p2: number | null }[],
     adminId: string,
     bestOf: 3 | 5 = 5,
-    userRole?: string
+    userRole?: string,
+    startTime?: string,
+    endTime?: string
   ) {
     const existingMatch = await prisma.groupMatch.findUnique({
       where: { id: matchId },
@@ -1017,21 +1071,60 @@ async updateGroupMembers(
 
     if (!existingMatch) throw new AppError('Match not found', 404);
 
+   // Start Time and End Time are optional
+if (Boolean(startTime) !== Boolean(endTime)) {
+  throw new AppError(
+    "Please provide both Start Time and End Time, or leave both empty",
+    400
+  );
+}
+
+let parsedStartTime: Date | undefined;
+let parsedEndTime: Date | undefined;
+
+if (startTime && endTime) {
+  parsedStartTime = new Date(startTime);
+  parsedEndTime = new Date(endTime);
+
+  if (
+    Number.isNaN(parsedStartTime.getTime()) ||
+    Number.isNaN(parsedEndTime.getTime())
+  ) {
+    throw new AppError("Invalid match time", 400);
+  }
+
+  if (parsedEndTime <= parsedStartTime) {
+    throw new AppError("End Time must be after Start Time", 400);
+  }
+}
+
     if (userRole === 'REFEREE') {
       if (!existingMatch.referee || existingMatch.referee.userId !== adminId) {
         throw new AppError('You can only record scores for matches assigned to you', 403);
       }
     }
 
-    const winsToWin = Math.ceil(bestOf / 2);
-    let team1GamesWon = 0;
-    let team2GamesWon = 0;
+    const normalizedGames = games.map((game) => ({
+  p1: toNullableScore(game.p1),
+  p2: toNullableScore(game.p2),
+}));
 
-    for (const g of games) {
-      if (g.p1 === null || g.p2 === null) continue;
-      if (g.p1 > g.p2) team1GamesWon++;
-      else if (g.p2 > g.p1) team2GamesWon++;
-    }
+console.log("BACKEND NORMALIZED GAMES:", normalizedGames);
+console.log("BACKEND BEST OF:", bestOf);
+
+const winsToWin = Math.ceil(bestOf / 2);
+let team1GamesWon = 0;
+let team2GamesWon = 0;
+
+for (const g of normalizedGames) {
+  if (g.p1 === null || g.p2 === null) continue;
+
+  if (g.p1 > g.p2) team1GamesWon++;
+  else if (g.p2 > g.p1) team2GamesWon++;
+}
+
+console.log("Team 1 games won:", team1GamesWon);
+console.log("Team 2 games won:", team2GamesWon);
 
     if (team1GamesWon < winsToWin && team2GamesWon < winsToWin) {
       throw new AppError(
@@ -1059,26 +1152,36 @@ async updateGroupMembers(
     }
 
     const updatedMatch = await prisma.groupMatch.update({
-      where: { id: matchId },
-      data: {
-        player1Score,
-        player2Score,
-        winnerTeamId,
-        bestOf,
-        status: 'COMPLETED',
-        completedAt: new Date(),
-        game1player1: games[0]?.p1 ?? null,
-        game1player2: games[0]?.p2 ?? null,
-        game2player1: games[1]?.p1 ?? null,
-        game2player2: games[1]?.p2 ?? null,
-        game3player1: games[2]?.p1 ?? null,
-        game3player2: games[2]?.p2 ?? null,
-        game4player1: games[3]?.p1 ?? null,
-        game4player2: games[3]?.p2 ?? null,
-        game5player1: games[4]?.p1 ?? null,
-        game5player2: games[4]?.p2 ?? null,
-      },
-    });
+  where: { id: matchId },
+  data: {
+    player1Score,
+    player2Score,
+    winnerTeamId,
+    bestOf,
+    status: 'COMPLETED',
+    completedAt: new Date(),
+
+    // Optional match times
+    startTime: parsedStartTime,
+    endTime: parsedEndTime,
+
+    // Convert strings to integers; empty scores become null
+    game1player1: toNullableScore(games[0]?.p1),
+    game1player2: toNullableScore(games[0]?.p2),
+
+    game2player1: toNullableScore(games[1]?.p1),
+    game2player2: toNullableScore(games[1]?.p2),
+
+    game3player1: toNullableScore(games[2]?.p1),
+    game3player2: toNullableScore(games[2]?.p2),
+
+    game4player1: toNullableScore(games[3]?.p1),
+    game4player2: toNullableScore(games[3]?.p2),
+
+    game5player1: toNullableScore(games[4]?.p1),
+    game5player2: toNullableScore(games[4]?.p2),
+  },
+});
 
     await this.updateGroupTeamStats(
       existingMatch.groupId,

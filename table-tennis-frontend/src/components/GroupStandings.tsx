@@ -49,12 +49,16 @@ export interface GroupMatch {
   team1?: {
     id: string;
     name: string;
-    members?: Array<{ player?: { id: string; firstName: string; lastName: string } }>;
+    members?: Array<{
+      player?: { id: string; firstName: string; lastName: string };
+    }>;
   } | null;
   team2?: {
     id: string;
     name: string;
-    members?: Array<{ player?: { id: string; firstName: string; lastName: string } }>;
+    members?: Array<{
+      player?: { id: string; firstName: string; lastName: string };
+    }>;
   } | null;
   player1Score: number | null;
   player2Score: number | null;
@@ -81,8 +85,9 @@ export interface GroupMatch {
       profileImage?: string | null;
     };
   } | null;
+  startTime?: string | null;
+  endTime?: string | null;
 }
-
 interface Group {
   id: string;
   name: string;
@@ -95,7 +100,8 @@ export const getParticipantName = (team?: any, player?: any) => {
   if (team?.members && team.members.length >= 2) {
     const m1 = team.members[0]?.player;
     const m2 = team.members[1]?.player;
-    if (m1 && m2) return `${m1.firstName} ${m1.lastName} & ${m2.firstName} ${m2.lastName}`;
+    if (m1 && m2)
+      return `${m1.firstName} ${m1.lastName} & ${m2.firstName} ${m2.lastName}`;
   }
   if (team?.name) return team.name;
   if (player) return `${player.firstName} ${player.lastName}`;
@@ -112,7 +118,13 @@ interface Props {
 export interface UmpireSheetProps {
   match: GroupMatch;
   onClose: () => void;
-  onSave: (matchId: string, games: GameScore[], bestOf: 3 | 5) => Promise<void>;
+  onSave: (
+    matchId: string,
+    games: GameScore[],
+    bestOf: 3 | 5,
+    startTime?: string,
+    endTime?: string,
+  ) => Promise<void>;
   isAdminOrReferee: boolean;
   categoryName?: string;
   onAssignReferee?: (match: GroupMatch) => void;
@@ -166,8 +178,40 @@ export const UmpireSheet: React.FC<UmpireSheetProps> = ({
 
   const [games, setGames] = useState<GameScore[]>(initGames);
   const [saving, setSaving] = useState(false);
+  const formatSavedTime = (value?: string | null) => {
+    if (!value) return "";
+
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "";
+
+    return `${String(date.getHours()).padStart(2, "0")}:${String(
+      date.getMinutes(),
+    ).padStart(2, "0")}`;
+  };
+
+  const [startTime, setStartTime] = useState(formatSavedTime(match.startTime));
+
+  const [endTime, setEndTime] = useState(formatSavedTime(match.endTime));
+
+  const calculateDuration = () => {
+    if (!startTime || !endTime) return null;
+
+    const [startHour, startMinute] = startTime.split(":").map(Number);
+    const [endHour, endMinute] = endTime.split(":").map(Number);
+
+    let minutes = endHour * 60 + endMinute - (startHour * 60 + startMinute);
+
+    if (minutes < 0) minutes += 24 * 60;
+
+    return minutes;
+  };
+
+  const matchDuration = calculateDuration();
   const [pointsToWin, setPointsToWin] = useState<number>(11);
-  const targetPts = typeof pointsToWin === "number" && !isNaN(pointsToWin) && pointsToWin > 0 ? pointsToWin : 11;
+  const targetPts =
+    typeof pointsToWin === "number" && !isNaN(pointsToWin) && pointsToWin > 0
+      ? pointsToWin
+      : 11;
 
   const getGameWinner = (p1Str: string, p2Str: string): "p1" | "p2" | null => {
     if (p1Str === "" || p2Str === "") return null;
@@ -234,7 +278,9 @@ export const UmpireSheet: React.FC<UmpireSheetProps> = ({
       const g = games[i];
       if (g.p1 === "" && g.p2 === "") continue;
       if (!isGameValid(g.p1, g.p2)) {
-        toast.error(`Game ${i + 1} has an invalid score. A game is played to ${targetPts} points and must be won by 2 clear points.`);
+        toast.error(
+          `Game ${i + 1} has an invalid score. A game is played to ${targetPts} points and must be won by 2 clear points.`,
+        );
         return;
       }
     }
@@ -243,9 +289,20 @@ export const UmpireSheet: React.FC<UmpireSheetProps> = ({
       toast.error(`Match not complete. ${winsNeeded} game wins needed to win.`);
       return;
     }
+    if (Boolean(startTime) !== Boolean(endTime)) {
+      toast.error(
+        "Please enter both Start Time and End Time, or leave both empty.",
+      );
+      return;
+    }
+
     setSaving(true);
-    await onSave(match.id, games, bestOf);
-    setSaving(false);
+
+    try {
+      await onSave(match.id, games, bestOf, startTime, endTime);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const p1Name = getParticipantName(match.team1, match.player1);
@@ -304,7 +361,15 @@ export const UmpireSheet: React.FC<UmpireSheetProps> = ({
                 fontSize: 22,
               }}
             >
-              🏓
+              <img
+                src="/club-logo.png"
+                alt="Table Tennis Club Logo"
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "contain",
+                }}
+              />
             </div>
             <div>
               <div
@@ -368,7 +433,9 @@ export const UmpireSheet: React.FC<UmpireSheetProps> = ({
                 <strong>DATE:</strong> {today}
               </span>
               {categoryName && (
-                <span style={{ color: "#e11d48", fontWeight: 700, fontSize: 13 }}>
+                <span
+                  style={{ color: "#e11d48", fontWeight: 700, fontSize: 13 }}
+                >
                   {categoryName}
                 </span>
               )}
@@ -376,7 +443,11 @@ export const UmpireSheet: React.FC<UmpireSheetProps> = ({
 
             <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{ fontSize: 12, color: "#64748b", fontWeight: 600 }}>Pts to Win:</span>
+                <span
+                  style={{ fontSize: 12, color: "#64748b", fontWeight: 600 }}
+                >
+                  Pts to Win:
+                </span>
                 <input
                   type="number"
                   min={1}
@@ -407,55 +478,113 @@ export const UmpireSheet: React.FC<UmpireSheetProps> = ({
                 />
               </div>
 
-            {/* Best Of toggle — only editable before match starts */}
-            {!isCompleted && isAdminOrReferee && (
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span
-                  style={{ fontSize: 12, color: "#64748b", fontWeight: 600 }}
-                >
-                  Format:
-                </span>
-                {([3, 5] as const).map((n) => (
-                  <button
-                    key={n}
-                    onClick={() => {
-                      setBestOf(n);
-                      // Clear games beyond new bestOf
-                      setGames((prev) =>
-                        prev.map((g, i) => (i >= n ? { p1: "", p2: "" } : g)),
-                      );
-                    }}
-                    style={{
-                      padding: "4px 14px",
-                      borderRadius: 20,
-                      border: "1.5px solid",
-                      borderColor: bestOf === n ? "#0f172a" : "#e2e8f0",
-                      background: bestOf === n ? "#0f172a" : "#fff",
-                      color: bestOf === n ? "#fff" : "#64748b",
-                      fontWeight: 700,
-                      fontSize: 12,
-                      cursor: "pointer",
-                    }}
+              {/* Best Of toggle — only editable before match starts */}
+              {!isCompleted && isAdminOrReferee && (
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span
+                    style={{ fontSize: 12, color: "#64748b", fontWeight: 600 }}
                   >
-                    Best of {n}
-                  </button>
-                ))}
-              </div>
-            )}
-            {isCompleted && (
-              <span
+                    Format:
+                  </span>
+                  {([3, 5] as const).map((n) => (
+                    <button
+                      key={n}
+                      onClick={() => {
+                        setBestOf(n);
+                        // Clear games beyond new bestOf
+                        setGames((prev) =>
+                          prev.map((g, i) => (i >= n ? { p1: "", p2: "" } : g)),
+                        );
+                      }}
+                      style={{
+                        padding: "4px 14px",
+                        borderRadius: 20,
+                        border: "1.5px solid",
+                        borderColor: bestOf === n ? "#0f172a" : "#e2e8f0",
+                        background: bestOf === n ? "#0f172a" : "#fff",
+                        color: bestOf === n ? "#fff" : "#64748b",
+                        fontWeight: 700,
+                        fontSize: 12,
+                        cursor: "pointer",
+                      }}
+                    >
+                      Best of {n}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {isCompleted && (
+                <span
+                  style={{
+                    fontSize: 12,
+                    color: "#64748b",
+                    background: "#f1f5f9",
+                    padding: "4px 12px",
+                    borderRadius: 20,
+                    fontWeight: 600,
+                  }}
+                >
+                  Best of {bestOf}
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Match Time */}
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              alignItems: "center",
+              gap: 16,
+              marginBottom: 16,
+              padding: 12,
+              background: "#f8fafc",
+              border: "1px solid #e2e8f0",
+              borderRadius: 10,
+            }}
+          >
+            <label style={{ fontSize: 13, fontWeight: 600 }}>
+              Start Time
+              <input
+                type="time"
+                value={startTime}
+                onChange={(e) => setStartTime(e.target.value)}
+                disabled={isCompleted || !isAdminOrReferee}
                 style={{
-                  fontSize: 12,
-                  color: "#64748b",
-                  background: "#f1f5f9",
-                  padding: "4px 12px",
-                  borderRadius: 20,
-                  fontWeight: 600,
+                  display: "block",
+                  marginTop: 5,
+                  padding: 7,
+                  border: "1px solid #cbd5e1",
+                  borderRadius: 6,
                 }}
-              >
-                Best of {bestOf}
-              </span>
-            )}
+              />
+            </label>
+
+            <label style={{ fontSize: 13, fontWeight: 600 }}>
+              End Time
+              <input
+                type="time"
+                value={endTime}
+                onChange={(e) => setEndTime(e.target.value)}
+                disabled={isCompleted || !isAdminOrReferee}
+                style={{
+                  display: "block",
+                  marginTop: 5,
+                  padding: 7,
+                  border: "1px solid #cbd5e1",
+                  borderRadius: 6,
+                }}
+              />
+            </label>
+
+            <div style={{ fontSize: 13 }}>
+              <strong>Duration:</strong>{" "}
+              {matchDuration === null
+                ? "Not entered"
+                : `${Math.floor(matchDuration / 60)} hr ${
+                    matchDuration % 60
+                  } min`}
             </div>
           </div>
 
@@ -691,6 +820,18 @@ export const UmpireSheet: React.FC<UmpireSheetProps> = ({
               </p>
               <RefereeProfileCard referee={match.referee?.user} />
             </div>
+            <div style={{ fontSize: 13, color: "#475569" }}>
+              <strong>Umpire:</strong>{" "}
+              <span style={{ color: "#0f172a", fontWeight: 700 }}>
+                {match.referee?.user
+                  ? `${match.referee.user.firstName} ${match.referee.user.lastName}`
+                  : user?.role === "SUPER_ADMIN" || user?.role === "ADMIN"
+                    ? `${user.firstName} ${user.lastName} (${user.role === "SUPER_ADMIN" ? "Super Admin" : "Admin"})`
+                    : isCompleted
+                      ? "Tournament Official"
+                      : "…………………………"}
+              </span>
+            </div>
           </div>
 
           {isCompleted && (
@@ -737,24 +878,26 @@ export const UmpireSheet: React.FC<UmpireSheetProps> = ({
           >
             Close
           </button>
-          {(user?.role === "SUPER_ADMIN" || user?.role === "ADMIN") && !isCompleted && onAssignReferee && (
-            <button
-              onClick={() => onAssignReferee(match)}
-              style={{
-                padding: "9px 20px",
-                border: "1.5px solid #e2e8f0",
-                borderRadius: 10,
-                background: "#f8fafc",
-                color: "#0f172a",
-                fontWeight: 600,
-                fontSize: 14,
-                cursor: "pointer",
-                marginRight: "auto",
-              }}
-            >
-              👨‍⚖️ Assign Referee
-            </button>
-          )}
+          {(user?.role === "SUPER_ADMIN" || user?.role === "ADMIN") &&
+            !isCompleted &&
+            onAssignReferee && (
+              <button
+                onClick={() => onAssignReferee(match)}
+                style={{
+                  padding: "9px 20px",
+                  border: "1.5px solid #e2e8f0",
+                  borderRadius: 10,
+                  background: "#f8fafc",
+                  color: "#0f172a",
+                  fontWeight: 600,
+                  fontSize: 14,
+                  cursor: "pointer",
+                  marginRight: "auto",
+                }}
+              >
+                👨‍⚖️ Assign Referee
+              </button>
+            )}
           {isAdminOrReferee && !isCompleted && (
             <button
               onClick={handleSave}
@@ -780,7 +923,7 @@ export const UmpireSheet: React.FC<UmpireSheetProps> = ({
         </div>
       </div>
     </div>,
-    document.body
+    document.body,
   );
 };
 
@@ -796,13 +939,17 @@ const GroupStandings: React.FC<Props> = ({
 }) => {
   const { user, hasPermission } = useAuth();
   const isSuperAdmin = user?.role === "SUPER_ADMIN" || user?.isSuperAdmin;
-  const isAdmin = isSuperAdmin || (user?.role === "ADMIN" && (hasPermission("MANAGE_MATCHES") || hasPermission("MANAGE_RESULTS")));
+  const isAdmin =
+    isSuperAdmin ||
+    (user?.role === "ADMIN" &&
+      (hasPermission("MANAGE_MATCHES") || hasPermission("MANAGE_RESULTS")));
   const isReferee = user?.role === "REFEREE";
   const [groups, setGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeMatch, setActiveMatch] = useState<GroupMatch | null>(null);
   const [activeGroupName, setActiveGroupName] = useState("");
-  const [assignRefereeMatch, setAssignRefereeMatch] = useState<GroupMatch | null>(null);
+  const [assignRefereeMatch, setAssignRefereeMatch] =
+    useState<GroupMatch | null>(null);
 
   const canRecordActiveMatch =
     isAdmin ||
@@ -815,8 +962,14 @@ const GroupStandings: React.FC<Props> = ({
   useEffect(() => {
     if (activeMatch) {
       for (const group of groups) {
-        const updatedMatch = group.matches?.find((m) => m.id === activeMatch.id);
-        if (updatedMatch && JSON.stringify(updatedMatch.referee) !== JSON.stringify(activeMatch.referee)) {
+        const updatedMatch = group.matches?.find(
+          (m) => m.id === activeMatch.id,
+        );
+        if (
+          updatedMatch &&
+          JSON.stringify(updatedMatch.referee) !==
+            JSON.stringify(activeMatch.referee)
+        ) {
           setActiveMatch(updatedMatch);
           break;
         }
@@ -854,11 +1007,7 @@ const GroupStandings: React.FC<Props> = ({
         (m.team1Id === id2 && m.team2Id === id1),
     );
 
-  const cellContent = (
-    group: Group,
-    rowId: string,
-    colId: string,
-  ) => {
+  const cellContent = (group: Group, rowId: string, colId: string) => {
     const match = findMatch(group, rowId, colId);
     if (!match) return null;
     const isFirst = match.player1Id === rowId || match.team1Id === rowId;
@@ -880,17 +1029,49 @@ const GroupStandings: React.FC<Props> = ({
     matchId: string,
     games: GameScore[],
     bestOf: 3 | 5,
+    startTime?: string,
+    endTime?: string,
   ) => {
     const gamesPayload = games.map((g) => ({
       p1: g.p1 !== "" ? parseInt(g.p1) : null,
       p2: g.p2 !== "" ? parseInt(g.p2) : null,
     }));
 
-    await api.patch(`/groups/group-matches/${matchId}`, {
-      games: gamesPayload,
-      bestOf,
-    });
+    const toDateTime = (time: string) => {
+      const [hours, minutes] = time.split(":").map(Number);
 
+      const date = new Date();
+      date.setHours(hours, minutes, 0, 0);
+
+      return date;
+    };
+
+    let startDate: Date | undefined;
+    let endDate: Date | undefined;
+
+    if (startTime && endTime) {
+      startDate = toDateTime(startTime);
+      endDate = toDateTime(endTime);
+
+      if (endDate <= startDate) {
+        endDate.setDate(endDate.getDate() + 1);
+      }
+    }
+
+    try {
+      const response = await api.patch(`/groups/group-matches/${matchId}`, {
+        games: gamesPayload,
+        bestOf,
+        ...(startDate && { startTime: startDate.toISOString() }),
+        ...(endDate && { endTime: endDate.toISOString() }),
+      });
+
+      console.log("Score saved successfully:", response.data);
+    } catch (error: any) {
+      console.error("Backend error:", error.response?.data);
+      toast.error(error.response?.data?.message || "Failed to save score");
+      throw error;
+    }
     await fetchStandings();
     onScoreUpdate?.();
     setActiveMatch(null);
@@ -929,7 +1110,7 @@ const GroupStandings: React.FC<Props> = ({
   const maxEntries = Math.max(
     ...groups.map((g) => {
       const isDoubles = Boolean(g.teams && g.teams.length > 0);
-      return isDoubles ? (g.teams?.length || 0) : (g.players?.length || 0);
+      return isDoubles ? g.teams?.length || 0 : g.players?.length || 0;
     }),
     0,
   );
@@ -993,10 +1174,14 @@ const GroupStandings: React.FC<Props> = ({
             {/* Mobile swipe hint */}
             <div className="sm:hidden px-3.5 py-2 bg-[#4AEEFF]/10 border-b border-white/10 text-xs text-[#4AEEFF] flex items-center justify-between font-mono">
               <span>↔ Swipe table for matches & rank</span>
-              <span className="text-[10px] text-white/60">Tap cell to score</span>
+              <span className="text-[10px] text-white/60">
+                Tap cell to score
+              </span>
             </div>
 
-            <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
+            <div
+              style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}
+            >
               <table
                 style={{
                   width: "100%",
@@ -1195,11 +1380,7 @@ const GroupStandings: React.FC<Props> = ({
                             key={colEntry.id}
                             onClick={() =>
                               match &&
-                              handleCellClick(
-                                group,
-                                rowEntry.id,
-                                colEntry.id,
-                              )
+                              handleCellClick(group, rowEntry.id, colEntry.id)
                             }
                             style={{
                               border: "1px solid #e2e8f0",
@@ -1291,7 +1472,9 @@ const GroupStandings: React.FC<Props> = ({
                   <span className="inline-block w-3 h-3 rounded bg-[#fee2e2] border border-[#991b1b]/30" />
                   <span className="text-slate-200">Loss</span>
                 </span>
-                <span className="text-slate-400">MP = Match Points · R = Rank</span>
+                <span className="text-slate-400">
+                  MP = Match Points · R = Rank
+                </span>
               </div>
               <span className="text-xs text-amber-300 font-bold flex items-center gap-1">
                 <span>🏆</span> Top 2 advance to knockout

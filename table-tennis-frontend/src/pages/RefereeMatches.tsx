@@ -11,6 +11,39 @@ interface Player {
   lastName: string;
 }
 
+interface Team {
+  id: string;
+  name: string;
+  members?: {
+    player: Player;
+  }[];
+}
+
+const getParticipantName = (
+  player?: Player | null,
+  team?: Team | null,
+): string => {
+  if (team) {
+    const memberNames = team.members
+      ?.map((member) =>
+        `${member.player.firstName} ${member.player.lastName}`.trim(),
+      )
+      .filter(Boolean)
+      .join(" / ");
+
+    return memberNames || team.name || "TBD";
+  }
+
+  return player ? `${player.firstName} ${player.lastName}`.trim() : "TBD";
+};
+
+interface RefereeStatistics {
+  groupStageMinutes: number;
+  knockoutStageMinutes: number;
+  totalWorkingMinutes: number;
+  totalWorkingTime: string;
+}
+
 interface Match {
   id: string;
   round: string;
@@ -25,8 +58,8 @@ interface Match {
   player2: Player | null;
   player1Id: string | null;
   player2Id: string | null;
-  team1?: { id: string; name: string } | null;
-  team2?: { id: string; name: string } | null;
+  team1?: Team | null;
+  team2?: Team | null;
   tournament: {
     id: string;
     name: string;
@@ -71,6 +104,9 @@ const formatDuration = (minutes: number): string => {
 
 const RefereeMatches: React.FC = () => {
   const [matches, setMatches] = useState<Match[]>([]);
+  const [refereeStats, setRefereeStats] = useState<RefereeStatistics | null>(
+    null,
+  );
   const [loading, setLoading] = useState(true);
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
   const [filter, setFilter] = useState<"all" | "pending" | "completed">(
@@ -85,10 +121,16 @@ const RefereeMatches: React.FC = () => {
 
   const fetchAssignedMatches = async () => {
     try {
-      const response = await api.get("/matches/my-assigned-matches");
-      setMatches(response.data.data);
+      const [matchesResponse, dashboardResponse] = await Promise.all([
+        api.get("/matches/my-assigned-matches"),
+        api.get("/dashboard/referee"),
+      ]);
+
+      setMatches(matchesResponse.data.data || []);
+      setRefereeStats(dashboardResponse.data.data.statistics);
     } catch (error) {
-      toast.error("Failed to load assigned matches");
+      console.error("Failed to load referee dashboard", error);
+      toast.error("Failed to load referee dashboard");
     } finally {
       setLoading(false);
     }
@@ -98,11 +140,55 @@ const RefereeMatches: React.FC = () => {
     matchId: string,
     games: GameScore[],
     bestOf: 3 | 5,
+    startTime?: string,
+    endTime?: string,
   ) => {
     try {
-      await api.patch(`/groups/group-matches/${matchId}`, { games, bestOf });
+      const toDateTime = (time: string) => {
+        const [hours, minutes] = time.split(":").map(Number);
+
+        const date = new Date();
+        date.setHours(hours, minutes, 0, 0);
+
+        return date;
+      };
+
+      let startDate: Date | undefined;
+      let endDate: Date | undefined;
+
+      if (startTime && endTime) {
+        startDate = toDateTime(startTime);
+        endDate = toDateTime(endTime);
+
+        // Handle matches that finish after midnight
+        if (endDate <= startDate) {
+          endDate.setDate(endDate.getDate() + 1);
+        }
+      }
+      const gamesPayload = games.map((game) => ({
+        p1: game.p1 === "" || game.p1 == null ? null : Number(game.p1),
+        p2: game.p2 === "" || game.p2 == null ? null : Number(game.p2),
+      }));
+
+      console.log("Converted games:", gamesPayload);
+      console.log("Best of:", bestOf);
+
+      await api.patch(`/groups/group-matches/${matchId}`, {
+        games,
+        bestOf,
+        ...(startDate && {
+          startTime: startDate.toISOString(),
+        }),
+        ...(endDate && {
+          endTime: endDate.toISOString(),
+        }),
+      });
+
+      console.log("Games sent to backend:", games);
+      console.log("Best of:", bestOf);
+
       toast.success("Score recorded successfully");
-      fetchAssignedMatches();
+      await fetchAssignedMatches();
       setSelectedMatch(null);
     } catch (error: any) {
       toast.error(error.response?.data?.message || "Failed to record score");
@@ -290,94 +376,107 @@ const RefereeMatches: React.FC = () => {
     matches.find((m) => m.status === "ONGOING") ||
     matches.find((m) => m.status === "SCHEDULED");
 
-  const nextP1Name =
-    nextPendingMatch?.team1?.name ||
-    (nextPendingMatch?.player1
-      ? `${nextPendingMatch.player1.firstName} ${nextPendingMatch.player1.lastName || ""}`.trim()
-      : "TBD");
-  const nextP2Name =
-    nextPendingMatch?.team2?.name ||
-    (nextPendingMatch?.player2
-      ? `${nextPendingMatch.player2.firstName} ${nextPendingMatch.player2.lastName || ""}`.trim()
-      : "TBD");
+  const nextP1Name = getParticipantName(
+    nextPendingMatch?.player1,
+    nextPendingMatch?.team1,
+  );
+
+  const nextP2Name = getParticipantName(
+    nextPendingMatch?.player2,
+    nextPendingMatch?.team2,
+  );
 
   return wrapInBaseLayout(
     <>
       {/* HEADER MODULE */}
-      <header className="flex flex-col justify-between gap-5 rounded-[20px] border border-white/20 bg-[#061D23]/35 p-6 sm:p-7 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.6)] backdrop-blur-xl md:flex-row md:items-center">
-        <div>
-          <div className="flex items-center gap-2 mb-2 flex-wrap">
-            <span className="w-2 h-5 bg-[#4AEEFF] rounded-full shadow-[0_0_10px_#4AEEFF]"></span>
-            <span className="px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-md bg-[#4AEEFF]/15 text-[#4AEEFF] border border-[#4AEEFF]/30">
-              Official Match Portal
-            </span>
-            <span className="flex items-center gap-1 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-md bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-              On Duty
-            </span>
+      <div className="pt-6 sm:pt-8">
+        <header className="flex flex-col gap-3 rounded-[20px] border border-white/20 bg-[#061D23]/35 p-4 sm:p-5 lg:p-5 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.6)] backdrop-blur-xl">
+          <div>
+            <div className="flex items-center gap-2 mb-2 flex-wrap">
+              <span className="w-2 h-5 bg-[#4AEEFF] rounded-full shadow-[0_0_10px_#4AEEFF]"></span>
+              <span className="px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-md bg-[#4AEEFF]/15 text-[#4AEEFF] border border-[#4AEEFF]/30">
+                Official Match Portal
+              </span>
+              <span className="flex items-center gap-1 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-md bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                On Duty
+              </span>
+            </div>
+            <h1 className="text-xl sm:text-3xl lg:text-4xl font-black uppercase tracking-[0.08em] sm:tracking-[0.12em] text-white break-words">
+              Referee Dashboard
+            </h1>
+            <p className="mt-1.5 text-xs text-slate-300 max-w-xl">
+              Inspect your assigned matches, manage court schedules, and enter
+              official set scores.
+            </p>
           </div>
-          <h1 className="text-2xl sm:text-4xl font-black uppercase tracking-[0.15em] text-white">
-            Referee Dashboard
-          </h1>
-          <p className="mt-1.5 text-xs text-slate-300 max-w-xl">
-            Inspect your assigned matches, manage court schedules, and enter
-            official set scores.
-          </p>
-        </div>
 
-        <div className="flex items-center gap-3 flex-wrap sm:flex-nowrap">
-          <button
-            onClick={() => setShowRulesModal(true)}
-            className="rounded-xl border border-white/20 bg-white/5 px-3.5 py-3 text-xs font-bold text-white hover:bg-white/10 hover:border-[#4AEEFF]/40 transition-all flex items-center gap-2 shadow-sm"
-            title="ITTF Official Rules Quick Reference"
-          >
-            <span>📖</span>
-            <span className="hidden sm:inline">ITTF Rules</span>
-          </button>
-          <button
-            onClick={fetchAssignedMatches}
-            className="rounded-xl border border-white/20 bg-white/5 p-3 text-xs font-bold text-slate-300 hover:text-white hover:bg-white/10 transition-all shadow-sm"
-            title="Refresh Assigned Matches"
-          >
-            🔄
-          </button>
-          <div className="flex gap-2.5">
-            <div className="rounded-xl border border-white/10 bg-black/30 px-3.5 py-2.5 text-center min-w-[70px]">
-              <p className="text-lg sm:text-xl font-black text-[#4AEEFF]">
-                {matches.length}
-              </p>
-              <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">
-                Total
-              </p>
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setShowRulesModal(true)}
+                className="rounded-xl border border-white/20 bg-white/5 px-3.5 py-3 text-xs font-bold text-white hover:bg-white/10 hover:border-[#4AEEFF]/40 transition-all flex items-center gap-2 shadow-sm"
+                title="ITTF Official Rules Quick Reference"
+              >
+                <span>📖</span>
+                <span className="hidden sm:inline">ITTF Rules</span>
+              </button>
+              <button
+                onClick={fetchAssignedMatches}
+                className="rounded-xl border border-white/20 bg-white/5 p-3 text-xs font-bold text-slate-300 hover:text-white hover:bg-white/10 transition-all shadow-sm"
+                title="Refresh Assigned Matches"
+              >
+                🔄
+              </button>
             </div>
-            <div className="rounded-xl border border-amber-400/20 bg-amber-400/5 px-3.5 py-2.5 text-center min-w-[70px]">
-              <p className="text-lg sm:text-xl font-black text-amber-400">
-                {pendingCount}
-              </p>
-              <p className="text-[9px] font-bold uppercase tracking-wider text-amber-300/70">
-                Pending
-              </p>
-            </div>
-            <div className="rounded-xl border border-emerald-400/20 bg-emerald-400/5 px-3.5 py-2.5 text-center min-w-[70px]">
-              <p className="text-lg sm:text-xl font-black text-emerald-400">
-                {completedCount}
-              </p>
-              <p className="text-[9px] font-bold uppercase tracking-wider text-emerald-300/70">
-                Completed
-              </p>
-            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 w-full">
+              <div className="rounded-xl border border-white/10 bg-black/30 px-3.5 py-2.5 text-center min-w-0">
+                <p className="text-lg sm:text-xl font-black text-[#4AEEFF]">
+                  {matches.length}
+                </p>
+                <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">
+                  Total
+                </p>
+              </div>
+              <div className="rounded-xl border border-amber-400/20 bg-amber-400/5 px-3.5 py-2.5 text-center min-w-0">
+                <p className="text-lg sm:text-xl font-black text-amber-400">
+                  {pendingCount}
+                </p>
+                <p className="text-[9px] font-bold uppercase tracking-wider text-amber-300/70">
+                  Pending
+                </p>
+              </div>
+              <div className="rounded-xl border border-emerald-400/20 bg-emerald-400/5 px-3.5 py-2.5 text-center min-w-0">
+                <p className="text-lg sm:text-xl font-black text-emerald-400">
+                  {completedCount}
+                </p>
+                <p className="text-[9px] font-bold uppercase tracking-wider text-emerald-300/70">
+                  Completed
+                </p>
+              </div>
 
-            <div className="rounded-xl border border-[#4AEEFF]/30 bg-[#4AEEFF]/10 px-3.5 py-2.5 text-center min-w-[110px]">
-              <p className="text-lg sm:text-xl font-black text-[#4AEEFF]">
-                {formatDuration(totalOfficiatingMinutes)}
-              </p>
-              <p className="text-[9px] font-bold uppercase tracking-wider text-[#4AEEFF]/80">
-                Officiating Time
-              </p>
+              <div className="rounded-xl border border-[#4AEEFF]/30 bg-[#4AEEFF]/10 px-3.5 py-2.5 text-center min-w-0">
+                <p className="text-lg sm:text-xl font-black text-[#4AEEFF]">
+                  {refereeStats
+                    ? formatDuration(refereeStats.totalWorkingMinutes)
+                    : formatDuration(totalOfficiatingMinutes)}
+                </p>
+                <p className="text-[9px] font-bold uppercase tracking-wider text-[#4AEEFF]/80">
+                  Officiating Time
+                </p>
+                {refereeStats && (
+                  <p className="mt-1 text-[9px] text-[#4AEEFF]/70">
+                    Group: {formatDuration(refereeStats.groupStageMinutes)}
+                    {" | "}
+                    Knockout:{" "}
+                    {formatDuration(refereeStats.knockoutStageMinutes)}
+                  </p>
+                )}
+              </div>
             </div>
           </div>
-        </div>
-      </header>
+        </header>
+      </div>
 
       {/* ─── NEXT MATCH ON COURT SPOTLIGHT HERO ─── */}
       {nextPendingMatch && (
@@ -468,7 +567,7 @@ const RefereeMatches: React.FC = () => {
       )}
 
       {/* FILTER & STAGE CONTROLS */}
-      <section className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-[16px] border border-white/20 bg-[#061D23]/25 p-4 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl">
+      <section className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 rounded-[16px] border border-white/20 bg-[#061D23]/25 p-4 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl">
         {/* Stage selection */}
         <div className="flex gap-2">
           <button
@@ -494,7 +593,7 @@ const RefereeMatches: React.FC = () => {
         </div>
 
         {/* Status filters */}
-        <div className="flex gap-2 border-t sm:border-t-0 sm:border-l border-white/10 pt-3 sm:pt-0 sm:pl-3 flex-wrap">
+        <div className="flex gap-2 border-t lg:border-t-0 lg:border-l border-white/10 pt-3 lg:pt-0  lg:pl-3 flex-wrap">
           <button
             onClick={() => setFilter("all")}
             className={`rounded-xl border px-3.5 py-1.5 text-xs font-black uppercase tracking-wider transition-all ${
@@ -531,7 +630,7 @@ const RefereeMatches: React.FC = () => {
       {/* MATCHES LIST */}
       <div className="space-y-4">
         {filteredMatches.length === 0 ? (
-          <section className="rounded-[20px] border border-white/15 bg-[#061D23]/30 p-10 sm:p-14 text-center shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl">
+          <section className="rounded-[20px] border border-white/15 bg-[#061D23]/30 p-6 sm:p-8 lg:p-10 text-center shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl">
             <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-2xl">
               🏓
             </div>
@@ -548,7 +647,7 @@ const RefereeMatches: React.FC = () => {
             </p>
 
             {matches.length > 0 && (
-              <div className="mt-5 flex justify-center gap-3">
+              <div className="mt-5 flex flex-wrap justify-center gap-3">
                 {filter !== "all" && (
                   <button
                     onClick={() => setFilter("all")}
@@ -573,16 +672,8 @@ const RefereeMatches: React.FC = () => {
           </section>
         ) : (
           filteredMatches.map((match) => {
-            const p1Name =
-              match.team1?.name ||
-              (match.player1
-                ? `${match.player1.firstName} ${match.player1.lastName || ""}`.trim()
-                : "TBD");
-            const p2Name =
-              match.team2?.name ||
-              (match.player2
-                ? `${match.player2.firstName} ${match.player2.lastName || ""}`.trim()
-                : "TBD");
+            const p1Name = getParticipantName(match.player1, match.team1);
+            const p2Name = getParticipantName(match.player2, match.team2);
 
             const isP1Winner =
               match.status === "COMPLETED" &&
