@@ -64,7 +64,7 @@ interface UserProfile {
 }
 
 const Profile: React.FC = () => {
-  const { user } = useAuth();
+  const { user, refetchUser } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
@@ -332,6 +332,7 @@ const Profile: React.FC = () => {
 
       toast.success("Profile picture updated successfully!");
       fetchProfile();
+      await refetchUser();
       setProfileImage(null);
       setImagePreview(null);
     } catch (error) {

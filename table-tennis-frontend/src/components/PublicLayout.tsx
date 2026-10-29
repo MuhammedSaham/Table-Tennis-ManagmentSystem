@@ -3,6 +3,7 @@ import { Outlet, Link, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import Logo from "../assets/LOGO.png";
 import FooterImage from "../assets/footerimg.png";
+import UserNavProfile from "./UserNavProfile";
 import {
   Bars3Icon,
   XMarkIcon,
@@ -49,15 +50,15 @@ const PublicLayout: React.FC = () => {
       {/* Navbar - Solid Consistent Dark Petrol Teal */}
       <nav className="fixed top-0 left-0 right-0 z-50 bg-[#0D3843] border-b border-white/10 shadow-md transition-all duration-300 w-full">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-20">
+          <div className="flex justify-between items-center h-16 sm:h-20">
             {/* Logo */}
-            <Link to="/" className="flex items-center gap-2 group">
+            <Link to="/" className="flex items-center gap-2 group shrink-0">
               <img
                 src={Logo}
                 alt="Sam's College"
-                className="w-10 h-10 object-contain rounded-lg"
+                className="w-8 h-8 sm:w-10 sm:h-10 object-contain rounded-lg"
               />
-              <span className="font-bold text-xl text-white tracking-wide slow-blink">
+              <span className="font-extrabold text-base sm:text-xl text-white tracking-wide slow-blink whitespace-nowrap">
                 SAM'S COLLEGE
               </span>
             </Link>
@@ -83,15 +84,11 @@ const PublicLayout: React.FC = () => {
             </div>
 
             {/* Right section matching Figma reference */}
-            <div className="flex items-center gap-4 sm:gap-6">
+            <div className="flex items-center gap-3 sm:gap-4">
               {user ? (
-                <Link
-                  to="/app/dashboard"
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-white/20 bg-white/5 hover:bg-white/10 px-4 py-2 text-xs sm:text-sm font-medium text-white transition-all"
-                >
-                  <span>Dashboard</span>
-                  <span>→</span>
-                </Link>
+                <div className="hidden lg:block">
+                  <UserNavProfile />
+                </div>
               ) : (
                 <div className="hidden sm:flex items-center gap-5">
                   <Link
@@ -132,7 +129,7 @@ const PublicLayout: React.FC = () => {
       <>
         {/* Backdrop Overlay */}
         <div
-          className={`fixed inset-0 top-20 z-40 bg-black/60 backdrop-blur-sm transition-opacity duration-200 lg:hidden ${
+          className={`fixed inset-0 top-16 sm:top-20 z-40 bg-black/60 backdrop-blur-sm transition-opacity duration-200 lg:hidden ${
             mobileMenuOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
           }`}
           onClick={() => setMobileMenuOpen(false)}
@@ -140,7 +137,7 @@ const PublicLayout: React.FC = () => {
 
         {/* Modern Dropdown Panel */}
         <div
-          className={`fixed top-20 left-0 right-0 z-50 bg-[#0D3843]/95 backdrop-blur-xl border-b border-white/15 shadow-2xl transition-all duration-300 ease-in-out lg:hidden origin-top overflow-hidden ${
+          className={`fixed top-16 sm:top-20 left-0 right-0 z-50 bg-[#0D3843]/95 backdrop-blur-xl border-b border-white/15 shadow-2xl transition-all duration-300 ease-in-out lg:hidden origin-top overflow-hidden ${
             mobileMenuOpen
               ? "max-h-[540px] opacity-100 translate-y-0"
               : "max-h-0 opacity-0 -translate-y-2 pointer-events-none"
@@ -212,7 +209,7 @@ const PublicLayout: React.FC = () => {
 
       {/* Main content */}
       <main className={`flex-1 ${isTournamentRoute ? "bg-gradient-to-r from-[#061D23] via-[#12679E] to-[#4AEEFF]" : "bg-transparent"} w-full overflow-x-hidden`}>
-        <div className="pt-20">
+        <div className="pt-16 sm:pt-20">
           <Outlet />
         </div>
       </main>
