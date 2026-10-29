@@ -114,6 +114,11 @@ interface PaymentProofRequest {
   registrations: Array<{
     id: string;
     status: string;
+
+    verificationId: string;
+    verificationStatus: "PENDING" | "APPROVED" | "REJECTED";
+    verificationPlayerId: string;
+
     category: {
       id: string;
       name: string;
@@ -165,6 +170,9 @@ const AdminRequests: React.FC = () => {
   const [selectedPaymentProofId, setSelectedPaymentProofId] = useState<
     string | null
   >(null);
+
+  const [selectedPaymentVerificationId, setSelectedPaymentVerificationId] =
+    useState<string | null>(null);
 
   const [paymentRejectionReason, setPaymentRejectionReason] = useState("");
 
@@ -383,73 +391,69 @@ const AdminRequests: React.FC = () => {
       setPaymentProofLoading(false);
     }
   };
-  const handlePaymentApprove = async (proofId: string) => {
-    setPaymentProcessingId(proofId);
+  const handlePaymentApprove = async (
+    proofId: string,
+    verificationId: string,
+  ) => {
+    setPaymentProcessingId(verificationId);
 
     try {
       await api.patch(`/payment-proofs/${proofId}/process`, {
         action: "APPROVE",
+        verificationId,
       });
 
-      toast.success("Payment proof approved successfully!");
-
-      // Refresh the list.
-      // The approved proof should disappear from pending requests.
+      toast.success("Category payment approved successfully!");
       await fetchPaymentProofRequests();
     } catch (error: any) {
-      console.error(
-        "Approve payment proof error:",
-        error.response?.status,
-        error.response?.data,
-      );
+      console.error("Approve category payment error:", error);
 
       toast.error(
-        error.response?.data?.message || "Failed to approve payment proof",
+        error.response?.data?.message || "Failed to approve category payment",
       );
     } finally {
       setPaymentProcessingId(null);
     }
   };
-  const openPaymentRejectModal = (proofId: string) => {
+  const openPaymentRejectModal = (proofId: string, verificationId: string) => {
     setSelectedPaymentProofId(proofId);
+    setSelectedPaymentVerificationId(verificationId);
     setPaymentRejectionReason("");
     setShowPaymentRejectModal(true);
   };
 
   const handlePaymentReject = async () => {
-    if (!selectedPaymentProofId) return;
+    if (!selectedPaymentProofId || !selectedPaymentVerificationId) {
+      return;
+    }
 
     if (!paymentRejectionReason.trim()) {
       toast.error("Please enter a rejection reason");
       return;
     }
 
-    setPaymentProcessingId(selectedPaymentProofId);
+    setPaymentProcessingId(selectedPaymentVerificationId);
 
     try {
       await api.patch(`/payment-proofs/${selectedPaymentProofId}/process`, {
         action: "REJECT",
+        verificationId: selectedPaymentVerificationId,
         rejectionReason: paymentRejectionReason.trim(),
       });
 
-      toast.success("Payment proof rejected successfully");
+      toast.success("Category payment rejected successfully");
 
       setShowPaymentRejectModal(false);
       setSelectedPaymentProofId(null);
+      setSelectedPaymentVerificationId(null);
       setPaymentRejectionReason("");
 
-      // Rejected proof is no longer pending,
-      // so refresh the pending list.
       await fetchPaymentProofRequests();
     } catch (error: any) {
-      console.error(
-        "Reject payment proof error:",
-        error.response?.status,
-        error.response?.data,
-      );
+      console.error("Reject category payment error:", error);
 
       toast.error(
-        error.response?.data?.message || "Failed to reject payment proof",
+        error.response?.data?.message || "Failed to reject category payment",
       );
     } finally {
       setPaymentProcessingId(null);
@@ -1145,8 +1149,6 @@ const AdminRequests: React.FC = () => {
             ) : (
               <div className="space-y-4">
                 {filteredPaymentProofRequests.map((proof) => {
-                  const isProcessing = paymentProcessingId === proof.id;
-
                   return (
                     <div
                       key={proof.id}
@@ -1209,22 +1211,87 @@ const AdminRequests: React.FC = () => {
                             </div>
                           </div>
 
-                          {/* Categories */}
+                          {/* Categories - Individual Payment Verification */}
                           <div className="mt-4">
-                            <p className="mb-2 text-[10px] font-black uppercase tracking-wider text-white/40">
-                              Registered Categories
+                            <p className="mb-3 text-[10px] font-black uppercase tracking-wider text-white/40">
+                              Registered Categories - Payment Verification
                             </p>
 
-                            <div className="flex flex-wrap gap-2">
-                              {proof.registrations.map((registration) => (
-                                <span
-                                  key={registration.id}
-                                  className="rounded-lg border border-[#4AEEFF]/20 bg-[#4AEEFF]/10 px-3 py-1.5 text-xs font-bold text-[#4AEEFF]"
-                                >
-                                  {registration.category?.name ||
-                                    "Unknown Category"}
-                                </span>
-                              ))}
+                            <div className="space-y-3">
+                              {proof.registrations.map((registration) => {
+                                const isCategoryProcessing =
+                                  paymentProcessingId ===
+                                  registration.verificationId;
+
+                                return (
+                                  <div
+                                    key={registration.verificationId}
+                                    className="rounded-lg border border-[#4AEEFF]/20 bg-[#061D23]/60 p-4"
+                                  >
+                                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                      <div>
+                                        <p className="text-sm font-bold text-white">
+                                          {registration.category?.name ||
+                                            "Unknown Category"}
+                                        </p>
+
+                                        <p className="mt-1 text-xs text-white/50">
+                                          {registration.category?.type?.replace(
+                                            /_/g,
+                                            " ",
+                                          )}
+                                        </p>
+
+                                        <p className="mt-2 text-xs font-bold text-amber-300">
+                                          Payment:{" "}
+                                          {registration.verificationStatus}
+                                        </p>
+                                      </div>
+
+                                      {registration.verificationStatus ===
+                                        "PENDING" && (
+                                        <div className="flex flex-wrap gap-2">
+                                          <button
+                                            type="button"
+                                            onClick={() =>
+                                              handlePaymentApprove(
+                                                proof.id,
+                                                registration.verificationId,
+                                              )
+                                            }
+                                            disabled={
+                                              paymentProcessingId !== null
+                                            }
+                                            className="flex items-center gap-2 rounded-lg bg-[#4AEEFF] px-4 py-2 text-xs font-black uppercase text-[#061D23] hover:bg-white disabled:opacity-50"
+                                          >
+                                            <CheckCircleIcon className="h-4 w-4" />
+                                            {isCategoryProcessing
+                                              ? "Processing..."
+                                              : "Approve"}
+                                          </button>
+
+                                          <button
+                                            type="button"
+                                            onClick={() =>
+                                              openPaymentRejectModal(
+                                                proof.id,
+                                                registration.verificationId,
+                                              )
+                                            }
+                                            disabled={
+                                              paymentProcessingId !== null
+                                            }
+                                            className="flex items-center gap-2 rounded-lg border border-red-400/50 px-4 py-2 text-xs font-black uppercase text-red-300 hover:bg-red-500/10 disabled:opacity-50"
+                                          >
+                                            <XCircleIcon className="h-4 w-4" />
+                                            Reject
+                                          </button>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              })}
                             </div>
                           </div>
 
@@ -1249,27 +1316,6 @@ const AdminRequests: React.FC = () => {
                           >
                             View Payment Proof
                           </a>
-
-                          <button
-                            type="button"
-                            onClick={() => handlePaymentApprove(proof.id)}
-                            disabled={isProcessing}
-                            className="flex items-center justify-center gap-2 rounded-lg bg-[#4AEEFF] px-5 py-2.5 text-xs font-black uppercase tracking-wider text-[#061D23] transition-all hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
-                          >
-                            <CheckCircleIcon className="h-4 w-4" />
-
-                            {isProcessing ? "Processing..." : "Approve"}
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => openPaymentRejectModal(proof.id)}
-                            disabled={isProcessing}
-                            className="flex items-center justify-center gap-2 rounded-lg border border-red-400/50 px-5 py-2.5 text-xs font-black uppercase tracking-wider text-red-300 transition-all hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-50"
-                          >
-                            <XCircleIcon className="h-4 w-4" />
-                            Reject
-                          </button>
                         </div>
                       </div>
                     </div>
@@ -1426,6 +1472,7 @@ const AdminRequests: React.FC = () => {
                 onClick={() => {
                   setShowPaymentRejectModal(false);
                   setSelectedPaymentProofId(null);
+                  setSelectedPaymentVerificationId(null);
                   setPaymentRejectionReason("");
                 }}
                 disabled={paymentProcessingId !== null}
