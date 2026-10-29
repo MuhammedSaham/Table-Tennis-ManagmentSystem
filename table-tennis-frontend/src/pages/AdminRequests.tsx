@@ -1497,20 +1497,23 @@ const AdminRequests: React.FC = () => {
 
       {/* APPROVE ADMIN WITH PERMISSIONS MODAL */}
       {adminToApprove && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-md animate-fadeIn">
-          <div className="w-full max-w-xl rounded-2xl border border-emerald-500/40 bg-[#061D23]/95 p-6 sm:p-8 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.8)] backdrop-blur-2xl space-y-6 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-white/10 pb-4">
-              <div>
-                <h3 className="text-xl font-black uppercase tracking-widest text-white flex items-center gap-2">
-                  👑 Approve Admin Request
-                </h3>
-                <p className="text-xs text-emerald-300 font-mono mt-1">
-                  Granting access to:{" "}
-                  <span className="font-bold text-white">
-                    {adminToApprove.firstName} {adminToApprove.lastName}
-                  </span>{" "}
-                  ({adminToApprove.email})
-                </p>
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/70 p-4 pt-24 backdrop-blur-sm animate-fadeIn sm:pt-28">
+          <div className="w-full max-w-2xl rounded-2xl border border-white/20 bg-[#061D23]/90 p-6 text-white shadow-[0_25px_60px_-15px_rgba(0,0,0,0.8)] backdrop-blur-2xl sm:p-8">
+            <div className="mb-6 flex items-center justify-between border-b border-white/10 pb-4">
+              <div className="flex items-center gap-3">
+                <span className="h-6 w-2.5 rounded-full bg-[#4AEEFF] shadow-[0_0_10px_#4AEEFF]" />
+                <div>
+                  <h3 className="text-xl font-black uppercase tracking-widest text-white sm:text-2xl">
+                    Approve Admin Request
+                  </h3>
+                  <p className="text-xs text-emerald-300 font-mono mt-1">
+                    Granting access to:{" "}
+                    <span className="font-bold text-white">
+                      {adminToApprove.firstName} {adminToApprove.lastName}
+                    </span>{" "}
+                    ({adminToApprove.email})
+                  </p>
+                </div>
               </div>
               <button
                 type="button"
@@ -1519,13 +1522,13 @@ const AdminRequests: React.FC = () => {
                   setSelectedPermissionsToGrant([]);
                 }}
                 disabled={adminProcessingId !== null}
-                className="text-white/50 hover:text-white transition-colors p-1"
+                className="rounded-lg p-2 text-white/50 transition hover:bg-white/10 hover:text-white"
               >
                 ✕
               </button>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-5">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <p className="text-xs text-white/80 uppercase tracking-wider font-bold">
                   Select module permissions to assign:
@@ -1553,7 +1556,7 @@ const AdminRequests: React.FC = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 gap-2.5">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 {AVAILABLE_ADMIN_PERMISSIONS.map((perm) => {
                   const isChecked = selectedPermissionsToGrant.includes(
                     perm.id,
@@ -1562,17 +1565,17 @@ const AdminRequests: React.FC = () => {
                     <div
                       key={perm.id}
                       onClick={() => togglePermissionToGrant(perm.id)}
-                      className={`flex items-start gap-3 p-3 rounded-xl border transition-all cursor-pointer ${
+                      className={`flex cursor-pointer items-start gap-3 rounded-lg border p-4 transition-all ${
                         isChecked
-                          ? "bg-emerald-500/10 border-emerald-500/60 text-white"
-                          : "bg-white/5 border-white/10 text-white/60 hover:bg-white/10"
+                          ? "border-[#4AEEFF]/60 bg-[#4AEEFF]/10 text-white"
+                          : "border-white/10 bg-[#061D23]/60 text-white/60 hover:border-[#4AEEFF]/40"
                       }`}
                     >
                       <input
                         type="checkbox"
                         checked={isChecked}
                         onChange={() => {}}
-                        className="mt-0.5 h-4 w-4 rounded border-white/20 bg-transparent text-emerald-400 focus:ring-0 focus:ring-offset-0 cursor-pointer accent-emerald-500"
+                        className="mt-0.5 h-4 w-4 cursor-pointer rounded border-white/20 bg-transparent accent-[#4AEEFF] focus:ring-0 focus:ring-offset-0"
                       />
                       <div>
                         <span className="font-bold text-sm block leading-tight text-white">
@@ -1596,7 +1599,7 @@ const AdminRequests: React.FC = () => {
               )}
             </div>
 
-            <div className="flex gap-3 pt-2 border-t border-white/10">
+            <div className="mt-6 flex gap-3 border-t border-white/10 pt-5">
               <button
                 type="button"
                 onClick={() => {
@@ -1604,7 +1607,7 @@ const AdminRequests: React.FC = () => {
                   setSelectedPermissionsToGrant([]);
                 }}
                 disabled={adminProcessingId !== null}
-                className="flex-1 rounded-xl border border-white/20 bg-white/5 py-3 text-xs font-black uppercase tracking-wider text-white transition-all hover:bg-white/10 disabled:opacity-50"
+                className="flex-1 rounded-xl border border-white/20 py-2.5 text-xs font-black uppercase tracking-wider text-white/70 transition-all hover:bg-white/10 disabled:opacity-50"
               >
                 Cancel
               </button>
@@ -1612,7 +1615,7 @@ const AdminRequests: React.FC = () => {
                 type="button"
                 onClick={handleConfirmApproveAdmin}
                 disabled={adminProcessingId !== null}
-                className="flex-1 rounded-xl bg-emerald-500 py-3 text-xs font-black uppercase tracking-wider text-slate-950 transition-all hover:bg-emerald-400 disabled:opacity-50 font-bold shadow-lg shadow-emerald-500/20"
+                className="flex-1 rounded-xl bg-[#4AEEFF] py-2.5 text-xs font-black uppercase tracking-wider text-[#061D23] shadow-md shadow-[#4AEEFF]/20 transition-all hover:bg-white disabled:opacity-50"
               >
                 {adminProcessingId !== null
                   ? "Approving & Saving..."

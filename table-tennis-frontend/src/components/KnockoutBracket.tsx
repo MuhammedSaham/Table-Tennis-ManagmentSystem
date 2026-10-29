@@ -1946,7 +1946,6 @@ const KnockoutBracket: React.FC<KnockoutBracketProps> = ({
         m.round.trim().toLowerCase() === "final" ||
         m.round.trim().toLowerCase() === "finals",
     ) ?? null;
-  //const tp = round("3rd Place Playoff")[0] ?? null;
 
   const cols: ColDef[] = [];
   if (r32.length)
