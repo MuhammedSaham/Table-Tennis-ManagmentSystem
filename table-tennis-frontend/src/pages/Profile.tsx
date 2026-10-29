@@ -12,6 +12,8 @@ import {
   AcademicCapIcon,
   IdentificationIcon,
   UserGroupIcon,
+  EyeIcon,
+  EyeSlashIcon,
 } from "@heroicons/react/24/outline";
 
 interface PlayerStats {
@@ -68,6 +70,20 @@ const Profile: React.FC = () => {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
+  const [showChangePassword, setShowChangePassword] = useState(false);
+  const [showPasswords, setShowPasswords] = useState({
+    currentPassword: false,
+    newPassword: false,
+    confirmPassword: false,
+  });
+
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
+
+  const [changingPassword, setChangingPassword] = useState(false);
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -237,6 +253,41 @@ const Profile: React.FC = () => {
       toast.error("Failed to fetch profile");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const { currentPassword, newPassword, confirmPassword } = passwordData;
+
+    if (newPassword !== confirmPassword) {
+      toast.error("New passwords do not match");
+      return;
+    }
+
+    setChangingPassword(true);
+
+    try {
+      const response = await api.post("/auth/change-password", {
+        currentPassword,
+        newPassword,
+        confirmPassword,
+      });
+
+      toast.success(response.data.message || "Password changed successfully!");
+
+      setPasswordData({
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: "",
+      });
+
+      setShowChangePassword(false);
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Failed to change password");
+    } finally {
+      setChangingPassword(false);
     }
   };
 
@@ -448,14 +499,18 @@ const Profile: React.FC = () => {
                 <h2 className="text-2xl font-black text-white uppercase tracking-wide">
                   {profile.firstName} {profile.lastName}
                 </h2>
-                <div className={`mt-2 inline-flex items-center rounded px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider ${
-                  profile.role === "SUPER_ADMIN"
-                    ? "bg-amber-500/20 text-amber-300 border border-amber-500/40"
-                    : profile.role === "ADMIN"
-                    ? "bg-purple-500/20 text-purple-300 border border-purple-500/40"
-                    : "bg-[#4AEEFF]/20 text-[#4AEEFF]"
-                }`}>
-                  {profile.role === "SUPER_ADMIN" ? "SUPER ADMIN" : profile.role}
+                <div
+                  className={`mt-2 inline-flex items-center rounded px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider ${
+                    profile.role === "SUPER_ADMIN"
+                      ? "bg-amber-500/20 text-amber-300 border border-amber-500/40"
+                      : profile.role === "ADMIN"
+                        ? "bg-purple-500/20 text-purple-300 border border-purple-500/40"
+                        : "bg-[#4AEEFF]/20 text-[#4AEEFF]"
+                  }`}
+                >
+                  {profile.role === "SUPER_ADMIN"
+                    ? "SUPER ADMIN"
+                    : profile.role}
                 </div>
               </div>
             </div>
@@ -479,6 +534,121 @@ const Profile: React.FC = () => {
                 </p>
               </div>
             </div>
+          </section>
+
+          {/* ─── SECURITY SETTINGS ─── */}
+          <section className="rounded-[16px] border border-white/20 bg-[#061D23]/5 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl sm:p-8">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2 className="text-lg font-bold uppercase tracking-wider text-white">
+                  Security Settings
+                </h2>
+                <p className="mt-1 text-xs text-white/60">
+                  Update your account password to keep your profile secure.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowChangePassword(!showChangePassword)}
+                className="rounded-lg bg-[#4AEEFF] px-5 py-3 text-xs font-black uppercase tracking-wider text-[#061D23] transition-all hover:bg-white"
+              >
+                {showChangePassword ? "Cancel" : "Change Password"}
+              </button>
+            </div>
+
+            {showChangePassword && (
+              <form
+                onSubmit={handleChangePassword}
+                className="mt-6 space-y-4 border-t border-white/10 pt-6"
+              >
+                {[
+                  { name: "currentPassword", label: "Current Password" },
+                  { name: "newPassword", label: "New Password" },
+                  { name: "confirmPassword", label: "Confirm New Password" },
+                ].map((field) => (
+                  <div key={field.name}>
+                    <label className="mb-2 block text-xs font-black uppercase tracking-wider text-[#4AEEFF]">
+                      {field.label}
+                    </label>
+
+                    <div className="relative">
+                      <input
+                        type={
+                          showPasswords[
+                            field.name as keyof typeof showPasswords
+                          ]
+                            ? "text"
+                            : "password"
+                        }
+                        name={field.name}
+                        value={
+                          passwordData[field.name as keyof typeof passwordData]
+                        }
+                        onChange={(e) =>
+                          setPasswordData((prev) => ({
+                            ...prev,
+                            [e.target.name]: e.target.value,
+                          }))
+                        }
+                        required
+                        autoComplete={
+                          field.name === "currentPassword"
+                            ? "current-password"
+                            : "new-password"
+                        }
+                        className="w-full rounded-lg border border-white/10 bg-[#061D23]/60 px-4 py-3 pr-12 text-sm text-white focus:border-[#4AEEFF] focus:outline-none focus:ring-1 focus:ring-[#4AEEFF]"
+                      />
+
+                      <button
+                        type="button"
+                        aria-label={
+                          showPasswords[
+                            field.name as keyof typeof showPasswords
+                          ]
+                            ? `Hide ${field.label}`
+                            : `Show ${field.label}`
+                        }
+                        aria-pressed={
+                          showPasswords[
+                            field.name as keyof typeof showPasswords
+                          ]
+                        }
+                        onClick={() =>
+                          setShowPasswords((prev) => ({
+                            ...prev,
+                            [field.name]:
+                              !prev[field.name as keyof typeof prev],
+                          }))
+                        }
+                        className="absolute inset-y-0 right-3 flex items-center text-white/60 transition-colors hover:text-[#4AEEFF]"
+                      >
+                        {showPasswords[
+                          field.name as keyof typeof showPasswords
+                        ] ? (
+                          <EyeSlashIcon className="h-5 w-5" />
+                        ) : (
+                          <EyeIcon className="h-5 w-5" />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+
+                <p className="text-xs text-white/60">
+                  Password must contain at least 8 characters, including an
+                  uppercase letter, lowercase letter, and number.
+                </p>
+
+                <button
+                  type="submit"
+                  disabled={changingPassword}
+                  className="rounded-lg bg-[#4AEEFF] px-6 py-3 text-xs font-black uppercase tracking-wider text-[#061D23] transition-all hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {changingPassword ? "Updating..." : "Update Password"}
+                </button>
+              </form>
+            )}
           </section>
 
           {/* ─── ROLE-SPECIFIC PROFILES ─── */}
@@ -1144,24 +1314,26 @@ const Profile: React.FC = () => {
           )}
 
           {/* Admin properties profile template */}
-          {(profile.role === "ADMIN" || profile.role === "SUPER_ADMIN") && profile.adminProfile && (
-            <section className="rounded-[16px] border border-white/20 bg-[#061D23]/5 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl">
-              <div className="mb-4 flex items-center gap-3">
-                <IdentificationIcon className="h-5 w-5 text-[#4AEEFF]" />
-                <h3 className="font-bold uppercase tracking-wider text-white">
-                  Management Details
-                </h3>
-              </div>
-              <div className="rounded-[12px] bg-[#061D23]/60 p-4 border border-white/5">
-                <p className="text-xs text-[#4AEEFF]/80 uppercase font-bold tracking-wider">
-                  Department Domain
-                </p>
-                <p className="font-semibold text-white mt-1">
-                  {profile.adminProfile.department || "General Administration"}
-                </p>
-              </div>
-            </section>
-          )}
+          {(profile.role === "ADMIN" || profile.role === "SUPER_ADMIN") &&
+            profile.adminProfile && (
+              <section className="rounded-[16px] border border-white/20 bg-[#061D23]/5 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl">
+                <div className="mb-4 flex items-center gap-3">
+                  <IdentificationIcon className="h-5 w-5 text-[#4AEEFF]" />
+                  <h3 className="font-bold uppercase tracking-wider text-white">
+                    Management Details
+                  </h3>
+                </div>
+                <div className="rounded-[12px] bg-[#061D23]/60 p-4 border border-white/5">
+                  <p className="text-xs text-[#4AEEFF]/80 uppercase font-bold tracking-wider">
+                    Department Domain
+                  </p>
+                  <p className="font-semibold text-white mt-1">
+                    {profile.adminProfile.department ||
+                      "General Administration"}
+                  </p>
+                </div>
+              </section>
+            )}
         </div>
       ) : (
         /* ─── PREMIUM FORMS SUITE ─── */

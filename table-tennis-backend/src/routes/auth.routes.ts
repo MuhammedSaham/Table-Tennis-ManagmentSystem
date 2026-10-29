@@ -6,6 +6,7 @@ import {
   resetPassword,
   verifyEmail,
   resendVerification,
+  changePassword,
 } from '../controllers/auth.controller';
 import { validate } from '../middleware/validation.middleware';
 import {
@@ -14,7 +15,10 @@ import {
   forgotPasswordSchema,
   resetPasswordSchema,
   resendVerificationSchema,
+  changePasswordSchema,
 } from '../validations/auth.validation';
+import { authenticate } from '../middleware/auth.middleware';
+
 
 const router = Router();
 
@@ -26,5 +30,11 @@ router.post('/verify-email', verifyEmail);
 router.post('/resend-verification', validate(resendVerificationSchema), resendVerification);
 router.post('/forgot-password', validate(forgotPasswordSchema), forgotPassword);
 router.post('/reset-password', validate(resetPasswordSchema), resetPassword);
+router.post(
+  '/change-password',
+  authenticate,
+  validate(changePasswordSchema),
+  changePassword
+);
 
 export default router;

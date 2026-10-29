@@ -417,6 +417,7 @@ if (teamRegistrations.length > 0) {
             playerProfile: {
               select: {
                 isClubMember: true,
+                gender: true,
               },
             },
           },

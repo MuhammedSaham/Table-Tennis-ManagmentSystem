@@ -283,6 +283,81 @@ export class AuthService {
             throw new AppError('Invalid token', 401);
         }
     }
+    // Change password for authenticated users
+async changePassword(
+    userId: string,
+    currentPassword: string,
+    newPassword: string
+) {
+    if (
+        typeof currentPassword !== 'string' ||
+        typeof newPassword !== 'string' ||
+        !currentPassword ||
+        !newPassword
+    ) {
+        throw new AppError('Current password and new password are required', 400);
+    }
+
+    // Find the currently logged-in user
+    const user = await prisma.user.findUnique({
+        where: { id: userId },
+    });
+
+    if (!user) {
+        throw new AppError('User not found', 404);
+    }
+
+    // Verify current password
+    const isPasswordValid = await bcrypt.compare(
+        currentPassword,
+        user.password
+    );
+
+    if (!isPasswordValid) {
+        throw new AppError('Current password is incorrect', 400);
+    }
+
+    // Check password length
+    if (newPassword.length < 8) {
+        throw new AppError(
+            'New password must contain at least 8 characters',
+            400
+        );
+    }
+
+    // Prevent reusing the same password
+    const isSamePassword = await bcrypt.compare(
+        newPassword,
+        user.password
+    );
+
+    if (isSamePassword) {
+        throw new AppError(
+            'New password must be different from current password',
+            400
+        );
+    }
+
+    // Hash new password
+    const hashedPassword = await bcrypt.hash(
+        newPassword,
+        config.BCRYPT_SALT_ROUNDS
+    );
+
+    // Update password
+    await prisma.user.update({
+        where: { id: userId },
+        data: {
+            password: hashedPassword,
+            resetPasswordToken: null,
+            resetPasswordExpiry: null,
+        },
+    });
+
+    return {
+        message: 'Password changed successfully',
+    };
+}
 
     // Forgot password - generate a single-use reset token and email it to the user.
     async forgotPassword(email: string) {
