@@ -122,10 +122,12 @@ export const updateTournamentSchema = z.object({
       .int('Max players must be a whole number')
       .positive('Max players must be positive')
       .max(1000, 'Max players cannot exceed 1000')
+      .nullable()
       .optional(),
 
     registrationFee: z.number()
   .nonnegative('Registration fee cannot be negative')
+  .nullable()
   .optional(),
 
 requirePaymentProofClub: z.boolean()
