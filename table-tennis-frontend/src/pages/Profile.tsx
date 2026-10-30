@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { Link, useParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import api, { getProfileImageUrl } from "../services/api";
 import toast from "react-hot-toast";
@@ -49,7 +50,9 @@ interface UserProfile {
   lastName: string;
   phone: string | null;
   role: string;
+  createdAt?: string;
   profileImage?: string;
+  permissions?: string[];
   playerProfile?: {
     skillLevel: string;
     clubAffiliation: string;
@@ -65,8 +68,17 @@ interface UserProfile {
   };
 }
 
+const permissionLabel = (permission: string) =>
+  permission
+    .toLowerCase()
+    .split("_")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+
 const Profile: React.FC = () => {
   const { user } = useAuth();
+  const { userId: viewedUserId } = useParams<{ userId: string }>();
+  const isViewingOtherProfile = Boolean(viewedUserId);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
@@ -99,6 +111,9 @@ const Profile: React.FC = () => {
   const [uploading, setUploading] = useState(false);
   const [playerStats, setPlayerStats] = useState<PlayerStats | null>(null);
   const [_statsLoading, setStatsLoading] = useState(false);
+  const [isFavorited, setIsFavorited] = useState(false);
+  const [totalFavorites, setTotalFavorites] = useState(0);
+  const [favoriteLoading, setFavoriteLoading] = useState(false);
 
   const [membershipStatus, setMembershipStatus] = useState<any>(null);
   const [membershipLoading, setMembershipLoading] = useState(false);
@@ -115,15 +130,17 @@ const Profile: React.FC = () => {
 
   useEffect(() => {
     fetchProfile();
-  }, []);
+  }, [viewedUserId]);
 
   useEffect(() => {
-    if (user?.role === "PLAYER") {
-      fetchPlayerStats();
-      fetchDoublesData();
-      fetchMembershipStatus();
+    if (profile?.role === "PLAYER") {
+      fetchPlayerStats(profile.id);
+      if (!isViewingOtherProfile) {
+        fetchDoublesData();
+        fetchMembershipStatus();
+      }
     }
-  }, [user]);
+  }, [profile?.id, profile?.role, isViewingOtherProfile]);
 
   const fetchDoublesData = async () => {
     if (user?.role !== "PLAYER") return;
@@ -220,12 +237,14 @@ const Profile: React.FC = () => {
     }
   };
 
-  const fetchPlayerStats = async () => {
-    if (user?.role !== "PLAYER") return;
-
+  const fetchPlayerStats = async (playerId: string) => {
     setStatsLoading(true);
     try {
-      const response = await api.get("/matches/my-performance");
+      const response = await api.get(
+        isViewingOtherProfile
+          ? `/matches/player-performance/${playerId}`
+          : "/matches/my-performance",
+      );
       setPlayerStats(response.data.data);
     } catch (error) {
       console.error("Failed to fetch player stats", error);
@@ -236,9 +255,16 @@ const Profile: React.FC = () => {
 
   const fetchProfile = async () => {
     try {
-      const response = await api.get("/users/profile");
+      const response = await api.get(
+        isViewingOtherProfile ? `/users/${viewedUserId}` : "/users/profile",
+      );
       const profileData = response.data.data;
       setProfile(profileData);
+      if (isViewingOtherProfile && profileData.role === "PLAYER") {
+        const publicProfile = await api.get(`/users/public/${profileData.id}`);
+        setIsFavorited(Boolean(publicProfile.data.data.isFavorited));
+        setTotalFavorites(Number(publicProfile.data.data.totalFavorites) || 0);
+      }
       setFormData({
         firstName: profileData.firstName || "",
         lastName: profileData.lastName || "",
@@ -460,13 +486,21 @@ const Profile: React.FC = () => {
         <div>
           <div className="mb-4 h-[3px] w-16 bg-[#4AEEFF]" />
           <h1 className="mb-2 text-2xl font-black uppercase tracking-[0.2em] text-[#FFFFFF] sm:text-4xl">
-            My Profile
+            {isViewingOtherProfile ? "User Profile" : "My Profile"}
           </h1>
           <p className="text-xs uppercase tracking-[0.3em] text-[#4AEEFF]/90">
             Manage personal credentials and overview stats
           </p>
         </div>
-        {!editing && (
+        {isViewingOtherProfile && (
+          <Link
+            to="/app/users"
+            className="inline-flex h-11 items-center justify-center rounded-lg border border-white/20 px-6 text-xs font-black uppercase tracking-wider text-[#4AEEFF] transition-all duration-200 hover:bg-white/5"
+          >
+            Back to Users
+          </Link>
+        )}
+        {!editing && !isViewingOtherProfile && (
           <button
             onClick={() => setEditing(true)}
             className="inline-flex h-11 items-center justify-center rounded-lg bg-[#4AEEFF] px-6 text-xs font-black uppercase tracking-wider text-[#061D23] transition-all duration-200 hover:bg-[#FFFFFF]"
@@ -512,6 +546,24 @@ const Profile: React.FC = () => {
                     ? "SUPER ADMIN"
                     : profile.role}
                 </div>
+                {isViewingOtherProfile && profile.role === "PLAYER" && (
+                  <button
+                    type="button"
+                   // onClick={handleToggleFavorite}
+                    disabled={favoriteLoading}
+                    className={`mt-3 flex items-center gap-2 rounded-xl border px-4 py-2 text-xs font-bold transition-all ${
+                      isFavorited
+                        ? "border-[#FF4B72]/70 bg-[#FF4B72]/20 text-[#FF4B72]"
+                        : "border-white/15 bg-white/[0.05] text-white/80 hover:border-[#FF4B72]/50 hover:text-[#FF4B72]"
+                    }`}
+                  >
+                    <span>{isFavorited ? "❤️" : "🤍"}</span>
+                    <span>
+                      {totalFavorites}{" "}
+                      {totalFavorites === 1 ? "Fan" : "Fans"}
+                    </span>
+                  </button>
+                )}
               </div>
             </div>
 
@@ -730,7 +782,9 @@ const Profile: React.FC = () => {
           )}
 
           {/* ─── CLUB MEMBERSHIP ─── */}
-          {profile.role === "PLAYER" && profile.playerProfile && (
+          {!isViewingOtherProfile &&
+            profile.role === "PLAYER" &&
+            profile.playerProfile && (
             <section className="rounded-[16px] border border-white/20 bg-[#061D23]/5 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl">
               <div className="mb-5 flex items-center gap-3">
                 <div className="rounded-lg bg-[#4AEEFF]/20 p-2 text-[#4AEEFF]">
@@ -871,8 +925,39 @@ const Profile: React.FC = () => {
             </section>
           )}
 
+          {isViewingOtherProfile &&
+            (profile.role === "ADMIN" || profile.role === "SUPER_ADMIN") &&
+            profile.permissions && (
+              <section className="rounded-[16px] border border-white/20 bg-[#061D23]/5 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl">
+                <div className="mb-5 flex items-center gap-3">
+                  <div className="rounded-lg bg-[#4AEEFF]/20 p-2 text-[#4AEEFF]">
+                    <IdentificationIcon className="h-5 w-5" />
+                  </div>
+                  <h2 className="text-lg font-bold uppercase tracking-wider text-white">
+                    Permissions
+                  </h2>
+                </div>
+                {profile.permissions.length === 0 ? (
+                  <p className="text-sm text-white/60">
+                    No permissions assigned yet.
+                  </p>
+                ) : (
+                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                    {profile.permissions.map((permission) => (
+                      <div
+                        key={permission}
+                        className="rounded-[12px] border border-[#4AEEFF]/20 bg-[#4AEEFF]/10 px-4 py-3 text-sm font-bold text-[#B8F7FF]"
+                      >
+                        {permissionLabel(permission)}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </section>
+            )}
+
           {/* ─── PERFORMANCE PERFORMANCE GRAPH MATRIX ─── */}
-          {user?.role === "PLAYER" && playerStats && (
+          {profile.role === "PLAYER" && playerStats && (
             <section className="rounded-[16px] border border-white/20 bg-[#061D23]/5 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl">
               <div className="mb-5 flex items-center gap-3">
                 <div className="rounded-lg bg-[#4AEEFF]/20 p-2 text-[#4AEEFF]">
@@ -1038,7 +1123,7 @@ const Profile: React.FC = () => {
           )}
 
           {/* Doubles Teams & Partnerships Section (International Standard) */}
-          {profile.role === "PLAYER" && (
+          {!isViewingOtherProfile && profile.role === "PLAYER" && (
             <section className="rounded-[16px] border border-white/20 bg-[#061D23]/5 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-white/10">
                 <div className="flex items-center gap-3">
@@ -1447,7 +1532,7 @@ const Profile: React.FC = () => {
             </p>
           </div>
 
-          {user?.role === "PLAYER" && (
+          {!isViewingOtherProfile && user?.role === "PLAYER" && (
             <div className="grid gap-4 border-t border-white/10 pt-5 sm:grid-cols-2">
               <div>
                 <label className="block text-xs font-black uppercase tracking-widest text-[#4AEEFF] mb-2">
@@ -1537,7 +1622,7 @@ const Profile: React.FC = () => {
             <UserIcon className="h-4 w-4 text-[#4AEEFF]" />
             <span>Logged in as:</span>
             <span className="rounded bg-[#4AEEFF]/20 px-2 py-0.5 text-xs font-bold uppercase tracking-wider text-[#4AEEFF]">
-              {user?.role || "GUEST"}
+              {profile.role || "GUEST"}
             </span>
           </div>
           {user?.email && (

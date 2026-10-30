@@ -125,12 +125,7 @@ const Users: React.FC = () => {
       ? displayedUsers.filter((userItem) => userItem.gender === clubGenderTab)
       : displayedUsers;
 
-  const getUserDetailsPath = (userItem: User) =>
-    userItem.role === "ADMIN" ||
-    userItem.role === "SUPER_ADMIN" ||
-    userItem.role === "REFEREE"
-      ? `/app/users/${userItem.id}`
-      : `/profile/${userItem.id}`;
+  const getUserDetailsPath = (userItem: User) => `/app/users/${userItem.id}`;
 
   const confirmDeleteUser = async () => {
     if (!userToDelete) return;
