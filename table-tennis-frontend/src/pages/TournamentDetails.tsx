@@ -746,6 +746,34 @@ const TournamentDetails: React.FC = () => {
     }
   };
 
+  const getWinnerProfileImage = (participant: any) =>
+    (() => {
+      const profileImage =
+        participant?.profileImage ||
+        participant?.members?.[0]?.player?.profileImage ||
+        "";
+      const imageUrl = getProfileImageUrl(profileImage);
+
+      if (import.meta.env.DEV) {
+        console.debug("[Champions] winner image", {
+          playerId:
+            participant?.id || participant?.members?.[0]?.player?.id || null,
+          receivedPath: profileImage || null,
+          imageUrl: imageUrl || null,
+        });
+      }
+
+      return imageUrl;
+    })();
+
+  const getWinnerInitials = (participant: any) => {
+    const firstMember = participant?.members?.[0]?.player;
+    const firstName = participant?.firstName || firstMember?.firstName || "";
+    const lastName = participant?.lastName || firstMember?.lastName || "";
+    const initials = `${firstName[0] || ""}${lastName[0] || ""}`.toUpperCase();
+    return initials || "?";
+  };
+
   const fetchWinners = async (categoryIdToFetch?: string) => {
     const targetCategoryId =
       categoryIdToFetch || activeCategoryId || tournament?.categories?.[0]?.id;
@@ -772,7 +800,105 @@ const TournamentDetails: React.FC = () => {
       // Ignore responses from an older category request.
       if (requestId !== winnersRequestId.current) return;
 
-      const allMatches = matchesResponse.data.data || [];
+      let allMatches = matchesResponse.data.data || [];
+
+      try {
+        const playersResponse = await api.get("/users/public/players");
+        const profileImages = new Map<string, string>();
+
+        for (const player of playersResponse.data.data || []) {
+          if (player.id && player.profileImage) {
+            profileImages.set(player.id, player.profileImage);
+          }
+
+          if (import.meta.env.DEV) {
+            console.debug("[Champions] public player profile", {
+              playerId: player.id,
+              receivedPath: player.profileImage || null,
+              matched: Boolean(player.id && player.profileImage),
+            });
+          }
+        }
+
+        allMatches = allMatches.map((match: any) => ({
+          ...match,
+          player1: match.player1
+            ? {
+                ...match.player1,
+                profileImage:
+                  match.player1.profileImage ||
+                  profileImages.get(match.player1.id),
+              }
+            : match.player1,
+          player2: match.player2
+            ? {
+                ...match.player2,
+                profileImage:
+                  match.player2.profileImage ||
+                  profileImages.get(match.player2.id),
+              }
+            : match.player2,
+          team1: match.team1
+            ? {
+                ...match.team1,
+                members: (match.team1.members || []).map((member: any) => ({
+                  ...member,
+                  player: member.player
+                    ? {
+                        ...member.player,
+                        profileImage:
+                          member.player.profileImage ||
+                          profileImages.get(member.player.id),
+                      }
+                    : member.player,
+                })),
+              }
+            : match.team1,
+          team2: match.team2
+            ? {
+                ...match.team2,
+                members: (match.team2.members || []).map((member: any) => ({
+                  ...member,
+                  player: member.player
+                    ? {
+                        ...member.player,
+                        profileImage:
+                          member.player.profileImage ||
+                          profileImages.get(member.player.id),
+                      }
+                    : member.player,
+                })),
+              }
+            : match.team2,
+        }));
+
+        if (import.meta.env.DEV) {
+          console.debug(
+            "[Champions] enriched match participants",
+            allMatches
+              .filter((match: any) =>
+                ["Final", "Finals", "Semi-Finals", "Semifinals"].includes(
+                  match.round,
+                ),
+              )
+              .map((match: any) => ({
+                round: match.round,
+                players: [match.player1, match.player2].filter(Boolean).map(
+                  (player: any) => ({
+                    playerId: player.id,
+                    receivedPath: player.profileImage || null,
+                    matched: Boolean(player.profileImage),
+                  }),
+                ),
+              })),
+          );
+        }
+      } catch (profileError) {
+        console.warn(
+          "Unable to enrich tournament winners with profile images",
+          profileError,
+        );
+      }
 
       const isSemiFinal = (round: string) => {
         const norm = (round || "").toLowerCase().replace(/[^a-z]/g, "");
@@ -2124,7 +2250,31 @@ const TournamentDetails: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
               {/* Champion */}
               <div className="rounded-2xl border border-yellow-400/40 bg-yellow-400/10 p-6 backdrop-blur-md">
-                <div className="text-5xl mb-2">🥇</div>
+                {winners.first ? (
+                  <div className="relative mx-auto mb-2 h-20 w-20">
+                    <div className="flex h-full w-full items-center justify-center rounded-full border-2 border-yellow-300 bg-[#061D23] text-xl font-black text-white">
+                      {getWinnerInitials(winners.first)}
+                    </div>
+                    {getWinnerProfileImage(winners.first) && (
+                      <img
+                        src={getWinnerProfileImage(winners.first)}
+                        alt="Champion profile"
+                        className="absolute inset-0 h-full w-full rounded-full border-2 border-yellow-300 object-cover"
+                        onError={(event) => {
+                          console.warn("[Champions] failed to load image", {
+                            playerId: winners.first?.id || null,
+                            imageUrl: event.currentTarget.src,
+                          });
+                          event.currentTarget.style.display = "none";
+                        }}
+                      />
+                    )}
+                  </div>
+                ) : (
+                  <div className="mb-2 flex h-20 items-center justify-center text-5xl">
+                    🥇
+                  </div>
+                )}
 
                 <h3 className="font-black text-xs uppercase tracking-wider text-yellow-300">
                   Champion
@@ -2141,7 +2291,31 @@ const TournamentDetails: React.FC = () => {
 
               {/* Runner-up */}
               <div className="rounded-2xl border border-slate-300/40 bg-slate-300/10 p-6 backdrop-blur-md">
-                <div className="text-5xl mb-2">🥈</div>
+                {winners.second ? (
+                  <div className="relative mx-auto mb-2 h-20 w-20">
+                    <div className="flex h-full w-full items-center justify-center rounded-full border-2 border-slate-300 bg-[#061D23] text-xl font-black text-white">
+                      {getWinnerInitials(winners.second)}
+                    </div>
+                    {getWinnerProfileImage(winners.second) && (
+                      <img
+                        src={getWinnerProfileImage(winners.second)}
+                        alt="Runner-up profile"
+                        className="absolute inset-0 h-full w-full rounded-full border-2 border-slate-300 object-cover"
+                        onError={(event) => {
+                          console.warn("[Champions] failed to load image", {
+                            playerId: winners.second?.id || null,
+                            imageUrl: event.currentTarget.src,
+                          });
+                          event.currentTarget.style.display = "none";
+                        }}
+                      />
+                    )}
+                  </div>
+                ) : (
+                  <div className="mb-2 flex h-20 items-center justify-center text-5xl">
+                    🥈
+                  </div>
+                )}
 
                 <h3 className="font-black text-xs uppercase tracking-wider text-slate-300">
                   Runner-up
@@ -2158,7 +2332,46 @@ const TournamentDetails: React.FC = () => {
 
               {/* Joint Third Place */}
               <div className="rounded-2xl border border-amber-600/40 bg-amber-600/10 p-6 backdrop-blur-md">
-                <div className="text-5xl mb-2">🥉</div>
+                {winners.jointThird.length === 2 ? (
+                  <div className="mb-2 flex justify-center gap-2">
+                    {winners.jointThird.map(
+                      (participant: any, index: number) => {
+                        const profileImage = getWinnerProfileImage(participant);
+                        return (
+                          <div
+                            key={participant.id || index}
+                            className="relative h-16 w-16"
+                          >
+                            <div className="flex h-full w-full items-center justify-center rounded-full border-2 border-amber-400 bg-[#061D23] text-sm font-black text-white">
+                              {getWinnerInitials(participant)}
+                            </div>
+                            {profileImage && (
+                              <img
+                                src={profileImage}
+                                alt="Third place profile"
+                                className="absolute inset-0 h-full w-full rounded-full border-2 border-amber-400 object-cover"
+                                onError={(event) => {
+                                  console.warn(
+                                    "[Champions] failed to load image",
+                                    {
+                                      playerId: participant.id || null,
+                                      imageUrl: event.currentTarget.src,
+                                    },
+                                  );
+                                  event.currentTarget.style.display = "none";
+                                }}
+                              />
+                            )}
+                          </div>
+                        );
+                      },
+                    )}
+                  </div>
+                ) : (
+                  <div className="mb-2 flex h-16 items-center justify-center text-5xl">
+                    🥉
+                  </div>
+                )}
 
                 <h3 className="font-black text-xs uppercase tracking-wider text-amber-400">
                   Joint 3rd Place
@@ -2172,7 +2385,6 @@ const TournamentDetails: React.FC = () => {
                           key={participant.id || index}
                           className="text-lg font-bold text-white"
                         >
-                          🥉{" "}
                           {participant.name ||
                             `${participant.firstName || ""} ${
                               participant.lastName || ""

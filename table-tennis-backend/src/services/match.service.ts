@@ -106,8 +106,22 @@ export class MatchService {
         status: 'COMPLETED',
       },
       include: {
-        player1: { select: { id: true, firstName: true, lastName: true } },
-        player2: { select: { id: true, firstName: true, lastName: true } },
+        player1: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            profileImage: true,
+          },
+        },
+        player2: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            profileImage: true,
+          },
+        },
         tournament: { select: { id: true, name: true } },
         category: { select: { name: true } },
         games: true,
@@ -225,15 +239,36 @@ export class MatchService {
     const matches = await prisma.match.findMany({
       where: whereClause,
       include: {
-        player1: { select: { id: true, firstName: true, lastName: true } },
-        player2: { select: { id: true, firstName: true, lastName: true } },
+        player1: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            profileImage: true,
+          },
+        },
+        player2: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            profileImage: true,
+          },
+        },
         team1: {
           select: {
             id: true,
             name: true,
             members: {
               include: {
-                player: { select: { id: true, firstName: true, lastName: true } },
+                player: {
+                  select: {
+                    id: true,
+                    firstName: true,
+                    lastName: true,
+                    profileImage: true,
+                  },
+                },
               },
             },
           },
@@ -244,7 +279,14 @@ export class MatchService {
             name: true,
             members: {
               include: {
-                player: { select: { id: true, firstName: true, lastName: true } },
+                player: {
+                  select: {
+                    id: true,
+                    firstName: true,
+                    lastName: true,
+                    profileImage: true,
+                  },
+                },
               },
             },
           },
