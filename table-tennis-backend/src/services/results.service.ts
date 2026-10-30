@@ -296,10 +296,10 @@ async getCategoryWinners(tournamentId: string) {
             },
             include: {
               player1: {
-                select: { id: true, firstName: true, lastName: true },
+                select: { id: true, firstName: true, lastName: true,profileImage: true, },
               },
               player2: {
-                select: { id: true, firstName: true, lastName: true },
+                select: { id: true, firstName: true, lastName: true,profileImage: true, },
               },
               team1: {
                 include: {
@@ -310,6 +310,7 @@ async getCategoryWinners(tournamentId: string) {
                           id: true,
                           firstName: true,
                           lastName: true,
+                          profileImage: true,
                         },
                       },
                     },
@@ -325,6 +326,7 @@ async getCategoryWinners(tournamentId: string) {
                           id: true,
                           firstName: true,
                           lastName: true,
+                          profileImage: true,
                         },
                       },
                     },
