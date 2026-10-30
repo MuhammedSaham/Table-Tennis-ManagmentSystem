@@ -88,6 +88,26 @@ interface PaymentProofInfo {
     registrationId: string | null;
     playerId: string | null;
   } | null;
+
+  categoryPayments: Array<{
+    verificationId: string;
+    registrationId: string;
+    categoryId: string;
+    categoryName: string;
+    categoryType: string;
+
+    registrationStatus: string;
+    paymentStatus: "PENDING" | "APPROVED" | "REJECTED";
+
+    rejectionReason: string | null;
+    verifiedAt: string | null;
+
+    proofId: string | null;
+    proofUrl: string | null;
+    submittedAt: string | null;
+
+    canResubmit: boolean;
+  }>;
 }
 
 interface Tournament {
@@ -124,8 +144,10 @@ const TournamentDetails: React.FC = () => {
   const [paymentProofFile, setPaymentProofFile] = useState<File | null>(null);
   const [uploadingProof, setUploadingProof] = useState(false);
 
-  const [showDeleteProofConfirm, setShowDeleteProofConfirm] = useState(false);
-  const [deletingProof, setDeletingProof] = useState(false);
+  const [resubmitRegistrationId, setResubmitRegistrationId] = useState<
+    string | null
+  >(null);
+
   const [activeCategoryId, setActiveCategoryId] = useState<string>("");
   const [registering, setRegistering] = useState(false);
   const [generating, setGenerating] = useState<string | null>(null);
@@ -337,12 +359,33 @@ const TournamentDetails: React.FC = () => {
       return;
     }
 
+    // Only rejected categories can receive a replacement receipt.
+    if (resubmitRegistrationId) {
+      const rejectedCategory = paymentProofInfo?.categoryPayments?.find(
+        (category) =>
+          category.registrationId === resubmitRegistrationId &&
+          category.paymentStatus === "REJECTED" &&
+          category.canResubmit,
+      );
+
+      if (!rejectedCategory) {
+        toast.error("This category is not eligible for resubmission");
+        return;
+      }
+    } else if (paymentProofInfo?.paymentProof) {
+      toast.error("An initial receipt has already been submitted");
+      return;
+    }
+
     const formData = new FormData();
 
-    // IMPORTANT:
-    // Backend uses uploadPaymentProof.single("proof")
-    // so this name must be exactly "proof"
+    // Must match the backend upload middleware field name.
     formData.append("proof", paymentProofFile);
+
+    // Send registrationId only when replacing a rejected category receipt.
+    if (resubmitRegistrationId) {
+      formData.append("registrationId", resubmitRegistrationId);
+    }
 
     setUploadingProof(true);
 
@@ -353,14 +396,16 @@ const TournamentDetails: React.FC = () => {
         },
       });
 
-      toast.success("Payment proof submitted successfully");
+      toast.success(
+        resubmitRegistrationId
+          ? "Replacement receipt submitted for the selected category"
+          : "Payment receipt submitted for all registered categories",
+      );
 
       setPaymentProofFile(null);
+      setResubmitRegistrationId(null);
 
-      // Refresh proof information so UI becomes PENDING
       await fetchMyPaymentProof();
-
-      // Refresh registrations too
       await fetchTournamentDetails();
     } catch (error: any) {
       console.error("Payment proof upload failed:", error);
@@ -370,41 +415,6 @@ const TournamentDetails: React.FC = () => {
       );
     } finally {
       setUploadingProof(false);
-    }
-  };
-  const handleDeletePaymentProof = async () => {
-    const proof = paymentProofInfo?.paymentProof;
-
-    if (!proof) {
-      toast.error("Payment proof not found");
-      return;
-    }
-
-    if (proof.status === "APPROVED") {
-      toast.error("Approved payment proofs cannot be deleted");
-      return;
-    }
-
-    setDeletingProof(true);
-
-    try {
-      await api.delete(`/payment-proofs/${proof.id}`);
-
-      toast.success("Payment proof deleted successfully");
-
-      setPaymentProofFile(null);
-      setShowDeleteProofConfirm(false);
-
-      await fetchMyPaymentProof();
-      await fetchTournamentDetails();
-    } catch (error: any) {
-      console.error("Payment proof deletion failed:", error);
-
-      toast.error(
-        error.response?.data?.message || "Failed to delete payment proof",
-      );
-    } finally {
-      setDeletingProof(false);
     }
   };
 
@@ -2637,164 +2647,134 @@ const TournamentDetails: React.FC = () => {
               </div>
             )}
 
-            {/* Pending */}
-            {paymentProofInfo.paymentProof?.status === "PENDING" && (
-              <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4">
-                <div className="flex items-center gap-2">
-                  <span className="h-2.5 w-2.5 rounded-full bg-amber-400 animate-pulse" />
-
-                  <p className="text-sm font-black uppercase tracking-wider text-amber-300">
-                    Pending Verification
-                  </p>
-                </div>
-
-                <p className="text-xs text-white/60 mt-2">
-                  Your payment proof has been submitted and is waiting for
-                  administrator verification.
-                </p>
-
-                <p className="text-xs text-white/50 mt-2">
-                  Please check your uploaded proof. If you uploaded the wrong
-                  file, you can delete it and submit a new one before it is
-                  approved.
-                </p>
-
-                <div className="flex flex-wrap gap-3 mt-4">
-                  {/* View Proof */}
-                  <a
-                    href={getProfileImageUrl(
-                      paymentProofInfo.paymentProof.proofUrl,
-                    )}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="rounded-xl border border-[#4AEEFF]/40 bg-[#4AEEFF]/15 px-4 py-2.5 text-xs font-black uppercase tracking-wider text-[#4AEEFF] transition-all hover:bg-[#4AEEFF] hover:text-[#061D23]"
-                  >
-                    View Proof
-                  </a>
-
-                  {/* Delete Proof */}
-                  <button
-                    type="button"
-                    onClick={() => setShowDeleteProofConfirm(true)}
-                    className="rounded-xl border border-red-500/40 bg-red-500/15 px-4 py-2.5 text-xs font-black uppercase tracking-wider text-red-300 transition-all hover:bg-red-500 hover:text-white"
-                  >
-                    Delete Proof
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* Approved */}
-            {paymentProofInfo.paymentProof?.status === "APPROVED" && (
-              <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4">
-                <p className="text-sm font-black uppercase tracking-wider text-emerald-300">
-                  ✓ Payment Verified
-                </p>
-
-                <p className="text-xs text-white/60 mt-2">
-                  Your payment proof has been verified successfully. For doubles
-                  or mixed doubles, the team registration will be approved after
-                  both players' payment proofs are verified.
-                </p>
-
-                <div className="flex flex-wrap gap-3 mt-4">
-                  <a
-                    href={getProfileImageUrl(
-                      paymentProofInfo.paymentProof.proofUrl,
-                    )}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="rounded-xl border border-[#4AEEFF]/40 bg-[#4AEEFF]/15 px-4 py-2.5 text-xs font-black uppercase tracking-wider text-[#4AEEFF] transition-all hover:bg-[#4AEEFF] hover:text-[#061D23]"
-                  >
-                    View Proof
-                  </a>
-                </div>
-              </div>
-            )}
-
-            {/* Rejected */}
-            {paymentProofInfo.paymentProof?.status === "REJECTED" && (
+            {/* Category-wise Payment Verification */}
+            {paymentProofInfo.paymentProof && (
               <div className="space-y-4">
-                <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-4">
-                  <p className="text-sm font-black uppercase tracking-wider text-red-300">
-                    Payment Proof Rejected
+                <div className="rounded-xl border border-[#4AEEFF]/30 bg-[#4AEEFF]/10 p-4">
+                  <p className="text-sm font-bold text-[#4AEEFF]">
+                    Payment Receipt Submitted
                   </p>
+                  <p className="mt-1 text-xs text-white/60">
+                    Each registered category is verified separately.
+                  </p>
+                </div>
 
-                  {paymentProofInfo.paymentProof.rejectionReason && (
-                    <div className="mt-3">
-                      <p className="text-[10px] font-black uppercase tracking-wider text-white/40">
-                        Reason
-                      </p>
+                {(paymentProofInfo.categoryPayments ?? []).map((category) => (
+                  <div
+                    key={category.registrationId}
+                    className="rounded-xl border border-white/10 bg-black/20 p-4"
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-bold text-white">
+                          {category.categoryName}
+                        </p>
+                        <p className="mt-1 text-xs text-white/50">
+                          {category.categoryType?.replace(/_/g, " ")}
+                        </p>
+                      </div>
 
-                      <p className="text-sm text-red-200 mt-1">
-                        {paymentProofInfo.paymentProof.rejectionReason}
-                      </p>
+                      <span
+                        className={`rounded-lg border px-3 py-1.5 text-xs font-black ${
+                          category.paymentStatus === "APPROVED"
+                            ? "border-emerald-500/40 bg-emerald-500/15 text-emerald-300"
+                            : category.paymentStatus === "REJECTED"
+                              ? "border-red-500/40 bg-red-500/15 text-red-300"
+                              : "border-amber-500/40 bg-amber-500/15 text-amber-300"
+                        }`}
+                      >
+                        {category.paymentStatus}
+                      </span>
                     </div>
-                  )}
-                  <div className="flex flex-wrap gap-3">
-                    {/* View Rejected Proof */}
-                    <a
-                      href={getProfileImageUrl(
-                        paymentProofInfo.paymentProof.proofUrl,
+
+                    {category.paymentStatus === "REJECTED" &&
+                      category.rejectionReason && (
+                        <p className="mt-3 text-xs text-red-300">
+                          Rejection reason: {category.rejectionReason}
+                        </p>
                       )}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="rounded-xl border border-[#4AEEFF]/40 bg-[#4AEEFF]/15 px-4 py-2.5 text-xs font-black uppercase tracking-wider text-[#4AEEFF] transition-all hover:bg-[#4AEEFF] hover:text-[#061D23]"
-                    >
-                      View Proof
-                    </a>
 
-                    {/* Delete Rejected Proof */}
-                    <button
-                      type="button"
-                      onClick={() => setShowDeleteProofConfirm(true)}
-                      className="rounded-xl border border-red-500/40 bg-red-500/15 px-4 py-2.5 text-xs font-black uppercase tracking-wider text-red-300 transition-all hover:bg-red-500 hover:text-white"
-                    >
-                      Delete Proof
-                    </button>
+                    <div className="mt-3 flex flex-wrap gap-3">
+                      {category.proofUrl && (
+                        <a
+                          href={getProfileImageUrl(category.proofUrl)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="rounded-lg border border-[#4AEEFF]/40 bg-[#4AEEFF]/10 px-4 py-2 text-xs font-bold text-[#4AEEFF]"
+                        >
+                          View Receipt
+                        </a>
+                      )}
+
+                      {category.paymentStatus === "REJECTED" &&
+                        category.canResubmit && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setResubmitRegistrationId(
+                                category.registrationId,
+                              );
+                              setPaymentProofFile(null);
+                            }}
+                            className="rounded-lg bg-[#4AEEFF] px-4 py-2 text-xs font-black text-[#061D23]"
+                          >
+                            Resubmit Receipt
+                          </button>
+                        )}
+                    </div>
                   </div>
+                ))}
 
-                  <p className="text-xs text-white/60 mt-3">
-                    Please upload a new payment proof after correcting the
-                    issue.
-                  </p>
-                </div>
+                {resubmitRegistrationId && (
+                  <div className="rounded-xl border border-[#4AEEFF]/30 bg-[#4AEEFF]/10 p-4">
+                    <p className="mb-3 text-sm font-bold text-white">
+                      Replacement receipt for{" "}
+                      {
+                        paymentProofInfo.categoryPayments.find(
+                          (category) =>
+                            category.registrationId === resubmitRegistrationId,
+                        )?.categoryName
+                      }
+                    </p>
 
-                <div>
-                  <input
-                    type="file"
-                    accept=".jpg,.jpeg,.png,.pdf"
-                    onChange={handlePaymentProofFileChange}
-                    className="block w-full text-xs text-white/70
-                file:mr-4 file:rounded-lg file:border-0
-                file:bg-[#4AEEFF] file:px-4 file:py-2.5
-                file:text-xs file:font-black file:uppercase
-                file:text-[#061D23] hover:file:bg-white
-                file:cursor-pointer"
-                  />
+                    <input
+                      key={resubmitRegistrationId}
+                      type="file"
+                      accept=".jpg,.jpeg,.png,.pdf"
+                      onChange={handlePaymentProofFileChange}
+                      className="block w-full text-xs text-white/70"
+                    />
 
-                  <p className="text-[10px] text-white/40 mt-2">
-                    Accepted: JPG, JPEG, PNG or PDF • Maximum size: 5MB
-                  </p>
-                </div>
+                    {paymentProofFile && (
+                      <p className="mt-2 text-xs text-white/70">
+                        Selected: {paymentProofFile.name}
+                      </p>
+                    )}
 
-                {paymentProofFile && (
-                  <p className="text-xs text-white/70">
-                    Selected:{" "}
-                    <span className="font-bold text-white">
-                      {paymentProofFile.name}
-                    </span>
-                  </p>
+                    <div className="mt-4 flex flex-wrap gap-3">
+                      <button
+                        type="button"
+                        onClick={handleUploadPaymentProof}
+                        disabled={!paymentProofFile || uploadingProof}
+                        className="rounded-lg bg-[#4AEEFF] px-4 py-2 text-xs font-black text-[#061D23] disabled:opacity-40"
+                      >
+                        {uploadingProof ? "Uploading..." : "Submit Replacement"}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setResubmitRegistrationId(null);
+                          setPaymentProofFile(null);
+                        }}
+                        disabled={uploadingProof}
+                        className="rounded-lg border border-white/20 px-4 py-2 text-xs font-bold text-white"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
                 )}
-
-                <button
-                  type="button"
-                  onClick={handleUploadPaymentProof}
-                  disabled={!paymentProofFile || uploadingProof}
-                  className="rounded-xl bg-[#4AEEFF] px-5 py-3 text-xs font-black uppercase tracking-wider text-[#061D23] transition-all hover:bg-white disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  {uploadingProof ? "Uploading..." : "Upload New Payment Proof"}
-                </button>
               </div>
             )}
           </div>
@@ -3376,50 +3356,6 @@ const TournamentDetails: React.FC = () => {
           </div>,
           document.body,
         )}
-      {/* Delete Payment Proof Confirmation Modal */}
-      {showDeleteProofConfirm && paymentProofInfo?.paymentProof && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/75 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md rounded-2xl border border-red-500/30 bg-[#061D23] p-6 shadow-2xl">
-            {/* Icon */}
-            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full border border-red-500/30 bg-red-500/15">
-              <span className="text-2xl">⚠️</span>
-            </div>
-
-            {/* Title */}
-            <h3 className="mt-4 text-center text-lg font-black uppercase tracking-wider text-white">
-              Delete Payment Proof?
-            </h3>
-
-            {/* Message */}
-            <p className="mt-3 text-center text-sm leading-relaxed text-white/60">
-              Are you sure you want to delete this payment proof? You will need
-              to upload a new proof after deleting it.
-            </p>
-
-            <div className="mt-6 flex gap-3">
-              {/* Cancel */}
-              <button
-                type="button"
-                onClick={() => setShowDeleteProofConfirm(false)}
-                disabled={deletingProof}
-                className="flex-1 rounded-xl border border-white/20 bg-white/5 px-4 py-3 text-xs font-black uppercase tracking-wider text-white transition-all hover:bg-white/10 disabled:opacity-50"
-              >
-                Cancel
-              </button>
-
-              {/* Confirm Delete */}
-              <button
-                type="button"
-                onClick={handleDeletePaymentProof}
-                disabled={deletingProof}
-                className="flex-1 rounded-xl border border-red-500/40 bg-red-500/20 px-4 py-3 text-xs font-black uppercase tracking-wider text-red-300 transition-all hover:bg-red-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {deletingProof ? "Deleting..." : "Delete Proof"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </>,
   );
 };

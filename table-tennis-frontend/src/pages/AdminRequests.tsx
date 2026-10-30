@@ -36,15 +36,51 @@ interface PendingAdminUser {
 }
 
 const AVAILABLE_ADMIN_PERMISSIONS = [
-  { id: "MANAGE_USERS", name: "Manage Users", desc: "View, update user accounts, roles & permissions" },
-  { id: "MANAGE_PLAYERS", name: "Manage Players", desc: "Create, edit, rank, and manage player profiles" },
-  { id: "MANAGE_REFEREES", name: "Manage Referees", desc: "Manage referee assignments and information" },
-  { id: "MANAGE_TOURNAMENTS", name: "Manage Tournaments", desc: "Create, edit, and manage tournaments" },
-  { id: "MANAGE_REGISTRATIONS", name: "Manage Registrations", desc: "Approve, reject, or modify tournament registrations" },
-  { id: "MANAGE_MATCHES", name: "Manage Matches", desc: "Schedule matches, assign referees, and update scores" },
-  { id: "MANAGE_RESULTS", name: "Manage Results", desc: "Record, verify, and publish tournament results" },
-  { id: "MANAGE_RANKINGS", name: "Manage Rankings", desc: "Update official player rankings and points" },
-  { id: "MANAGE_CLUB_MEMBERSHIPS", name: "Manage Club Memberships", desc: "Grant or revoke player club memberships" },
+  {
+    id: "MANAGE_USERS",
+    name: "Manage Users",
+    desc: "View, update user accounts, roles & permissions",
+  },
+  {
+    id: "MANAGE_PLAYERS",
+    name: "Manage Players",
+    desc: "Create, edit, rank, and manage player profiles",
+  },
+  {
+    id: "MANAGE_REFEREES",
+    name: "Manage Referees",
+    desc: "Manage referee assignments and information",
+  },
+  {
+    id: "MANAGE_TOURNAMENTS",
+    name: "Manage Tournaments",
+    desc: "Create, edit, and manage tournaments",
+  },
+  {
+    id: "MANAGE_REGISTRATIONS",
+    name: "Manage Registrations",
+    desc: "Approve, reject, or modify tournament registrations",
+  },
+  {
+    id: "MANAGE_MATCHES",
+    name: "Manage Matches",
+    desc: "Schedule matches, assign referees, and update scores",
+  },
+  {
+    id: "MANAGE_RESULTS",
+    name: "Manage Results",
+    desc: "Record, verify, and publish tournament results",
+  },
+  {
+    id: "MANAGE_RANKINGS",
+    name: "Manage Rankings",
+    desc: "Update official player rankings and points",
+  },
+  {
+    id: "MANAGE_CLUB_MEMBERSHIPS",
+    name: "Manage Club Memberships",
+    desc: "Grant or revoke player club memberships",
+  },
 ];
 interface PaymentProofRequest {
   id: string;
@@ -71,12 +107,18 @@ interface PaymentProofRequest {
     email: string;
     playerProfile?: {
       isClubMember: boolean;
+      gender: "MALE" | "FEMALE" | null;
     } | null;
   };
 
   registrations: Array<{
     id: string;
     status: string;
+
+    verificationId: string;
+    verificationStatus: "PENDING" | "APPROVED" | "REJECTED";
+    verificationPlayerId: string;
+
     category: {
       id: string;
       name: string;
@@ -88,11 +130,36 @@ interface PaymentProofRequest {
 const AdminRequests: React.FC = () => {
   const { user, hasPermission } = useAuth();
 
+  const [activeTab, setActiveTab] = useState<
+    "ADMIN" | "MEMBERSHIP" | "PAYMENT"
+  >(
+    user?.role === "SUPER_ADMIN" || user?.isSuperAdmin
+      ? "ADMIN"
+      : hasPermission("MANAGE_CLUB_MEMBERSHIPS")
+        ? "MEMBERSHIP"
+        : "PAYMENT",
+  );
+
   const [paymentProofRequests, setPaymentProofRequests] = useState<
     PaymentProofRequest[]
   >([]);
 
   const [paymentProofLoading, setPaymentProofLoading] = useState(true);
+
+  const [paymentMembershipFilter, setPaymentMembershipFilter] = useState<
+    "ALL" | "CLUB" | "GUEST"
+  >("ALL");
+
+  const [paymentGenderFilter, setPaymentGenderFilter] = useState<
+    "ALL" | "MALE" | "FEMALE"
+  >("ALL");
+
+  const [paymentTournamentFilter, setPaymentTournamentFilter] =
+    useState<string>("ALL");
+
+  const [paymentEventFilter, setPaymentEventFilter] = useState<
+    "ALL" | "SINGLES" | "DOUBLES" | "MIXED_DOUBLES"
+  >("ALL");
 
   const [paymentProcessingId, setPaymentProcessingId] = useState<string | null>(
     null,
@@ -103,6 +170,9 @@ const AdminRequests: React.FC = () => {
   const [selectedPaymentProofId, setSelectedPaymentProofId] = useState<
     string | null
   >(null);
+
+  const [selectedPaymentVerificationId, setSelectedPaymentVerificationId] =
+    useState<string | null>(null);
 
   const [paymentRejectionReason, setPaymentRejectionReason] = useState("");
 
@@ -133,12 +203,18 @@ const AdminRequests: React.FC = () => {
 
   const [adminRequests, setAdminRequests] = useState<PendingAdminUser[]>([]);
   const [adminRequestsLoading, setAdminRequestsLoading] = useState(false);
-  const [adminProcessingId, setAdminProcessingId] = useState<string | null>(null);
+  const [adminProcessingId, setAdminProcessingId] = useState<string | null>(
+    null,
+  );
   const [showAdminRejectModal, setShowAdminRejectModal] = useState(false);
   const [selectedAdminId, setSelectedAdminId] = useState<string | null>(null);
   const [adminRejectionReason, setAdminRejectionReason] = useState("");
-  const [adminToApprove, setAdminToApprove] = useState<PendingAdminUser | null>(null);
-  const [selectedPermissionsToGrant, setSelectedPermissionsToGrant] = useState<string[]>([]);
+  const [adminToApprove, setAdminToApprove] = useState<PendingAdminUser | null>(
+    null,
+  );
+  const [selectedPermissionsToGrant, setSelectedPermissionsToGrant] = useState<
+    string[]
+  >([]);
 
   useEffect(() => {
     if (isSuperAdmin || hasPermission("MANAGE_CLUB_MEMBERSHIPS")) {
@@ -178,7 +254,9 @@ const AdminRequests: React.FC = () => {
 
   const togglePermissionToGrant = (permId: string) => {
     setSelectedPermissionsToGrant((prev) =>
-      prev.includes(permId) ? prev.filter((p) => p !== permId) : [...prev, permId]
+      prev.includes(permId)
+        ? prev.filter((p) => p !== permId)
+        : [...prev, permId],
     );
   };
 
@@ -198,13 +276,15 @@ const AdminRequests: React.FC = () => {
         permissions: selectedPermissionsToGrant,
       });
       toast.success(
-        `Admin request approved! ${selectedPermissionsToGrant.length} permission(s) granted.`
+        `Admin request approved! ${selectedPermissionsToGrant.length} permission(s) granted.`,
       );
       setAdminToApprove(null);
       setSelectedPermissionsToGrant([]);
       await fetchAdminRequests();
     } catch (error: any) {
-      toast.error(error.response?.data?.message || "Failed to approve admin request");
+      toast.error(
+        error.response?.data?.message || "Failed to approve admin request",
+      );
     } finally {
       setAdminProcessingId(null);
     }
@@ -223,7 +303,9 @@ const AdminRequests: React.FC = () => {
       setAdminRejectionReason("");
       await fetchAdminRequests();
     } catch (error: any) {
-      toast.error(error.response?.data?.message || "Failed to reject admin request");
+      toast.error(
+        error.response?.data?.message || "Failed to reject admin request",
+      );
     } finally {
       setAdminProcessingId(null);
     }
@@ -247,6 +329,76 @@ const AdminRequests: React.FC = () => {
     }
   };
 
+  // Get unique tournaments from pending payment proofs
+  const paymentTournaments = Array.from(
+    new Map(
+      paymentProofRequests.map((proof) => [
+        proof.tournamentId,
+        proof.tournament,
+      ]),
+    ).values(),
+  );
+
+  // Identify the event type for payment filtering.
+  const getPaymentCategoryEventType = (
+    category: PaymentProofRequest["registrations"][number]["category"],
+  ): "SINGLES" | "DOUBLES" | "MIXED_DOUBLES" | null => {
+    if (!category) return null;
+
+    const type = category.type.toUpperCase().replace(/[\s-]+/g, "_");
+    const name = category.name.toUpperCase();
+
+    if (type === "MIXED_DOUBLES" || name.includes("MIXED")) {
+      return "MIXED_DOUBLES";
+    }
+
+    if (type === "SINGLES") return "SINGLES";
+    if (type === "DOUBLES") return "DOUBLES";
+
+    return null;
+  };
+
+  // Filter both payment proof cards and their individual categories.
+  const filteredPaymentProofRequests = paymentProofRequests
+    .map((proof) => {
+      const profile = proof.player.playerProfile;
+
+      const matchesMembership =
+        paymentMembershipFilter === "ALL" ||
+        (paymentMembershipFilter === "CLUB" &&
+          profile?.isClubMember === true) ||
+        (paymentMembershipFilter === "GUEST" &&
+          profile?.isClubMember === false);
+
+      const matchesGender =
+        paymentGenderFilter === "ALL" ||
+        profile?.gender === paymentGenderFilter;
+
+      const matchesTournament =
+        paymentTournamentFilter === "ALL" ||
+        proof.tournamentId === paymentTournamentFilter;
+
+      if (!matchesMembership || !matchesGender || !matchesTournament) {
+        return null;
+      }
+
+      const matchingRegistrations = proof.registrations.filter(
+        (registration) =>
+          registration.verificationStatus === "PENDING" &&
+          (paymentEventFilter === "ALL" ||
+            getPaymentCategoryEventType(registration.category) ===
+              paymentEventFilter),
+      );
+
+      if (matchingRegistrations.length === 0) return null;
+
+      return {
+        ...proof,
+        registrations: matchingRegistrations,
+      };
+    })
+    .filter((proof): proof is PaymentProofRequest => proof !== null);
+
   const fetchPaymentProofRequests = async () => {
     try {
       setPaymentProofLoading(true);
@@ -268,73 +420,69 @@ const AdminRequests: React.FC = () => {
       setPaymentProofLoading(false);
     }
   };
-  const handlePaymentApprove = async (proofId: string) => {
-    setPaymentProcessingId(proofId);
+  const handlePaymentApprove = async (
+    proofId: string,
+    verificationId: string,
+  ) => {
+    setPaymentProcessingId(verificationId);
 
     try {
       await api.patch(`/payment-proofs/${proofId}/process`, {
         action: "APPROVE",
+        verificationId,
       });
 
-      toast.success("Payment proof approved successfully!");
-
-      // Refresh the list.
-      // The approved proof should disappear from pending requests.
+      toast.success("Category payment approved successfully!");
       await fetchPaymentProofRequests();
     } catch (error: any) {
-      console.error(
-        "Approve payment proof error:",
-        error.response?.status,
-        error.response?.data,
-      );
+      console.error("Approve category payment error:", error);
 
       toast.error(
-        error.response?.data?.message || "Failed to approve payment proof",
+        error.response?.data?.message || "Failed to approve category payment",
       );
     } finally {
       setPaymentProcessingId(null);
     }
   };
-  const openPaymentRejectModal = (proofId: string) => {
+  const openPaymentRejectModal = (proofId: string, verificationId: string) => {
     setSelectedPaymentProofId(proofId);
+    setSelectedPaymentVerificationId(verificationId);
     setPaymentRejectionReason("");
     setShowPaymentRejectModal(true);
   };
 
   const handlePaymentReject = async () => {
-    if (!selectedPaymentProofId) return;
+    if (!selectedPaymentProofId || !selectedPaymentVerificationId) {
+      return;
+    }
 
     if (!paymentRejectionReason.trim()) {
       toast.error("Please enter a rejection reason");
       return;
     }
 
-    setPaymentProcessingId(selectedPaymentProofId);
+    setPaymentProcessingId(selectedPaymentVerificationId);
 
     try {
       await api.patch(`/payment-proofs/${selectedPaymentProofId}/process`, {
         action: "REJECT",
+        verificationId: selectedPaymentVerificationId,
         rejectionReason: paymentRejectionReason.trim(),
       });
 
-      toast.success("Payment proof rejected successfully");
+      toast.success("Category payment rejected successfully");
 
       setShowPaymentRejectModal(false);
       setSelectedPaymentProofId(null);
+      setSelectedPaymentVerificationId(null);
       setPaymentRejectionReason("");
 
-      // Rejected proof is no longer pending,
-      // so refresh the pending list.
       await fetchPaymentProofRequests();
     } catch (error: any) {
-      console.error(
-        "Reject payment proof error:",
-        error.response?.status,
-        error.response?.data,
-      );
+      console.error("Reject category payment error:", error);
 
       toast.error(
-        error.response?.data?.message || "Failed to reject payment proof",
+        error.response?.data?.message || "Failed to reject category payment",
       );
     } finally {
       setPaymentProcessingId(null);
@@ -507,13 +655,17 @@ const AdminRequests: React.FC = () => {
     </div>
   );
 
-  if (!isSuperAdmin && !hasPermission("MANAGE_CLUB_MEMBERSHIPS") && !hasPermission("MANAGE_REGISTRATIONS")) {
+  if (
+    !isSuperAdmin &&
+    !hasPermission("MANAGE_CLUB_MEMBERSHIPS") &&
+    !hasPermission("MANAGE_REGISTRATIONS")
+  ) {
     return wrapInBaseLayout(
       <div className="rounded-[16px] border border-red-500/30 bg-[#061D23]/40 p-12 text-center backdrop-blur-xl shadow-2xl">
         <p className="font-black uppercase tracking-widest text-red-400">
           Access denied. Permission required to view requests.
         </p>
-      </div>
+      </div>,
     );
   }
 
@@ -526,12 +678,69 @@ const AdminRequests: React.FC = () => {
           Pending Requests
         </h1>
         <p className="text-xs uppercase tracking-[0.3em] text-[#4AEEFF]/90">
-          Review and manage administrative, player membership, and payment requests
+          Review and manage administrative, player membership, and payment
+          requests
         </p>
       </header>
 
+      {/* ─── REQUEST CATEGORY TABS ─── */}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        {isSuperAdmin && (
+          <button
+            type="button"
+            onClick={() => setActiveTab("ADMIN")}
+            className={`rounded-xl border p-5 text-left transition-all duration-200 ${
+              activeTab === "ADMIN"
+                ? "border-[#4AEEFF] bg-[#4AEEFF]/20 text-[#4AEEFF]"
+                : "border-white/20 bg-[#061D23]/30 text-white/70 hover:border-[#4AEEFF]/50"
+            }`}
+          >
+            <p className="text-sm font-black uppercase tracking-wider">
+              Admin Requests
+            </p>
+            <p className="mt-2 text-xs">{adminRequests.length} Pending</p>
+          </button>
+        )}
+
+        {(isSuperAdmin || hasPermission("MANAGE_CLUB_MEMBERSHIPS")) && (
+          <button
+            type="button"
+            onClick={() => setActiveTab("MEMBERSHIP")}
+            className={`rounded-xl border p-5 text-left transition-all duration-200 ${
+              activeTab === "MEMBERSHIP"
+                ? "border-[#4AEEFF] bg-[#4AEEFF]/20 text-[#4AEEFF]"
+                : "border-white/20 bg-[#061D23]/30 text-white/70 hover:border-[#4AEEFF]/50"
+            }`}
+          >
+            <p className="text-sm font-black uppercase tracking-wider">
+              Membership Requests
+            </p>
+            <p className="mt-2 text-xs">{membershipRequests.length} Pending</p>
+          </button>
+        )}
+
+        {(isSuperAdmin || hasPermission("MANAGE_REGISTRATIONS")) && (
+          <button
+            type="button"
+            onClick={() => setActiveTab("PAYMENT")}
+            className={`rounded-xl border p-5 text-left transition-all duration-200 ${
+              activeTab === "PAYMENT"
+                ? "border-[#4AEEFF] bg-[#4AEEFF]/20 text-[#4AEEFF]"
+                : "border-white/20 bg-[#061D23]/30 text-white/70 hover:border-[#4AEEFF]/50"
+            }`}
+          >
+            <p className="text-sm font-black uppercase tracking-wider">
+              Payment Verifications
+            </p>
+            <p className="mt-2 text-xs">
+              {paymentProofRequests.length} Pending
+            </p>
+          </button>
+        )}
+      </div>
+
       {/* SUPER ADMIN: PENDING ADMIN ACCOUNT REQUESTS */}
-      {isSuperAdmin && (
+      {isSuperAdmin && activeTab === "ADMIN" && (
         <section className="rounded-[16px] border border-amber-500/30 bg-[#061D23]/25 p-6 shadow-[0_25px_60px_-15px_rgba(245,158,11,0.2)] backdrop-blur-xl">
           <div className="mb-6 flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -548,7 +757,8 @@ const AdminRequests: React.FC = () => {
                   </span>
                 </div>
                 <p className="text-xs text-white/60">
-                  Review and grant administrative roles to requested user accounts
+                  Review and grant administrative roles to requested user
+                  accounts
                 </p>
               </div>
             </div>
@@ -560,7 +770,9 @@ const AdminRequests: React.FC = () => {
           {adminRequestsLoading ? (
             <div className="py-8 text-center">
               <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-amber-400 mx-auto"></div>
-              <p className="text-xs font-mono text-amber-300 mt-2">Loading admin requests...</p>
+              <p className="text-xs font-mono text-amber-300 mt-2">
+                Loading admin requests...
+              </p>
             </div>
           ) : adminRequests.length === 0 ? (
             <div className="rounded-xl border border-white/5 bg-[#061D23]/40 p-8 text-center text-white/50 text-sm">
@@ -586,7 +798,17 @@ const AdminRequests: React.FC = () => {
                         {req.email}
                       </p>
                       <p className="text-[11px] text-white/40 font-mono mt-0.5">
-                        Requested: {new Date(req.adminRequestedAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                        Requested:{" "}
+                        {new Date(req.adminRequestedAt).toLocaleDateString(
+                          undefined,
+                          {
+                            year: "numeric",
+                            month: "short",
+                            day: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          },
+                        )}
                       </p>
                     </div>
                   </div>
@@ -597,7 +819,9 @@ const AdminRequests: React.FC = () => {
                       disabled={adminProcessingId === req.id}
                       className="rounded-lg bg-emerald-500/20 hover:bg-emerald-500 text-emerald-300 hover:text-slate-950 border border-emerald-500/40 px-4 py-2 text-xs font-black uppercase tracking-wider transition-all disabled:opacity-50"
                     >
-                      {adminProcessingId === req.id ? "Approving..." : "✓ Approve Admin"}
+                      {adminProcessingId === req.id
+                        ? "Approving..."
+                        : "✓ Approve Admin"}
                     </button>
                     <button
                       onClick={() => openAdminRejectModal(req.id)}
@@ -615,344 +839,521 @@ const AdminRequests: React.FC = () => {
       )}
 
       {/* CLUB MEMBERSHIP REQUESTS MAIN CONTAINER */}
-      {(isSuperAdmin || hasPermission("MANAGE_CLUB_MEMBERSHIPS")) && (
-        <section className="rounded-[16px] border border-white/20 bg-[#061D23]/10 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl">
-        <div className="mb-6 flex items-center gap-3">
-          <div className="rounded-lg bg-[#4AEEFF]/20 p-2 text-[#4AEEFF]">
-            <UserIcon className="h-5 w-5" />
-          </div>
-          <div>
-            <h2 className="text-lg font-bold uppercase tracking-wider text-white">
-              Pending  Membership Requests
-            </h2>
-            <p className="text-xs text-white/60">
-              Select individual or bulk options to process membership requests
-            </p>
-          </div>
-        </div>
-
-        {!membershipLoading && membershipRequests.length > 0 && (
-          <div className="mb-5 flex flex-col gap-3 rounded-xl border border-white/10 bg-[#061D23]/40 p-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-3">
-              <input
-                type="checkbox"
-                checked={
-                  membershipRequests.length > 0 &&
-                  selectedMembershipIds.length === membershipRequests.length
-                }
-                onChange={toggleSelectAllMembership}
-                disabled={bulkProcessing}
-                className="h-4 w-4 cursor-pointer accent-[#4AEEFF]"
-              />
-              <span className="text-sm font-bold text-white">Select All</span>
-              <span className="text-xs text-white/60">
-                ({selectedMembershipIds.length} selected)
-              </span>
+      {activeTab === "MEMBERSHIP" &&
+        (isSuperAdmin || hasPermission("MANAGE_CLUB_MEMBERSHIPS")) && (
+          <section className="rounded-[16px] border border-white/20 bg-[#061D23]/10 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl">
+            <div className="mb-6 flex items-center gap-3">
+              <div className="rounded-lg bg-[#4AEEFF]/20 p-2 text-[#4AEEFF]">
+                <UserIcon className="h-5 w-5" />
+              </div>
+              <div>
+                <h2 className="text-lg font-bold uppercase tracking-wider text-white">
+                  Pending Membership Requests
+                </h2>
+                <p className="text-xs text-white/60">
+                  Select individual or bulk options to process membership
+                  requests
+                </p>
+              </div>
             </div>
 
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={handleBulkApprove}
-                disabled={selectedMembershipIds.length === 0 || bulkProcessing}
-                className="rounded-lg bg-[#4AEEFF] px-4 py-2.5 text-xs font-black uppercase tracking-wider text-[#061D23] hover:bg-white disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                {bulkProcessing ? "Processing..." : "Approve Selected"}
-              </button>
+            {!membershipLoading && membershipRequests.length > 0 && (
+              <div className="mb-5 flex flex-col gap-3 rounded-xl border border-white/10 bg-[#061D23]/40 p-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    checked={
+                      membershipRequests.length > 0 &&
+                      selectedMembershipIds.length === membershipRequests.length
+                    }
+                    onChange={toggleSelectAllMembership}
+                    disabled={bulkProcessing}
+                    className="h-4 w-4 cursor-pointer accent-[#4AEEFF]"
+                  />
+                  <span className="text-sm font-bold text-white">
+                    Select All
+                  </span>
+                  <span className="text-xs text-white/60">
+                    ({selectedMembershipIds.length} selected)
+                  </span>
+                </div>
 
-              <button
-                type="button"
-                onClick={() => {
-                  setBulkRejectionReason("");
-                  setShowBulkRejectModal(true);
-                }}
-                disabled={selectedMembershipIds.length === 0 || bulkProcessing}
-                className="rounded-lg border border-red-400/50 px-4 py-2.5 text-xs font-black uppercase tracking-wider text-red-300 hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                Reject Selected
-              </button>
-            </div>
-          </div>
-        )}
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={handleBulkApprove}
+                    disabled={
+                      selectedMembershipIds.length === 0 || bulkProcessing
+                    }
+                    className="rounded-lg bg-[#4AEEFF] px-4 py-2.5 text-xs font-black uppercase tracking-wider text-[#061D23] hover:bg-white disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    {bulkProcessing ? "Processing..." : "Approve Selected"}
+                  </button>
 
-        {membershipLoading ? (
-          <div className="rounded-[12px] border border-white/10 bg-[#061D23]/40 p-12 text-center">
-            <div className="mx-auto mb-3 h-8 w-8 animate-spin rounded-full border-b-2 border-[#4AEEFF]" />
-            <p className="text-xs font-black uppercase tracking-wider text-[#4AEEFF]">
-              Loading membership requests...
-            </p>
-          </div>
-        ) : membershipRequests.length === 0 ? (
-          <div className="rounded-[12px] border border-white/10 bg-[#061D23]/40 p-12 text-center">
-            <CheckCircleIcon className="mx-auto mb-3 h-10 w-10 text-emerald-400" />
-            <h3 className="text-base font-bold uppercase tracking-wider text-white">
-              No Pending Membership Requests
-            </h3>
-            <p className="mt-2 text-xs text-white/60">
-              There are currently no players waiting for club membership
-              approval.
-            </p>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {membershipRequests.map((request) => {
-              const player = request.playerProfile.user;
-              const isProcessing = membershipProcessingId === request.id;
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setBulkRejectionReason("");
+                      setShowBulkRejectModal(true);
+                    }}
+                    disabled={
+                      selectedMembershipIds.length === 0 || bulkProcessing
+                    }
+                    className="rounded-lg border border-red-400/50 px-4 py-2.5 text-xs font-black uppercase tracking-wider text-red-300 hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    Reject Selected
+                  </button>
+                </div>
+              </div>
+            )}
 
-              return (
-                <div
-                  key={request.id}
-                  className="rounded-[12px] border border-white/10 bg-[#061D23]/40 p-5 transition-all duration-300 hover:border-[#4AEEFF]/40"
-                >
-                  <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-                    <div className="flex items-start gap-4">
-                      <input
-                        type="checkbox"
-                        checked={selectedMembershipIds.includes(request.id)}
-                        onChange={() => toggleMembershipSelection(request.id)}
-                        disabled={bulkProcessing || isProcessing}
-                        className="mt-4 h-4 w-4 shrink-0 cursor-pointer accent-[#4AEEFF]"
-                      />
-                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-[#061D23]/70 text-sm font-black text-[#4AEEFF]">
-                        {player.firstName?.[0]?.toUpperCase()}
-                        {player.lastName?.[0]?.toUpperCase()}
-                      </div>
+            {membershipLoading ? (
+              <div className="rounded-[12px] border border-white/10 bg-[#061D23]/40 p-12 text-center">
+                <div className="mx-auto mb-3 h-8 w-8 animate-spin rounded-full border-b-2 border-[#4AEEFF]" />
+                <p className="text-xs font-black uppercase tracking-wider text-[#4AEEFF]">
+                  Loading membership requests...
+                </p>
+              </div>
+            ) : membershipRequests.length === 0 ? (
+              <div className="rounded-[12px] border border-white/10 bg-[#061D23]/40 p-12 text-center">
+                <CheckCircleIcon className="mx-auto mb-3 h-10 w-10 text-emerald-400" />
+                <h3 className="text-base font-bold uppercase tracking-wider text-white">
+                  No Pending Membership Requests
+                </h3>
+                <p className="mt-2 text-xs text-white/60">
+                  There are currently no players waiting for club membership
+                  approval.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {membershipRequests.map((request) => {
+                  const player = request.playerProfile.user;
+                  const isProcessing = membershipProcessingId === request.id;
 
-                      <div>
-                        <h3 className="font-bold uppercase tracking-wide text-white">
-                          {player.firstName} {player.lastName}
-                        </h3>
-
-                        <div className="mt-2 space-y-1">
-                          <div className="flex items-center gap-2 text-xs text-white/60">
-                            <EnvelopeIcon className="h-4 w-4 text-[#4AEEFF]" />
-                            <span>{player.email}</span>
+                  return (
+                    <div
+                      key={request.id}
+                      className="rounded-[12px] border border-white/10 bg-[#061D23]/40 p-5 transition-all duration-300 hover:border-[#4AEEFF]/40"
+                    >
+                      <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+                        <div className="flex items-start gap-4">
+                          <input
+                            type="checkbox"
+                            checked={selectedMembershipIds.includes(request.id)}
+                            onChange={() =>
+                              toggleMembershipSelection(request.id)
+                            }
+                            disabled={bulkProcessing || isProcessing}
+                            className="mt-4 h-4 w-4 shrink-0 cursor-pointer accent-[#4AEEFF]"
+                          />
+                          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-[#061D23]/70 text-sm font-black text-[#4AEEFF]">
+                            {player.firstName?.[0]?.toUpperCase()}
+                            {player.lastName?.[0]?.toUpperCase()}
                           </div>
 
-                          {player.phone && (
-                            <p className="text-xs text-white/50 font-mono">
-                              Phone: {player.phone}
-                            </p>
-                          )}
+                          <div>
+                            <h3 className="font-bold uppercase tracking-wide text-white">
+                              {player.firstName} {player.lastName}
+                            </h3>
 
-                          <div className="flex items-center gap-2 text-xs text-white/50">
-                            <ClockIcon className="h-4 w-4 text-[#4AEEFF]" />
-                            <span>
-                              Requested on{" "}
-                              {new Date(request.requestedAt).toLocaleString()}
-                            </span>
+                            <div className="mt-2 space-y-1">
+                              <div className="flex items-center gap-2 text-xs text-white/60">
+                                <EnvelopeIcon className="h-4 w-4 text-[#4AEEFF]" />
+                                <span>{player.email}</span>
+                              </div>
+
+                              {player.phone && (
+                                <p className="text-xs text-white/50 font-mono">
+                                  Phone: {player.phone}
+                                </p>
+                              )}
+
+                              <div className="flex items-center gap-2 text-xs text-white/50">
+                                <ClockIcon className="h-4 w-4 text-[#4AEEFF]" />
+                                <span>
+                                  Requested on{" "}
+                                  {new Date(
+                                    request.requestedAt,
+                                  ).toLocaleString()}
+                                </span>
+                              </div>
+                            </div>
                           </div>
+                        </div>
+
+                        <div className="flex w-full gap-3 lg:w-auto">
+                          <button
+                            type="button"
+                            onClick={() => handleMembershipApprove(request.id)}
+                            disabled={isProcessing}
+                            className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-[#4AEEFF] px-5 py-2.5 text-xs font-black uppercase tracking-wider text-[#061D23] transition-all hover:bg-white disabled:cursor-not-allowed disabled:opacity-50 lg:flex-none"
+                          >
+                            <CheckCircleIcon className="h-4 w-4" />
+                            {isProcessing ? "Processing..." : "Approve"}
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() =>
+                              openMembershipRejectModal(request.id)
+                            }
+                            disabled={isProcessing}
+                            className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-white/20 bg-transparent px-5 py-2.5 text-xs font-black uppercase tracking-wider text-[#4AEEFF] transition-all hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-50 lg:flex-none"
+                          >
+                            <XCircleIcon className="h-4 w-4" />
+                            Reject
+                          </button>
                         </div>
                       </div>
                     </div>
-
-                    <div className="flex w-full gap-3 lg:w-auto">
-                      <button
-                        type="button"
-                        onClick={() => handleMembershipApprove(request.id)}
-                        disabled={isProcessing}
-                        className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-[#4AEEFF] px-5 py-2.5 text-xs font-black uppercase tracking-wider text-[#061D23] transition-all hover:bg-white disabled:cursor-not-allowed disabled:opacity-50 lg:flex-none"
-                      >
-                        <CheckCircleIcon className="h-4 w-4" />
-                        {isProcessing ? "Processing..." : "Approve"}
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => openMembershipRejectModal(request.id)}
-                        disabled={isProcessing}
-                        className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-white/20 bg-transparent px-5 py-2.5 text-xs font-black uppercase tracking-wider text-[#4AEEFF] transition-all hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-50 lg:flex-none"
-                      >
-                        <XCircleIcon className="h-4 w-4" />
-                        Reject
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+                  );
+                })}
+              </div>
+            )}
+          </section>
         )}
-      </section>
-      )}
 
       {/* PAYMENT PROOF REQUESTS */}
-      {(isSuperAdmin || hasPermission("MANAGE_REGISTRATIONS")) && (
-        <section className="rounded-[16px] border border-white/20 bg-[#061D23]/10 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl">
-        <div className="mb-6 flex items-center gap-3">
-          <div className="rounded-lg bg-[#4AEEFF]/20 p-2 text-[#4AEEFF]">
-            <CheckCircleIcon className="h-5 w-5" />
-          </div>
+      {activeTab === "PAYMENT" &&
+        (isSuperAdmin || hasPermission("MANAGE_REGISTRATIONS")) && (
+          <section className="rounded-[16px] border border-white/20 bg-[#061D23]/10 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl">
+            <div className="mb-6 flex items-center gap-3">
+              <div className="rounded-lg bg-[#4AEEFF]/20 p-2 text-[#4AEEFF]">
+                <CheckCircleIcon className="h-5 w-5" />
+              </div>
 
-          <div>
-            <h2 className="text-lg font-bold uppercase tracking-wider text-white">
-              Pending Payment Verifications
-            </h2>
+              <div>
+                <h2 className="text-lg font-bold uppercase tracking-wider text-white">
+                  Pending Payment Verifications
+                </h2>
 
-            <p className="text-xs text-white/60">
-              Review player payment proofs before approving tournament
-              registrations
-            </p>
-          </div>
-        </div>
+                <p className="text-xs text-white/60">
+                  Review player payment proofs before approving tournament
+                  registrations
+                </p>
+              </div>
+            </div>
 
-        {paymentProofLoading ? (
-          <div className="rounded-[12px] border border-white/10 bg-[#061D23]/40 p-12 text-center">
-            <div className="mx-auto mb-3 h-8 w-8 animate-spin rounded-full border-b-2 border-[#4AEEFF]" />
+            {/* PAYMENT VERIFICATION FILTERS */}
+            <div className="mb-6 rounded-xl border border-white/10 bg-[#061D23]/40 p-4">
+              <h3 className="mb-4 text-sm font-black uppercase tracking-wider text-[#4AEEFF]">
+                Filter Payment Verifications
+              </h3>
 
-            <p className="text-xs font-black uppercase tracking-wider text-[#4AEEFF]">
-              Loading payment proofs...
-            </p>
-          </div>
-        ) : paymentProofRequests.length === 0 ? (
-          <div className="rounded-[12px] border border-white/10 bg-[#061D23]/40 p-12 text-center">
-            <CheckCircleIcon className="mx-auto mb-3 h-10 w-10 text-emerald-400" />
-
-            <h3 className="text-base font-bold uppercase tracking-wider text-white">
-              No Pending Payment Proofs
-            </h3>
-
-            <p className="mt-2 text-xs text-white/60">
-              There are currently no payment proofs waiting for verification.
-            </p>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {paymentProofRequests.map((proof) => {
-              const isProcessing = paymentProcessingId === proof.id;
-
-              return (
-                <div
-                  key={proof.id}
-                  className="rounded-[12px] border border-white/10 bg-[#061D23]/40 p-5 transition-all duration-300 hover:border-[#4AEEFF]/40"
-                >
-                  <div className="flex flex-col gap-5 lg:flex-row lg:justify-between">
-                    {/* LEFT SIDE */}
-                    <div className="flex-1">
-                      <div className="mb-4 flex flex-wrap items-center gap-3">
-                        <div className="flex h-12 w-12 items-center justify-center rounded-lg border border-white/10 bg-[#061D23]/70 text-sm font-black text-[#4AEEFF]">
-                          {proof.player.firstName?.[0]?.toUpperCase()}
-                          {proof.player.lastName?.[0]?.toUpperCase()}
-                        </div>
-
-                        <div>
-                          <h3 className="font-bold uppercase tracking-wide text-white">
-                            {proof.player.firstName} {proof.player.lastName}
-                          </h3>
-
-                          <p className="text-xs text-white/60">
-                            {proof.player.email}
-                          </p>
-                        </div>
-
-                        <span
-                          className={`rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-wider ${
-                            proof.player.playerProfile?.isClubMember
-                              ? "bg-emerald-500/15 text-emerald-300"
-                              : "bg-amber-500/15 text-amber-300"
-                          }`}
-                        >
-                          {proof.player.playerProfile?.isClubMember
-                            ? "Club Member"
-                            : "Guest"}
-                        </span>
-                      </div>
-
-                      {/* Tournament */}
-                      <div className="grid gap-3 sm:grid-cols-2">
-                        <div className="rounded-lg border border-white/10 bg-black/20 p-3">
-                          <p className="text-[10px] font-black uppercase tracking-wider text-white/40">
-                            Tournament
-                          </p>
-
-                          <p className="mt-1 text-sm font-bold text-white">
-                            {proof.tournament.name}
-                          </p>
-                        </div>
-
-                        <div className="rounded-lg border border-white/10 bg-black/20 p-3">
-                          <p className="text-[10px] font-black uppercase tracking-wider text-white/40">
-                            Registration Fee
-                          </p>
-
-                          <p className="mt-1 text-sm font-bold text-[#4AEEFF]">
-                            {proof.tournament.registrationFee
-                              ? `LKR ${proof.tournament.registrationFee}`
-                              : "Not specified"}
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* Categories */}
-                      <div className="mt-4">
-                        <p className="mb-2 text-[10px] font-black uppercase tracking-wider text-white/40">
-                          Registered Categories
-                        </p>
-
-                        <div className="flex flex-wrap gap-2">
-                          {proof.registrations.map((registration) => (
-                            <span
-                              key={registration.id}
-                              className="rounded-lg border border-[#4AEEFF]/20 bg-[#4AEEFF]/10 px-3 py-1.5 text-xs font-bold text-[#4AEEFF]"
-                            >
-                              {registration.category?.name ||
-                                "Unknown Category"}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Submitted Date */}
-                      <div className="mt-4 flex items-center gap-2 text-xs text-white/50">
-                        <ClockIcon className="h-4 w-4 text-[#4AEEFF]" />
-
-                        <span>
-                          Submitted{" "}
-                          {new Date(proof.submittedAt).toLocaleString()}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* RIGHT SIDE */}
-                    <div className="flex flex-col gap-3 lg:w-56">
-                      <a
-                        href={getProfileImageUrl(proof.proofUrl)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center justify-center rounded-lg border border-[#4AEEFF]/40 bg-[#4AEEFF]/10 px-5 py-2.5 text-xs font-black uppercase tracking-wider text-[#4AEEFF] transition-all hover:bg-[#4AEEFF]/20"
-                      >
-                        View Payment Proof
-                      </a>
-
-                      <button
-                        type="button"
-                        onClick={() => handlePaymentApprove(proof.id)}
-                        disabled={isProcessing}
-                        className="flex items-center justify-center gap-2 rounded-lg bg-[#4AEEFF] px-5 py-2.5 text-xs font-black uppercase tracking-wider text-[#061D23] transition-all hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        <CheckCircleIcon className="h-4 w-4" />
-
-                        {isProcessing ? "Processing..." : "Approve"}
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => openPaymentRejectModal(proof.id)}
-                        disabled={isProcessing}
-                        className="flex items-center justify-center gap-2 rounded-lg border border-red-400/50 px-5 py-2.5 text-xs font-black uppercase tracking-wider text-red-300 transition-all hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        <XCircleIcon className="h-4 w-4" />
-                        Reject
-                      </button>
-                    </div>
-                  </div>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                {/* MEMBERSHIP FILTER */}
+                <div>
+                  <label className="mb-2 block text-xs font-bold text-white/70">
+                    Membership
+                  </label>
+                  <select
+                    value={paymentMembershipFilter}
+                    onChange={(e) =>
+                      setPaymentMembershipFilter(
+                        e.target.value as "ALL" | "CLUB" | "GUEST",
+                      )
+                    }
+                    className="w-full rounded-lg border border-white/20 bg-[#061D23] px-3 py-2.5 text-sm text-white outline-none focus:border-[#4AEEFF]"
+                  >
+                    <option value="ALL">All Players</option>
+                    <option value="CLUB">Club Players</option>
+                    <option value="GUEST">Guest Players</option>
+                  </select>
                 </div>
-              );
-            })}
-          </div>
+
+                {/* GENDER FILTER */}
+                <div>
+                  <label className="mb-2 block text-xs font-bold text-white/70">
+                    Gender
+                  </label>
+                  <select
+                    value={paymentGenderFilter}
+                    onChange={(e) =>
+                      setPaymentGenderFilter(
+                        e.target.value as "ALL" | "MALE" | "FEMALE",
+                      )
+                    }
+                    className="w-full rounded-lg border border-white/20 bg-[#061D23] px-3 py-2.5 text-sm text-white outline-none focus:border-[#4AEEFF]"
+                  >
+                    <option value="ALL">All Genders</option>
+                    <option value="MALE">Men</option>
+                    <option value="FEMALE">Women</option>
+                  </select>
+                </div>
+
+                {/* TOURNAMENT FILTER */}
+                <div>
+                  <label className="mb-2 block text-xs font-bold text-white/70">
+                    Tournament
+                  </label>
+                  <select
+                    value={paymentTournamentFilter}
+                    onChange={(e) => setPaymentTournamentFilter(e.target.value)}
+                    className="w-full rounded-lg border border-white/20 bg-[#061D23] px-3 py-2.5 text-sm text-white outline-none focus:border-[#4AEEFF]"
+                  >
+                    <option value="ALL">All Tournaments</option>
+                    {paymentTournaments.map((tournament) => (
+                      <option key={tournament.id} value={tournament.id}>
+                        {tournament.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* EVENT TYPE FILTER */}
+                <div>
+                  <label className="mb-2 block text-xs font-bold text-white/70">
+                    Event Type
+                  </label>
+                  <select
+                    value={paymentEventFilter}
+                    onChange={(e) =>
+                      setPaymentEventFilter(
+                        e.target.value as
+                          | "ALL"
+                          | "SINGLES"
+                          | "DOUBLES"
+                          | "MIXED_DOUBLES",
+                      )
+                    }
+                    className="w-full rounded-lg border border-white/20 bg-[#061D23] px-3 py-2.5 text-sm text-white outline-none focus:border-[#4AEEFF]"
+                  >
+                    <option value="ALL">All Events</option>
+                    <option value="SINGLES">Singles</option>
+                    <option value="DOUBLES">Doubles</option>
+                    <option value="MIXED_DOUBLES">Mixed Doubles</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* FILTER RESULTS AND RESET */}
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-4">
+                <p className="text-xs text-white/60">
+                  Showing{" "}
+                  <span className="font-bold text-[#4AEEFF]">
+                    {filteredPaymentProofRequests.length}
+                  </span>{" "}
+                  of {paymentProofRequests.length} pending payment proofs
+                </p>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPaymentMembershipFilter("ALL");
+                    setPaymentGenderFilter("ALL");
+                    setPaymentTournamentFilter("ALL");
+                    setPaymentEventFilter("ALL");
+                  }}
+                  className="rounded-lg border border-[#4AEEFF]/40 px-4 py-2 text-xs font-bold text-[#4AEEFF] transition-colors hover:bg-[#4AEEFF]/10"
+                >
+                  Reset Filters
+                </button>
+              </div>
+            </div>
+
+            {paymentProofLoading ? (
+              <div className="rounded-[12px] border border-white/10 bg-[#061D23]/40 p-12 text-center">
+                <div className="mx-auto mb-3 h-8 w-8 animate-spin rounded-full border-b-2 border-[#4AEEFF]" />
+
+                <p className="text-xs font-black uppercase tracking-wider text-[#4AEEFF]">
+                  Loading payment proofs...
+                </p>
+              </div>
+            ) : filteredPaymentProofRequests.length === 0 ? (
+              <div className="rounded-[12px] border border-white/10 bg-[#061D23]/40 p-12 text-center">
+                <CheckCircleIcon className="mx-auto mb-3 h-10 w-10 text-emerald-400" />
+
+                <h3 className="text-base font-bold uppercase tracking-wider text-white">
+                  {paymentProofRequests.length === 0
+                    ? "No Pending Payment Proofs"
+                    : "No Payment Proofs Match Your Filters"}
+                </h3>
+
+                <p className="mt-2 text-xs text-white/60">
+                  There are currently no payment proofs waiting for
+                  verification.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {filteredPaymentProofRequests.map((proof) => {
+                  return (
+                    <div
+                      key={proof.id}
+                      className="rounded-[12px] border border-white/10 bg-[#061D23]/40 p-5 transition-all duration-300 hover:border-[#4AEEFF]/40"
+                    >
+                      <div className="flex flex-col gap-5 lg:flex-row lg:justify-between">
+                        {/* LEFT SIDE */}
+                        <div className="flex-1">
+                          <div className="mb-4 flex flex-wrap items-center gap-3">
+                            <div className="flex h-12 w-12 items-center justify-center rounded-lg border border-white/10 bg-[#061D23]/70 text-sm font-black text-[#4AEEFF]">
+                              {proof.player.firstName?.[0]?.toUpperCase()}
+                              {proof.player.lastName?.[0]?.toUpperCase()}
+                            </div>
+
+                            <div>
+                              <h3 className="font-bold uppercase tracking-wide text-white">
+                                {proof.player.firstName} {proof.player.lastName}
+                              </h3>
+
+                              <p className="text-xs text-white/60">
+                                {proof.player.email}
+                              </p>
+                            </div>
+
+                            <span
+                              className={`rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-wider ${
+                                proof.player.playerProfile?.isClubMember
+                                  ? "bg-emerald-500/15 text-emerald-300"
+                                  : "bg-amber-500/15 text-amber-300"
+                              }`}
+                            >
+                              {proof.player.playerProfile?.isClubMember
+                                ? "Club Member"
+                                : "Guest"}
+                            </span>
+                          </div>
+
+                          {/* Tournament */}
+                          <div className="grid gap-3 sm:grid-cols-2">
+                            <div className="rounded-lg border border-white/10 bg-black/20 p-3">
+                              <p className="text-[10px] font-black uppercase tracking-wider text-white/40">
+                                Tournament
+                              </p>
+
+                              <p className="mt-1 text-sm font-bold text-white">
+                                {proof.tournament.name}
+                              </p>
+                            </div>
+
+                            <div className="rounded-lg border border-white/10 bg-black/20 p-3">
+                              <p className="text-[10px] font-black uppercase tracking-wider text-white/40">
+                                Registration Fee
+                              </p>
+
+                              <p className="mt-1 text-sm font-bold text-[#4AEEFF]">
+                                {proof.tournament.registrationFee
+                                  ? `LKR ${proof.tournament.registrationFee}`
+                                  : "Not specified"}
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* Categories - Individual Payment Verification */}
+                          <div className="mt-4">
+                            <p className="mb-3 text-[10px] font-black uppercase tracking-wider text-white/40">
+                              Registered Categories - Payment Verification
+                            </p>
+
+                            <div className="space-y-3">
+                              {proof.registrations.map((registration) => {
+                                const isCategoryProcessing =
+                                  paymentProcessingId ===
+                                  registration.verificationId;
+
+                                return (
+                                  <div
+                                    key={registration.verificationId}
+                                    className="rounded-lg border border-[#4AEEFF]/20 bg-[#061D23]/60 p-4"
+                                  >
+                                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                      <div>
+                                        <p className="text-sm font-bold text-white">
+                                          {registration.category?.name ||
+                                            "Unknown Category"}
+                                        </p>
+
+                                        <p className="mt-1 text-xs text-white/50">
+                                          {registration.category?.type?.replace(
+                                            /_/g,
+                                            " ",
+                                          )}
+                                        </p>
+
+                                        <p className="mt-2 text-xs font-bold text-amber-300">
+                                          Payment:{" "}
+                                          {registration.verificationStatus}
+                                        </p>
+                                      </div>
+
+                                      {registration.verificationStatus ===
+                                        "PENDING" && (
+                                        <div className="flex flex-wrap gap-2">
+                                          <button
+                                            type="button"
+                                            onClick={() =>
+                                              handlePaymentApprove(
+                                                proof.id,
+                                                registration.verificationId,
+                                              )
+                                            }
+                                            disabled={
+                                              paymentProcessingId !== null
+                                            }
+                                            className="flex items-center gap-2 rounded-lg bg-[#4AEEFF] px-4 py-2 text-xs font-black uppercase text-[#061D23] hover:bg-white disabled:opacity-50"
+                                          >
+                                            <CheckCircleIcon className="h-4 w-4" />
+                                            {isCategoryProcessing
+                                              ? "Processing..."
+                                              : "Approve"}
+                                          </button>
+
+                                          <button
+                                            type="button"
+                                            onClick={() =>
+                                              openPaymentRejectModal(
+                                                proof.id,
+                                                registration.verificationId,
+                                              )
+                                            }
+                                            disabled={
+                                              paymentProcessingId !== null
+                                            }
+                                            className="flex items-center gap-2 rounded-lg border border-red-400/50 px-4 py-2 text-xs font-black uppercase text-red-300 hover:bg-red-500/10 disabled:opacity-50"
+                                          >
+                                            <XCircleIcon className="h-4 w-4" />
+                                            Reject
+                                          </button>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+
+                          {/* Submitted Date */}
+                          <div className="mt-4 flex items-center gap-2 text-xs text-white/50">
+                            <ClockIcon className="h-4 w-4 text-[#4AEEFF]" />
+
+                            <span>
+                              Submitted{" "}
+                              {new Date(proof.submittedAt).toLocaleString()}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* RIGHT SIDE */}
+                        <div className="flex flex-col gap-3 lg:w-56">
+                          <a
+                            href={getProfileImageUrl(proof.proofUrl)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center justify-center rounded-lg border border-[#4AEEFF]/40 bg-[#4AEEFF]/10 px-5 py-2.5 text-xs font-black uppercase tracking-wider text-[#4AEEFF] transition-all hover:bg-[#4AEEFF]/20"
+                          >
+                            View Payment Proof
+                          </a>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </section>
         )}
-      </section>
-      )}
 
       {/* BULK MEMBERSHIP REJECTION MODAL */}
       {showBulkRejectModal && (
@@ -1100,6 +1501,7 @@ const AdminRequests: React.FC = () => {
                 onClick={() => {
                   setShowPaymentRejectModal(false);
                   setSelectedPaymentProofId(null);
+                  setSelectedPaymentVerificationId(null);
                   setPaymentRejectionReason("");
                 }}
                 disabled={paymentProcessingId !== null}
@@ -1133,7 +1535,8 @@ const AdminRequests: React.FC = () => {
               Reject Admin Request
             </h3>
             <p className="text-xs text-white/70">
-              Provide an optional reason explaining why this administrative access request is being rejected.
+              Provide an optional reason explaining why this administrative
+              access request is being rejected.
             </p>
             <textarea
               value={adminRejectionReason}
@@ -1176,12 +1579,16 @@ const AdminRequests: React.FC = () => {
               <div className="flex items-center gap-3">
                 <span className="h-6 w-2.5 rounded-full bg-[#4AEEFF] shadow-[0_0_10px_#4AEEFF]" />
                 <div>
-                <h3 className="text-xl font-black uppercase tracking-widest text-white sm:text-2xl">
-                  Approve Admin Request
-                </h3>
-                <p className="mt-1 text-xs text-[#4AEEFF]/90">
-                  Granting access to: <span className="font-bold text-white">{adminToApprove.firstName} {adminToApprove.lastName}</span> ({adminToApprove.email})
-                </p>
+                  <h3 className="text-xl font-black uppercase tracking-widest text-white sm:text-2xl">
+                    Approve Admin Request
+                  </h3>
+                  <p className="text-xs text-emerald-300 font-mono mt-1">
+                    Granting access to:{" "}
+                    <span className="font-bold text-white">
+                      {adminToApprove.firstName} {adminToApprove.lastName}
+                    </span>{" "}
+                    ({adminToApprove.email})
+                  </p>
                 </div>
               </div>
               <button
@@ -1218,15 +1625,18 @@ const AdminRequests: React.FC = () => {
                   >
                     Clear All
                   </button>
-                  <span className="ml-1 rounded-md bg-white/10 px-2 py-0.5 text-[11px] font-mono text-white/70">
-                    {selectedPermissionsToGrant.length} of {AVAILABLE_ADMIN_PERMISSIONS.length}
+                  <span className="rounded-md bg-white/10 px-2 py-0.5 text-[11px] font-mono text-white/70 ml-1">
+                    {selectedPermissionsToGrant.length} of{" "}
+                    {AVAILABLE_ADMIN_PERMISSIONS.length}
                   </span>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 {AVAILABLE_ADMIN_PERMISSIONS.map((perm) => {
-                  const isChecked = selectedPermissionsToGrant.includes(perm.id);
+                  const isChecked = selectedPermissionsToGrant.includes(
+                    perm.id,
+                  );
                   return (
                     <div
                       key={perm.id}
@@ -1257,8 +1667,10 @@ const AdminRequests: React.FC = () => {
               </div>
 
               {selectedPermissionsToGrant.length === 0 && (
-                <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-200">
-                  ⚠️ Note: No permissions selected. The user will be approved as an ADMIN without module permissions until you grant permissions in User Management.
+                <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-200">
+                  ⚠️ Note: No permissions selected. The user will be approved as
+                  an ADMIN without module permissions until you grant
+                  permissions in User Management.
                 </div>
               )}
             </div>
@@ -1281,7 +1693,9 @@ const AdminRequests: React.FC = () => {
                 disabled={adminProcessingId !== null}
                 className="flex-1 rounded-xl bg-[#4AEEFF] py-2.5 text-xs font-black uppercase tracking-wider text-[#061D23] shadow-md shadow-[#4AEEFF]/20 transition-all hover:bg-white disabled:opacity-50"
               >
-                {adminProcessingId !== null ? "Approving & Saving..." : "Confirm & Approve Admin"}
+                {adminProcessingId !== null
+                  ? "Approving & Saving..."
+                  : "Confirm & Approve Admin"}
               </button>
             </div>
           </div>

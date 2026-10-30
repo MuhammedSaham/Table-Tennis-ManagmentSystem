@@ -53,3 +53,24 @@ export const resendVerification = catchAsync(async (req: Request, res: Response)
   const result = await authService.resendVerification(email);
   sendResponse(res, 200, result.message);
 });
+
+// Change password for logged-in user
+export const changePassword = catchAsync(
+    async (req: Request, res: Response) => {
+        const userId = req.user?.id;
+
+        if (!userId) {
+            return sendResponse(res, 401, 'Unauthorized');
+        }
+
+        const { currentPassword, newPassword } = req.body;
+
+        const result = await authService.changePassword(
+            userId,
+            currentPassword,
+            newPassword
+        );
+
+        sendResponse(res, 200, result.message);
+    }
+);

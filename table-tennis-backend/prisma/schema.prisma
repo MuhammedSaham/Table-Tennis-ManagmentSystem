@@ -284,24 +284,25 @@ model TeamMember {
 
 // Tournament Registrations
 model TournamentRegistration {
-  id              String                   @id @default(cuid())
-  tournamentId    String
-  tournament      Tournament               @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
-  categoryId      String?
-  category        Category?                @relation(fields: [categoryId], references: [id])
-  playerId        String
-  partnerId       String?
-  player          User                     @relation(fields: [playerId], references: [id])
-  teamId          String?
-  team            Team?                    @relation(fields: [teamId], references: [id])
-  status          RegistrationStatus       @default(PENDING)
-  approvedBy      String?
-  approvedAt      DateTime?
-  rejectionReason String?
-  registeredAt    DateTime                 @default(now())
-  PlayerProfile   PlayerProfile?           @relation(fields: [playerProfileId], references: [id])
-  playerProfileId String?
-  paymentProofs   TournamentPaymentProof[]
+  id                   String                            @id @default(cuid())
+  tournamentId         String
+  tournament           Tournament                        @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  categoryId           String?
+  category             Category?                         @relation(fields: [categoryId], references: [id])
+  playerId             String
+  partnerId            String?
+  player               User                              @relation(fields: [playerId], references: [id])
+  teamId               String?
+  team                 Team?                             @relation(fields: [teamId], references: [id])
+  status               RegistrationStatus                @default(PENDING)
+  approvedBy           String?
+  approvedAt           DateTime?
+  rejectionReason      String?
+  registeredAt         DateTime                          @default(now())
+  PlayerProfile        PlayerProfile?                    @relation(fields: [playerProfileId], references: [id])
+  playerProfileId      String?
+  paymentProofs        TournamentPaymentProof[]
+  paymentVerifications RegistrationPaymentVerification[]
 
   @@unique([tournamentId, categoryId, playerId])
   @@unique([tournamentId, teamId])
@@ -319,26 +320,32 @@ model TournamentPaymentProof {
   tournamentId String
   tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
 
-  // The player who actually uploaded the proof
+  // Player who uploaded the receipt
   playerId String
   player   User   @relation(fields: [playerId], references: [id], onDelete: Cascade)
 
-  // Used for doubles / mixed doubles team payment.
-  // Both partners share the same TournamentRegistration.
+  // Optional legacy registration association
   registrationId String?
   registration   TournamentRegistration? @relation(fields: [registrationId], references: [id], onDelete: Cascade)
 
   proofUrl String
 
+  // Submission status (category decisions are stored separately)
   status PaymentProofStatus @default(PENDING)
 
-  submittedAt DateTime  @default(now())
-  verifiedAt  DateTime?
-  verifiedBy  String?
-
+  submittedAt     DateTime  @default(now())
+  verifiedAt      DateTime?
+  verifiedBy      String?
   rejectionReason String?
 
-  @@unique([registrationId, playerId])
+  // Current category verifications
+  verifications RegistrationPaymentVerification[]
+
+  // Historical category decisions associated with this receipt
+  decisions PaymentVerificationHistory[]
+
+  // Allow multiple submissions from the same player
+  @@index([registrationId, playerId])
   @@index([tournamentId, playerId])
 }
 
@@ -346,6 +353,56 @@ enum PaymentProofStatus {
   PENDING
   APPROVED
   REJECTED
+}
+
+model RegistrationPaymentVerification {
+  id String @id @default(cuid())
+
+  // Specific tournament category registration
+  registrationId String
+  registration   TournamentRegistration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+
+  // Player being verified
+  // Important for Doubles and Mixed Doubles
+  playerId String
+
+  // Currently submitted payment proof
+  proofId String?
+  proof   TournamentPaymentProof? @relation(fields: [proofId], references: [id], onDelete: SetNull)
+
+  status PaymentProofStatus @default(PENDING)
+
+  verifiedBy      String?
+  verifiedAt      DateTime?
+  rejectionReason String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // One verification per player per category registration
+  @@unique([registrationId, playerId])
+  @@index([playerId])
+  @@index([proofId])
+}
+
+model PaymentVerificationHistory {
+  id String @id @default(cuid())
+
+  registrationId String
+  playerId       String
+
+  proofId String
+  proof   TournamentPaymentProof @relation(fields: [proofId], references: [id], onDelete: Cascade)
+
+  status PaymentProofStatus
+
+  verifiedBy      String?
+  rejectionReason String?
+
+  createdAt DateTime @default(now())
+
+  @@index([registrationId, playerId])
+  @@index([proofId])
 }
 
 // Matches

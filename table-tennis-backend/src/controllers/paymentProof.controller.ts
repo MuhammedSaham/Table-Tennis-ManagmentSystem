@@ -9,6 +9,7 @@ const paymentProofService = new PaymentProofService();
 export const submitPaymentProof = catchAsync(
   async (req: Request, res: Response) => {
     const { tournamentId } = req.params;
+    const { registrationId } = req.body;
 
     if (!req.file) {
       throw new AppError(
@@ -24,7 +25,8 @@ export const submitPaymentProof = catchAsync(
       await paymentProofService.submitPaymentProof(
         req.user!.id,
         tournamentId,
-        proofUrl
+        proofUrl,
+        registrationId || undefined
       );
 
     sendResponse(
@@ -51,7 +53,7 @@ export const getPendingPaymentProofs = catchAsync(
 export const processPaymentProof = catchAsync(
   async (req: Request, res: Response) => {
     const { proofId } = req.params;
-    const { action, rejectionReason } = req.body;
+    const { action, rejectionReason, verificationId } = req.body;
 
     if (action !== 'APPROVE' && action !== 'REJECT') {
       throw new AppError(
@@ -65,7 +67,8 @@ export const processPaymentProof = catchAsync(
         req.user!.id,
         proofId,
         action,
-        rejectionReason
+        rejectionReason,
+        verificationId
       );
 
     sendResponse(

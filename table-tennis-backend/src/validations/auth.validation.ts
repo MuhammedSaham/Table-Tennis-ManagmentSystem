@@ -84,3 +84,15 @@ export const resendVerificationSchema = z.object({
     email: z.string().email('Invalid email format'),
   }),
 });
+
+// Change password validation
+export const changePasswordSchema = z.object({
+  body: z.object({
+    currentPassword: z.string().min(1, 'Current password is required'),
+    newPassword: passwordSchema,
+    confirmPassword: z.string().min(1, 'Please confirm your new password'),
+  }).refine((data) => data.newPassword === data.confirmPassword, {
+    message: 'New password and confirm password do not match',
+    path: ['confirmPassword'],
+  }),
+});

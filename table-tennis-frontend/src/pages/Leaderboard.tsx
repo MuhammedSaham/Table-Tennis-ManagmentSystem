@@ -70,11 +70,48 @@ const Leaderboard: React.FC = () => {
 
   const fetchStandings = async () => {
     setLoadingStandings(true);
+
     try {
-      const response = await api.get(
-        `/results/tournaments/${selectedTournament}/standings`,
+      const [standingsResponse, playersResponse] = await Promise.all([
+        api.get(`/results/tournaments/${selectedTournament}/standings`),
+        api.get("/users/public/players"),
+      ]);
+
+      // Identify all Club Players using their User IDs.
+      const clubPlayerIds = new Set<string>(
+        playersResponse.data.data
+          .filter(
+            (player: { id: string; isClubMember: boolean }) =>
+              player.isClubMember === true,
+          )
+          .map((player: { id: string }) => player.id),
       );
-      setStandings(response.data.data);
+
+      const filteredStandings: CategoryStanding[] =
+        standingsResponse.data.data.map((category: CategoryStanding) => {
+          const eligibleStandings = category.standings.filter((entry) => {
+            if (entry.participantType === "TEAM") {
+              // Both players must be Club Players.
+              return (
+                entry.members?.length === 2 &&
+                entry.members.every((member) =>
+                  clubPlayerIds.has(member.playerId),
+                )
+              );
+            }
+
+            // Singles: only Club Players.
+            return clubPlayerIds.has(entry.playerId);
+          });
+
+          return {
+            ...category,
+            standings: eligibleStandings,
+            totalPlayers: eligibleStandings.length,
+          };
+        });
+
+      setStandings(filteredStandings);
     } catch (error) {
       toast.error("Failed to fetch standings");
     } finally {
