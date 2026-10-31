@@ -1978,49 +1978,52 @@ const TournamentDetails: React.FC = () => {
                   onClick={() => {
                     setActiveCategoryId(category.id);
                   }}
-                  className={`group relative cursor-pointer rounded-2xl border transition-all duration-300 backdrop-blur-md flex flex-col justify-between overflow-hidden ${
+                  className={`group relative cursor-pointer rounded-2xl border transition-all duration-200 flex flex-col justify-between overflow-hidden shadow-lg ${
                     isActive
-                      ? "border-[#4AEEFF] bg-gradient-to-b from-[#4AEEFF]/15 via-[#061D23]/90 to-[#061D23]/95 shadow-[0_12px_35px_-8px_rgba(74,238,255,0.25)] ring-1 ring-[#4AEEFF]/40 -translate-y-0.5"
-                      : "border-white/10 bg-[#061D23]/40 hover:border-white/25 hover:bg-[#061D23]/65 hover:-translate-y-0.5"
+                      ? "border-[#4AEEFF] bg-gradient-to-b from-[#103842] via-[#0A262E] to-[#061D23] shadow-black/50 ring-1 ring-[#4AEEFF]/40 -translate-y-0.5"
+                      : "border-white/10 bg-[#0A262E]/70 hover:border-white/25 hover:bg-[#0E333D] hover:-translate-y-1 hover:shadow-2xl hover:shadow-black/60"
                   }`}
                 >
-                  {/* Top indicator bar for active card */}
+                  {/* Top colored accent stripe for selected card */}
                   {isActive && (
-                    <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-[#4AEEFF] to-transparent shadow-[0_0_8px_#4AEEFF]" />
+                    <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#4AEEFF] via-[#74ffed] to-[#4AEEFF] shadow-[0_0_8px_#4AEEFF]" />
                   )}
 
-                  <div className="p-5 space-y-4">
-                    {/* Header Badges */}
-                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <div className="p-5 sm:p-6 space-y-4">
+                    {/* Top Row: Format & Gender Badges + Selection Status */}
+                    <div className="flex items-center justify-between gap-2">
                       <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="px-2 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-md bg-white/10 text-white border border-white/15">
+                        <span className="px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider rounded-md bg-white/10 text-white border border-white/15">
                           {category.type}
                         </span>
                         {category.gender && category.gender !== "MIXED" && (
-                          <span className="px-2 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-md bg-[#4AEEFF]/15 text-[#4AEEFF] border border-[#4AEEFF]/30">
+                          <span className="px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider rounded-md bg-[#4AEEFF]/15 text-[#4AEEFF] border border-[#4AEEFF]/30">
                             {category.gender === "MALE" ? "♂ Men" : "♀ Women"}
                           </span>
                         )}
                       </div>
 
                       {isActive ? (
-                        <span className="flex items-center gap-1.5 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-full bg-[#4AEEFF] text-[#061D23] shadow-[0_0_10px_rgba(74,238,255,0.4)]">
-                          <span className="w-1.5 h-1.5 rounded-full bg-[#061D23] animate-pulse"></span>
-                          Viewing Draw
+                        <span className="flex items-center gap-1.5 px-3 py-1 text-[10px] font-black uppercase tracking-wider rounded-full bg-[#4AEEFF] text-[#061D23] shadow-sm">
+                          <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                          </svg>
+                          <span>Active Draw</span>
                         </span>
                       ) : (
-                        <span className="text-[10px] font-bold text-slate-400 group-hover:text-white transition-colors">
-                          Click to view
+                        <span className="text-xs font-bold text-slate-400 group-hover:text-[#4AEEFF] flex items-center gap-1 transition-colors">
+                          <span>Select</span>
+                          <span className="transition-transform duration-200 group-hover:translate-x-1">→</span>
                         </span>
                       )}
                     </div>
 
-                    {/* Category Title */}
+                    {/* Category Title & Age / Format Subtitle */}
                     <div>
-                      <h3 className="font-black text-white text-lg tracking-wide group-hover:text-[#4AEEFF] transition-colors line-clamp-1">
+                      <h3 className="font-extrabold text-white text-lg tracking-tight group-hover:text-[#4AEEFF] transition-colors line-clamp-1">
                         {category.name}
                       </h3>
-                      <div className="flex items-center gap-2 mt-1 text-xs text-slate-400">
+                      <div className="flex items-center gap-2 mt-1 text-xs text-slate-300">
                         {category.minAge || category.maxAge ? (
                           <span>
                             Age: {category.minAge ? `${category.minAge}+` : ""}
@@ -2035,49 +2038,54 @@ const TournamentDetails: React.FC = () => {
                           {(category.stageFormat || tournamentType) ===
                           "GROUP_KNOCKOUT"
                             ? "Group & Knockout"
-                            : "Knockout"}
+                            : "Knockout Bracket"}
                         </span>
                       </div>
                     </div>
 
-                    {/* Capacity Progress */}
-                    <div className="space-y-2 pt-2 border-t border-white/10">
-                      <div className="flex justify-between items-center text-xs font-mono">
-                        <span className="text-slate-300 font-sans text-[11px] uppercase tracking-wider">
+                    {/* Capacity & Progress Bar */}
+                    <div className="space-y-2 pt-3 border-t border-white/10">
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="text-slate-300 text-[11px] font-medium tracking-wide">
                           Participants
                         </span>
-                        <span className="font-bold text-white">
-                          {category.currentParticipants} /{" "}
-                          {category.maxParticipants}{" "}
-                          <span className="text-slate-400 font-normal">
-                            ({fillPct}%)
-                          </span>
+                        <span className="font-bold text-white font-mono text-xs">
+                          {category.currentParticipants}
+                          <span className="text-slate-400 font-normal"> / {category.maxParticipants}</span>
                         </span>
                       </div>
 
-                      <div className="w-full bg-black/40 border border-white/10 h-2 rounded-full overflow-hidden p-0.5">
+                      {/* Smooth Rounded Progress Bar */}
+                      <div className="w-full bg-black/40 border border-white/10 h-2.5 rounded-full overflow-hidden p-0.5">
                         <div
                           className={`h-full rounded-full transition-all duration-500 ${
                             isFull
-                              ? "bg-gradient-to-r from-red-500 to-amber-500"
-                              : "bg-gradient-to-r from-[#4AEEFF] via-[#22d3ee] to-[#0ea5e9] shadow-[0_0_8px_rgba(74,238,255,0.4)]"
+                              ? "bg-gradient-to-r from-rose-500 to-amber-500"
+                              : "bg-gradient-to-r from-[#4AEEFF] via-[#74ffed] to-[#0ea5e9]"
                           }`}
                           style={{ width: `${Math.min(100, fillPct)}%` }}
                         />
                       </div>
 
-                      <div className="flex justify-between items-center text-[11px] text-slate-400 pt-0.5">
-                        <span>
+                      {/* Availability & Percentage */}
+                      <div className="flex justify-between items-center text-xs pt-0.5">
+                        <span className="text-[11px]">
                           {isFull ? (
-                            <strong className="text-red-400 font-semibold">
-                              Division Full
-                            </strong>
+                            <span className="text-rose-400 font-bold">
+                              Bracket Full
+                            </span>
+                          ) : spotsLeft <= 4 ? (
+                            <span className="text-amber-300 font-bold">
+                              Only {spotsLeft} spot{spotsLeft === 1 ? "" : "s"} left
+                            </span>
                           ) : (
-                            <span>{spotsLeft} spots available</span>
+                            <span className="text-slate-300 font-medium">
+                              {spotsLeft} spots available
+                            </span>
                           )}
                         </span>
-                        <span className="font-mono text-slate-400 text-[10px]">
-                          MAX {category.maxParticipants}
+                        <span className="font-mono text-slate-400 text-[11px] font-semibold">
+                          {fillPct}%
                         </span>
                       </div>
                     </div>
