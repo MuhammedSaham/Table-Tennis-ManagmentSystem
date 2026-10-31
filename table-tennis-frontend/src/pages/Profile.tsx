@@ -113,7 +113,7 @@ const Profile: React.FC = () => {
   const [_statsLoading, setStatsLoading] = useState(false);
   const [isFavorited, setIsFavorited] = useState(false);
   const [totalFavorites, setTotalFavorites] = useState(0);
-  const [favoriteLoading, setFavoriteLoading] = useState(false);
+  const [favoriteLoading, _setFavoriteLoading] = useState(false);
 
   const [membershipStatus, setMembershipStatus] = useState<any>(null);
   const [membershipLoading, setMembershipLoading] = useState(false);
