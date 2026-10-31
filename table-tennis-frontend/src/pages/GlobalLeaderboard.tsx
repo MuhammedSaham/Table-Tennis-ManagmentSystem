@@ -3,6 +3,7 @@ import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import { Link } from "react-router-dom";
 import { TrophyIcon, ChartBarIcon } from "@heroicons/react/24/outline";
+import ScrollReveal from "../components/ScrollReveal";
 
 interface Player {
   playerId: string;
@@ -104,13 +105,13 @@ const GlobalLeaderboard: React.FC = () => {
   return wrapInBaseLayout(
     <>
       {/* HEADER MODULE */}
-      <header className="flex flex-col justify-between gap-4 rounded-[16px] border border-white/20 bg-[#061D23]/15 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl sm:flex-row sm:items-center">
+      <header className="animate-fade-up-1 flex flex-col justify-between gap-4 rounded-[16px] border border-white/20 bg-[#061D23]/15 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl sm:flex-row sm:items-center">
         <div>
-          <div className="mb-3 h-[3px] w-16 bg-[#4AEEFF]" />
+          <div className="mb-3 h-[3px] w-16 bg-[#4AEEFF] animate-laser-flow" />
           <span className="inline-block px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-md bg-[#4AEEFF]/20 text-[#4AEEFF] border border-[#4AEEFF]/40 align-middle mb-2">
             Official Rankings
           </span>
-          <h1 className="text-2xl font-black uppercase tracking-[0.2em] text-white sm:text-4xl">
+          <h1 className="text-2xl font-black uppercase tracking-[0.2em] text-white sm:text-4xl animate-light-sweep">
             Global Leaderboard
           </h1>
           <p className="mt-1 text-xs uppercase tracking-[0.3em] text-[#4AEEFF]/90">
@@ -120,47 +121,50 @@ const GlobalLeaderboard: React.FC = () => {
       </header>
 
       {/* CATEGORY SELECTOR MODULE */}
-      <section className="rounded-[16px] border border-white/20 bg-[#061D23]/15 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl">
-        <div className="mb-4 flex items-center gap-2">
-          <ChartBarIcon className="h-5 w-5 text-[#4AEEFF]" />
-          <h2 className="text-xs font-black uppercase tracking-widest text-[#4AEEFF]">
-            Filter Category
-          </h2>
-        </div>
-        {loadingCategories ? (
-          <p className="text-sm font-semibold text-[#4AEEFF] animate-pulse">
-            Loading categories...
-          </p>
-        ) : (
-          <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-            <select
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="w-full max-w-md rounded-xl border border-white/20 bg-[#061D23]/80 px-4 py-3 text-sm font-medium text-white shadow-inner focus:border-[#4AEEFF] focus:outline-none focus:ring-1 focus:ring-[#4AEEFF]"
-            >
-              <option value="" className="bg-[#061D23] text-white">
-                -- Select a category --
-              </option>
-              {categories.map((category) => (
-                <option
-                  key={category.id}
-                  value={category.name}
-                  className="bg-[#061D23] text-white"
-                >
-                  {category.name} ({category.type})
-                </option>
-              ))}
-            </select>
-            <p className="text-xs uppercase tracking-wider text-white/60 font-mono">
-              Aggregated across all tournaments
-            </p>
+      <ScrollReveal delay={100}>
+        <section className="rounded-[16px] border border-white/20 bg-[#061D23]/15 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl">
+          <div className="mb-4 flex items-center gap-2">
+            <ChartBarIcon className="h-5 w-5 text-[#4AEEFF]" />
+            <h2 className="text-xs font-black uppercase tracking-widest text-[#4AEEFF]">
+              Filter Category
+            </h2>
           </div>
-        )}
-      </section>
+          {loadingCategories ? (
+            <p className="text-sm font-semibold text-[#4AEEFF] animate-pulse">
+              Loading categories...
+            </p>
+          ) : (
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+              <select
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                className="w-full max-w-md rounded-xl border border-white/20 bg-[#061D23]/80 px-4 py-3 text-sm font-medium text-white shadow-inner focus:border-[#4AEEFF] focus:outline-none focus:ring-1 focus:ring-[#4AEEFF]"
+              >
+                <option value="" className="bg-[#061D23] text-white">
+                  -- Select a category --
+                </option>
+                {categories.map((category) => (
+                  <option
+                    key={category.id}
+                    value={category.name}
+                    className="bg-[#061D23] text-white"
+                  >
+                    {category.name} ({category.type})
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs uppercase tracking-wider text-white/60 font-mono">
+                Aggregated across all tournaments
+              </p>
+            </div>
+          )}
+        </section>
+      </ScrollReveal>
 
       {/* STANDINGS TABLE MODULE */}
       {selectedCategory && (
-        <section className="rounded-[16px] border border-white/20 bg-[#061D23]/15 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl">
+        <ScrollReveal delay={150}>
+          <section className="rounded-[16px] border border-white/20 bg-[#061D23]/15 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl">
           <div className="mb-4 sm:mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <h2 className="text-base sm:text-lg font-black uppercase tracking-wider text-white">
               {selectedCategory} — Overall Rankings
@@ -342,6 +346,7 @@ const GlobalLeaderboard: React.FC = () => {
             </>
           )}
         </section>
+      </ScrollReveal>
       )}
     </>,
   );

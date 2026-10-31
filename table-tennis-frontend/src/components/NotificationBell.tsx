@@ -204,11 +204,11 @@ const NotificationBell: React.FC = () => {
     <div ref={bellContainerRef} className="relative">
       <button
         onClick={() => setShowDropdown(!showDropdown)}
-        className="relative p-2 text-gray-300 hover:text-white rounded-full hover:bg-[#0f2b33] transition-colors"
+        className="relative p-1.5 sm:p-2 text-gray-300 hover:text-white rounded-full hover:bg-white/10 transition-colors"
       >
-        <BellIcon className="w-6 h-6" />
+        <BellIcon className="w-5 h-5 sm:w-6 sm:h-6" />
         {unreadCount > 0 && (
-          <span className="absolute top-0 right-0 inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-bold leading-none text-white bg-red-600 rounded-full min-w-[18px] min-h-[18px]">
+          <span className="absolute top-0 right-0 inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] sm:text-xs font-bold leading-none text-white bg-rose-500 rounded-full min-w-[16px] sm:min-w-[18px] min-h-[16px] sm:min-h-[18px]">
             {unreadCount > 9 ? "9+" : unreadCount}
           </span>
         )}
@@ -222,7 +222,7 @@ const NotificationBell: React.FC = () => {
             onTouchStart={() => setShowDropdown(false)}
           />
 
-          <div className="fixed sm:absolute inset-x-3 sm:inset-x-auto right-auto sm:right-0 top-20 sm:top-auto mt-2 w-auto sm:w-96 max-w-md bg-[#082229] rounded-2xl shadow-2xl border border-cyan-500/30 z-50 overflow-hidden backdrop-blur-xl text-white">
+          <div className="fixed sm:absolute inset-x-3 sm:inset-x-auto right-auto sm:right-0 top-16 sm:top-auto mt-2 w-auto sm:w-96 max-w-md bg-[#082229] rounded-2xl shadow-2xl border border-cyan-500/30 z-50 overflow-hidden backdrop-blur-xl text-white">
             <div className="flex justify-between items-center p-3.5 border-b border-white/10 bg-[#061D23]/80">
               <div className="flex items-center gap-2">
                 <span className="h-2 w-2 rounded-full bg-[#4AEEFF]"></span>

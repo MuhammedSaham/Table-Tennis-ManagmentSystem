@@ -24,6 +24,7 @@ export interface User {
   adminRequestStatus?: string;
   permissions?: Permission[];
   isEmailVerified?: boolean;
+  profileImage?: string;
 }
 
 interface AuthContextType {
@@ -60,7 +61,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
     if (storedToken && storedUser) {
       setToken(storedToken);
-      setUser(JSON.parse(storedUser));
+      try {
+        setUser(JSON.parse(storedUser));
+      } catch {
+        setUser(null);
+      }
+      // Sync fresh profile data including profileImage
+      api.get("/users/profile")
+        .then((res) => {
+          if (res.data?.data) {
+            localStorage.setItem("user", JSON.stringify(res.data.data));
+            setUser(res.data.data);
+          }
+        })
+        .catch(() => {});
     }
     setIsLoading(false);
   }, []);

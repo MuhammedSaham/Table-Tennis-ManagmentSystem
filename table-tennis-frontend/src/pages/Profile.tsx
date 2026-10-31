@@ -76,7 +76,7 @@ const permissionLabel = (permission: string) =>
     .join(" ");
 
 const Profile: React.FC = () => {
-  const { user } = useAuth();
+  const { user, refetchUser } = useAuth();
   const { userId: viewedUserId } = useParams<{ userId: string }>();
   const isViewingOtherProfile = Boolean(viewedUserId);
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -222,7 +222,7 @@ const Profile: React.FC = () => {
 
       toast.success(
         response.data.message ||
-          "Club membership request submitted successfully!",
+        "Club membership request submitted successfully!",
       );
 
       await fetchMembershipStatus();
@@ -409,6 +409,7 @@ const Profile: React.FC = () => {
 
       toast.success("Profile picture updated successfully!");
       fetchProfile();
+      await refetchUser();
       setProfileImage(null);
       setImagePreview(null);
     } catch (error) {
@@ -534,13 +535,12 @@ const Profile: React.FC = () => {
                   {profile.firstName} {profile.lastName}
                 </h2>
                 <div
-                  className={`mt-2 inline-flex items-center rounded px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider ${
-                    profile.role === "SUPER_ADMIN"
+                  className={`mt-2 inline-flex items-center rounded px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider ${profile.role === "SUPER_ADMIN"
                       ? "bg-amber-500/20 text-amber-300 border border-amber-500/40"
                       : profile.role === "ADMIN"
                         ? "bg-purple-500/20 text-purple-300 border border-purple-500/40"
                         : "bg-[#4AEEFF]/20 text-[#4AEEFF]"
-                  }`}
+                    }`}
                 >
                   {profile.role === "SUPER_ADMIN"
                     ? "SUPER ADMIN"
@@ -549,13 +549,12 @@ const Profile: React.FC = () => {
                 {isViewingOtherProfile && profile.role === "PLAYER" && (
                   <button
                     type="button"
-                   // onClick={handleToggleFavorite}
+                    // onClick={handleToggleFavorite}
                     disabled={favoriteLoading}
-                    className={`mt-3 flex items-center gap-2 rounded-xl border px-4 py-2 text-xs font-bold transition-all ${
-                      isFavorited
+                    className={`mt-3 flex items-center gap-2 rounded-xl border px-4 py-2 text-xs font-bold transition-all ${isFavorited
                         ? "border-[#FF4B72]/70 bg-[#FF4B72]/20 text-[#FF4B72]"
                         : "border-white/15 bg-white/[0.05] text-white/80 hover:border-[#FF4B72]/50 hover:text-[#FF4B72]"
-                    }`}
+                      }`}
                   >
                     <span>{isFavorited ? "❤️" : "🤍"}</span>
                     <span>
@@ -663,7 +662,7 @@ const Profile: React.FC = () => {
                         }
                         aria-pressed={
                           showPasswords[
-                            field.name as keyof typeof showPasswords
+                          field.name as keyof typeof showPasswords
                           ]
                         }
                         onClick={() =>
@@ -740,8 +739,8 @@ const Profile: React.FC = () => {
                   <p className="mt-1 font-bold text-white">
                     {profile.playerProfile.dateOfBirth
                       ? getPlayerAgeCategory(
-                          new Date(profile.playerProfile.dateOfBirth),
-                        ).category
+                        new Date(profile.playerProfile.dateOfBirth),
+                      ).category
                       : "N/A"}
                   </p>
                 </div>
@@ -772,8 +771,8 @@ const Profile: React.FC = () => {
                   <p className="mt-1 font-bold text-white">
                     {profile.playerProfile.dateOfBirth
                       ? new Date(
-                          profile.playerProfile.dateOfBirth,
-                        ).toLocaleDateString()
+                        profile.playerProfile.dateOfBirth,
+                      ).toLocaleDateString()
                       : "Not provided"}
                   </p>
                 </div>
@@ -785,95 +784,130 @@ const Profile: React.FC = () => {
           {!isViewingOtherProfile &&
             profile.role === "PLAYER" &&
             profile.playerProfile && (
-            <section className="rounded-[16px] border border-white/20 bg-[#061D23]/5 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl">
-              <div className="mb-5 flex items-center gap-3">
-                <div className="rounded-lg bg-[#4AEEFF]/20 p-2 text-[#4AEEFF]">
-                  <UserGroupIcon className="h-5 w-5" />
-                </div>
+              <section className="rounded-[16px] border border-white/20 bg-[#061D23]/5 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl">
+                <div className="mb-5 flex items-center gap-3">
+                  <div className="rounded-lg bg-[#4AEEFF]/20 p-2 text-[#4AEEFF]">
+                    <UserGroupIcon className="h-5 w-5" />
+                  </div>
 
-                <div>
-                  <h2 className="text-lg font-bold uppercase tracking-wider text-white">
-                    Club Membership
-                  </h2>
-                  <p className="text-xs text-white/60">
-                    Manage your table tennis club membership
-                  </p>
-                </div>
-              </div>
-
-              {membershipLoading ? (
-                <div className="rounded-[12px] border border-white/10 bg-[#061D23]/60 p-5">
-                  <p className="text-sm text-white/70">
-                    Checking membership status...
-                  </p>
-                </div>
-              ) : membershipStatus?.isClubMember ? (
-                /* APPROVED / MEMBER */
-                <div className="rounded-[12px] border border-emerald-500/30 bg-emerald-500/10 p-5">
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                      <p className="text-xs font-black uppercase tracking-wider text-emerald-300">
-                        Membership Status
-                      </p>
-                      <p className="mt-1 text-lg font-bold text-white">
-                        You are a Club Member
-                      </p>
-                      <p className="mt-1 text-xs text-white/60">
-                        Your club membership has been approved by an
-                        administrator.
-                      </p>
-                    </div>
-
-                    <span className="inline-flex w-fit rounded-lg border border-emerald-500/40 bg-emerald-500/20 px-4 py-2 text-xs font-black uppercase tracking-wider text-emerald-300">
-                      ✓ Approved
-                    </span>
+                  <div>
+                    <h2 className="text-lg font-bold uppercase tracking-wider text-white">
+                      Club Membership
+                    </h2>
+                    <p className="text-xs text-white/60">
+                      Manage your table tennis club membership
+                    </p>
                   </div>
                 </div>
-              ) : membershipStatus?.request?.status === "PENDING" ? (
-                /* PENDING */
-                <div className="rounded-[12px] border border-amber-500/30 bg-amber-500/10 p-5">
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                      <p className="text-xs font-black uppercase tracking-wider text-amber-300">
-                        Membership Status
-                      </p>
-                      <p className="mt-1 text-lg font-bold text-white">
-                        Membership Request Pending
-                      </p>
-                      <p className="mt-1 text-xs text-white/60">
-                        Your request has been submitted and is waiting for
-                        administrator approval.
-                      </p>
-                    </div>
 
-                    <span className="inline-flex w-fit rounded-lg border border-amber-500/40 bg-amber-500/20 px-4 py-2 text-xs font-black uppercase tracking-wider text-amber-300">
-                      ⏳ Pending
-                    </span>
+                {membershipLoading ? (
+                  <div className="rounded-[12px] border border-white/10 bg-[#061D23]/60 p-5">
+                    <p className="text-sm text-white/70">
+                      Checking membership status...
+                    </p>
                   </div>
-                </div>
-              ) : membershipStatus?.request?.status === "REJECTED" ? (
-                /* REJECTED */
-                <div className="rounded-[12px] border border-red-500/30 bg-red-500/10 p-5">
-                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                      <p className="text-xs font-black uppercase tracking-wider text-red-300">
-                        Membership Status
-                      </p>
+                ) : membershipStatus?.isClubMember ? (
+                  /* APPROVED / MEMBER */
+                  <div className="rounded-[12px] border border-emerald-500/30 bg-emerald-500/10 p-5">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <p className="text-xs font-black uppercase tracking-wider text-emerald-300">
+                          Membership Status
+                        </p>
+                        <p className="mt-1 text-lg font-bold text-white">
+                          You are a Club Member
+                        </p>
+                        <p className="mt-1 text-xs text-white/60">
+                          Your club membership has been approved by an
+                          administrator.
+                        </p>
+                      </div>
 
-                      <p className="mt-1 text-lg font-bold text-white">
-                        Membership Request Rejected
-                      </p>
+                      <span className="inline-flex w-fit rounded-lg border border-emerald-500/40 bg-emerald-500/20 px-4 py-2 text-xs font-black uppercase tracking-wider text-emerald-300">
+                        ✓ Approved
+                      </span>
+                    </div>
+                  </div>
+                ) : membershipStatus?.request?.status === "PENDING" ? (
+                  /* PENDING */
+                  <div className="rounded-[12px] border border-amber-500/30 bg-amber-500/10 p-5">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <p className="text-xs font-black uppercase tracking-wider text-amber-300">
+                          Membership Status
+                        </p>
+                        <p className="mt-1 text-lg font-bold text-white">
+                          Membership Request Pending
+                        </p>
+                        <p className="mt-1 text-xs text-white/60">
+                          Your request has been submitted and is waiting for
+                          administrator approval.
+                        </p>
+                      </div>
 
-                      <p className="mt-1 text-xs text-white/60">
-                        Reason:{" "}
-                        <span className="text-red-200">
-                          {membershipStatus.request.rejectionReason ||
-                            "No reason provided"}
+                      <span className="inline-flex w-fit rounded-lg border border-amber-500/40 bg-amber-500/20 px-4 py-2 text-xs font-black uppercase tracking-wider text-amber-300">
+                        ⏳ Pending
+                      </span>
+                    </div>
+                  </div>
+                ) : membershipStatus?.request?.status === "REJECTED" ? (
+                  /* REJECTED */
+                  <div className="rounded-[12px] border border-red-500/30 bg-red-500/10 p-5">
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <p className="text-xs font-black uppercase tracking-wider text-red-300">
+                          Membership Status
+                        </p>
+
+                        <p className="mt-1 text-lg font-bold text-white">
+                          Membership Request Rejected
+                        </p>
+
+                        <p className="mt-1 text-xs text-white/60">
+                          Reason:{" "}
+                          <span className="text-red-200">
+                            {membershipStatus.request.rejectionReason ||
+                              "No reason provided"}
+                          </span>
+                        </p>
+                      </div>
+
+                      {membershipStatus.request.rejectionCount < 3 ? (
+                        <button
+                          type="button"
+                          onClick={handleRequestMembership}
+                          disabled={membershipRequesting}
+                          className="inline-flex h-10 items-center justify-center rounded-lg bg-[#4AEEFF] px-5 text-xs font-black uppercase tracking-wider text-[#061D23] transition-all hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          {membershipRequesting
+                            ? "Submitting..."
+                            : "Request Again"}
+                        </button>
+                      ) : (
+                        <span className="inline-flex w-fit rounded-lg border border-red-500/40 bg-red-500/20 px-4 py-2 text-xs font-black uppercase tracking-wider text-red-300">
+                          Permanently Rejected
                         </span>
-                      </p>
+                      )}
                     </div>
+                  </div>
+                ) : (
+                  /* NO REQUEST */
+                  <div className="rounded-[12px] border border-white/10 bg-[#061D23]/60 p-5">
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <p className="text-xs font-black uppercase tracking-wider text-[#4AEEFF]">
+                          Membership Status
+                        </p>
 
-                    {membershipStatus.request.rejectionCount < 3 ? (
+                        <p className="mt-1 text-lg font-bold text-white">
+                          You are not a club member
+                        </p>
+
+                        <p className="mt-1 text-xs text-white/60">
+                          Submit a request to become a member of the club.
+                        </p>
+                      </div>
+
                       <button
                         type="button"
                         onClick={handleRequestMembership}
@@ -882,48 +916,13 @@ const Profile: React.FC = () => {
                       >
                         {membershipRequesting
                           ? "Submitting..."
-                          : "Request Again"}
+                          : "Request Club Membership"}
                       </button>
-                    ) : (
-                      <span className="inline-flex w-fit rounded-lg border border-red-500/40 bg-red-500/20 px-4 py-2 text-xs font-black uppercase tracking-wider text-red-300">
-                        Permanently Rejected
-                      </span>
-                    )}
-                  </div>
-                </div>
-              ) : (
-                /* NO REQUEST */
-                <div className="rounded-[12px] border border-white/10 bg-[#061D23]/60 p-5">
-                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                      <p className="text-xs font-black uppercase tracking-wider text-[#4AEEFF]">
-                        Membership Status
-                      </p>
-
-                      <p className="mt-1 text-lg font-bold text-white">
-                        You are not a club member
-                      </p>
-
-                      <p className="mt-1 text-xs text-white/60">
-                        Submit a request to become a member of the club.
-                      </p>
                     </div>
-
-                    <button
-                      type="button"
-                      onClick={handleRequestMembership}
-                      disabled={membershipRequesting}
-                      className="inline-flex h-10 items-center justify-center rounded-lg bg-[#4AEEFF] px-5 text-xs font-black uppercase tracking-wider text-[#061D23] transition-all hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      {membershipRequesting
-                        ? "Submitting..."
-                        : "Request Club Membership"}
-                    </button>
                   </div>
-                </div>
-              )}
-            </section>
-          )}
+                )}
+              </section>
+            )}
 
           {isViewingOtherProfile &&
             (profile.role === "ADMIN" || profile.role === "SUPER_ADMIN") &&
@@ -1093,11 +1092,10 @@ const Profile: React.FC = () => {
                         </div>
                         <div className="text-right">
                           <span
-                            className={`inline-block px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-md ${
-                              match.result === "Win"
+                            className={`inline-block px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-md ${match.result === "Win"
                                 ? "bg-[#4AEEFF]/20 text-[#4AEEFF]"
                                 : "bg-red-500/20 text-red-400"
-                            }`}
+                              }`}
                           >
                             {match.result}
                           </span>
@@ -1145,21 +1143,19 @@ const Profile: React.FC = () => {
                 <div className="flex items-center gap-1.5 p-1 rounded-xl bg-black/40 border border-white/10 self-start sm:self-auto">
                   <button
                     onClick={() => setActiveDoublesTab("ACTIVE")}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all ${
-                      activeDoublesTab === "ACTIVE"
+                    className={`px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all ${activeDoublesTab === "ACTIVE"
                         ? "bg-[#4AEEFF] text-[#061D23] shadow-md shadow-[#4AEEFF]/20"
                         : "text-white/60 hover:text-white"
-                    }`}
+                      }`}
                   >
                     Active Pairs ({doublesRegistrations.length})
                   </button>
                   <button
                     onClick={() => setActiveDoublesTab("RECEIVED")}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all relative ${
-                      activeDoublesTab === "RECEIVED"
+                    className={`px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all relative ${activeDoublesTab === "RECEIVED"
                         ? "bg-[#4AEEFF] text-[#061D23] shadow-md shadow-[#4AEEFF]/20"
                         : "text-white/60 hover:text-white"
-                    }`}
+                      }`}
                   >
                     Received ({profileReceivedInvites.length})
                     {profileReceivedInvites.length > 0 && (
@@ -1170,11 +1166,10 @@ const Profile: React.FC = () => {
                   </button>
                   <button
                     onClick={() => setActiveDoublesTab("SENT")}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all ${
-                      activeDoublesTab === "SENT"
+                    className={`px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all ${activeDoublesTab === "SENT"
                         ? "bg-[#4AEEFF] text-[#061D23] shadow-md shadow-[#4AEEFF]/20"
                         : "text-white/60 hover:text-white"
-                    }`}
+                      }`}
                   >
                     Sent ({profileSentInvites.length})
                   </button>
@@ -1337,13 +1332,12 @@ const Profile: React.FC = () => {
                           </div>
                           <div className="flex items-center gap-3 self-end sm:self-auto flex-shrink-0">
                             <span
-                              className={`px-2.5 py-1 text-[10px] font-black uppercase tracking-wider rounded-md border ${
-                                inv.status === "PENDING"
+                              className={`px-2.5 py-1 text-[10px] font-black uppercase tracking-wider rounded-md border ${inv.status === "PENDING"
                                   ? "bg-amber-500/15 text-amber-300 border-amber-500/30"
                                   : inv.status === "ACCEPTED"
                                     ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/30"
                                     : "bg-red-500/15 text-red-300 border-red-500/30"
-                              }`}
+                                }`}
                             >
                               {inv.status}
                             </span>

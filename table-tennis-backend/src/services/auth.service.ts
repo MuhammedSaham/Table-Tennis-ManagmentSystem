@@ -138,6 +138,7 @@ export class AuthService {
                 lastName: user.lastName,
                 role: userData.role === 'ADMIN' ? 'PENDING_ADMIN' : user.role,
                 adminRequestStatus: user.adminRequestStatus,
+                profileImage: user.profileImage,
                 permissions: [],
                 isEmailVerified: true,
             } as any,
@@ -207,6 +208,7 @@ export class AuthService {
                 adminRequestStatus: user.adminRequestStatus,
                 isSuperAdmin: user.role === 'SUPER_ADMIN' || user.isSuperAdmin,
                 isEmailVerified: user.isEmailVerified,
+                profileImage: user.profileImage,
                 permissions,
                 profile,
             },
@@ -242,6 +244,7 @@ export class AuthService {
                     role: true,
                     adminRequestStatus: true,
                     isSuperAdmin: true,
+                    profileImage: true,
                     adminPermissions: {
                         select: {
                             permission: true,
