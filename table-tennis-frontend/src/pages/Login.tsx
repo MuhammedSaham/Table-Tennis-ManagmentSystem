@@ -108,7 +108,7 @@ const styles: Record<string, React.CSSProperties> = {
     width: "calc(100% - 32px)",
     maxWidth: 440,
     padding: "22px 28px",
-    margin: "20px 16px",
+    margin: "20px 60px 20px 16px",
     boxSizing: "border-box",
     borderRadius: 20,
 
