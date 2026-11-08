@@ -978,6 +978,103 @@ if (paymentProofRequired) {
 
   return updated;
 }
+
+async removeRegistrationByAdmin(adminId: string, registrationId: string) {
+  const admin = await prisma.user.findUnique({
+    where: { id: adminId },
+    select: { role: true, isSuperAdmin: true },
+  });
+
+  if (
+    !admin ||
+    (admin.role !== 'ADMIN' &&
+      admin.role !== 'SUPER_ADMIN' &&
+      !admin.isSuperAdmin)
+  ) {
+    throw new AppError('Only admins can remove registrations', 403);
+  }
+
+  return await prisma.$transaction(async (tx) => {
+    const registration = await tx.tournamentRegistration.findUnique({
+      where: { id: registrationId },
+      include: {
+        category: true,
+        tournament: true,
+      },
+    });
+
+    if (!registration) {
+      throw new AppError('Registration not found', 404);
+    }
+
+    if (registration.status !== 'APPROVED') {
+      throw new AppError(
+        'Only approved registrations can be removed',
+        400
+      );
+    }
+
+    if (!registration.categoryId) {
+      throw new AppError('Registration category not found', 400);
+    }
+
+    if (registration.tournament.status === 'COMPLETED') {
+      throw new AppError(
+        'Cannot remove registrations from a completed tournament',
+        400
+      );
+    }
+
+    // Conservative safety rule:
+    // Do not remove registrations after tournament-stage data
+    // has been created for this category.
+    const [groupsCount, matchesCount, resultsCount] = await Promise.all([
+      tx.group.count({
+        where: {
+          tournamentId: registration.tournamentId,
+          categoryId: registration.categoryId,
+        },
+      }),
+      tx.match.count({
+        where: {
+          tournamentId: registration.tournamentId,
+          categoryId: registration.categoryId,
+        },
+      }),
+      tx.tournamentResult.count({
+        where: {
+          tournamentId: registration.tournamentId,
+        },
+      }),
+    ]);
+
+    if (groupsCount > 0 || matchesCount > 0 || resultsCount > 0) {
+      throw new AppError(
+        'Cannot remove this registration because tournament groups, matches, or published result data already exist. Use the tournament no-show or walkover process instead.',
+        400
+      );
+    }
+
+    // Update only this registration.
+    const updated = await tx.tournamentRegistration.update({
+      where: { id: registrationId },
+      data: { status: 'CANCELLED' },
+    });
+
+    // Approved registrations contribute one participant entry.
+    await tx.category.update({
+      where: { id: registration.categoryId },
+      data: {
+        currentParticipants: {
+          decrement: 1,
+        },
+      },
+    });
+
+    return updated;
+  });
+}
+
   // Helper method to calculate age
   private calculateAge(birthDate: Date): number {
     const today = new Date();

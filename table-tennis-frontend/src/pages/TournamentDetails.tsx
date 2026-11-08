@@ -212,7 +212,8 @@ const TournamentDetails: React.FC<TournamentDetailsProps> = ({
   const [tournament, setTournament] = useState<Tournament | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
-
+  const [selectedRegistrationCategoryId, setSelectedRegistrationCategoryId] =
+    useState<string>("");
   const [paymentProofInfo, setPaymentProofInfo] =
     useState<PaymentProofInfo | null>(null);
 
@@ -315,6 +316,10 @@ const TournamentDetails: React.FC<TournamentDetailsProps> = ({
   const [showKnockoutModal, setShowKnockoutModal] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [registrationToRemove, setRegistrationToRemove] =
+    useState<Registration | null>(null);
+
+  const [isRemovingRegistration, setIsRemovingRegistration] = useState(false);
   const [isDeletingTournament, setIsDeletingTournament] = useState(false);
   const [showCompleteConfirm, setShowCompleteConfirm] = useState(false);
   const [isCompletingTournament, setIsCompletingTournament] = useState(false);
@@ -777,6 +782,28 @@ const TournamentDetails: React.FC<TournamentDetailsProps> = ({
       toast.error("Failed to reset knockout stage");
     } finally {
       setShowResetConfirm(false);
+    }
+  };
+  const handleRemoveRegistration = async () => {
+    if (!registrationToRemove || isRemovingRegistration) return;
+
+    setIsRemovingRegistration(true);
+
+    try {
+      await api.delete(
+        `/registrations/${registrationToRemove.id}/admin-remove`,
+      );
+
+      toast.success("Registration removed successfully");
+
+      setRegistrationToRemove(null);
+      await fetchTournamentDetails();
+    } catch (error: any) {
+      toast.error(
+        error.response?.data?.message || "Failed to remove registration",
+      );
+    } finally {
+      setIsRemovingRegistration(false);
     }
   };
 
@@ -1583,6 +1610,24 @@ const TournamentDetails: React.FC<TournamentDetailsProps> = ({
     ) || [];
   const hasRegistration = userRegistrations.length > 0;
   const canRegister = isPlayer && isRegistrationOpen;
+
+  const registrationCategoryId =
+    selectedRegistrationCategoryId &&
+    tournament.categories.some(
+      (category) => category.id === selectedRegistrationCategoryId,
+    )
+      ? selectedRegistrationCategoryId
+      : tournament.categories[0]?.id || "";
+
+  const activeRegistrations = (tournament.registrations || []).filter(
+    (registration) => registration.status !== "CANCELLED",
+  );
+
+  const filteredRegistrations = activeRegistrations.filter(
+    (registration) =>
+      (registration.categoryId || registration.category?.id) ===
+      registrationCategoryId,
+  );
 
   // Function to check if category is doubles
   const isDoublesCategory = (categoryType: string) => {
@@ -3661,11 +3706,41 @@ const TournamentDetails: React.FC<TournamentDetailsProps> = ({
       {/* Registrations Section */}
       {!registrationOnly &&
         ((isAdmin && canManageRegistrations) || isSuperAdmin || isReferee) &&
-        tournament.registrations?.length > 0 && (
+        tournament.categories.length > 0 && (
           <div className="rounded-2xl border border-white/20 bg-[#061D23]/25 p-4 sm:p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl mb-6">
             <h2 className="text-xl font-black uppercase tracking-wider text-white mb-4">
               Registrations ({tournament.registrations.length})
             </h2>
+            {/* Horizontal Registration Category Tabs */}
+            <div className="mb-5 flex gap-2 overflow-x-auto border-b border-white/10 pb-3">
+              {tournament.categories.map((category) => {
+                const count = activeRegistrations.filter(
+                  (registration) =>
+                    (registration.categoryId || registration.category?.id) ===
+                    category.id,
+                ).length;
+
+                const isActive = registrationCategoryId === category.id;
+
+                return (
+                  <button
+                    key={category.id}
+                    type="button"
+                    onClick={() =>
+                      setSelectedRegistrationCategoryId(category.id)
+                    }
+                    className={`shrink-0 rounded-xl border px-4 py-2.5 text-xs font-black uppercase tracking-wide transition-all ${
+                      isActive
+                        ? "border-[#4AEEFF] bg-[#4AEEFF]/20 text-[#4AEEFF]"
+                        : "border-white/15 bg-white/5 text-white/60 hover:border-[#4AEEFF]/40 hover:text-white"
+                    }`}
+                  >
+                    {formatDivisionName(category.name)}
+                    <span className="ml-2 opacity-70">({count})</span>
+                  </button>
+                );
+              })}
+            </div>
             <div
               className="overflow-x-auto"
               style={{ WebkitOverflowScrolling: "touch" }}
@@ -3688,10 +3763,15 @@ const TournamentDetails: React.FC<TournamentDetailsProps> = ({
                     <th className="px-6 py-3 text-left text-xs font-black uppercase tracking-wider text-[#4AEEFF]">
                       Status
                     </th>
+                    {isAdmin && canManageRegistrations && (
+                      <th className="px-6 py-3 text-left text-xs font-black uppercase tracking-wider text-[#4AEEFF]">
+                        Action
+                      </th>
+                    )}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5">
-                  {tournament.registrations.map((registration) => (
+                  {filteredRegistrations.map((registration) => (
                     <tr
                       key={registration.id}
                       className="hover:bg-white/5 transition-colors"
@@ -3749,6 +3829,21 @@ const TournamentDetails: React.FC<TournamentDetailsProps> = ({
                           {registration.status}
                         </span>
                       </td>
+                      {isAdmin && canManageRegistrations && (
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          {registration.status === "APPROVED" && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setRegistrationToRemove(registration)
+                              }
+                              className="rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-xs font-bold text-red-300 transition-colors hover:bg-red-500/20 hover:text-red-200"
+                            >
+                              Remove
+                            </button>
+                          )}
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>
@@ -4235,6 +4330,34 @@ const TournamentDetails: React.FC<TournamentDetailsProps> = ({
           </div>,
           document.body,
         )}
+      {/* Remove Registration Confirmation Modal */}
+      <ConfirmModal
+        isOpen={registrationToRemove !== null}
+        onClose={() => {
+          if (!isRemovingRegistration) {
+            setRegistrationToRemove(null);
+          }
+        }}
+        onConfirm={handleRemoveRegistration}
+        title="Remove Registration"
+        message="Are you sure you want to remove this approved registration?"
+        itemName={
+          registrationToRemove?.team?.members?.length
+            ? registrationToRemove.team.members
+                .map((member) =>
+                  `${member.player?.firstName || ""} ${member.player?.lastName || ""}`.trim(),
+                )
+                .filter(Boolean)
+                .join(" & ")
+            : `${registrationToRemove?.player?.firstName || ""} ${registrationToRemove?.player?.lastName || ""}`.trim()
+        }
+        itemBadge={registrationToRemove?.category?.name || "REGISTRATION"}
+        details="Only this category registration will be cancelled. Other category registrations and payment records will remain unchanged. Removal is blocked when tournament-stage data already exists."
+        confirmText="Yes, Remove Registration"
+        cancelText="Cancel"
+        variant="danger"
+        isLoading={isRemovingRegistration}
+      />
 
       {/* Delete Tournament Confirmation Modal */}
       <ConfirmModal

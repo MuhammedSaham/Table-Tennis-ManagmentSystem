@@ -8,6 +8,7 @@ import {
   getTournamentRegistrations,
   processRegistration,
   cancelRegistration,
+  removeRegistrationByAdmin,
 } from '../controllers/registration.controller';
 import {
   registerTournamentSchema,
@@ -27,5 +28,12 @@ router.delete('/:registrationId/cancel', isPlayer, cancelRegistration);
 // Admin/Referee routes
 router.get('/tournaments/:tournamentId', restrictTo('ADMIN', 'SUPER_ADMIN', 'REFEREE'), getTournamentRegistrations);
 router.patch('/:registrationId/process', hasPermission('MANAGE_REGISTRATIONS'), validate(processRegistrationSchema), processRegistration);
+
+router.delete(
+  '/:registrationId/admin-remove',
+  restrictTo('ADMIN', 'SUPER_ADMIN'),
+  hasPermission('MANAGE_REGISTRATIONS'),
+  removeRegistrationByAdmin
+);
 
 export default router;

@@ -46,3 +46,22 @@ export const cancelRegistration = catchAsync(async (req: Request, res: Response)
   const registration = await tournamentService.cancelRegistration(req.user!.id, registrationId);
   sendResponse(res, 200, 'Registration cancelled successfully', registration);
 });
+
+export const removeRegistrationByAdmin = catchAsync(
+  async (req: Request, res: Response) => {
+    const { registrationId } = req.params;
+
+    const registration =
+      await tournamentService.removeRegistrationByAdmin(
+        req.user!.id,
+        registrationId
+      );
+
+    sendResponse(
+      res,
+      200,
+      'Registration removed successfully',
+      registration
+    );
+  }
+);
