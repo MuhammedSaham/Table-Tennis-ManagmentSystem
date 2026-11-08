@@ -49,7 +49,15 @@ const WinnerAvatar: React.FC<{
   bgClass: string;
   textClass: string;
   borderClass: string;
-}> = ({ image, name, initials, sizeClass, bgClass, textClass, borderClass }) => {
+}> = ({
+  image,
+  name,
+  initials,
+  sizeClass,
+  bgClass,
+  textClass,
+  borderClass,
+}) => {
   const [error, setError] = useState(false);
 
   useEffect(() => {
@@ -191,7 +199,13 @@ interface Tournament {
   matches?: Match[];
 }
 
-const TournamentDetails: React.FC = () => {
+interface TournamentDetailsProps {
+  registrationOnly?: boolean;
+}
+
+const TournamentDetails: React.FC<TournamentDetailsProps> = ({
+  registrationOnly = false,
+}) => {
   const { id } = useParams<{ id: string }>();
   const { user, hasPermission } = useAuth();
   const navigate = useNavigate();
@@ -893,14 +907,19 @@ const TournamentDetails: React.FC = () => {
       const firstName = p.firstName || "";
       const lastName = p.lastName || "";
       let fullName =
-        `${firstName} ${lastName}`.trim() || p.name || fallbackName.trim() || "Player";
+        `${firstName} ${lastName}`.trim() ||
+        p.name ||
+        fallbackName.trim() ||
+        "Player";
       fullName = capitalizeWords(fullName);
 
       // Match in playerDirectory for id or image if missing
       const dirMatch = playerDirectory.find((dp: any) => {
         if (p.id && dp.id === p.id) return true;
         if (p.playerId && dp.id === p.playerId) return true;
-        const dpFullName = `${dp.firstName || ""} ${dp.lastName || ""}`.trim().toLowerCase();
+        const dpFullName = `${dp.firstName || ""} ${dp.lastName || ""}`
+          .trim()
+          .toLowerCase();
         return dpFullName && dpFullName === fullName.toLowerCase();
       });
 
@@ -926,7 +945,7 @@ const TournamentDetails: React.FC = () => {
     if (isDoubles || (participant.members && participant.members.length > 0)) {
       if (participant.members && participant.members.length > 0) {
         return participant.members.map((m: any) =>
-          resolvePlayer(m, m.name || m.playerName || "")
+          resolvePlayer(m, m.name || m.playerName || ""),
         );
       }
 
@@ -944,7 +963,11 @@ const TournamentDetails: React.FC = () => {
     return [resolvePlayer(participant, participant.name || "")];
   };
 
-  const TrophyOutlineIcon = ({ className = "w-10 h-10" }: { className?: string }) => (
+  const TrophyOutlineIcon = ({
+    className = "w-10 h-10",
+  }: {
+    className?: string;
+  }) => (
     <svg
       viewBox="0 0 48 48"
       fill="none"
@@ -996,7 +1019,11 @@ const TournamentDetails: React.FC = () => {
     </svg>
   );
 
-  const SilverMedalIcon = ({ className = "w-9 h-9" }: { className?: string }) => (
+  const SilverMedalIcon = ({
+    className = "w-9 h-9",
+  }: {
+    className?: string;
+  }) => (
     <svg
       viewBox="0 0 40 44"
       fill="none"
@@ -1052,7 +1079,11 @@ const TournamentDetails: React.FC = () => {
     </svg>
   );
 
-  const BronzeMedalIcon = ({ className = "w-9 h-9" }: { className?: string }) => (
+  const BronzeMedalIcon = ({
+    className = "w-9 h-9",
+  }: {
+    className?: string;
+  }) => (
     <svg
       viewBox="0 0 40 44"
       fill="none"
@@ -1158,51 +1189,51 @@ const TournamentDetails: React.FC = () => {
           ...match,
           player1: match.player1
             ? {
-              ...match.player1,
-              profileImage:
-                match.player1.profileImage ||
-                profileImages.get(match.player1.id),
-            }
+                ...match.player1,
+                profileImage:
+                  match.player1.profileImage ||
+                  profileImages.get(match.player1.id),
+              }
             : match.player1,
           player2: match.player2
             ? {
-              ...match.player2,
-              profileImage:
-                match.player2.profileImage ||
-                profileImages.get(match.player2.id),
-            }
+                ...match.player2,
+                profileImage:
+                  match.player2.profileImage ||
+                  profileImages.get(match.player2.id),
+              }
             : match.player2,
           team1: match.team1
             ? {
-              ...match.team1,
-              members: (match.team1.members || []).map((member: any) => ({
-                ...member,
-                player: member.player
-                  ? {
-                    ...member.player,
-                    profileImage:
-                      member.player.profileImage ||
-                      profileImages.get(member.player.id),
-                  }
-                  : member.player,
-              })),
-            }
+                ...match.team1,
+                members: (match.team1.members || []).map((member: any) => ({
+                  ...member,
+                  player: member.player
+                    ? {
+                        ...member.player,
+                        profileImage:
+                          member.player.profileImage ||
+                          profileImages.get(member.player.id),
+                      }
+                    : member.player,
+                })),
+              }
             : match.team1,
           team2: match.team2
             ? {
-              ...match.team2,
-              members: (match.team2.members || []).map((member: any) => ({
-                ...member,
-                player: member.player
-                  ? {
-                    ...member.player,
-                    profileImage:
-                      member.player.profileImage ||
-                      profileImages.get(member.player.id),
-                  }
-                  : member.player,
-              })),
-            }
+                ...match.team2,
+                members: (match.team2.members || []).map((member: any) => ({
+                  ...member,
+                  player: member.player
+                    ? {
+                        ...member.player,
+                        profileImage:
+                          member.player.profileImage ||
+                          profileImages.get(member.player.id),
+                      }
+                    : member.player,
+                })),
+              }
             : match.team2,
         }));
 
@@ -1217,13 +1248,13 @@ const TournamentDetails: React.FC = () => {
               )
               .map((match: any) => ({
                 round: match.round,
-                players: [match.player1, match.player2].filter(Boolean).map(
-                  (player: any) => ({
+                players: [match.player1, match.player2]
+                  .filter(Boolean)
+                  .map((player: any) => ({
                     playerId: player.id,
                     receivedPath: player.profileImage || null,
                     matched: Boolean(player.profileImage),
-                  }),
-                ),
+                  })),
               })),
           );
         }
@@ -1605,7 +1636,11 @@ const TournamentDetails: React.FC = () => {
     const startYear = start.getFullYear();
     const endYear = end.getFullYear();
 
-    if (startDay === endDay && startMonth === endMonth && startYear === endYear) {
+    if (
+      startDay === endDay &&
+      startMonth === endMonth &&
+      startYear === endYear
+    ) {
       return `${startDay} ${startMonth} ${startYear}`;
     }
     if (startMonth === endMonth && startYear === endYear) {
@@ -1624,7 +1659,10 @@ const TournamentDetails: React.FC = () => {
     return `Closes ${date.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}`;
   };
 
-  const formatAgeEligibility = (minAge?: number | null, maxAge?: number | null) => {
+  const formatAgeEligibility = (
+    minAge?: number | null,
+    maxAge?: number | null,
+  ) => {
     if (minAge && maxAge) {
       return `Ages ${minAge}–${maxAge}`;
     }
@@ -1639,1239 +1677,1409 @@ const TournamentDetails: React.FC = () => {
 
   return wrapInBaseLayout(
     <>
-      {/* Tournament Hero Header - Glass Card Module */}
-      <header className="rounded-2xl border border-white/20 bg-[#061D23]/20 p-4 sm:p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl mb-6">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5 sm:gap-6">
-          {/* LEFT SIDE: Back Link + Title + Tournament Details Info Strip */}
-          <div className="space-y-2.5 min-w-0">
-            <BackButton to="/tournaments" label="Back to Tournaments" className="mb-1" />
+      {!registrationOnly && (
+        <>
+          {/* Tournament Hero Header - Glass Card Module */}
+          <header className="rounded-2xl border border-white/20 bg-[#061D23]/20 p-4 sm:p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl mb-6">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5 sm:gap-6">
+              {/* LEFT SIDE: Back Link + Title + Tournament Details Info Strip */}
+              <div className="space-y-2.5 min-w-0">
+                <BackButton
+                  to="/tournaments"
+                  label="Back to Tournaments"
+                  className="mb-1"
+                />
 
-            <h1 className="text-xl sm:text-2xl lg:text-3xl font-black uppercase tracking-wider text-white leading-tight">
-              {tournament.name}
-            </h1>
+                <h1 className="text-xl sm:text-2xl lg:text-3xl font-black uppercase tracking-wider text-white leading-tight">
+                  {tournament.name}
+                </h1>
 
-            {/* Tournament Details Info Strip (Venue, Dates, Reg. Deadline) */}
-            <div className="flex flex-wrap items-center gap-x-4 sm:gap-x-5 gap-y-2 text-xs sm:text-sm">
-              {/* Venue */}
-              <div className="flex items-center gap-1.5 sm:gap-2">
-                <span className="text-[#4AEEFF] font-bold flex items-center gap-1">
-                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
-                  </svg>
-                  <span className="text-white/60 font-medium">Venue:</span>
-                </span>
-                <span className="font-semibold text-white">{tournament.venue}</span>
+                {/* Tournament Details Info Strip (Venue, Dates, Reg. Deadline) */}
+                <div className="flex flex-wrap items-center gap-x-4 sm:gap-x-5 gap-y-2 text-xs sm:text-sm">
+                  {/* Venue */}
+                  <div className="flex items-center gap-1.5 sm:gap-2">
+                    <span className="text-[#4AEEFF] font-bold flex items-center gap-1">
+                      <svg
+                        className="w-3.5 h-3.5"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth={2}
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z"
+                        />
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z"
+                        />
+                      </svg>
+                      <span className="text-white/60 font-medium">Venue:</span>
+                    </span>
+                    <span className="font-semibold text-white">
+                      {tournament.venue}
+                    </span>
+                  </div>
+
+                  <span className="text-white/20 select-none">•</span>
+
+                  {/* Dates */}
+                  <div className="flex items-center gap-1.5 sm:gap-2">
+                    <span className="text-[#4AEEFF] font-bold flex items-center gap-1">
+                      <svg
+                        className="w-3.5 h-3.5"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth={2}
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5"
+                        />
+                      </svg>
+                      <span className="text-white/60 font-medium">Dates:</span>
+                    </span>
+                    <span className="font-semibold text-white">
+                      {formatTournamentDateRange(
+                        tournament.startDate,
+                        tournament.endDate,
+                      )}
+                    </span>
+                  </div>
+
+                  <span className="text-white/20 select-none">•</span>
+
+                  {/* Deadline */}
+                  <div className="flex items-center gap-1.5 sm:gap-2">
+                    <span className="text-[#4AEEFF] font-bold flex items-center gap-1">
+                      <svg
+                        className="w-3.5 h-3.5"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth={2}
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
+                      </svg>
+                      <span className="text-white/60 font-medium">Reg:</span>
+                    </span>
+                    <span className="font-semibold text-white">
+                      {formatDeadline(tournament.registrationDeadline)}
+                    </span>
+                  </div>
+                </div>
               </div>
 
-              <span className="text-white/20 select-none">•</span>
-
-              {/* Dates */}
-              <div className="flex items-center gap-1.5 sm:gap-2">
-                <span className="text-[#4AEEFF] font-bold flex items-center gap-1">
-                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
-                  </svg>
-                  <span className="text-white/60 font-medium">Dates:</span>
-                </span>
-                <span className="font-semibold text-white">
-                  {formatTournamentDateRange(tournament.startDate, tournament.endDate)}
-                </span>
-              </div>
-
-              <span className="text-white/20 select-none">•</span>
-
-              {/* Deadline */}
-              <div className="flex items-center gap-1.5 sm:gap-2">
-                <span className="text-[#4AEEFF] font-bold flex items-center gap-1">
-                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <span className="text-white/60 font-medium">Reg:</span>
-                </span>
-                <span className="font-semibold text-white">
-                  {formatDeadline(tournament.registrationDeadline)}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* RIGHT SIDE: Status Badge + Admin Buttons + Category Dropdown */}
-          <div className="flex flex-col sm:items-end gap-3 shrink-0">
-            {/* Status & Admin Action Buttons */}
-            <div className="flex flex-wrap gap-2 items-center">
-              <span
-                className={`px-3 py-1.5 text-xs font-semibold uppercase tracking-wider rounded-lg border shadow-sm ${getStatusColor(tournament.status)}`}
-              >
-                {tournament.status}
-              </span>
-              {canManageTournaments && (
-                <>
-                  <button
-                    onClick={() => setShowDeleteConfirm(true)}
-                    className="rounded-lg border border-red-500/40 bg-red-500/15 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-red-300 hover:bg-red-500 hover:text-white transition-colors shadow-sm"
-                  >
-                    Delete Tournament
-                  </button>
-                  <button
-                    onClick={() => {
-                      setEditFormData({
-                        name: tournament.name,
-                        description: tournament.description || "",
-                        venue: tournament.venue,
-                        startDate: tournament.startDate.slice(0, 16),
-                        endDate: tournament.endDate.slice(0, 16),
-                        registrationDeadline:
-                          tournament.registrationDeadline.slice(0, 16),
-                        maxPlayers: tournament.maxPlayers?.toString() || "",
-                        registrationFee:
-                          tournament.registrationFee?.toString() || "",
-                        requirePaymentProofClub:
-                          tournament.requirePaymentProofClub ?? false,
-                        requirePaymentProofGuest:
-                          tournament.requirePaymentProofGuest ?? false,
-                        paymentInstructions: tournament.paymentInstructions || "",
-                      });
-                      setEditCategories(
-                        tournament.categories?.map((c) => ({
-                          ...c,
-                        })) || [],
-                      );
-                      setShowEditModal(true);
-                    }}
-                    className="rounded-lg border border-[#4AEEFF]/40 bg-[#4AEEFF]/15 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-[#4AEEFF] hover:bg-[#4AEEFF] hover:text-[#061D23] transition-colors shadow-sm"
-                  >
-                    Edit Tournament
-                  </button>
-
-                  {tournament.status !== "COMPLETED" && (
+              {/* RIGHT SIDE: Status Badge + Admin Buttons + Category Dropdown */}
+              <div className="flex flex-col sm:items-end gap-3 shrink-0">
+                {/* Status & Admin Action Buttons */}
+                <div className="flex flex-wrap gap-2 items-center">
+                  {/* Player Registration Button */}
+                  {canRegister && tournament.categories.length > 0 && (
                     <button
-                      onClick={() => setShowCompleteConfirm(true)}
-                      className="rounded-lg border border-emerald-500/40 bg-emerald-500/15 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-emerald-300 hover:bg-emerald-500 hover:text-[#061D23] transition-colors shadow-sm"
+                      type="button"
+                      onClick={() =>
+                        navigate(`/app/tournaments/${id}/register`)
+                      }
+                      className="rounded-xl bg-[#4AEEFF] px-5 py-2.5
+               text-xs font-black uppercase tracking-wider
+               text-[#061D23] shadow-lg
+               transition-all duration-300
+               hover:bg-white hover:-translate-y-0.5
+               active:scale-95"
                     >
-                      Mark Complete
+                      Register Now →
                     </button>
                   )}
-                </>
-              )}
-            </div>
-
-            {/* Category Dropdown */}
-            {tournament.categories.length > 0 && (
-              <div className="flex items-center gap-2.5">
-                <span className="text-[11px] font-black uppercase tracking-wider text-[#4AEEFF]">
-                  Category:
-                </span>
-                <GlassSelect
-                  value={activeCategoryId}
-                  onChange={(e) => handleSelectCategoryDetail(e.target.value)}
-                  aria-label="Select Category"
-                >
-                  {tournament.categories.map((c) => (
-                    <option key={c.id} value={c.id} className="bg-[#061D23] text-white">
-                      {formatDivisionName(c.name)} ({c.type === "DOUBLES" || c.type === "MIXED_DOUBLES" ? "Doubles" : "Singles"})
-                    </option>
-                  ))}
-                </GlassSelect>
-              </div>
-            )}
-          </div>
-        </div>
-      </header>
-
-      {/* Incoming Partner Invites Alert Banner */}
-      {myPendingInvites.length > 0 && (
-        <div className="rounded-[18px] border border-cyan-500/40 bg-gradient-to-r from-[#0b2b36] via-[#08242c] to-[#061D23] p-5 sm:p-6 shadow-[0_12px_40px_-10px_rgba(74,238,255,0.3)] backdrop-blur-xl animate-in fade-in">
-          <div className="flex items-center gap-2 mb-3">
-            <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping" />
-            <span className="text-xs font-black uppercase tracking-widest text-[#4AEEFF]">
-              ⚡ Action Required • Doubles Partner Invitations (
-              {myPendingInvites.length})
-            </span>
-          </div>
-          <div className="space-y-3">
-            {myPendingInvites.map((inv) => (
-              <div
-                key={inv.id}
-                className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl bg-black/40 border border-cyan-500/25"
-              >
-                <div>
-                  <p className="text-sm font-bold text-white flex items-center gap-2 flex-wrap">
-                    <span className="text-[#4AEEFF] font-black text-base">
-                      {inv.inviter?.firstName} {inv.inviter?.lastName}
-                    </span>
-                    <span>invited you to partner with them!</span>
-                  </p>
-                  <p className="text-xs text-slate-300 mt-1">
-                    Tournament Division:{" "}
-                    <span className="text-white font-bold">
-                      {inv.category?.name}
-                    </span>{" "}
-                    <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded bg-white/10 text-cyan-200 ml-1">
-                      {inv.category?.type}
-                    </span>
-                  </p>
-                </div>
-                <div className="flex items-center gap-2.5 self-end sm:self-auto flex-shrink-0">
-                  <button
-                    onClick={() => handleAcceptInvite(inv.id)}
-                    disabled={respondingInviteId === inv.id}
-                    className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-teal-500 hover:from-cyan-400 hover:to-teal-400 text-slate-950 text-xs font-black uppercase tracking-wider shadow-[0_4px_14px_rgba(74,238,255,0.35)] transition-all active:scale-95 disabled:opacity-50 flex items-center gap-1.5"
+                  <span
+                    className={`px-3 py-1.5 text-xs font-semibold uppercase tracking-wider rounded-lg border shadow-sm ${getStatusColor(tournament.status)}`}
                   >
-                    {respondingInviteId === inv.id
-                      ? "Enrolling..."
-                      : "✓ Accept & Confirm Team"}
-                  </button>
-                  <button
-                    onClick={() => handleDeclineInvite(inv.id)}
-                    disabled={respondingInviteId === inv.id}
-                    className="px-3.5 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white text-xs font-bold transition-all disabled:opacity-50"
-                  >
-                    Decline
-                  </button>
+                    {tournament.status}
+                  </span>
+                  {canManageTournaments && (
+                    <>
+                      <button
+                        onClick={() => setShowDeleteConfirm(true)}
+                        className="rounded-lg border border-red-500/40 bg-red-500/15 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-red-300 hover:bg-red-500 hover:text-white transition-colors shadow-sm"
+                      >
+                        Delete Tournament
+                      </button>
+                      <button
+                        onClick={() => {
+                          setEditFormData({
+                            name: tournament.name,
+                            description: tournament.description || "",
+                            venue: tournament.venue,
+                            startDate: tournament.startDate.slice(0, 16),
+                            endDate: tournament.endDate.slice(0, 16),
+                            registrationDeadline:
+                              tournament.registrationDeadline.slice(0, 16),
+                            maxPlayers: tournament.maxPlayers?.toString() || "",
+                            registrationFee:
+                              tournament.registrationFee?.toString() || "",
+                            requirePaymentProofClub:
+                              tournament.requirePaymentProofClub ?? false,
+                            requirePaymentProofGuest:
+                              tournament.requirePaymentProofGuest ?? false,
+                            paymentInstructions:
+                              tournament.paymentInstructions || "",
+                          });
+                          setEditCategories(
+                            tournament.categories?.map((c) => ({
+                              ...c,
+                            })) || [],
+                          );
+                          setShowEditModal(true);
+                        }}
+                        className="rounded-lg border border-[#4AEEFF]/40 bg-[#4AEEFF]/15 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-[#4AEEFF] hover:bg-[#4AEEFF] hover:text-[#061D23] transition-colors shadow-sm"
+                      >
+                        Edit Tournament
+                      </button>
+
+                      {tournament.status !== "COMPLETED" && (
+                        <button
+                          onClick={() => setShowCompleteConfirm(true)}
+                          className="rounded-lg border border-emerald-500/40 bg-emerald-500/15 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-emerald-300 hover:bg-emerald-500 hover:text-[#061D23] transition-colors shadow-sm"
+                        >
+                          Mark Complete
+                        </button>
+                      )}
+                    </>
+                  )}
                 </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
-      {/* Edit Tournament Modal */}
-      {showEditModal && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/70 p-4 pt-24 backdrop-blur-sm animate-fadeIn sm:pt-28">
-          <div className="w-full max-w-4xl rounded-2xl border border-white/20 bg-[#061D23]/90 p-6 text-white shadow-[0_25px_60px_-15px_rgba(0,0,0,0.8)] backdrop-blur-2xl sm:p-8">
-            <div className="mb-6 flex items-center justify-between border-b border-white/10 pb-4">
-              <div className="flex items-center gap-3">
-                <span className="h-6 w-2.5 rounded-full bg-[#4AEEFF] shadow-[0_0_10px_#4AEEFF]" />
-                <h2 className="text-xl font-black uppercase tracking-widest text-white sm:text-2xl">
-                  Edit Tournament
-                </h2>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowEditModal(false)}
-                className="rounded-lg p-2 text-white/50 transition hover:bg-white/10 hover:text-white"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="space-y-5">
-              {/* Basic Info */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="mb-1.5 block text-xs font-black uppercase tracking-wider text-white/70">
-                    Tournament Name
-                  </label>
-                  <input
-                    type="text"
-                    value={editFormData.name}
-                    onChange={(e) =>
-                      setEditFormData({ ...editFormData, name: e.target.value })
-                    }
-                    className="w-full rounded-lg border border-white/10 bg-[#061D23]/60 p-2.5 text-sm text-white placeholder-white/20 transition focus:border-[#4AEEFF] focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="mb-1.5 block text-xs font-black uppercase tracking-wider text-white/70">
-                    Venue
-                  </label>
-                  <input
-                    type="text"
-                    value={editFormData.venue}
-                    onChange={(e) =>
-                      setEditFormData({
-                        ...editFormData,
-                        venue: e.target.value,
-                      })
-                    }
-                    className="w-full rounded-lg border border-white/10 bg-[#061D23]/60 p-2.5 text-sm text-white placeholder-white/20 transition focus:border-[#4AEEFF] focus:outline-none"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="mb-1.5 block text-xs font-black uppercase tracking-wider text-white/70">
-                  Description
-                </label>
-                <textarea
-                  value={editFormData.description}
-                  onChange={(e) =>
-                    setEditFormData({
-                      ...editFormData,
-                      description: e.target.value,
-                    })
-                  }
-                  rows={2}
-                  className="w-full rounded-lg border border-white/10 bg-[#061D23]/60 p-2.5 text-sm text-white placeholder-white/20 transition focus:border-[#4AEEFF] focus:outline-none"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label className="mb-1.5 block text-xs font-black uppercase tracking-wider text-white/70">
-                    Start Date
-                  </label>
-                  <input
-                    type="datetime-local"
-                    value={editFormData.startDate}
-                    onChange={(e) =>
-                      setEditFormData({
-                        ...editFormData,
-                        startDate: e.target.value,
-                      })
-                    }
-                    className="w-full rounded-lg border border-white/10 bg-[#061D23]/60 p-2.5 text-sm text-white placeholder-white/20 [color-scheme:dark] transition focus:border-[#4AEEFF] focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="mb-1.5 block text-xs font-black uppercase tracking-wider text-white/70">
-                    End Date
-                  </label>
-                  <input
-                    type="datetime-local"
-                    value={editFormData.endDate}
-                    onChange={(e) =>
-                      setEditFormData({
-                        ...editFormData,
-                        endDate: e.target.value,
-                      })
-                    }
-                    className="w-full rounded-lg border border-white/10 bg-[#061D23]/60 p-2.5 text-sm text-white placeholder-white/20 [color-scheme:dark] transition focus:border-[#4AEEFF] focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="mb-1.5 block text-xs font-black uppercase tracking-wider text-white/70">
-                    Registration Deadline
-                  </label>
-                  <input
-                    type="datetime-local"
-                    value={editFormData.registrationDeadline}
-                    onChange={(e) =>
-                      setEditFormData({
-                        ...editFormData,
-                        registrationDeadline: e.target.value,
-                      })
-                    }
-                    className="w-full rounded-lg border border-white/10 bg-[#061D23]/60 p-2.5 text-sm text-white placeholder-white/20 [color-scheme:dark] transition focus:border-[#4AEEFF] focus:outline-none"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="mb-1.5 block text-xs font-black uppercase tracking-wider text-white/70">
-                  Max Players (Optional)
-                </label>
-                <input
-                  type="number"
-                  value={editFormData.maxPlayers}
-                  onChange={(e) =>
-                    setEditFormData({
-                      ...editFormData,
-                      maxPlayers: e.target.value,
-                    })
-                  }
-                  className="w-full rounded-lg border border-white/10 bg-[#061D23]/60 p-2.5 text-sm text-white placeholder-white/20 transition focus:border-[#4AEEFF] focus:outline-none"
-                  min="2"
-                />
-              </div>
-
-              <div className="mt-4 border-t border-white/10 pt-5">
-                <h3 className="text-base font-black uppercase tracking-wider text-white">
-                  Payment & Registration
-                </h3>
-                <p className="mt-1 text-xs text-white/50">
-                  Configure registration fees and payment proof requirements.
-                </p>
-
-                <div className="mt-4 space-y-4">
-                  <div>
-                    <label className="mb-1.5 block text-xs font-black uppercase tracking-wider text-white/70">
-                      Registration Fee (LKR)
-                    </label>
-                    <input
-                      type="number"
-                      value={editFormData.registrationFee}
+                {/* Category Dropdown */}
+                {tournament.categories.length > 0 && (
+                  <div className="flex items-center gap-2.5">
+                    <span className="text-[11px] font-black uppercase tracking-wider text-[#4AEEFF]">
+                      Category:
+                    </span>
+                    <GlassSelect
+                      value={activeCategoryId}
                       onChange={(e) =>
-                        setEditFormData({
-                          ...editFormData,
-                          registrationFee: e.target.value,
-                        })
+                        handleSelectCategoryDetail(e.target.value)
                       }
-                      min="0"
-                      step="0.01"
-                      className="w-full rounded-lg border border-white/10 bg-[#061D23]/60 p-2.5 text-sm text-white placeholder-white/20 transition focus:border-[#4AEEFF] focus:outline-none"
-                      placeholder="Leave empty if no payment is required"
-                    />
+                      aria-label="Select Category"
+                    >
+                      {tournament.categories.map((c) => (
+                        <option
+                          key={c.id}
+                          value={c.id}
+                          className="bg-[#061D23] text-white"
+                        >
+                          {formatDivisionName(c.name)} (
+                          {c.type === "DOUBLES" || c.type === "MIXED_DOUBLES"
+                            ? "Doubles"
+                            : "Singles"}
+                          )
+                        </option>
+                      ))}
+                    </GlassSelect>
                   </div>
+                )}
+              </div>
+            </div>
+          </header>
 
-                  <div>
-                    <label className="mb-1.5 block text-xs font-black uppercase tracking-wider text-white/70">
-                      Require Payment Proof From
-                    </label>
-                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                      <label className="flex cursor-pointer items-center gap-3 rounded-lg border border-white/10 bg-[#061D23]/40 p-4 transition-colors hover:border-[#4AEEFF]/40">
-                        <input
-                          type="checkbox"
-                          checked={editFormData.requirePaymentProofClub}
-                          onChange={(e) =>
-                            setEditFormData({
-                              ...editFormData,
-                              requirePaymentProofClub: e.target.checked,
-                            })
-                          }
-                          className="h-4 w-4 accent-[#4AEEFF]"
-                        />
-                        <div>
-                          <p className="text-sm font-bold text-white">
-                            Club Players
-                          </p>
-                          <p className="text-xs text-white/50">
-                            Club members must upload payment proof
-                          </p>
-                        </div>
-                      </label>
-
-                      <label className="flex cursor-pointer items-center gap-3 rounded-lg border border-white/10 bg-[#061D23]/40 p-4 transition-colors hover:border-[#4AEEFF]/40">
-                        <input
-                          type="checkbox"
-                          checked={editFormData.requirePaymentProofGuest}
-                          onChange={(e) =>
-                            setEditFormData({
-                              ...editFormData,
-                              requirePaymentProofGuest: e.target.checked,
-                            })
-                          }
-                          className="h-4 w-4 accent-[#4AEEFF]"
-                        />
-                        <div>
-                          <p className="text-sm font-bold text-white">
-                            Guest Players
-                          </p>
-                          <p className="text-xs text-white/50">
-                            Guest players must upload payment proof
-                          </p>
-                        </div>
-                      </label>
+          {/* Incoming Partner Invites Alert Banner */}
+          {myPendingInvites.length > 0 && (
+            <div className="rounded-[18px] border border-cyan-500/40 bg-gradient-to-r from-[#0b2b36] via-[#08242c] to-[#061D23] p-5 sm:p-6 shadow-[0_12px_40px_-10px_rgba(74,238,255,0.3)] backdrop-blur-xl animate-in fade-in">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping" />
+                <span className="text-xs font-black uppercase tracking-widest text-[#4AEEFF]">
+                  ⚡ Action Required • Doubles Partner Invitations (
+                  {myPendingInvites.length})
+                </span>
+              </div>
+              <div className="space-y-3">
+                {myPendingInvites.map((inv) => (
+                  <div
+                    key={inv.id}
+                    className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl bg-black/40 border border-cyan-500/25"
+                  >
+                    <div>
+                      <p className="text-sm font-bold text-white flex items-center gap-2 flex-wrap">
+                        <span className="text-[#4AEEFF] font-black text-base">
+                          {inv.inviter?.firstName} {inv.inviter?.lastName}
+                        </span>
+                        <span>invited you to partner with them!</span>
+                      </p>
+                      <p className="text-xs text-slate-300 mt-1">
+                        Tournament Division:{" "}
+                        <span className="text-white font-bold">
+                          {inv.category?.name}
+                        </span>{" "}
+                        <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded bg-white/10 text-cyan-200 ml-1">
+                          {inv.category?.type}
+                        </span>
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2.5 self-end sm:self-auto flex-shrink-0">
+                      <button
+                        onClick={() => handleAcceptInvite(inv.id)}
+                        disabled={respondingInviteId === inv.id}
+                        className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-teal-500 hover:from-cyan-400 hover:to-teal-400 text-slate-950 text-xs font-black uppercase tracking-wider shadow-[0_4px_14px_rgba(74,238,255,0.35)] transition-all active:scale-95 disabled:opacity-50 flex items-center gap-1.5"
+                      >
+                        {respondingInviteId === inv.id
+                          ? "Enrolling..."
+                          : "✓ Accept & Confirm Team"}
+                      </button>
+                      <button
+                        onClick={() => handleDeclineInvite(inv.id)}
+                        disabled={respondingInviteId === inv.id}
+                        className="px-3.5 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white text-xs font-bold transition-all disabled:opacity-50"
+                      >
+                        Decline
+                      </button>
                     </div>
                   </div>
-
-                  {(editFormData.requirePaymentProofClub ||
-                    editFormData.requirePaymentProofGuest) && (
-                      <div>
-                        <label className="mb-1.5 block text-xs font-black uppercase tracking-wider text-white/70">
-                          Payment Instructions
-                        </label>
-                        <textarea
-                          value={editFormData.paymentInstructions}
-                          onChange={(e) =>
-                            setEditFormData({
-                              ...editFormData,
-                              paymentInstructions: e.target.value,
-                            })
-                          }
-                          rows={4}
-                          className="w-full rounded-lg border border-white/10 bg-[#061D23]/60 p-2.5 text-sm text-white placeholder-white/20 transition focus:border-[#4AEEFF] focus:outline-none"
-                          placeholder="Explain how players should pay and upload their receipt."
-                        />
-                      </div>
-                    )}
-                </div>
+                ))}
               </div>
+            </div>
+          )}
 
-              {/* Categories Section */}
-              <div className="mt-4 border-t border-white/10 pt-5">
-                <div className="mb-4 flex items-center justify-between">
-                  <div>
-                    <h3 className="text-base font-black uppercase tracking-wider text-white">
-                      Tournament Categories
-                    </h3>
-                    <p className="mt-1 text-xs text-white/50">
-                      Configure divisions and participant limits
-                    </p>
+          {/* Edit Tournament Modal */}
+          {showEditModal && (
+            <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/70 p-4 pt-24 backdrop-blur-sm animate-fadeIn sm:pt-28">
+              <div className="w-full max-w-4xl rounded-2xl border border-white/20 bg-[#061D23]/90 p-6 text-white shadow-[0_25px_60px_-15px_rgba(0,0,0,0.8)] backdrop-blur-2xl sm:p-8">
+                <div className="mb-6 flex items-center justify-between border-b border-white/10 pb-4">
+                  <div className="flex items-center gap-3">
+                    <span className="h-6 w-2.5 rounded-full bg-[#4AEEFF] shadow-[0_0_10px_#4AEEFF]" />
+                    <h2 className="text-xl font-black uppercase tracking-widest text-white sm:text-2xl">
+                      Edit Tournament
+                    </h2>
                   </div>
                   <button
                     type="button"
-                    onClick={addEditCategory}
-                    className="flex items-center gap-1.5 rounded-lg border border-[#4AEEFF]/40 bg-[#4AEEFF]/15 px-3.5 py-1.5 text-xs font-black uppercase tracking-wider text-[#4AEEFF] shadow-sm transition hover:bg-[#4AEEFF]/25"
+                    onClick={() => setShowEditModal(false)}
+                    className="rounded-lg p-2 text-white/50 transition hover:bg-white/10 hover:text-white"
                   >
-                    <span>+</span> Add Category
+                    ✕
                   </button>
                 </div>
 
-                <div className="space-y-3.5 max-h-80 overflow-y-auto custom-scrollbar pr-1">
-                  {editCategories.map((category, index) => (
-                    <div
-                      key={category.id}
-                      className="space-y-3 rounded-xl border border-white/10 bg-[#061D23]/60 p-4 backdrop-blur-sm"
-                    >
-                      <div className="flex justify-between items-center">
-                        <span className="text-xs font-black uppercase tracking-wider text-[#4AEEFF]">
-                          Category {index + 1}
-                        </span>
-                        {editCategories.length > 1 && (
-                          <button
-                            type="button"
-                            onClick={() => removeEditCategory(index)}
-                            className="flex items-center gap-1 text-xs font-bold text-red-400 transition hover:text-red-300"
-                          >
-                            Remove
-                          </button>
-                        )}
+                <div className="space-y-5">
+                  {/* Basic Info */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="mb-1.5 block text-xs font-black uppercase tracking-wider text-white/70">
+                        Tournament Name
+                      </label>
+                      <input
+                        type="text"
+                        value={editFormData.name}
+                        onChange={(e) =>
+                          setEditFormData({
+                            ...editFormData,
+                            name: e.target.value,
+                          })
+                        }
+                        className="w-full rounded-lg border border-white/10 bg-[#061D23]/60 p-2.5 text-sm text-white placeholder-white/20 transition focus:border-[#4AEEFF] focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1.5 block text-xs font-black uppercase tracking-wider text-white/70">
+                        Venue
+                      </label>
+                      <input
+                        type="text"
+                        value={editFormData.venue}
+                        onChange={(e) =>
+                          setEditFormData({
+                            ...editFormData,
+                            venue: e.target.value,
+                          })
+                        }
+                        className="w-full rounded-lg border border-white/10 bg-[#061D23]/60 p-2.5 text-sm text-white placeholder-white/20 transition focus:border-[#4AEEFF] focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="mb-1.5 block text-xs font-black uppercase tracking-wider text-white/70">
+                      Description
+                    </label>
+                    <textarea
+                      value={editFormData.description}
+                      onChange={(e) =>
+                        setEditFormData({
+                          ...editFormData,
+                          description: e.target.value,
+                        })
+                      }
+                      rows={2}
+                      className="w-full rounded-lg border border-white/10 bg-[#061D23]/60 p-2.5 text-sm text-white placeholder-white/20 transition focus:border-[#4AEEFF] focus:outline-none"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="mb-1.5 block text-xs font-black uppercase tracking-wider text-white/70">
+                        Start Date
+                      </label>
+                      <input
+                        type="datetime-local"
+                        value={editFormData.startDate}
+                        onChange={(e) =>
+                          setEditFormData({
+                            ...editFormData,
+                            startDate: e.target.value,
+                          })
+                        }
+                        className="w-full rounded-lg border border-white/10 bg-[#061D23]/60 p-2.5 text-sm text-white placeholder-white/20 [color-scheme:dark] transition focus:border-[#4AEEFF] focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1.5 block text-xs font-black uppercase tracking-wider text-white/70">
+                        End Date
+                      </label>
+                      <input
+                        type="datetime-local"
+                        value={editFormData.endDate}
+                        onChange={(e) =>
+                          setEditFormData({
+                            ...editFormData,
+                            endDate: e.target.value,
+                          })
+                        }
+                        className="w-full rounded-lg border border-white/10 bg-[#061D23]/60 p-2.5 text-sm text-white placeholder-white/20 [color-scheme:dark] transition focus:border-[#4AEEFF] focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1.5 block text-xs font-black uppercase tracking-wider text-white/70">
+                        Registration Deadline
+                      </label>
+                      <input
+                        type="datetime-local"
+                        value={editFormData.registrationDeadline}
+                        onChange={(e) =>
+                          setEditFormData({
+                            ...editFormData,
+                            registrationDeadline: e.target.value,
+                          })
+                        }
+                        className="w-full rounded-lg border border-white/10 bg-[#061D23]/60 p-2.5 text-sm text-white placeholder-white/20 [color-scheme:dark] transition focus:border-[#4AEEFF] focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="mb-1.5 block text-xs font-black uppercase tracking-wider text-white/70">
+                      Max Players (Optional)
+                    </label>
+                    <input
+                      type="number"
+                      value={editFormData.maxPlayers}
+                      onChange={(e) =>
+                        setEditFormData({
+                          ...editFormData,
+                          maxPlayers: e.target.value,
+                        })
+                      }
+                      className="w-full rounded-lg border border-white/10 bg-[#061D23]/60 p-2.5 text-sm text-white placeholder-white/20 transition focus:border-[#4AEEFF] focus:outline-none"
+                      min="2"
+                    />
+                  </div>
+
+                  <div className="mt-4 border-t border-white/10 pt-5">
+                    <h3 className="text-base font-black uppercase tracking-wider text-white">
+                      Payment & Registration
+                    </h3>
+                    <p className="mt-1 text-xs text-white/50">
+                      Configure registration fees and payment proof
+                      requirements.
+                    </p>
+
+                    <div className="mt-4 space-y-4">
+                      <div>
+                        <label className="mb-1.5 block text-xs font-black uppercase tracking-wider text-white/70">
+                          Registration Fee (LKR)
+                        </label>
+                        <input
+                          type="number"
+                          value={editFormData.registrationFee}
+                          onChange={(e) =>
+                            setEditFormData({
+                              ...editFormData,
+                              registrationFee: e.target.value,
+                            })
+                          }
+                          min="0"
+                          step="0.01"
+                          className="w-full rounded-lg border border-white/10 bg-[#061D23]/60 p-2.5 text-sm text-white placeholder-white/20 transition focus:border-[#4AEEFF] focus:outline-none"
+                          placeholder="Leave empty if no payment is required"
+                        />
                       </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div>
-                          <label className="mb-1 block text-[10px] font-black uppercase tracking-wider text-white/60">
-                            Category Name
+
+                      <div>
+                        <label className="mb-1.5 block text-xs font-black uppercase tracking-wider text-white/70">
+                          Require Payment Proof From
+                        </label>
+                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                          <label className="flex cursor-pointer items-center gap-3 rounded-lg border border-white/10 bg-[#061D23]/40 p-4 transition-colors hover:border-[#4AEEFF]/40">
+                            <input
+                              type="checkbox"
+                              checked={editFormData.requirePaymentProofClub}
+                              onChange={(e) =>
+                                setEditFormData({
+                                  ...editFormData,
+                                  requirePaymentProofClub: e.target.checked,
+                                })
+                              }
+                              className="h-4 w-4 accent-[#4AEEFF]"
+                            />
+                            <div>
+                              <p className="text-sm font-bold text-white">
+                                Club Players
+                              </p>
+                              <p className="text-xs text-white/50">
+                                Club members must upload payment proof
+                              </p>
+                            </div>
                           </label>
-                          <input
-                            type="text"
-                            placeholder="Category Name"
-                            value={category.name}
+
+                          <label className="flex cursor-pointer items-center gap-3 rounded-lg border border-white/10 bg-[#061D23]/40 p-4 transition-colors hover:border-[#4AEEFF]/40">
+                            <input
+                              type="checkbox"
+                              checked={editFormData.requirePaymentProofGuest}
+                              onChange={(e) =>
+                                setEditFormData({
+                                  ...editFormData,
+                                  requirePaymentProofGuest: e.target.checked,
+                                })
+                              }
+                              className="h-4 w-4 accent-[#4AEEFF]"
+                            />
+                            <div>
+                              <p className="text-sm font-bold text-white">
+                                Guest Players
+                              </p>
+                              <p className="text-xs text-white/50">
+                                Guest players must upload payment proof
+                              </p>
+                            </div>
+                          </label>
+                        </div>
+                      </div>
+
+                      {(editFormData.requirePaymentProofClub ||
+                        editFormData.requirePaymentProofGuest) && (
+                        <div>
+                          <label className="mb-1.5 block text-xs font-black uppercase tracking-wider text-white/70">
+                            Payment Instructions
+                          </label>
+                          <textarea
+                            value={editFormData.paymentInstructions}
                             onChange={(e) =>
-                              updateEditCategory(index, "name", e.target.value)
+                              setEditFormData({
+                                ...editFormData,
+                                paymentInstructions: e.target.value,
+                              })
                             }
-                            className="w-full rounded-lg border border-white/10 bg-[#061D23]/60 px-3 py-2 text-xs text-white placeholder-white/20 focus:border-[#4AEEFF] focus:outline-none"
+                            rows={4}
+                            className="w-full rounded-lg border border-white/10 bg-[#061D23]/60 p-2.5 text-sm text-white placeholder-white/20 transition focus:border-[#4AEEFF] focus:outline-none"
+                            placeholder="Explain how players should pay and upload their receipt."
                           />
                         </div>
-                        <div>
-                          <label className="mb-1 block text-[10px] font-black uppercase tracking-wider text-white/60">
-                            Match Type
-                          </label>
-                          <GlassSelect
-                            value={category.type}
-                            onChange={(e) =>
-                              updateEditCategory(index, "type", e.target.value)
-                            }
-                            className="w-full"
-                          >
-                            <option value="SINGLES" className="bg-[#061D23] text-white">Singles</option>
-                            <option value="DOUBLES" className="bg-[#061D23] text-white">Doubles</option>
-                            <option value="TEAM" className="bg-[#061D23] text-white">Team</option>
-                          </GlassSelect>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Categories Section */}
+                  <div className="mt-4 border-t border-white/10 pt-5">
+                    <div className="mb-4 flex items-center justify-between">
+                      <div>
+                        <h3 className="text-base font-black uppercase tracking-wider text-white">
+                          Tournament Categories
+                        </h3>
+                        <p className="mt-1 text-xs text-white/50">
+                          Configure divisions and participant limits
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={addEditCategory}
+                        className="flex items-center gap-1.5 rounded-lg border border-[#4AEEFF]/40 bg-[#4AEEFF]/15 px-3.5 py-1.5 text-xs font-black uppercase tracking-wider text-[#4AEEFF] shadow-sm transition hover:bg-[#4AEEFF]/25"
+                      >
+                        <span>+</span> Add Category
+                      </button>
+                    </div>
+
+                    <div className="space-y-3.5 max-h-80 overflow-y-auto custom-scrollbar pr-1">
+                      {editCategories.map((category, index) => (
+                        <div
+                          key={category.id}
+                          className="space-y-3 rounded-xl border border-white/10 bg-[#061D23]/60 p-4 backdrop-blur-sm"
+                        >
+                          <div className="flex justify-between items-center">
+                            <span className="text-xs font-black uppercase tracking-wider text-[#4AEEFF]">
+                              Category {index + 1}
+                            </span>
+                            {editCategories.length > 1 && (
+                              <button
+                                type="button"
+                                onClick={() => removeEditCategory(index)}
+                                className="flex items-center gap-1 text-xs font-bold text-red-400 transition hover:text-red-300"
+                              >
+                                Remove
+                              </button>
+                            )}
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div>
+                              <label className="mb-1 block text-[10px] font-black uppercase tracking-wider text-white/60">
+                                Category Name
+                              </label>
+                              <input
+                                type="text"
+                                placeholder="Category Name"
+                                value={category.name}
+                                onChange={(e) =>
+                                  updateEditCategory(
+                                    index,
+                                    "name",
+                                    e.target.value,
+                                  )
+                                }
+                                className="w-full rounded-lg border border-white/10 bg-[#061D23]/60 px-3 py-2 text-xs text-white placeholder-white/20 focus:border-[#4AEEFF] focus:outline-none"
+                              />
+                            </div>
+                            <div>
+                              <label className="mb-1 block text-[10px] font-black uppercase tracking-wider text-white/60">
+                                Match Type
+                              </label>
+                              <GlassSelect
+                                value={category.type}
+                                onChange={(e) =>
+                                  updateEditCategory(
+                                    index,
+                                    "type",
+                                    e.target.value,
+                                  )
+                                }
+                                className="w-full"
+                              >
+                                <option
+                                  value="SINGLES"
+                                  className="bg-[#061D23] text-white"
+                                >
+                                  Singles
+                                </option>
+                                <option
+                                  value="DOUBLES"
+                                  className="bg-[#061D23] text-white"
+                                >
+                                  Doubles
+                                </option>
+                                <option
+                                  value="TEAM"
+                                  className="bg-[#061D23] text-white"
+                                >
+                                  Team
+                                </option>
+                              </GlassSelect>
+                            </div>
+                            <div>
+                              <label className="mb-1 block text-[10px] font-black uppercase tracking-wider text-white/60">
+                                Draw Format
+                              </label>
+                              <GlassSelect
+                                value={category.stageFormat || "KNOCKOUT"}
+                                onChange={(e) =>
+                                  updateEditCategory(
+                                    index,
+                                    "stageFormat",
+                                    e.target.value as
+                                      | "KNOCKOUT"
+                                      | "GROUP_KNOCKOUT",
+                                  )
+                                }
+                                className="w-full"
+                              >
+                                <option
+                                  value="KNOCKOUT"
+                                  className="bg-[#061D23] text-white"
+                                >
+                                  Knockout
+                                </option>
+                                <option
+                                  value="GROUP_KNOCKOUT"
+                                  className="bg-[#061D23] text-white"
+                                >
+                                  Group + Knockout
+                                </option>
+                              </GlassSelect>
+                            </div>
+                            <div>
+                              <label className="mb-1 block text-[10px] font-black uppercase tracking-wider text-white/60">
+                                Gender Division
+                              </label>
+                              <GlassSelect
+                                value={category.gender || ""}
+                                onChange={(e) =>
+                                  updateEditCategory(
+                                    index,
+                                    "gender",
+                                    (e.target.value as
+                                      | "MALE"
+                                      | "FEMALE"
+                                      | "MIXED") || undefined,
+                                  )
+                                }
+                                className="w-full"
+                              >
+                                <option
+                                  value=""
+                                  className="bg-[#061D23] text-white"
+                                >
+                                  Mixed / Open
+                                </option>
+                                <option
+                                  value="MALE"
+                                  className="bg-[#061D23] text-white"
+                                >
+                                  Men's Only
+                                </option>
+                                <option
+                                  value="FEMALE"
+                                  className="bg-[#061D23] text-white"
+                                >
+                                  Women's Only
+                                </option>
+                              </GlassSelect>
+                            </div>
+                            <div>
+                              <label className="mb-1 block text-[10px] font-black uppercase tracking-wider text-white/60">
+                                Max Participants
+                              </label>
+                              <input
+                                type="number"
+                                placeholder="Max Participants"
+                                value={category.maxParticipants}
+                                onChange={(e) =>
+                                  updateEditCategory(
+                                    index,
+                                    "maxParticipants",
+                                    parseInt(e.target.value) || 2,
+                                  )
+                                }
+                                min="2"
+                                max="256"
+                                className="w-full rounded-lg border border-white/10 bg-[#061D23]/60 px-3 py-2 text-xs text-white placeholder-white/20 focus:border-[#4AEEFF] focus:outline-none"
+                              />
+                            </div>
+                            <div className="sm:col-span-2">
+                              <label className="mb-1 block text-[10px] font-black uppercase tracking-wider text-white/60">
+                                Age Restrictions (Optional)
+                              </label>
+                              <div className="flex gap-2">
+                                <input
+                                  type="number"
+                                  placeholder="Min Age (e.g. 15)"
+                                  value={category.minAge || ""}
+                                  onChange={(e) =>
+                                    updateEditCategory(
+                                      index,
+                                      "minAge",
+                                      e.target.value
+                                        ? parseInt(e.target.value)
+                                        : undefined,
+                                    )
+                                  }
+                                  className="w-1/2 rounded-lg border border-white/10 bg-[#061D23]/60 px-3 py-2 text-xs text-white placeholder-white/20 focus:border-[#4AEEFF] focus:outline-none"
+                                />
+                                <input
+                                  type="number"
+                                  placeholder="Max Age (e.g. 18)"
+                                  value={category.maxAge || ""}
+                                  onChange={(e) =>
+                                    updateEditCategory(
+                                      index,
+                                      "maxAge",
+                                      e.target.value
+                                        ? parseInt(e.target.value)
+                                        : undefined,
+                                    )
+                                  }
+                                  className="w-1/2 rounded-lg border border-white/10 bg-[#061D23]/60 px-3 py-2 text-xs text-white placeholder-white/20 focus:border-[#4AEEFF] focus:outline-none"
+                                />
+                              </div>
+                            </div>
+                          </div>
                         </div>
-                        <div>
-                          <label className="mb-1 block text-[10px] font-black uppercase tracking-wider text-white/60">
-                            Draw Format
-                          </label>
-                          <GlassSelect
-                            value={category.stageFormat || "KNOCKOUT"}
-                            onChange={(e) =>
-                              updateEditCategory(
-                                index,
-                                "stageFormat",
-                                e.target.value as "KNOCKOUT" | "GROUP_KNOCKOUT",
-                              )
-                            }
-                            className="w-full"
-                          >
-                            <option value="KNOCKOUT" className="bg-[#061D23] text-white">Knockout</option>
-                            <option value="GROUP_KNOCKOUT" className="bg-[#061D23] text-white">
-                              Group + Knockout
-                            </option>
-                          </GlassSelect>
-                        </div>
-                        <div>
-                          <label className="mb-1 block text-[10px] font-black uppercase tracking-wider text-white/60">
-                            Gender Division
-                          </label>
-                          <GlassSelect
-                            value={category.gender || ""}
-                            onChange={(e) =>
-                              updateEditCategory(
-                                index,
-                                "gender",
-                                (e.target.value as
-                                  | "MALE"
-                                  | "FEMALE"
-                                  | "MIXED") || undefined,
-                              )
-                            }
-                            className="w-full"
-                          >
-                            <option value="" className="bg-[#061D23] text-white">Mixed / Open</option>
-                            <option value="MALE" className="bg-[#061D23] text-white">Men's Only</option>
-                            <option value="FEMALE" className="bg-[#061D23] text-white">Women's Only</option>
-                          </GlassSelect>
-                        </div>
-                        <div>
-                          <label className="mb-1 block text-[10px] font-black uppercase tracking-wider text-white/60">
-                            Max Participants
-                          </label>
-                          <input
-                            type="number"
-                            placeholder="Max Participants"
-                            value={category.maxParticipants}
-                            onChange={(e) =>
-                              updateEditCategory(
-                                index,
-                                "maxParticipants",
-                                parseInt(e.target.value) || 2,
-                              )
-                            }
-                            min="2"
-                            max="256"
-                            className="w-full rounded-lg border border-white/10 bg-[#061D23]/60 px-3 py-2 text-xs text-white placeholder-white/20 focus:border-[#4AEEFF] focus:outline-none"
-                          />
-                        </div>
-                        <div className="sm:col-span-2">
-                          <label className="mb-1 block text-[10px] font-black uppercase tracking-wider text-white/60">
-                            Age Restrictions (Optional)
-                          </label>
-                          <div className="flex gap-2">
-                            <input
-                              type="number"
-                              placeholder="Min Age (e.g. 15)"
-                              value={category.minAge || ""}
-                              onChange={(e) =>
-                                updateEditCategory(
-                                  index,
-                                  "minAge",
-                                  e.target.value
-                                    ? parseInt(e.target.value)
-                                    : undefined,
-                                )
-                              }
-                              className="w-1/2 rounded-lg border border-white/10 bg-[#061D23]/60 px-3 py-2 text-xs text-white placeholder-white/20 focus:border-[#4AEEFF] focus:outline-none"
-                            />
-                            <input
-                              type="number"
-                              placeholder="Max Age (e.g. 18)"
-                              value={category.maxAge || ""}
-                              onChange={(e) =>
-                                updateEditCategory(
-                                  index,
-                                  "maxAge",
-                                  e.target.value
-                                    ? parseInt(e.target.value)
-                                    : undefined,
-                                )
-                              }
-                              className="w-1/2 rounded-lg border border-white/10 bg-[#061D23]/60 px-3 py-2 text-xs text-white placeholder-white/20 focus:border-[#4AEEFF] focus:outline-none"
-                            />
+                      ))}
+                    </div>
+                    {editCategories.length === 0 && (
+                      <p className="py-4 text-center text-xs text-white/50">
+                        No categories. Click "+ Add Category" to create one.
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="flex gap-3 border-t border-white/10 pt-4">
+                    <button
+                      type="button"
+                      onClick={handleUpdateTournament}
+                      className="flex-1 rounded-lg bg-[#4AEEFF] py-3 text-sm font-black uppercase tracking-wider text-[#061D23] shadow-lg shadow-[#4AEEFF]/20 transition hover:bg-white"
+                    >
+                      Save Changes
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowEditModal(false)}
+                      className="flex-1 rounded-lg border border-white/20 py-3 text-sm font-black uppercase tracking-wider text-white transition hover:bg-white/10"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ─── TOURNAMENT COMPETITION SECTION (Bracket, Champions, Groups) ─── */}
+          {tournament.categories.length === 0 ? (
+            <section className="mb-10 text-center py-12 rounded-2xl border border-dashed border-white/15 bg-white/5">
+              <p className="text-slate-400 text-sm font-medium">
+                No categories configured for this tournament yet.
+              </p>
+            </section>
+          ) : (
+            activeCategory && (
+              <section className="mb-6">
+                {/* Sub-Stage Navigation Bar (Bracket, Champions, Group Stage) + Quick Stats */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-xl border border-white/15 bg-[#061D23]/25 px-4 py-3 shadow-[0_10px_30px_-10px_rgba(6,29,35,0.4)] backdrop-blur-xl">
+                  {/* Sub-Stage Navigation Tabs (Styled to match the Players.tsx segmented capsule) */}
+                  <div className="flex items-center gap-1.5 bg-white/5 p-1 rounded-xl border border-white/10 backdrop-blur-md">
+                    {activeCategoryFormat === "GROUP_KNOCKOUT" && (
+                      <button
+                        type="button"
+                        onClick={() => setDivisionStageTab("GROUPS")}
+                        className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                          divisionStageTab === "GROUPS"
+                            ? "bg-[#4AEEFF]/15 text-[#4AEEFF] border border-[#4AEEFF]/45 shadow-[0_0_14px_rgba(74,238,255,0.18)] backdrop-blur-md"
+                            : "text-white/70 hover:text-white hover:bg-white/5 border border-transparent"
+                        }`}
+                      >
+                        Group Stage
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setDivisionStageTab("KNOCKOUT")}
+                      className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                        divisionStageTab === "KNOCKOUT"
+                          ? "bg-[#4AEEFF]/15 text-[#4AEEFF] border border-[#4AEEFF]/45 shadow-[0_0_14px_rgba(74,238,255,0.18)] backdrop-blur-md"
+                          : "text-white/70 hover:text-white hover:bg-white/5 border border-transparent"
+                      }`}
+                    >
+                      Bracket
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDivisionStageTab("CHAMPIONS");
+                        if (activeCategoryId) {
+                          fetchWinners(activeCategoryId);
+                        }
+                      }}
+                      className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                        divisionStageTab === "CHAMPIONS"
+                          ? "bg-[#4AEEFF]/15 text-[#4AEEFF] border border-[#4AEEFF]/45 shadow-[0_0_14px_rgba(74,238,255,0.18)] backdrop-blur-md"
+                          : "text-white/70 hover:text-white hover:bg-white/5 border border-transparent"
+                      }`}
+                    >
+                      Champions
+                    </button>
+                  </div>
+
+                  {/* Category Info / Stats */}
+                  <div className="flex flex-wrap items-center gap-2 sm:gap-2.5 text-xs text-white/70">
+                    <span className="rounded-lg bg-white/5 border border-white/10 px-2.5 py-1 text-white font-medium">
+                      <strong className="text-[#4AEEFF] font-bold">
+                        {activeCategory.currentParticipants || 0}
+                      </strong>{" "}
+                      / {activeCategory.maxParticipants}{" "}
+                      {isDoublesCategory(activeCategory.type)
+                        ? "pairs"
+                        : "players"}{" "}
+                      registered
+                    </span>
+                    <span className="rounded-lg bg-white/5 border border-white/10 px-2.5 py-1 text-white/80 font-medium">
+                      {formatAgeEligibility(
+                        activeCategory.minAge,
+                        activeCategory.maxAge,
+                      )}
+                    </span>
+                    <span className="rounded-lg bg-[#4AEEFF]/10 border border-[#4AEEFF]/30 px-2.5 py-1 text-[#4AEEFF] font-bold uppercase tracking-wider text-[11px]">
+                      {(activeCategory.stageFormat || tournamentType) ===
+                      "GROUP_KNOCKOUT"
+                        ? "Group + Knockout"
+                        : "Knockout Draw"}
+                    </span>
+                  </div>
+                </div>
+              </section>
+            )
+          )}
+
+          {/* Group Stage UI */}
+          {viewingDivisionDetail &&
+            activeCategoryFormat === "GROUP_KNOCKOUT" &&
+            divisionStageTab === "GROUPS" &&
+            activeCategoryId && (
+              <div className="mb-6">
+                {(isSuperAdmin || canManageMatches) && (
+                  <div className="flex flex-wrap items-center justify-end gap-2 mb-3">
+                    <button
+                      onClick={() => setShowGroupsModal(true)}
+                      className="rounded-lg bg-[#4AEEFF] px-4 py-2 text-xs font-bold uppercase tracking-wider text-[#061D23] hover:bg-white transition-all shadow-sm"
+                    >
+                      Create / Edit Groups
+                    </button>
+                    <button
+                      onClick={handleGenerateGroupMatches}
+                      className="rounded-lg border border-white/20 bg-white/10 px-4 py-2 text-xs font-bold uppercase tracking-wider text-white hover:bg-white/20 transition-all"
+                    >
+                      Generate Matches
+                    </button>
+                    <button
+                      onClick={() => setShowKnockoutModal(true)}
+                      className="rounded-lg border border-white/20 bg-white/10 px-4 py-2 text-xs font-bold uppercase tracking-wider text-white hover:bg-white/20 transition-all"
+                    >
+                      Generate Knockout
+                    </button>
+                    <button
+                      onClick={() => setShowResetConfirm(true)}
+                      className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-4 py-2 text-xs font-bold uppercase tracking-wider text-rose-300 hover:bg-rose-500 hover:text-white transition-all"
+                    >
+                      Reset Knockout
+                    </button>
+                  </div>
+                )}
+
+                <GroupStandings
+                  tournamentId={id}
+                  categoryId={activeCategoryId}
+                  isAdminOrReferee={
+                    isSuperAdmin ||
+                    canManageMatches ||
+                    canManageResults ||
+                    isReferee
+                  }
+                  onScoreUpdate={fetchTournamentDetails}
+                  key={`groups-${activeCategoryId}-${refreshGroups}`}
+                />
+              </div>
+            )}
+
+          {/* Knockout Bracket Section */}
+          {viewingDivisionDetail &&
+            activeCategoryId &&
+            divisionStageTab === "KNOCKOUT" && (
+              <div
+                className="relative w-full min-w-0 max-w-full mb-8 pt-4 pb-8 bg-transparent"
+                style={{ minHeight: 200 }}
+              >
+                {(isSuperAdmin || canManageMatches) && (
+                  <div className="flex items-center justify-end gap-2.5 mb-4">
+                    {activeCategoryFormat === "KNOCKOUT" && (
+                      <button
+                        onClick={() => {
+                          const cat = tournament.categories.find(
+                            (c) => c.id === activeCategoryId,
+                          );
+                          if (cat) setConfirmDrawCategory(cat);
+                        }}
+                        disabled={generating === activeCategoryId}
+                        className="rounded-xl bg-[#0D5C63] hover:bg-[#094348] text-white px-3.5 py-2 text-xs font-black uppercase tracking-wider transition-all shadow-sm flex items-center gap-2"
+                      >
+                        {generating === activeCategoryId ? (
+                          <>
+                            <span className="animate-spin text-sm">⏳</span>
+                            <span>Generating Bracket...</span>
+                          </>
+                        ) : (
+                          <>
+                            <span>🎲</span>
+                            <span>Generate / Update Bracket</span>
+                          </>
+                        )}
+                      </button>
+                    )}
+
+                    <button
+                      onClick={() => setShowResetConfirm(true)}
+                      className="rounded-xl border border-red-500/40 bg-red-500/15 px-4 py-2 text-xs font-black uppercase tracking-wider text-red-300 hover:bg-red-500 hover:text-white transition-all shadow-md shadow-red-500/10"
+                    >
+                      Reset Bracket
+                    </button>
+                  </div>
+                )}
+
+                <KnockoutBracket
+                  tournamentId={id}
+                  categoryId={activeCategoryId}
+                  onScoreRecorded={fetchTournamentDetails}
+                  key={`knockout-${activeCategoryId}-${refreshKnockout}`}
+                  refreshTrigger={refreshKnockout}
+                />
+              </div>
+            )}
+
+          {/* Winners Section */}
+          {viewingDivisionDetail &&
+            activeCategoryId &&
+            divisionStageTab === "CHAMPIONS" && (
+              <div id="winners-section" className="mb-6">
+                {/* Centered Heading: "The winners" */}
+                <div className="text-center pt-0.5 pb-9 md:pb-10">
+                  <h2 className="text-4xl sm:text-5xl font-heading font-bold text-white tracking-tight">
+                    The winners
+                  </h2>
+                </div>
+
+                {/* Show results only for the selected category */}
+                {winners?.categoryId === activeCategoryId ? (
+                  (() => {
+                    const isDoubles =
+                      activeCategory?.type === "DOUBLES" ||
+                      activeCategory?.type === "MIXED_DOUBLES";
+
+                    const isChampionTBD =
+                      !winners.first ||
+                      !winners.first.name ||
+                      winners.first.name.includes("In Progress") ||
+                      winners.first.name.includes("TBD");
+
+                    const isRunnerUpTBD =
+                      !winners.second ||
+                      !winners.second.name ||
+                      winners.second.name.includes("In Progress") ||
+                      winners.second.name.includes("TBD");
+
+                    const championPlayers = getPlayersFromParticipant(
+                      winners.first,
+                      isDoubles,
+                    );
+                    const runnerUpPlayers = getPlayersFromParticipant(
+                      winners.second,
+                      isDoubles,
+                    );
+
+                    const hasOfficialThird = Boolean(
+                      winners.thirdPlace &&
+                      winners.thirdPlace.name &&
+                      !winners.thirdPlace.name.includes("In Progress") &&
+                      !winners.thirdPlace.name.includes("TBD"),
+                    );
+
+                    const thirdPlacePlayers = hasOfficialThird
+                      ? getPlayersFromParticipant(winners.thirdPlace, isDoubles)
+                      : [];
+
+                    const semifinalTeams = (winners.jointThird || []).map(
+                      (t: any) => ({
+                        name:
+                          t.name ||
+                          `${t.firstName || ""} ${t.lastName || ""}`.trim() ||
+                          "Team",
+                        players: getPlayersFromParticipant(t, isDoubles),
+                      }),
+                    );
+
+                    const shouldAnimate =
+                      !animatedCategoriesRef.current.has(activeCategoryId);
+
+                    return (
+                      <div className="w-full max-w-5xl mx-auto px-2 sm:px-4">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
+                          {/* Left Card: RUNNER-UP (order-2 on mobile, order-1 on desktop) */}
+                          <div className="order-2 md:order-1 flex flex-col h-full">
+                            <div
+                              className={`w-full flex-1 flex flex-col justify-between bg-white rounded-2xl p-6 sm:p-7 shadow-sm border border-slate-100 min-h-[380px] ${
+                                shouldAnimate ? "animate-showcase-runnerup" : ""
+                              }`}
+                            >
+                              {/* Top: Silver Medal Icon + Label */}
+                              <div className="flex flex-col items-center">
+                                <SilverMedalIcon className="w-8 h-8 sm:w-9 sm:h-9" />
+                                <span className="text-xs font-bold tracking-wider text-slate-500 uppercase mt-2.5">
+                                  {isDoubles ? "RUNNERS-UP" : "RUNNER-UP"}
+                                </span>
+                              </div>
+
+                              {/* Middle: Avatars & Names */}
+                              {isRunnerUpTBD ? (
+                                <div className="my-auto py-8 flex flex-col items-center">
+                                  <div className="w-16 h-16 rounded-full border-2 border-dashed border-slate-200 bg-slate-50 flex items-center justify-center text-slate-400 font-bold text-xs">
+                                    2ND
+                                  </div>
+                                  <p className="mt-3 text-sm font-semibold text-slate-400">
+                                    Final match pending
+                                  </p>
+                                </div>
+                              ) : (
+                                <div className="my-auto py-6 w-full flex items-center justify-center gap-4 sm:gap-6">
+                                  {runnerUpPlayers.map((player, idx) => (
+                                    <React.Fragment key={player.id || idx}>
+                                      {idx > 0 && (
+                                        <span className="text-slate-400 font-bold text-sm self-center select-none pb-5">
+                                          &amp;
+                                        </span>
+                                      )}
+                                      {player.id ? (
+                                        <Link
+                                          to={`/profile/${player.id}`}
+                                          className="group flex flex-col items-center gap-2.5 min-w-0 max-w-[120px]"
+                                          title={player.name}
+                                        >
+                                          <div className="transition-transform group-hover:scale-105">
+                                            <WinnerAvatar
+                                              image={player.image}
+                                              name={player.name}
+                                              initials={player.initials}
+                                              sizeClass="w-16 h-16 sm:w-20 sm:h-20"
+                                              bgClass="bg-[#EBF3FB]"
+                                              textClass="text-[#1E3A5F] text-lg sm:text-xl"
+                                              borderClass="border-[#D5E2EE]"
+                                            />
+                                          </div>
+                                          <p className="text-xs sm:text-sm font-bold text-slate-900 group-hover:text-sky-600 group-hover:underline transition-colors leading-tight text-center break-words">
+                                            {player.name}
+                                          </p>
+                                        </Link>
+                                      ) : (
+                                        <div className="flex flex-col items-center gap-2.5 min-w-0 max-w-[120px]">
+                                          <WinnerAvatar
+                                            image={player.image}
+                                            name={player.name}
+                                            initials={player.initials}
+                                            sizeClass="w-16 h-16 sm:w-20 sm:h-20"
+                                            bgClass="bg-[#EBF3FB]"
+                                            textClass="text-[#1E3A5F] text-lg sm:text-xl"
+                                            borderClass="border-[#D5E2EE]"
+                                          />
+                                          <p className="text-xs sm:text-sm font-bold text-slate-900 leading-tight text-center break-words">
+                                            {player.name}
+                                          </p>
+                                        </div>
+                                      )}
+                                    </React.Fragment>
+                                  ))}
+                                </div>
+                              )}
+
+                              {/* Bottom: Subtle Divider + 2nd place label */}
+                              <div className="w-full border-t border-slate-100 pt-3 text-center">
+                                <span className="text-xs text-slate-400 font-medium">
+                                  2nd place
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Centre Card: CHAMPION (order-1 on mobile, order-2 on desktop, elevated -translate-y-7 on desktop) */}
+                          <div className="order-1 md:order-2 md:-translate-y-7 flex flex-col h-full">
+                            <div
+                              className={`w-full flex-1 flex flex-col justify-between bg-white rounded-2xl p-6 sm:p-7 shadow-sm border border-slate-100 min-h-[400px] relative overflow-hidden ${
+                                shouldAnimate ? "animate-showcase-champion" : ""
+                              }`}
+                            >
+                              {/* Thin restrained gold accent along the top */}
+                              <div className="absolute top-0 inset-x-0 h-1 bg-[#F59E0B]" />
+
+                              {/* Top: Gold Trophy Icon + Label */}
+                              <div className="flex flex-col items-center">
+                                <TrophyOutlineIcon className="w-9 h-9 sm:w-10 sm:h-10 text-amber-500" />
+                                <span className="text-xs font-bold tracking-wider text-[#D97706] uppercase mt-2.5">
+                                  {isDoubles ? "CHAMPIONS" : "CHAMPION"}
+                                </span>
+                              </div>
+
+                              {/* Middle: Avatars & Names */}
+                              {isChampionTBD ? (
+                                <div className="my-auto py-8 flex flex-col items-center">
+                                  <div className="w-20 h-20 rounded-full border-2 border-dashed border-amber-200 bg-amber-50/60 flex items-center justify-center text-amber-500 font-bold text-sm">
+                                    1ST
+                                  </div>
+                                  <p className="mt-3 text-sm font-semibold text-slate-400">
+                                    Final match pending
+                                  </p>
+                                </div>
+                              ) : (
+                                <div className="my-auto py-6 w-full flex items-center justify-center gap-4 sm:gap-6">
+                                  {championPlayers.map((player, idx) => (
+                                    <React.Fragment key={player.id || idx}>
+                                      {idx > 0 && (
+                                        <span className="text-amber-500/70 font-bold text-sm self-center select-none pb-5">
+                                          &amp;
+                                        </span>
+                                      )}
+                                      {player.id ? (
+                                        <Link
+                                          to={`/profile/${player.id}`}
+                                          className="group flex flex-col items-center gap-2.5 min-w-0 max-w-[130px]"
+                                          title={player.name}
+                                        >
+                                          <div className="transition-transform group-hover:scale-105">
+                                            <WinnerAvatar
+                                              image={player.image}
+                                              name={player.name}
+                                              initials={player.initials}
+                                              sizeClass="w-20 h-20 sm:w-24 sm:h-24"
+                                              bgClass="bg-[#FFFBEB]"
+                                              textClass="text-[#92400E] text-xl sm:text-2xl"
+                                              borderClass="border-[#FDE68A]"
+                                            />
+                                          </div>
+                                          <p className="text-sm sm:text-base font-bold text-slate-900 group-hover:text-amber-600 group-hover:underline transition-colors leading-tight text-center break-words">
+                                            {player.name}
+                                          </p>
+                                        </Link>
+                                      ) : (
+                                        <div className="flex flex-col items-center gap-2.5 min-w-0 max-w-[130px]">
+                                          <WinnerAvatar
+                                            image={player.image}
+                                            name={player.name}
+                                            initials={player.initials}
+                                            sizeClass="w-20 h-20 sm:w-24 sm:h-24"
+                                            bgClass="bg-[#FFFBEB]"
+                                            textClass="text-[#92400E] text-xl sm:text-2xl"
+                                            borderClass="border-[#FDE68A]"
+                                          />
+                                          <p className="text-sm sm:text-base font-bold text-slate-900 leading-tight text-center break-words">
+                                            {player.name}
+                                          </p>
+                                        </div>
+                                      )}
+                                    </React.Fragment>
+                                  ))}
+                                </div>
+                              )}
+
+                              {/* Bottom: Subtle Divider + 1st place label */}
+                              <div className="w-full border-t border-slate-100 pt-3 text-center">
+                                <span className="text-xs text-slate-400 font-medium">
+                                  1st place
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Right Card: Third-place or Semifinalists (order-3 on mobile and desktop) */}
+                          <div className="order-3 md:order-3 flex flex-col h-full">
+                            <div
+                              className={`w-full flex-1 flex flex-col justify-between bg-white rounded-2xl p-6 sm:p-7 shadow-sm border border-slate-100 min-h-[380px] ${
+                                shouldAnimate ? "animate-showcase-third" : ""
+                              }`}
+                            >
+                              {/* Top: Bronze Medal Icon + Label */}
+                              <div className="flex flex-col items-center">
+                                <BronzeMedalIcon className="w-8 h-8 sm:w-9 sm:h-9" />
+                                <span className="text-xs font-bold tracking-wider text-[#B45309] uppercase mt-2.5">
+                                  {hasOfficialThird
+                                    ? "3RD PLACE"
+                                    : "SEMI-FINALISTS"}
+                                </span>
+                              </div>
+
+                              {/* Middle: Either 3rd place winner OR 2 Semifinalists */}
+                              {hasOfficialThird ? (
+                                <div className="my-auto py-6 w-full flex items-center justify-center gap-4 sm:gap-6">
+                                  {thirdPlacePlayers.map((player, idx) => (
+                                    <React.Fragment key={player.id || idx}>
+                                      {idx > 0 && (
+                                        <span className="text-slate-400 font-bold text-sm self-center select-none pb-5">
+                                          &amp;
+                                        </span>
+                                      )}
+                                      {player.id ? (
+                                        <Link
+                                          to={`/profile/${player.id}`}
+                                          className="group flex flex-col items-center gap-2.5 min-w-0 max-w-[120px]"
+                                          title={player.name}
+                                        >
+                                          <div className="transition-transform group-hover:scale-105">
+                                            <WinnerAvatar
+                                              image={player.image}
+                                              name={player.name}
+                                              initials={player.initials}
+                                              sizeClass="w-16 h-16 sm:w-20 sm:h-20"
+                                              bgClass="bg-[#FFF7ED]"
+                                              textClass="text-[#9A3412] text-lg sm:text-xl"
+                                              borderClass="border-[#FED7AA]"
+                                            />
+                                          </div>
+                                          <p className="text-xs sm:text-sm font-bold text-slate-900 group-hover:text-amber-700 group-hover:underline transition-colors leading-tight text-center break-words">
+                                            {player.name}
+                                          </p>
+                                        </Link>
+                                      ) : (
+                                        <div className="flex flex-col items-center gap-2.5 min-w-0 max-w-[120px]">
+                                          <WinnerAvatar
+                                            image={player.image}
+                                            name={player.name}
+                                            initials={player.initials}
+                                            sizeClass="w-16 h-16 sm:w-20 sm:h-20"
+                                            bgClass="bg-[#FFF7ED]"
+                                            textClass="text-[#9A3412] text-lg sm:text-xl"
+                                            borderClass="border-[#FED7AA]"
+                                          />
+                                          <p className="text-xs sm:text-sm font-bold text-slate-900 leading-tight text-center break-words">
+                                            {player.name}
+                                          </p>
+                                        </div>
+                                      )}
+                                    </React.Fragment>
+                                  ))}
+                                </div>
+                              ) : semifinalTeams.length > 0 ? (
+                                <div className="my-auto py-4 w-full flex flex-col justify-center gap-3.5">
+                                  {semifinalTeams.map((team, idx) => (
+                                    <React.Fragment key={idx}>
+                                      {idx > 0 && (
+                                        <div className="border-t border-slate-100 w-full" />
+                                      )}
+                                      <div className="flex items-center gap-3 w-full px-1">
+                                        <div className="flex items-center -space-x-2 shrink-0">
+                                          {team.players.map((p, pIdx) => {
+                                            const av = (
+                                              <WinnerAvatar
+                                                image={p.image}
+                                                name={p.name}
+                                                initials={p.initials}
+                                                sizeClass="w-9 h-9 sm:w-10 sm:h-10"
+                                                bgClass="bg-[#FFF7ED]"
+                                                textClass="text-[#9A3412] text-xs font-bold"
+                                                borderClass="border-[#FED7AA] ring-2 ring-white"
+                                              />
+                                            );
+                                            return p.id ? (
+                                              <Link
+                                                key={p.id || pIdx}
+                                                to={`/profile/${p.id}`}
+                                                title={p.name}
+                                                className="transition-transform hover:scale-110 relative"
+                                                style={{ zIndex: 10 - pIdx }}
+                                              >
+                                                {av}
+                                              </Link>
+                                            ) : (
+                                              <div
+                                                key={pIdx}
+                                                className="relative"
+                                                style={{ zIndex: 10 - pIdx }}
+                                              >
+                                                {av}
+                                              </div>
+                                            );
+                                          })}
+                                        </div>
+                                        <div className="min-w-0 flex items-center flex-wrap gap-x-1.5 leading-snug">
+                                          {team.players.map((p, pIdx) => (
+                                            <React.Fragment key={p.id || pIdx}>
+                                              {pIdx > 0 && (
+                                                <span className="text-slate-400 font-bold text-xs select-none">
+                                                  &amp;
+                                                </span>
+                                              )}
+                                              {p.id ? (
+                                                <Link
+                                                  to={`/profile/${p.id}`}
+                                                  className="text-xs sm:text-sm font-bold text-slate-900 hover:text-amber-700 hover:underline transition-colors truncate max-w-[120px] inline-block"
+                                                  title={p.name}
+                                                >
+                                                  {p.name}
+                                                </Link>
+                                              ) : (
+                                                <span
+                                                  className="text-xs sm:text-sm font-bold text-slate-900 truncate max-w-[120px] inline-block"
+                                                  title={p.name}
+                                                >
+                                                  {p.name}
+                                                </span>
+                                              )}
+                                            </React.Fragment>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    </React.Fragment>
+                                  ))}
+                                </div>
+                              ) : (
+                                <div className="my-auto py-8 flex flex-col items-center">
+                                  <div className="w-16 h-16 rounded-full border-2 border-dashed border-slate-200 bg-slate-50 flex items-center justify-center text-slate-400 font-bold text-xs">
+                                    3RD
+                                  </div>
+                                  <p className="mt-3 text-sm font-semibold text-slate-400">
+                                    Semifinals pending
+                                  </p>
+                                </div>
+                              )}
+
+                              {/* Bottom: Subtle Divider + Label */}
+                              <div className="w-full border-t border-slate-100 pt-3 text-center">
+                                <span className="text-xs text-slate-400 font-medium">
+                                  {hasOfficialThird
+                                    ? "3rd place"
+                                    : "Semi-finalists"}
+                                </span>
+                              </div>
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
-                {editCategories.length === 0 && (
-                  <p className="py-4 text-center text-xs text-white/50">
-                    No categories. Click "+ Add Category" to create one.
-                  </p>
+                    );
+                  })()
+                ) : (
+                  /* Loading State */
+                  <div className="flex flex-col items-center justify-center py-12 rounded-xl bg-white/5 border border-white/10">
+                    <div className="h-8 w-8 animate-spin rounded-full border-4 border-amber-400/20 border-t-amber-400 mb-3" />
+
+                    <p className="text-xs font-semibold text-white/70">
+                      Loading champions for the selected category...
+                    </p>
+                  </div>
                 )}
               </div>
+            )}
+        </>
+      )}
 
-              <div className="flex gap-3 border-t border-white/10 pt-4">
-                <button
-                  type="button"
-                  onClick={handleUpdateTournament}
-                  className="flex-1 rounded-lg bg-[#4AEEFF] py-3 text-sm font-black uppercase tracking-wider text-[#061D23] shadow-lg shadow-[#4AEEFF]/20 transition hover:bg-white"
-                >
-                  Save Changes
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowEditModal(false)}
-                  className="flex-1 rounded-lg border border-white/20 py-3 text-sm font-black uppercase tracking-wider text-white transition hover:bg-white/10"
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          </div>
+      {registrationOnly && (
+        <div className="mb-6">
+          <button
+            type="button"
+            onClick={() => navigate(`/app/tournaments/${id}`)}
+            className="mb-5 text-sm font-semibold text-[#4AEEFF] hover:text-white"
+          >
+            ← Back to Tournament Details
+          </button>
+
+          <h1 className="text-2xl font-black text-white">
+            Tournament Registration
+          </h1>
+
+          <p className="mt-2 text-sm text-white/60">{tournament.name}</p>
+
+          <p className="mt-1 text-sm text-white/50">
+            Select your eligible divisions and complete registration.
+          </p>
         </div>
       )}
 
-      {/* ─── TOURNAMENT COMPETITION SECTION (Bracket, Champions, Groups) ─── */}
-      {tournament.categories.length === 0 ? (
-        <section className="mb-10 text-center py-12 rounded-2xl border border-dashed border-white/15 bg-white/5">
-          <p className="text-slate-400 text-sm font-medium">
-            No categories configured for this tournament yet.
-          </p>
-        </section>
-      ) : activeCategory && (
-        <section className="mb-6">
-          {/* Sub-Stage Navigation Bar (Bracket, Champions, Group Stage) + Quick Stats */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-xl border border-white/15 bg-[#061D23]/25 px-4 py-3 shadow-[0_10px_30px_-10px_rgba(6,29,35,0.4)] backdrop-blur-xl">
-            {/* Sub-Stage Navigation Tabs (Styled to match the Players.tsx segmented capsule) */}
-            <div className="flex items-center gap-1.5 bg-white/5 p-1 rounded-xl border border-white/10 backdrop-blur-md">
-              {activeCategoryFormat === "GROUP_KNOCKOUT" && (
-                <button
-                  type="button"
-                  onClick={() => setDivisionStageTab("GROUPS")}
-                  className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                    divisionStageTab === "GROUPS"
-                      ? "bg-[#4AEEFF]/15 text-[#4AEEFF] border border-[#4AEEFF]/45 shadow-[0_0_14px_rgba(74,238,255,0.18)] backdrop-blur-md"
-                      : "text-white/70 hover:text-white hover:bg-white/5 border border-transparent"
-                  }`}
-                >
-                  Group Stage
-                </button>
-              )}
-              <button
-                type="button"
-                onClick={() => setDivisionStageTab("KNOCKOUT")}
-                className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                  divisionStageTab === "KNOCKOUT"
-                    ? "bg-[#4AEEFF]/15 text-[#4AEEFF] border border-[#4AEEFF]/45 shadow-[0_0_14px_rgba(74,238,255,0.18)] backdrop-blur-md"
-                    : "text-white/70 hover:text-white hover:bg-white/5 border border-transparent"
-                }`}
-              >
-                Bracket
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setDivisionStageTab("CHAMPIONS");
-                  if (activeCategoryId) {
-                    fetchWinners(activeCategoryId);
-                  }
-                }}
-                className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                  divisionStageTab === "CHAMPIONS"
-                    ? "bg-[#4AEEFF]/15 text-[#4AEEFF] border border-[#4AEEFF]/45 shadow-[0_0_14px_rgba(74,238,255,0.18)] backdrop-blur-md"
-                    : "text-white/70 hover:text-white hover:bg-white/5 border border-transparent"
-                }`}
-              >
-                Champions
-              </button>
-            </div>
-
-            {/* Category Info / Stats */}
-            <div className="flex flex-wrap items-center gap-2 sm:gap-2.5 text-xs text-white/70">
-              <span className="rounded-lg bg-white/5 border border-white/10 px-2.5 py-1 text-white font-medium">
-                <strong className="text-[#4AEEFF] font-bold">
-                  {activeCategory.currentParticipants || 0}
-                </strong>{" "}
-                / {activeCategory.maxParticipants}{" "}
-                {isDoublesCategory(activeCategory.type) ? "pairs" : "players"} registered
-              </span>
-              <span className="rounded-lg bg-white/5 border border-white/10 px-2.5 py-1 text-white/80 font-medium">
-                {formatAgeEligibility(activeCategory.minAge, activeCategory.maxAge)}
-              </span>
-              <span className="rounded-lg bg-[#4AEEFF]/10 border border-[#4AEEFF]/30 px-2.5 py-1 text-[#4AEEFF] font-bold uppercase tracking-wider text-[11px]">
-                {(activeCategory.stageFormat || tournamentType) === "GROUP_KNOCKOUT"
-                  ? "Group + Knockout"
-                  : "Knockout Draw"}
-              </span>
-            </div>
-          </div>
-        </section>
-      )}
-
-      {/* Group Stage UI */}
-      {viewingDivisionDetail &&
-        activeCategoryFormat === "GROUP_KNOCKOUT" &&
-        divisionStageTab === "GROUPS" &&
-        activeCategoryId && (
-          <div className="mb-6">
-            {(isSuperAdmin || canManageMatches) && (
-              <div className="flex flex-wrap items-center justify-end gap-2 mb-3">
-                <button
-                  onClick={() => setShowGroupsModal(true)}
-                  className="rounded-lg bg-[#4AEEFF] px-4 py-2 text-xs font-bold uppercase tracking-wider text-[#061D23] hover:bg-white transition-all shadow-sm"
-                >
-                  Create / Edit Groups
-                </button>
-                <button
-                  onClick={handleGenerateGroupMatches}
-                  className="rounded-lg border border-white/20 bg-white/10 px-4 py-2 text-xs font-bold uppercase tracking-wider text-white hover:bg-white/20 transition-all"
-                >
-                  Generate Matches
-                </button>
-                <button
-                  onClick={() => setShowKnockoutModal(true)}
-                  className="rounded-lg border border-white/20 bg-white/10 px-4 py-2 text-xs font-bold uppercase tracking-wider text-white hover:bg-white/20 transition-all"
-                >
-                  Generate Knockout
-                </button>
-                <button
-                  onClick={() => setShowResetConfirm(true)}
-                  className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-4 py-2 text-xs font-bold uppercase tracking-wider text-rose-300 hover:bg-rose-500 hover:text-white transition-all"
-                >
-                  Reset Knockout
-                </button>
-              </div>
-            )}
-
-            <GroupStandings
-              tournamentId={id}
-              categoryId={activeCategoryId}
-              isAdminOrReferee={
-                isSuperAdmin || canManageMatches || canManageResults || isReferee
-              }
-              onScoreUpdate={fetchTournamentDetails}
-              key={`groups-${activeCategoryId}-${refreshGroups}`}
-            />
-          </div>
-        )}
-
-      {/* Knockout Bracket Section */}
-      {viewingDivisionDetail &&
-        activeCategoryId &&
-        divisionStageTab === "KNOCKOUT" && (
-          <div
-            className="relative w-full min-w-0 max-w-full mb-8 pt-4 pb-8 bg-transparent"
-            style={{ minHeight: 200 }}
-          >
-            {(isSuperAdmin || canManageMatches) && (
-              <div className="flex items-center justify-end gap-2.5 mb-4">
-                {activeCategoryFormat === "KNOCKOUT" && (
-                  <button
-                    onClick={() => {
-                      const cat = tournament.categories.find(
-                        (c) => c.id === activeCategoryId,
-                      );
-                      if (cat) setConfirmDrawCategory(cat);
-                    }}
-                    disabled={generating === activeCategoryId}
-                    className="rounded-xl bg-[#0D5C63] hover:bg-[#094348] text-white px-3.5 py-2 text-xs font-black uppercase tracking-wider transition-all shadow-sm flex items-center gap-2"
-                  >
-                    {generating === activeCategoryId ? (
-                      <>
-                        <span className="animate-spin text-sm">⏳</span>
-                        <span>Generating Bracket...</span>
-                      </>
-                    ) : (
-                      <>
-                        <span>🎲</span>
-                        <span>Generate / Update Bracket</span>
-                      </>
-                    )}
-                  </button>
-                )}
-
-                <button
-                  onClick={() => setShowResetConfirm(true)}
-                  className="rounded-xl border border-red-500/40 bg-red-500/15 px-4 py-2 text-xs font-black uppercase tracking-wider text-red-300 hover:bg-red-500 hover:text-white transition-all shadow-md shadow-red-500/10"
-                >
-                  Reset Bracket
-                </button>
-              </div>
-            )}
-
-            <KnockoutBracket
-              tournamentId={id}
-              categoryId={activeCategoryId}
-              onScoreRecorded={fetchTournamentDetails}
-              key={`knockout-${activeCategoryId}-${refreshKnockout}`}
-              refreshTrigger={refreshKnockout}
-            />
-          </div>
-        )}
-
-      {/* Winners Section */}
-      {viewingDivisionDetail &&
-        activeCategoryId &&
-        divisionStageTab === "CHAMPIONS" && (
-          <div id="winners-section" className="mb-6">
-            {/* Centered Heading: "The winners" */}
-            <div className="text-center pt-0.5 pb-9 md:pb-10">
-              <h2 className="text-4xl sm:text-5xl font-heading font-bold text-white tracking-tight">
-                The winners
-              </h2>
-            </div>
-
-            {/* Show results only for the selected category */}
-            {winners?.categoryId === activeCategoryId ? (
-              (() => {
-                const isDoubles =
-                  activeCategory?.type === "DOUBLES" ||
-                  activeCategory?.type === "MIXED_DOUBLES";
-
-                const isChampionTBD =
-                  !winners.first ||
-                  !winners.first.name ||
-                  winners.first.name.includes("In Progress") ||
-                  winners.first.name.includes("TBD");
-
-                const isRunnerUpTBD =
-                  !winners.second ||
-                  !winners.second.name ||
-                  winners.second.name.includes("In Progress") ||
-                  winners.second.name.includes("TBD");
-
-                const championPlayers = getPlayersFromParticipant(
-                  winners.first,
-                  isDoubles,
-                );
-                const runnerUpPlayers = getPlayersFromParticipant(
-                  winners.second,
-                  isDoubles,
-                );
-
-                const hasOfficialThird = Boolean(
-                  winners.thirdPlace &&
-                    winners.thirdPlace.name &&
-                    !winners.thirdPlace.name.includes("In Progress") &&
-                    !winners.thirdPlace.name.includes("TBD"),
-                );
-
-                const thirdPlacePlayers = hasOfficialThird
-                  ? getPlayersFromParticipant(winners.thirdPlace, isDoubles)
-                  : [];
-
-                const semifinalTeams = (winners.jointThird || []).map((t: any) => ({
-                  name:
-                    t.name ||
-                    `${t.firstName || ""} ${t.lastName || ""}`.trim() ||
-                    "Team",
-                  players: getPlayersFromParticipant(t, isDoubles),
-                }));
-
-                const shouldAnimate = !animatedCategoriesRef.current.has(activeCategoryId);
-
-                return (
-                  <div className="w-full max-w-5xl mx-auto px-2 sm:px-4">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
-                      {/* Left Card: RUNNER-UP (order-2 on mobile, order-1 on desktop) */}
-                      <div className="order-2 md:order-1 flex flex-col h-full">
-                        <div
-                          className={`w-full flex-1 flex flex-col justify-between bg-white rounded-2xl p-6 sm:p-7 shadow-sm border border-slate-100 min-h-[380px] ${
-                            shouldAnimate ? "animate-showcase-runnerup" : ""
-                          }`}
-                        >
-                          {/* Top: Silver Medal Icon + Label */}
-                          <div className="flex flex-col items-center">
-                            <SilverMedalIcon className="w-8 h-8 sm:w-9 sm:h-9" />
-                            <span className="text-xs font-bold tracking-wider text-slate-500 uppercase mt-2.5">
-                              {isDoubles ? "RUNNERS-UP" : "RUNNER-UP"}
-                            </span>
-                          </div>
-
-                          {/* Middle: Avatars & Names */}
-                          {isRunnerUpTBD ? (
-                            <div className="my-auto py-8 flex flex-col items-center">
-                              <div className="w-16 h-16 rounded-full border-2 border-dashed border-slate-200 bg-slate-50 flex items-center justify-center text-slate-400 font-bold text-xs">
-                                2ND
-                              </div>
-                              <p className="mt-3 text-sm font-semibold text-slate-400">
-                                Final match pending
-                              </p>
-                            </div>
-                          ) : (
-                            <div className="my-auto py-6 w-full flex items-center justify-center gap-4 sm:gap-6">
-                              {runnerUpPlayers.map((player, idx) => (
-                                <React.Fragment key={player.id || idx}>
-                                  {idx > 0 && (
-                                    <span className="text-slate-400 font-bold text-sm self-center select-none pb-5">
-                                      &amp;
-                                    </span>
-                                  )}
-                                  {player.id ? (
-                                    <Link
-                                      to={`/profile/${player.id}`}
-                                      className="group flex flex-col items-center gap-2.5 min-w-0 max-w-[120px]"
-                                      title={player.name}
-                                    >
-                                      <div className="transition-transform group-hover:scale-105">
-                                        <WinnerAvatar
-                                          image={player.image}
-                                          name={player.name}
-                                          initials={player.initials}
-                                          sizeClass="w-16 h-16 sm:w-20 sm:h-20"
-                                          bgClass="bg-[#EBF3FB]"
-                                          textClass="text-[#1E3A5F] text-lg sm:text-xl"
-                                          borderClass="border-[#D5E2EE]"
-                                        />
-                                      </div>
-                                      <p className="text-xs sm:text-sm font-bold text-slate-900 group-hover:text-sky-600 group-hover:underline transition-colors leading-tight text-center break-words">
-                                        {player.name}
-                                      </p>
-                                    </Link>
-                                  ) : (
-                                    <div className="flex flex-col items-center gap-2.5 min-w-0 max-w-[120px]">
-                                      <WinnerAvatar
-                                        image={player.image}
-                                        name={player.name}
-                                        initials={player.initials}
-                                        sizeClass="w-16 h-16 sm:w-20 sm:h-20"
-                                        bgClass="bg-[#EBF3FB]"
-                                        textClass="text-[#1E3A5F] text-lg sm:text-xl"
-                                        borderClass="border-[#D5E2EE]"
-                                      />
-                                      <p className="text-xs sm:text-sm font-bold text-slate-900 leading-tight text-center break-words">
-                                        {player.name}
-                                      </p>
-                                    </div>
-                                  )}
-                                </React.Fragment>
-                              ))}
-                            </div>
-                          )}
-
-                          {/* Bottom: Subtle Divider + 2nd place label */}
-                          <div className="w-full border-t border-slate-100 pt-3 text-center">
-                            <span className="text-xs text-slate-400 font-medium">
-                              2nd place
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Centre Card: CHAMPION (order-1 on mobile, order-2 on desktop, elevated -translate-y-7 on desktop) */}
-                      <div className="order-1 md:order-2 md:-translate-y-7 flex flex-col h-full">
-                        <div
-                          className={`w-full flex-1 flex flex-col justify-between bg-white rounded-2xl p-6 sm:p-7 shadow-sm border border-slate-100 min-h-[400px] relative overflow-hidden ${
-                            shouldAnimate ? "animate-showcase-champion" : ""
-                          }`}
-                        >
-                          {/* Thin restrained gold accent along the top */}
-                          <div className="absolute top-0 inset-x-0 h-1 bg-[#F59E0B]" />
-
-                          {/* Top: Gold Trophy Icon + Label */}
-                          <div className="flex flex-col items-center">
-                            <TrophyOutlineIcon className="w-9 h-9 sm:w-10 sm:h-10 text-amber-500" />
-                            <span className="text-xs font-bold tracking-wider text-[#D97706] uppercase mt-2.5">
-                              {isDoubles ? "CHAMPIONS" : "CHAMPION"}
-                            </span>
-                          </div>
-
-                          {/* Middle: Avatars & Names */}
-                          {isChampionTBD ? (
-                            <div className="my-auto py-8 flex flex-col items-center">
-                              <div className="w-20 h-20 rounded-full border-2 border-dashed border-amber-200 bg-amber-50/60 flex items-center justify-center text-amber-500 font-bold text-sm">
-                                1ST
-                              </div>
-                              <p className="mt-3 text-sm font-semibold text-slate-400">
-                                Final match pending
-                              </p>
-                            </div>
-                          ) : (
-                            <div className="my-auto py-6 w-full flex items-center justify-center gap-4 sm:gap-6">
-                              {championPlayers.map((player, idx) => (
-                                <React.Fragment key={player.id || idx}>
-                                  {idx > 0 && (
-                                    <span className="text-amber-500/70 font-bold text-sm self-center select-none pb-5">
-                                      &amp;
-                                    </span>
-                                  )}
-                                  {player.id ? (
-                                    <Link
-                                      to={`/profile/${player.id}`}
-                                      className="group flex flex-col items-center gap-2.5 min-w-0 max-w-[130px]"
-                                      title={player.name}
-                                    >
-                                      <div className="transition-transform group-hover:scale-105">
-                                        <WinnerAvatar
-                                          image={player.image}
-                                          name={player.name}
-                                          initials={player.initials}
-                                          sizeClass="w-20 h-20 sm:w-24 sm:h-24"
-                                          bgClass="bg-[#FFFBEB]"
-                                          textClass="text-[#92400E] text-xl sm:text-2xl"
-                                          borderClass="border-[#FDE68A]"
-                                        />
-                                      </div>
-                                      <p className="text-sm sm:text-base font-bold text-slate-900 group-hover:text-amber-600 group-hover:underline transition-colors leading-tight text-center break-words">
-                                        {player.name}
-                                      </p>
-                                    </Link>
-                                  ) : (
-                                    <div className="flex flex-col items-center gap-2.5 min-w-0 max-w-[130px]">
-                                      <WinnerAvatar
-                                        image={player.image}
-                                        name={player.name}
-                                        initials={player.initials}
-                                        sizeClass="w-20 h-20 sm:w-24 sm:h-24"
-                                        bgClass="bg-[#FFFBEB]"
-                                        textClass="text-[#92400E] text-xl sm:text-2xl"
-                                        borderClass="border-[#FDE68A]"
-                                      />
-                                      <p className="text-sm sm:text-base font-bold text-slate-900 leading-tight text-center break-words">
-                                        {player.name}
-                                      </p>
-                                    </div>
-                                  )}
-                                </React.Fragment>
-                              ))}
-                            </div>
-                          )}
-
-                          {/* Bottom: Subtle Divider + 1st place label */}
-                          <div className="w-full border-t border-slate-100 pt-3 text-center">
-                            <span className="text-xs text-slate-400 font-medium">
-                              1st place
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Right Card: Third-place or Semifinalists (order-3 on mobile and desktop) */}
-                      <div className="order-3 md:order-3 flex flex-col h-full">
-                        <div
-                          className={`w-full flex-1 flex flex-col justify-between bg-white rounded-2xl p-6 sm:p-7 shadow-sm border border-slate-100 min-h-[380px] ${
-                            shouldAnimate ? "animate-showcase-third" : ""
-                          }`}
-                        >
-                          {/* Top: Bronze Medal Icon + Label */}
-                          <div className="flex flex-col items-center">
-                            <BronzeMedalIcon className="w-8 h-8 sm:w-9 sm:h-9" />
-                            <span className="text-xs font-bold tracking-wider text-[#B45309] uppercase mt-2.5">
-                              {hasOfficialThird ? "3RD PLACE" : "SEMI-FINALISTS"}
-                            </span>
-                          </div>
-
-                          {/* Middle: Either 3rd place winner OR 2 Semifinalists */}
-                          {hasOfficialThird ? (
-                            <div className="my-auto py-6 w-full flex items-center justify-center gap-4 sm:gap-6">
-                              {thirdPlacePlayers.map((player, idx) => (
-                                <React.Fragment key={player.id || idx}>
-                                  {idx > 0 && (
-                                    <span className="text-slate-400 font-bold text-sm self-center select-none pb-5">
-                                      &amp;
-                                    </span>
-                                  )}
-                                  {player.id ? (
-                                    <Link
-                                      to={`/profile/${player.id}`}
-                                      className="group flex flex-col items-center gap-2.5 min-w-0 max-w-[120px]"
-                                      title={player.name}
-                                    >
-                                      <div className="transition-transform group-hover:scale-105">
-                                        <WinnerAvatar
-                                          image={player.image}
-                                          name={player.name}
-                                          initials={player.initials}
-                                          sizeClass="w-16 h-16 sm:w-20 sm:h-20"
-                                          bgClass="bg-[#FFF7ED]"
-                                          textClass="text-[#9A3412] text-lg sm:text-xl"
-                                          borderClass="border-[#FED7AA]"
-                                        />
-                                      </div>
-                                      <p className="text-xs sm:text-sm font-bold text-slate-900 group-hover:text-amber-700 group-hover:underline transition-colors leading-tight text-center break-words">
-                                        {player.name}
-                                      </p>
-                                    </Link>
-                                  ) : (
-                                    <div className="flex flex-col items-center gap-2.5 min-w-0 max-w-[120px]">
-                                      <WinnerAvatar
-                                        image={player.image}
-                                        name={player.name}
-                                        initials={player.initials}
-                                        sizeClass="w-16 h-16 sm:w-20 sm:h-20"
-                                        bgClass="bg-[#FFF7ED]"
-                                        textClass="text-[#9A3412] text-lg sm:text-xl"
-                                        borderClass="border-[#FED7AA]"
-                                      />
-                                      <p className="text-xs sm:text-sm font-bold text-slate-900 leading-tight text-center break-words">
-                                        {player.name}
-                                      </p>
-                                    </div>
-                                  )}
-                                </React.Fragment>
-                              ))}
-                            </div>
-                          ) : semifinalTeams.length > 0 ? (
-                            <div className="my-auto py-4 w-full flex flex-col justify-center gap-3.5">
-                              {semifinalTeams.map((team, idx) => (
-                                <React.Fragment key={idx}>
-                                  {idx > 0 && <div className="border-t border-slate-100 w-full" />}
-                                  <div className="flex items-center gap-3 w-full px-1">
-                                    <div className="flex items-center -space-x-2 shrink-0">
-                                      {team.players.map((p, pIdx) => {
-                                        const av = (
-                                          <WinnerAvatar
-                                            image={p.image}
-                                            name={p.name}
-                                            initials={p.initials}
-                                            sizeClass="w-9 h-9 sm:w-10 sm:h-10"
-                                            bgClass="bg-[#FFF7ED]"
-                                            textClass="text-[#9A3412] text-xs font-bold"
-                                            borderClass="border-[#FED7AA] ring-2 ring-white"
-                                          />
-                                        );
-                                        return p.id ? (
-                                          <Link
-                                            key={p.id || pIdx}
-                                            to={`/profile/${p.id}`}
-                                            title={p.name}
-                                            className="transition-transform hover:scale-110 relative"
-                                            style={{ zIndex: 10 - pIdx }}
-                                          >
-                                            {av}
-                                          </Link>
-                                        ) : (
-                                          <div
-                                            key={pIdx}
-                                            className="relative"
-                                            style={{ zIndex: 10 - pIdx }}
-                                          >
-                                            {av}
-                                          </div>
-                                        );
-                                      })}
-                                    </div>
-                                    <div className="min-w-0 flex items-center flex-wrap gap-x-1.5 leading-snug">
-                                      {team.players.map((p, pIdx) => (
-                                        <React.Fragment key={p.id || pIdx}>
-                                          {pIdx > 0 && (
-                                            <span className="text-slate-400 font-bold text-xs select-none">
-                                              &amp;
-                                            </span>
-                                          )}
-                                          {p.id ? (
-                                            <Link
-                                              to={`/profile/${p.id}`}
-                                              className="text-xs sm:text-sm font-bold text-slate-900 hover:text-amber-700 hover:underline transition-colors truncate max-w-[120px] inline-block"
-                                              title={p.name}
-                                            >
-                                              {p.name}
-                                            </Link>
-                                          ) : (
-                                            <span
-                                              className="text-xs sm:text-sm font-bold text-slate-900 truncate max-w-[120px] inline-block"
-                                              title={p.name}
-                                            >
-                                              {p.name}
-                                            </span>
-                                          )}
-                                        </React.Fragment>
-                                      ))}
-                                    </div>
-                                  </div>
-                                </React.Fragment>
-                              ))}
-                            </div>
-                          ) : (
-                            <div className="my-auto py-8 flex flex-col items-center">
-                              <div className="w-16 h-16 rounded-full border-2 border-dashed border-slate-200 bg-slate-50 flex items-center justify-center text-slate-400 font-bold text-xs">
-                                3RD
-                              </div>
-                              <p className="mt-3 text-sm font-semibold text-slate-400">
-                                Semifinals pending
-                              </p>
-                            </div>
-                          )}
-
-                          {/* Bottom: Subtle Divider + Label */}
-                          <div className="w-full border-t border-slate-100 pt-3 text-center">
-                            <span className="text-xs text-slate-400 font-medium">
-                              {hasOfficialThird ? "3rd place" : "Semi-finalists"}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })()
-            ) : (
-              /* Loading State */
-              <div className="flex flex-col items-center justify-center py-12 rounded-xl bg-white/5 border border-white/10">
-                <div className="h-8 w-8 animate-spin rounded-full border-4 border-amber-400/20 border-t-amber-400 mb-3" />
-
-                <p className="text-xs font-semibold text-white/70">
-                  Loading champions for the selected category...
-                </p>
-              </div>
-            )}
-          </div>
-        )}
-
       {/* Professional Tournament Division Entry Section */}
-      {canRegister && tournament.categories.length > 0 && (
+      {registrationOnly && canRegister && tournament.categories.length > 0 && (
         <div className="rounded-2xl border border-white/[0.08] bg-[#061D23]/40 p-6 shadow-xl backdrop-blur-md mb-6">
           {/* Athlete Passport & Eligibility Bar */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-white/10">
@@ -2941,12 +3149,13 @@ const TournamentDetails: React.FC = () => {
               return (
                 <div
                   key={category.id}
-                  className={`rounded-xl border transition-all p-4 ${isAlreadyRegistered
+                  className={`rounded-xl border transition-all p-4 ${
+                    isAlreadyRegistered
                       ? "border-emerald-500/50 bg-gradient-to-r from-emerald-950/40 via-emerald-900/15 to-[#061D23]/60 shadow-sm"
                       : isSelected
                         ? "border-[#4AEEFF] bg-[#4AEEFF]/15 shadow-md shadow-[#4AEEFF]/10"
                         : "border-white/10 bg-[#061D23]/40 hover:border-white/20"
-                    }`}
+                  }`}
                 >
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div className="flex items-center gap-3.5 flex-1 min-w-0">
@@ -2975,10 +3184,11 @@ const TournamentDetails: React.FC = () => {
                       <div className="min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <h4
-                            className={`font-black text-sm sm:text-base ${isAlreadyRegistered
+                            className={`font-black text-sm sm:text-base ${
+                              isAlreadyRegistered
                                 ? "text-emerald-100"
                                 : "text-white"
-                              }`}
+                            }`}
                           >
                             {category.name}
                           </h4>
@@ -3103,10 +3313,11 @@ const TournamentDetails: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => toggleCategory(category.id)}
-                          className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider border transition-all ${isSelected
+                          className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider border transition-all ${
+                            isSelected
                               ? "bg-[#4AEEFF] text-[#061D23] border-[#4AEEFF]"
                               : "bg-white/5 text-white/70 border-white/10 hover:border-white/20"
-                            }`}
+                          }`}
                         >
                           {isSelected ? "Selected" : "Select"}
                         </button>
@@ -3202,7 +3413,7 @@ const TournamentDetails: React.FC = () => {
         </div>
       )}
 
-      {hasRegistration && (
+      {registrationOnly && hasRegistration && (
         <div className="rounded-[16px] border border-white/20 bg-[#061D23]/25 p-5 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl mb-6 flex items-center flex-wrap gap-2">
           <p className="text-xs uppercase tracking-wider font-bold text-[#4AEEFF]">
             Your registration status:
@@ -3218,7 +3429,8 @@ const TournamentDetails: React.FC = () => {
         </div>
       )}
       {/* Payment Proof Verification */}
-      {isPlayer &&
+      {registrationOnly &&
+        isPlayer &&
         hasRegistration &&
         paymentProofInfo?.paymentProofRequired && (
           <div className="rounded-[16px] border border-white/20 bg-[#061D23]/25 p-5 sm:p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl mb-6">
@@ -3341,12 +3553,13 @@ const TournamentDetails: React.FC = () => {
                       </div>
 
                       <span
-                        className={`rounded-lg border px-3 py-1.5 text-xs font-black ${category.paymentStatus === "APPROVED"
+                        className={`rounded-lg border px-3 py-1.5 text-xs font-black ${
+                          category.paymentStatus === "APPROVED"
                             ? "border-emerald-500/40 bg-emerald-500/15 text-emerald-300"
                             : category.paymentStatus === "REJECTED"
                               ? "border-red-500/40 bg-red-500/15 text-red-300"
                               : "border-amber-500/40 bg-amber-500/15 text-amber-300"
-                          }`}
+                        }`}
                       >
                         {category.paymentStatus}
                       </span>
@@ -3446,7 +3659,8 @@ const TournamentDetails: React.FC = () => {
         )}
 
       {/* Registrations Section */}
-      {((isAdmin && canManageRegistrations) || isSuperAdmin || isReferee) &&
+      {!registrationOnly &&
+        ((isAdmin && canManageRegistrations) || isSuperAdmin || isReferee) &&
         tournament.registrations?.length > 0 && (
           <div className="rounded-2xl border border-white/20 bg-[#061D23]/25 p-4 sm:p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl mb-6">
             <h2 className="text-xl font-black uppercase tracking-wider text-white mb-4">
@@ -3484,7 +3698,7 @@ const TournamentDetails: React.FC = () => {
                     >
                       <td className="px-6 py-4 whitespace-nowrap">
                         {registration.team?.members &&
-                          registration.team.members.length > 0 ? (
+                        registration.team.members.length > 0 ? (
                           <div className="flex flex-col">
                             <span className="text-white font-bold text-sm">
                               {registration.team.members
@@ -3516,11 +3730,11 @@ const TournamentDetails: React.FC = () => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-white/70">
                         {registration.team?.members &&
-                          registration.team.members.length > 0
+                        registration.team.members.length > 0
                           ? registration.team.members
-                            .map((m) => m.player?.email)
-                            .filter(Boolean)
-                            .join(", ")
+                              .map((m) => m.player?.email)
+                              .filter(Boolean)
+                              .join(", ")
                           : registration.player?.email}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-xs text-white/50 font-mono">
