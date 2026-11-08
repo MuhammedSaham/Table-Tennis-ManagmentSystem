@@ -10,8 +10,69 @@ import RecordGroupScoreModal from "../components/RecordGroupScoreModal";
 import KnockoutBracket from "../components/KnockoutBracket";
 import GuestRegistrationModal from "../components/GuestRegistrationModal";
 import { Link } from "react-router-dom";
+import BackButton from "../components/BackButton";
+import GlassSelect from "../components/GlassSelect";
+import ConfirmModal from "../components/ConfirmModal";
 import CreateKnockoutModal from "../components/CreateKnockoutModal";
 import DoublesPartnerModal from "../components/DoublesPartnerModal";
+
+const capitalizeWords = (str: string): string => {
+  if (!str) return "";
+  return str
+    .trim()
+    .split(/\s+/)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .join(" ");
+};
+
+const formatDivisionName = (name?: string) => {
+  if (!name) return "";
+  const cleaned = name
+    .replace(/\s+(double|doubles|single|singles)?\s*group\s*stages?/gi, "")
+    .trim();
+  const target = cleaned || name;
+  return target
+    .split(" ")
+    .map((w) => {
+      if (/^u-\d+$/i.test(w)) return w.toUpperCase();
+      if (w.length <= 2 && w === w.toUpperCase()) return w;
+      return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
+    })
+    .join(" ");
+};
+
+const WinnerAvatar: React.FC<{
+  image?: string;
+  name: string;
+  initials: string;
+  sizeClass: string;
+  bgClass: string;
+  textClass: string;
+  borderClass: string;
+}> = ({ image, name, initials, sizeClass, bgClass, textClass, borderClass }) => {
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    setError(false);
+  }, [image]);
+
+  return (
+    <div
+      className={`${sizeClass} rounded-full ${bgClass} border ${borderClass} flex items-center justify-center ${textClass} font-bold shadow-inner relative overflow-hidden shrink-0 select-none`}
+    >
+      {image && !error ? (
+        <img
+          src={image}
+          alt={name}
+          className="w-full h-full object-cover"
+          onError={() => setError(true)}
+        />
+      ) : (
+        <span>{initials}</span>
+      )}
+    </div>
+  );
+};
 
 interface Category {
   id: string;
@@ -149,6 +210,10 @@ const TournamentDetails: React.FC = () => {
   >(null);
 
   const [activeCategoryId, setActiveCategoryId] = useState<string>("");
+  const [viewingDivisionDetail, setViewingDivisionDetail] = useState(true);
+  const [divisionStageTab, setDivisionStageTab] = useState<
+    "GROUPS" | "KNOCKOUT" | "CHAMPIONS"
+  >("KNOCKOUT");
   const [registering, setRegistering] = useState(false);
   const [generating, setGenerating] = useState<string | null>(null);
   const [tournamentType, setTournamentType] = useState("KNOCKOUT");
@@ -157,6 +222,20 @@ const TournamentDetails: React.FC = () => {
   );
   const activeCategoryFormat =
     activeCategory?.stageFormat || tournamentType || "KNOCKOUT";
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+  }, [activeCategoryId]);
+
+  const handleSelectCategoryDetail = (categoryId: string) => {
+    setActiveCategoryId(categoryId);
+    const cat = tournament?.categories?.find((c) => c.id === categoryId);
+    const format = cat?.stageFormat || tournamentType || "KNOCKOUT";
+    setDivisionStageTab(format === "GROUP_KNOCKOUT" ? "GROUPS" : "KNOCKOUT");
+    setViewingDivisionDetail(true);
+    fetchWinners(categoryId);
+  };
+
   const [showGroupsModal, setShowGroupsModal] = useState(false);
   const [showScoreModal, setShowScoreModal] = useState(false);
   const [refreshGroups, setRefreshGroups] = useState(0);
@@ -170,10 +249,12 @@ const TournamentDetails: React.FC = () => {
     categoryName?: string;
     first: any;
     second: any;
+    thirdPlace?: any;
     jointThird: any[];
   } | null>(null);
   const [showWinners, setShowWinners] = useState(false);
   const winnersRequestId = useRef(0);
+  const animatedCategoriesRef = useRef<Set<string>>(new Set());
   const [showEditModal, setShowEditModal] = useState(false);
   const [editFormData, setEditFormData] = useState({
     name: "",
@@ -189,6 +270,21 @@ const TournamentDetails: React.FC = () => {
     paymentInstructions: "",
   });
   const [editCategories, setEditCategories] = useState<Category[]>([]);
+  const [playerDirectory, setPlayerDirectory] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchPlayerDirectory = async () => {
+      try {
+        const res = await api.get("/users/public/players");
+        if (res.data?.data) {
+          setPlayerDirectory(res.data.data);
+        }
+      } catch (err) {
+        console.warn("Failed to load player directory", err);
+      }
+    };
+    fetchPlayerDirectory();
+  }, []);
 
   // Doubles Pairing States
   const [partnerModalCategory, setPartnerModalCategory] = useState<{
@@ -204,6 +300,10 @@ const TournamentDetails: React.FC = () => {
   const [showGuestModal, setShowGuestModal] = useState(false);
   const [showKnockoutModal, setShowKnockoutModal] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeletingTournament, setIsDeletingTournament] = useState(false);
+  const [showCompleteConfirm, setShowCompleteConfirm] = useState(false);
+  const [isCompletingTournament, setIsCompletingTournament] = useState(false);
   const [showIneligible, setShowIneligible] = useState(false);
   const [confirmDrawCategory, setConfirmDrawCategory] =
     useState<Category | null>(null);
@@ -237,14 +337,20 @@ const TournamentDetails: React.FC = () => {
 
   useEffect(() => {
     if (tournament?.categories?.length && !activeCategoryId) {
-      setActiveCategoryId(tournament.categories[0].id);
+      const firstCat = tournament.categories[0];
+      setActiveCategoryId(firstCat.id);
+      const format = firstCat.stageFormat || tournamentType || "KNOCKOUT";
+      setDivisionStageTab(format === "GROUP_KNOCKOUT" ? "GROUPS" : "KNOCKOUT");
+      fetchWinners(firstCat.id);
     }
   }, [tournament?.categories, activeCategoryId]);
 
   useEffect(() => {
     if (
       activeCategoryId &&
-      (showWinners || tournament?.status === "COMPLETED")
+      (divisionStageTab === "CHAMPIONS" ||
+        showWinners ||
+        tournament?.status === "COMPLETED")
     ) {
       fetchWinners(activeCategoryId);
     } else {
@@ -256,6 +362,18 @@ const TournamentDetails: React.FC = () => {
       winnersRequestId.current++;
     };
   }, [activeCategoryId, showWinners, tournament?.status, id]);
+
+  useEffect(() => {
+    if (
+      divisionStageTab === "CHAMPIONS" &&
+      activeCategoryId &&
+      winners?.categoryId === activeCategoryId
+    ) {
+      if (!animatedCategoriesRef.current.has(activeCategoryId)) {
+        animatedCategoriesRef.current.add(activeCategoryId);
+      }
+    }
+  }, [divisionStageTab, activeCategoryId, winners?.categoryId]);
 
   const calculateAge = (dateOfBirth: string | Date): number => {
     const birthDate = new Date(dateOfBirth);
@@ -649,14 +767,32 @@ const TournamentDetails: React.FC = () => {
   };
 
   const handleDelete = async () => {
-    if (window.confirm("Are you sure you want to delete this tournament?")) {
-      try {
-        await api.delete(`/tournaments/${id}`);
-        toast.success("Tournament deleted successfully");
-        navigate(user ? "/app/tournaments" : "/tournaments");
-      } catch (error) {
-        toast.error("Failed to delete tournament");
-      }
+    try {
+      setIsDeletingTournament(true);
+      await api.delete(`/tournaments/${id}`);
+      toast.success("Tournament deleted successfully");
+      navigate(user ? "/app/tournaments" : "/tournaments");
+    } catch (error) {
+      toast.error("Failed to delete tournament");
+      setIsDeletingTournament(false);
+      setShowDeleteConfirm(false);
+    }
+  };
+
+  const handleMarkComplete = async () => {
+    try {
+      setIsCompletingTournament(true);
+      await api.patch(`/tournaments/${id}`, {
+        status: "COMPLETED",
+      });
+      toast.success("Tournament marked as completed!");
+      fetchTournamentDetails();
+      setShowWinners(true);
+      setShowCompleteConfirm(false);
+    } catch {
+      toast.error("Failed to update status");
+    } finally {
+      setIsCompletingTournament(false);
     }
   };
 
@@ -746,33 +882,231 @@ const TournamentDetails: React.FC = () => {
     }
   };
 
-  const getWinnerProfileImage = (participant: any) =>
-    (() => {
-      const profileImage =
-        participant?.profileImage ||
-        participant?.members?.[0]?.player?.profileImage ||
-        "";
-      const imageUrl = getProfileImageUrl(profileImage);
+  const getPlayersFromParticipant = (
+    participant: any,
+    isDoubles: boolean,
+  ): Array<{ id?: string; name: string; initials: string; image: string }> => {
+    if (!participant) return [];
 
-      if (import.meta.env.DEV) {
-        console.debug("[Champions] winner image", {
-          playerId:
-            participant?.id || participant?.members?.[0]?.player?.id || null,
-          receivedPath: profileImage || null,
-          imageUrl: imageUrl || null,
-        });
+    const resolvePlayer = (raw: any, fallbackName: string) => {
+      const p = raw?.player || raw || {};
+      const firstName = p.firstName || "";
+      const lastName = p.lastName || "";
+      let fullName =
+        `${firstName} ${lastName}`.trim() || p.name || fallbackName.trim() || "Player";
+      fullName = capitalizeWords(fullName);
+
+      // Match in playerDirectory for id or image if missing
+      const dirMatch = playerDirectory.find((dp: any) => {
+        if (p.id && dp.id === p.id) return true;
+        if (p.playerId && dp.id === p.playerId) return true;
+        const dpFullName = `${dp.firstName || ""} ${dp.lastName || ""}`.trim().toLowerCase();
+        return dpFullName && dpFullName === fullName.toLowerCase();
+      });
+
+      const finalId = p.id || p.playerId || dirMatch?.id;
+      const rawImage = p.profileImage || dirMatch?.profileImage || "";
+      const image = getProfileImageUrl(rawImage);
+
+      const words = fullName.split(" ").filter(Boolean);
+      const initials =
+        words.length > 1
+          ? `${words[0][0]}${words[words.length - 1][0]}`.toUpperCase()
+          : words[0]?.slice(0, 2).toUpperCase() || "?";
+
+      return {
+        id: finalId,
+        name: fullName,
+        initials,
+        image,
+      };
+    };
+
+    // Check if participant has members (doubles team)
+    if (isDoubles || (participant.members && participant.members.length > 0)) {
+      if (participant.members && participant.members.length > 0) {
+        return participant.members.map((m: any) =>
+          resolvePlayer(m, m.name || m.playerName || "")
+        );
       }
 
-      return imageUrl;
-    })();
+      // If members array not directly present, check if name has " / " or " & "
+      if (
+        participant.name &&
+        (participant.name.includes(" / ") || participant.name.includes(" & "))
+      ) {
+        const parts = participant.name.split(/\s*[\/&]\s*/);
+        return parts.map((namePart: string) => resolvePlayer(null, namePart));
+      }
+    }
 
-  const getWinnerInitials = (participant: any) => {
-    const firstMember = participant?.members?.[0]?.player;
-    const firstName = participant?.firstName || firstMember?.firstName || "";
-    const lastName = participant?.lastName || firstMember?.lastName || "";
-    const initials = `${firstName[0] || ""}${lastName[0] || ""}`.toUpperCase();
-    return initials || "?";
+    // Singles player or single fallback
+    return [resolvePlayer(participant, participant.name || "")];
   };
+
+  const TrophyOutlineIcon = ({ className = "w-10 h-10" }: { className?: string }) => (
+    <svg
+      viewBox="0 0 48 48"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className={className}
+    >
+      <path
+        d="M15 8H33V22C33 26.9706 28.9706 31 24 31C19.0294 31 15 26.9706 15 22V8Z"
+        stroke="#D97706"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M15 12H10C8.34315 12 7 13.3431 7 15V17C7 19.7614 9.23858 22 12 22H15"
+        stroke="#D97706"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M33 12H38C39.6569 12 41 13.3431 41 15V17C41 19.7614 38.7614 22 36 22H33"
+        stroke="#D97706"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M24 31V38"
+        stroke="#D97706"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M17 38H31"
+        stroke="#D97706"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M14 42H34"
+        stroke="#D97706"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+
+  const SilverMedalIcon = ({ className = "w-9 h-9" }: { className?: string }) => (
+    <svg
+      viewBox="0 0 40 44"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className={className}
+    >
+      <path
+        d="M13 3L17 17H23L27 3"
+        stroke="#94A3B8"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M16.5 3L18.5 10"
+        stroke="#CBD5E1"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+      <path
+        d="M23.5 3L21.5 10"
+        stroke="#CBD5E1"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+      <circle
+        cx="20"
+        cy="28"
+        r="12"
+        stroke="#94A3B8"
+        strokeWidth="2"
+        fill="#F8FAFC"
+      />
+      <circle
+        cx="20"
+        cy="28"
+        r="9.5"
+        stroke="#CBD5E1"
+        strokeWidth="1"
+        strokeDasharray="2 2"
+      />
+      <text
+        x="20"
+        y="32.5"
+        textAnchor="middle"
+        fontSize="12"
+        fontWeight="700"
+        fill="#64748B"
+        fontFamily="system-ui, -apple-system, sans-serif"
+      >
+        2
+      </text>
+    </svg>
+  );
+
+  const BronzeMedalIcon = ({ className = "w-9 h-9" }: { className?: string }) => (
+    <svg
+      viewBox="0 0 40 44"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className={className}
+    >
+      <path
+        d="M13 3L17 17H23L27 3"
+        stroke="#C2410C"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M16.5 3L18.5 10"
+        stroke="#EA580C"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+      <path
+        d="M23.5 3L21.5 10"
+        stroke="#EA580C"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+      <circle
+        cx="20"
+        cy="28"
+        r="12"
+        stroke="#C2410C"
+        strokeWidth="2"
+        fill="#FFF7ED"
+      />
+      <circle
+        cx="20"
+        cy="28"
+        r="9.5"
+        stroke="#FDBA74"
+        strokeWidth="1"
+        strokeDasharray="2 2"
+      />
+      <text
+        x="20"
+        y="32.5"
+        textAnchor="middle"
+        fontSize="12"
+        fontWeight="700"
+        fill="#C2410C"
+        fontFamily="system-ui, -apple-system, sans-serif"
+      >
+        3
+      </text>
+    </svg>
+  );
 
   const fetchWinners = async (categoryIdToFetch?: string) => {
     const targetCategoryId =
@@ -824,51 +1158,51 @@ const TournamentDetails: React.FC = () => {
           ...match,
           player1: match.player1
             ? {
-                ...match.player1,
-                profileImage:
-                  match.player1.profileImage ||
-                  profileImages.get(match.player1.id),
-              }
+              ...match.player1,
+              profileImage:
+                match.player1.profileImage ||
+                profileImages.get(match.player1.id),
+            }
             : match.player1,
           player2: match.player2
             ? {
-                ...match.player2,
-                profileImage:
-                  match.player2.profileImage ||
-                  profileImages.get(match.player2.id),
-              }
+              ...match.player2,
+              profileImage:
+                match.player2.profileImage ||
+                profileImages.get(match.player2.id),
+            }
             : match.player2,
           team1: match.team1
             ? {
-                ...match.team1,
-                members: (match.team1.members || []).map((member: any) => ({
-                  ...member,
-                  player: member.player
-                    ? {
-                        ...member.player,
-                        profileImage:
-                          member.player.profileImage ||
-                          profileImages.get(member.player.id),
-                      }
-                    : member.player,
-                })),
-              }
+              ...match.team1,
+              members: (match.team1.members || []).map((member: any) => ({
+                ...member,
+                player: member.player
+                  ? {
+                    ...member.player,
+                    profileImage:
+                      member.player.profileImage ||
+                      profileImages.get(member.player.id),
+                  }
+                  : member.player,
+              })),
+            }
             : match.team1,
           team2: match.team2
             ? {
-                ...match.team2,
-                members: (match.team2.members || []).map((member: any) => ({
-                  ...member,
-                  player: member.player
-                    ? {
-                        ...member.player,
-                        profileImage:
-                          member.player.profileImage ||
-                          profileImages.get(member.player.id),
-                      }
-                    : member.player,
-                })),
-              }
+              ...match.team2,
+              members: (match.team2.members || []).map((member: any) => ({
+                ...member,
+                player: member.player
+                  ? {
+                    ...member.player,
+                    profileImage:
+                      member.player.profileImage ||
+                      profileImages.get(member.player.id),
+                  }
+                  : member.player,
+              })),
+            }
             : match.team2,
         }));
 
@@ -977,6 +1311,23 @@ const TournamentDetails: React.FC = () => {
         runnerUp = loser;
       }
 
+      const isThirdPlaceMatch = (round: string) => {
+        const norm = (round || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+        return norm.includes("third") || norm.includes("3rd");
+      };
+
+      const thirdPlaceMatch = allMatches.find(
+        (match: any) =>
+          isThirdPlaceMatch(match.round) &&
+          ["COMPLETED", "WALKOVER"].includes(match.status),
+      );
+
+      let thirdPlaceWinner = null;
+      if (thirdPlaceMatch) {
+        const { winner } = resolveMatchWinners(thirdPlaceMatch);
+        thirdPlaceWinner = winner;
+      }
+
       const semifinalMatches = allMatches.filter(
         (match: any) =>
           isSemiFinal(match.round) &&
@@ -998,10 +1349,8 @@ const TournamentDetails: React.FC = () => {
         categoryName: currentCat?.name || "Category",
         first: champion,
         second: runnerUp,
-        jointThird:
-          semifinalMatches.length === 2 && jointThird.length === 2
-            ? jointThird
-            : [],
+        thirdPlace: thirdPlaceWinner,
+        jointThird: jointThird,
       });
     } catch (error) {
       if (requestId !== winnersRequestId.current) return;
@@ -1142,7 +1491,7 @@ const TournamentDetails: React.FC = () => {
       <div className="fixed inset-0 bg-[#061D23]/25" />
       <div className="fixed inset-0 bg-gradient-to-b from-[#061D23]/20 via-transparent to-[#061D23]/35" />
 
-      <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-7xl flex-col space-y-5 sm:space-y-6 px-3.5 py-4 sm:px-6 sm:py-8 lg:px-8">
+      <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-[1600px] flex-col space-y-5 sm:space-y-6 px-3.5 py-4 sm:px-6 sm:py-8 lg:px-10 xl:px-14">
         {children}
       </div>
     </div>
@@ -1236,160 +1585,196 @@ const TournamentDetails: React.FC = () => {
       ),
     );
 
+  const formatTournamentDateRange = (startStr: string, endStr: string) => {
+    if (!startStr) return "";
+    const start = new Date(startStr);
+    const end = endStr ? new Date(endStr) : null;
+    if (isNaN(start.getTime())) return "";
+    if (!end || isNaN(end.getTime())) {
+      return start.toLocaleDateString("en-GB", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      });
+    }
+
+    const startDay = start.getDate();
+    const endDay = end.getDate();
+    const startMonth = start.toLocaleDateString("en-GB", { month: "short" });
+    const endMonth = end.toLocaleDateString("en-GB", { month: "short" });
+    const startYear = start.getFullYear();
+    const endYear = end.getFullYear();
+
+    if (startDay === endDay && startMonth === endMonth && startYear === endYear) {
+      return `${startDay} ${startMonth} ${startYear}`;
+    }
+    if (startMonth === endMonth && startYear === endYear) {
+      return `${startDay} – ${endDay} ${startMonth} ${startYear}`;
+    }
+    if (startYear === endYear) {
+      return `${startDay} ${startMonth} – ${endDay} ${endMonth} ${startYear}`;
+    }
+    return `${startDay} ${startMonth} ${startYear} – ${endDay} ${endMonth} ${endYear}`;
+  };
+
+  const formatDeadline = (deadlineStr: string) => {
+    if (!deadlineStr) return "";
+    const date = new Date(deadlineStr);
+    if (isNaN(date.getTime())) return "";
+    return `Closes ${date.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}`;
+  };
+
+  const formatAgeEligibility = (minAge?: number | null, maxAge?: number | null) => {
+    if (minAge && maxAge) {
+      return `Ages ${minAge}–${maxAge}`;
+    }
+    if (minAge && !maxAge) {
+      return `Ages ${minAge}+`;
+    }
+    if (!minAge && maxAge) {
+      return `Under ${maxAge}`;
+    }
+    return "All Ages";
+  };
+
   return wrapInBaseLayout(
     <>
-      {/* Tournament Hero Header */}
-      <header className="rounded-2xl border border-white/20 bg-[#061D23]/25 p-4 sm:p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl">
-        <div className="flex flex-col md:flex-row justify-between items-start gap-4">
-          <div>
-            <div className="mb-3 h-[3px] w-16 bg-[#4AEEFF]" />
-            <div className="flex items-center gap-2 mb-2 flex-wrap">
-              <span className="inline-block px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-md bg-[#4AEEFF]/20 text-[#4AEEFF] border border-[#4AEEFF]/40">
-                Tournament Hub
-              </span>
+      {/* Tournament Hero Header - Glass Card Module */}
+      <header className="rounded-2xl border border-white/20 bg-[#061D23]/20 p-4 sm:p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl mb-6">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5 sm:gap-6">
+          {/* LEFT SIDE: Back Link + Title + Tournament Details Info Strip */}
+          <div className="space-y-2.5 min-w-0">
+            <BackButton to="/tournaments" label="Back to Tournaments" className="mb-1" />
+
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-black uppercase tracking-wider text-white leading-tight">
+              {tournament.name}
+            </h1>
+
+            {/* Tournament Details Info Strip (Venue, Dates, Reg. Deadline) */}
+            <div className="flex flex-wrap items-center gap-x-4 sm:gap-x-5 gap-y-2 text-xs sm:text-sm">
+              {/* Venue */}
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <span className="text-[#4AEEFF] font-bold flex items-center gap-1">
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
+                  </svg>
+                  <span className="text-white/60 font-medium">Venue:</span>
+                </span>
+                <span className="font-semibold text-white">{tournament.venue}</span>
+              </div>
+
+              <span className="text-white/20 select-none">•</span>
+
+              {/* Dates */}
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <span className="text-[#4AEEFF] font-bold flex items-center gap-1">
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
+                  </svg>
+                  <span className="text-white/60 font-medium">Dates:</span>
+                </span>
+                <span className="font-semibold text-white">
+                  {formatTournamentDateRange(tournament.startDate, tournament.endDate)}
+                </span>
+              </div>
+
+              <span className="text-white/20 select-none">•</span>
+
+              {/* Deadline */}
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <span className="text-[#4AEEFF] font-bold flex items-center gap-1">
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span className="text-white/60 font-medium">Reg:</span>
+                </span>
+                <span className="font-semibold text-white">
+                  {formatDeadline(tournament.registrationDeadline)}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* RIGHT SIDE: Status Badge + Admin Buttons + Category Dropdown */}
+          <div className="flex flex-col sm:items-end gap-3 shrink-0">
+            {/* Status & Admin Action Buttons */}
+            <div className="flex flex-wrap gap-2 items-center">
               <span
-                className={`px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-md border ${getStatusColor(tournament.status)}`}
+                className={`px-3 py-1.5 text-xs font-semibold uppercase tracking-wider rounded-lg border shadow-sm ${getStatusColor(tournament.status)}`}
               >
                 {tournament.status}
               </span>
-            </div>
-            <h1 className="text-xl sm:text-3xl lg:text-4xl font-black uppercase tracking-[0.12em] sm:tracking-[0.15em] text-white leading-tight">
-              {tournament.name}
-            </h1>
-            <p className="text-white/70 text-sm mt-2 max-w-2xl leading-relaxed">
-              {tournament.description ||
-                "Official tournament event and match management."}
-            </p>
-          </div>
-
-          <div className="flex flex-wrap gap-2.5 items-center">
-            {canManageTournaments && (
-              <>
-                <button
-                  onClick={handleDelete}
-                  className="rounded-xl border border-red-500/40 bg-red-500/15 px-4 py-2.5 text-xs font-black uppercase tracking-wider text-red-300 hover:bg-red-500 hover:text-white transition-all shadow-md shadow-red-500/10 active:scale-95"
-                >
-                  Delete Tournament
-                </button>
-                <button
-                  onClick={() => {
-                    setEditFormData({
-                      name: tournament.name,
-                      description: tournament.description || "",
-                      venue: tournament.venue,
-                      startDate: tournament.startDate.slice(0, 16),
-                      endDate: tournament.endDate.slice(0, 16),
-                      registrationDeadline:
-                        tournament.registrationDeadline.slice(0, 16),
-                      maxPlayers: tournament.maxPlayers?.toString() || "",
-                      registrationFee:
-                        tournament.registrationFee?.toString() || "",
-                      requirePaymentProofClub:
-                        tournament.requirePaymentProofClub ?? false,
-                      requirePaymentProofGuest:
-                        tournament.requirePaymentProofGuest ?? false,
-                      paymentInstructions: tournament.paymentInstructions || "",
-                    });
-                    setEditCategories(
-                      tournament.categories?.map((c) => ({
-                        ...c,
-                      })) || [],
-                    );
-                    setShowEditModal(true);
-                  }}
-                  className="rounded-xl border border-[#4AEEFF]/40 bg-[#4AEEFF]/15 px-4 py-2.5 text-xs font-black uppercase tracking-wider text-[#4AEEFF] hover:bg-[#4AEEFF] hover:text-[#061D23] transition-all shadow-md shadow-[#4AEEFF]/10 active:scale-95"
-                >
-                  Edit Tournament
-                </button>
-
-                {tournament.status !== "COMPLETED" && (
+              {canManageTournaments && (
+                <>
                   <button
-                    onClick={async () => {
-                      try {
-                        await api.patch(`/tournaments/${id}`, {
-                          status: "COMPLETED",
-                        });
-
-                        toast.success("Tournament marked as completed!");
-
-                        fetchTournamentDetails();
-
-                        // Show Champions section.
-                        // The useEffect will fetch the selected category's winners.
-                        setShowWinners(true);
-                      } catch {
-                        toast.error("Failed to update status");
-                      }
-                    }}
-                    className="rounded-xl border border-emerald-500/40 bg-emerald-500/15 px-4 py-2.5 text-xs font-black uppercase tracking-wider text-emerald-300 hover:bg-emerald-500 hover:text-[#061D23] transition-all shadow-md shadow-emerald-500/10 active:scale-95"
+                    onClick={() => setShowDeleteConfirm(true)}
+                    className="rounded-lg border border-red-500/40 bg-red-500/15 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-red-300 hover:bg-red-500 hover:text-white transition-colors shadow-sm"
                   >
-                    Mark Complete
+                    Delete Tournament
                   </button>
-                )}
-              </>
-            )}
+                  <button
+                    onClick={() => {
+                      setEditFormData({
+                        name: tournament.name,
+                        description: tournament.description || "",
+                        venue: tournament.venue,
+                        startDate: tournament.startDate.slice(0, 16),
+                        endDate: tournament.endDate.slice(0, 16),
+                        registrationDeadline:
+                          tournament.registrationDeadline.slice(0, 16),
+                        maxPlayers: tournament.maxPlayers?.toString() || "",
+                        registrationFee:
+                          tournament.registrationFee?.toString() || "",
+                        requirePaymentProofClub:
+                          tournament.requirePaymentProofClub ?? false,
+                        requirePaymentProofGuest:
+                          tournament.requirePaymentProofGuest ?? false,
+                        paymentInstructions: tournament.paymentInstructions || "",
+                      });
+                      setEditCategories(
+                        tournament.categories?.map((c) => ({
+                          ...c,
+                        })) || [],
+                      );
+                      setShowEditModal(true);
+                    }}
+                    className="rounded-lg border border-[#4AEEFF]/40 bg-[#4AEEFF]/15 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-[#4AEEFF] hover:bg-[#4AEEFF] hover:text-[#061D23] transition-colors shadow-sm"
+                  >
+                    Edit Tournament
+                  </button>
 
-            <button
-              onClick={() => {
-                setShowWinners(true);
-
-                setTimeout(() => {
-                  document
-                    .getElementById("winners-section")
-                    ?.scrollIntoView({ behavior: "smooth" });
-                }, 100);
-              }}
-              className="rounded-xl border border-amber-400/40 bg-amber-400/15 px-4 py-2.5 text-xs font-black uppercase tracking-wider text-amber-300 hover:bg-amber-400 hover:text-[#061D23] transition-all shadow-md shadow-amber-400/10 active:scale-95"
-            >
-              🏆 Champions
-            </button>
-          </div>
-        </div>
-
-        {/* Quick Stat Tiles */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mt-6 pt-6 border-t border-white/10">
-          <div className="rounded-xl border border-white/10 bg-[#061D23]/40 p-3.5 backdrop-blur-md">
-            <p className="text-[10px] font-black uppercase tracking-wider text-[#4AEEFF]/80">
-              📍 Venue
-            </p>
-            <p className="font-bold text-white text-sm mt-1 truncate">
-              {tournament.venue}
-            </p>
-          </div>
-          <div className="rounded-xl border border-white/10 bg-[#061D23]/40 p-3.5 backdrop-blur-md">
-            <p className="text-[10px] font-black uppercase tracking-wider text-[#4AEEFF]/80">
-              📅 Start Date
-            </p>
-            <p className="font-bold text-white text-sm mt-1 truncate">
-              {new Date(tournament.startDate).toLocaleDateString("en-GB", {
-                day: "numeric",
-                month: "short",
-                year: "numeric",
-              })}
-            </p>
-          </div>
-          <div className="rounded-xl border border-white/10 bg-[#061D23]/40 p-3.5 backdrop-blur-md">
-            <p className="text-[10px] font-black uppercase tracking-wider text-[#4AEEFF]/80">
-              🏁 End Date
-            </p>
-            <p className="font-bold text-white text-sm mt-1 truncate">
-              {new Date(tournament.endDate).toLocaleDateString("en-GB", {
-                day: "numeric",
-                month: "short",
-                year: "numeric",
-              })}
-            </p>
-          </div>
-          <div className="rounded-xl border border-white/10 bg-[#061D23]/40 p-3.5 backdrop-blur-md">
-            <p className="text-[10px] font-black uppercase tracking-wider text-[#4AEEFF]/80">
-              ⏳ Reg. Deadline
-            </p>
-            <p className="font-bold text-white text-sm mt-1 truncate">
-              {new Date(tournament.registrationDeadline).toLocaleDateString(
-                "en-GB",
-                { day: "numeric", month: "short", year: "numeric" },
+                  {tournament.status !== "COMPLETED" && (
+                    <button
+                      onClick={() => setShowCompleteConfirm(true)}
+                      className="rounded-lg border border-emerald-500/40 bg-emerald-500/15 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-emerald-300 hover:bg-emerald-500 hover:text-[#061D23] transition-colors shadow-sm"
+                    >
+                      Mark Complete
+                    </button>
+                  )}
+                </>
               )}
-            </p>
+            </div>
+
+            {/* Category Dropdown */}
+            {tournament.categories.length > 0 && (
+              <div className="flex items-center gap-2.5">
+                <span className="text-[11px] font-black uppercase tracking-wider text-[#4AEEFF]">
+                  Category:
+                </span>
+                <GlassSelect
+                  value={activeCategoryId}
+                  onChange={(e) => handleSelectCategoryDetail(e.target.value)}
+                  aria-label="Select Category"
+                >
+                  {tournament.categories.map((c) => (
+                    <option key={c.id} value={c.id} className="bg-[#061D23] text-white">
+                      {formatDivisionName(c.name)} ({c.type === "DOUBLES" || c.type === "MIXED_DOUBLES" ? "Doubles" : "Singles"})
+                    </option>
+                  ))}
+                </GlassSelect>
+              </div>
+            )}
           </div>
         </div>
       </header>
@@ -1673,24 +2058,24 @@ const TournamentDetails: React.FC = () => {
 
                   {(editFormData.requirePaymentProofClub ||
                     editFormData.requirePaymentProofGuest) && (
-                    <div>
-                      <label className="mb-1.5 block text-xs font-black uppercase tracking-wider text-white/70">
-                        Payment Instructions
-                      </label>
-                      <textarea
-                        value={editFormData.paymentInstructions}
-                        onChange={(e) =>
-                          setEditFormData({
-                            ...editFormData,
-                            paymentInstructions: e.target.value,
-                          })
-                        }
-                        rows={4}
-                        className="w-full rounded-lg border border-white/10 bg-[#061D23]/60 p-2.5 text-sm text-white placeholder-white/20 transition focus:border-[#4AEEFF] focus:outline-none"
-                        placeholder="Explain how players should pay and upload their receipt."
-                      />
-                    </div>
-                  )}
+                      <div>
+                        <label className="mb-1.5 block text-xs font-black uppercase tracking-wider text-white/70">
+                          Payment Instructions
+                        </label>
+                        <textarea
+                          value={editFormData.paymentInstructions}
+                          onChange={(e) =>
+                            setEditFormData({
+                              ...editFormData,
+                              paymentInstructions: e.target.value,
+                            })
+                          }
+                          rows={4}
+                          className="w-full rounded-lg border border-white/10 bg-[#061D23]/60 p-2.5 text-sm text-white placeholder-white/20 transition focus:border-[#4AEEFF] focus:outline-none"
+                          placeholder="Explain how players should pay and upload their receipt."
+                        />
+                      </div>
+                    )}
                 </div>
               </div>
 
@@ -1753,23 +2138,23 @@ const TournamentDetails: React.FC = () => {
                           <label className="mb-1 block text-[10px] font-black uppercase tracking-wider text-white/60">
                             Match Type
                           </label>
-                          <select
+                          <GlassSelect
                             value={category.type}
                             onChange={(e) =>
                               updateEditCategory(index, "type", e.target.value)
                             }
-                            className="w-full rounded-lg border border-white/10 bg-[#061D23] px-3 py-2 text-xs text-white focus:border-[#4AEEFF] focus:outline-none"
+                            className="w-full"
                           >
-                            <option value="SINGLES">Singles</option>
-                            <option value="DOUBLES">Doubles</option>
-                            <option value="TEAM">Team</option>
-                          </select>
+                            <option value="SINGLES" className="bg-[#061D23] text-white">Singles</option>
+                            <option value="DOUBLES" className="bg-[#061D23] text-white">Doubles</option>
+                            <option value="TEAM" className="bg-[#061D23] text-white">Team</option>
+                          </GlassSelect>
                         </div>
                         <div>
                           <label className="mb-1 block text-[10px] font-black uppercase tracking-wider text-white/60">
                             Draw Format
                           </label>
-                          <select
+                          <GlassSelect
                             value={category.stageFormat || "KNOCKOUT"}
                             onChange={(e) =>
                               updateEditCategory(
@@ -1778,19 +2163,19 @@ const TournamentDetails: React.FC = () => {
                                 e.target.value as "KNOCKOUT" | "GROUP_KNOCKOUT",
                               )
                             }
-                            className="w-full rounded-lg border border-white/10 bg-[#061D23] px-3 py-2 text-xs text-white focus:border-[#4AEEFF] focus:outline-none"
+                            className="w-full"
                           >
-                            <option value="KNOCKOUT">Knockout</option>
-                            <option value="GROUP_KNOCKOUT">
+                            <option value="KNOCKOUT" className="bg-[#061D23] text-white">Knockout</option>
+                            <option value="GROUP_KNOCKOUT" className="bg-[#061D23] text-white">
                               Group + Knockout
                             </option>
-                          </select>
+                          </GlassSelect>
                         </div>
                         <div>
                           <label className="mb-1 block text-[10px] font-black uppercase tracking-wider text-white/60">
                             Gender Division
                           </label>
-                          <select
+                          <GlassSelect
                             value={category.gender || ""}
                             onChange={(e) =>
                               updateEditCategory(
@@ -1802,12 +2187,12 @@ const TournamentDetails: React.FC = () => {
                                   | "MIXED") || undefined,
                               )
                             }
-                            className="w-full rounded-lg border border-white/10 bg-[#061D23] px-3 py-2 text-xs text-white focus:border-[#4AEEFF] focus:outline-none"
+                            className="w-full"
                           >
-                            <option value="">Mixed / Open</option>
-                            <option value="MALE">Men's Only</option>
-                            <option value="FEMALE">Women's Only</option>
-                          </select>
+                            <option value="" className="bg-[#061D23] text-white">Mixed / Open</option>
+                            <option value="MALE" className="bg-[#061D23] text-white">Men's Only</option>
+                            <option value="FEMALE" className="bg-[#061D23] text-white">Women's Only</option>
+                          </GlassSelect>
                         </div>
                         <div>
                           <label className="mb-1 block text-[10px] font-black uppercase tracking-wider text-white/60">
@@ -1898,295 +2283,165 @@ const TournamentDetails: React.FC = () => {
         </div>
       )}
 
-      {/* Categories & Bracket Draw Section */}
-      <div className="rounded-2xl border border-white/20 bg-[#061D23]/35 p-4 sm:p-7 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.6)] backdrop-blur-xl mb-6">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 pb-5 border-b border-white/10">
-          <div>
-            <div className="flex items-center gap-2.5 mb-1.5">
-              <span className="w-2 h-5 bg-[#4AEEFF] rounded-full shadow-[0_0_10px_#4AEEFF]"></span>
-              <h2 className="text-xl sm:text-2xl font-black uppercase tracking-wider text-white">
-                Categories & Draws
-              </h2>
-              {tournament.categories.length > 0 && (
-                <span className="px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-md bg-[#4AEEFF]/15 text-[#4AEEFF] border border-[#4AEEFF]/30">
-                  {tournament.categories.length}{" "}
-                  {tournament.categories.length === 1
-                    ? "Division"
-                    : "Divisions"}
-                </span>
-              )}
-            </div>
-            <p className="text-xs text-slate-300">
-              Select a division below to view bracket draws, fixtures, and
-              registered participants
-            </p>
-          </div>
-
-          {tournament.categories.length > 0 && (
-            <div className="flex items-center gap-2.5 self-stretch sm:self-auto bg-black/30 border border-white/10 p-1.5 rounded-xl">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-[#4AEEFF] pl-2 whitespace-nowrap">
-                Active Draw:
-              </span>
-              <select
-                value={activeCategoryId}
-                onChange={(e) => {
-                  const newCatId = e.target.value;
-                  setActiveCategoryId(newCatId);
-                  if (showWinners) {
-                    fetchWinners(newCatId);
-                  }
-                }}
-                className="w-full sm:w-auto rounded-lg border border-white/15 bg-[#061D23] px-3 py-1.5 text-xs font-bold text-white outline-none focus:border-[#4AEEFF] cursor-pointer"
-              >
-                {tournament.categories.map((category) => (
-                  <option
-                    key={category.id}
-                    value={category.id}
-                    className="bg-[#061D23]"
-                  >
-                    {category.name} ({category.type})
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-        </div>
-
-        {tournament.categories.length === 0 ? (
-          <div className="text-center py-10 rounded-xl border border-dashed border-white/10 bg-white/5">
-            <p className="text-slate-400 text-sm">
-              No categories configured for this tournament yet.
-            </p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {tournament.categories.map((category) => {
-              const isActive = activeCategoryId === category.id;
-              const fillPct =
-                Math.round(
-                  (category.currentParticipants / category.maxParticipants) *
-                    100,
-                ) || 0;
-              const isFull =
-                category.currentParticipants >= category.maxParticipants;
-              const spotsLeft =
-                category.maxParticipants - category.currentParticipants;
-
-              return (
-                <div
-                  key={category.id}
-                  onClick={() => {
-                    setActiveCategoryId(category.id);
-                  }}
-                  className={`group relative cursor-pointer rounded-2xl border transition-all duration-200 flex flex-col justify-between overflow-hidden shadow-lg ${
-                    isActive
-                      ? "border-[#4AEEFF] bg-gradient-to-b from-[#103842] via-[#0A262E] to-[#061D23] shadow-black/50 ring-1 ring-[#4AEEFF]/40 -translate-y-0.5"
-                      : "border-white/10 bg-[#0A262E]/70 hover:border-white/25 hover:bg-[#0E333D] hover:-translate-y-1 hover:shadow-2xl hover:shadow-black/60"
+      {/* ─── TOURNAMENT COMPETITION SECTION (Bracket, Champions, Groups) ─── */}
+      {tournament.categories.length === 0 ? (
+        <section className="mb-10 text-center py-12 rounded-2xl border border-dashed border-white/15 bg-white/5">
+          <p className="text-slate-400 text-sm font-medium">
+            No categories configured for this tournament yet.
+          </p>
+        </section>
+      ) : activeCategory && (
+        <section className="mb-6">
+          {/* Sub-Stage Navigation Bar (Bracket, Champions, Group Stage) + Quick Stats */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-xl border border-white/15 bg-[#061D23]/25 px-4 py-3 shadow-[0_10px_30px_-10px_rgba(6,29,35,0.4)] backdrop-blur-xl">
+            {/* Sub-Stage Navigation Tabs (Styled to match the Players.tsx segmented capsule) */}
+            <div className="flex items-center gap-1.5 bg-white/5 p-1 rounded-xl border border-white/10 backdrop-blur-md">
+              {activeCategoryFormat === "GROUP_KNOCKOUT" && (
+                <button
+                  type="button"
+                  onClick={() => setDivisionStageTab("GROUPS")}
+                  className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                    divisionStageTab === "GROUPS"
+                      ? "bg-[#4AEEFF]/15 text-[#4AEEFF] border border-[#4AEEFF]/45 shadow-[0_0_14px_rgba(74,238,255,0.18)] backdrop-blur-md"
+                      : "text-white/70 hover:text-white hover:bg-white/5 border border-transparent"
                   }`}
                 >
-                  {/* Top colored accent stripe for selected card */}
-                  {isActive && (
-                    <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#4AEEFF] via-[#74ffed] to-[#4AEEFF] shadow-[0_0_8px_#4AEEFF]" />
-                  )}
+                  Group Stage
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setDivisionStageTab("KNOCKOUT")}
+                className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  divisionStageTab === "KNOCKOUT"
+                    ? "bg-[#4AEEFF]/15 text-[#4AEEFF] border border-[#4AEEFF]/45 shadow-[0_0_14px_rgba(74,238,255,0.18)] backdrop-blur-md"
+                    : "text-white/70 hover:text-white hover:bg-white/5 border border-transparent"
+                }`}
+              >
+                Bracket
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setDivisionStageTab("CHAMPIONS");
+                  if (activeCategoryId) {
+                    fetchWinners(activeCategoryId);
+                  }
+                }}
+                className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  divisionStageTab === "CHAMPIONS"
+                    ? "bg-[#4AEEFF]/15 text-[#4AEEFF] border border-[#4AEEFF]/45 shadow-[0_0_14px_rgba(74,238,255,0.18)] backdrop-blur-md"
+                    : "text-white/70 hover:text-white hover:bg-white/5 border border-transparent"
+                }`}
+              >
+                Champions
+              </button>
+            </div>
 
-                  <div className="p-5 sm:p-6 space-y-4">
-                    {/* Top Row: Format & Gender Badges + Selection Status */}
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider rounded-md bg-white/10 text-white border border-white/15">
-                          {category.type}
-                        </span>
-                        {category.gender && category.gender !== "MIXED" && (
-                          <span className="px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider rounded-md bg-[#4AEEFF]/15 text-[#4AEEFF] border border-[#4AEEFF]/30">
-                            {category.gender === "MALE" ? "♂ Men" : "♀ Women"}
-                          </span>
-                        )}
-                      </div>
-
-                      {isActive ? (
-                        <span className="flex items-center gap-1.5 px-3 py-1 text-[10px] font-black uppercase tracking-wider rounded-full bg-[#4AEEFF] text-[#061D23] shadow-sm">
-                          <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 20 20" fill="currentColor">
-                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                          </svg>
-                          <span>Active Draw</span>
-                        </span>
-                      ) : (
-                        <span className="text-xs font-bold text-slate-400 group-hover:text-[#4AEEFF] flex items-center gap-1 transition-colors">
-                          <span>Select</span>
-                          <span className="transition-transform duration-200 group-hover:translate-x-1">→</span>
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Category Title & Age / Format Subtitle */}
-                    <div>
-                      <h3 className="font-extrabold text-white text-lg tracking-tight group-hover:text-[#4AEEFF] transition-colors line-clamp-1">
-                        {category.name}
-                      </h3>
-                      <div className="flex items-center gap-2 mt-1 text-xs text-slate-300">
-                        {category.minAge || category.maxAge ? (
-                          <span>
-                            Age: {category.minAge ? `${category.minAge}+` : ""}
-                            {category.minAge && category.maxAge ? " - " : ""}
-                            {category.maxAge ? `Under ${category.maxAge}` : ""}
-                          </span>
-                        ) : (
-                          <span>All Ages</span>
-                        )}
-                        <span>•</span>
-                        <span>
-                          {(category.stageFormat || tournamentType) ===
-                          "GROUP_KNOCKOUT"
-                            ? "Group & Knockout"
-                            : "Knockout Bracket"}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Capacity & Progress Bar */}
-                    <div className="space-y-2 pt-3 border-t border-white/10">
-                      <div className="flex justify-between items-center text-xs">
-                        <span className="text-slate-300 text-[11px] font-medium tracking-wide">
-                          Participants
-                        </span>
-                        <span className="font-bold text-white font-mono text-xs">
-                          {category.currentParticipants}
-                          <span className="text-slate-400 font-normal"> / {category.maxParticipants}</span>
-                        </span>
-                      </div>
-
-                      {/* Smooth Rounded Progress Bar */}
-                      <div className="w-full bg-black/40 border border-white/10 h-2.5 rounded-full overflow-hidden p-0.5">
-                        <div
-                          className={`h-full rounded-full transition-all duration-500 ${
-                            isFull
-                              ? "bg-gradient-to-r from-rose-500 to-amber-500"
-                              : "bg-gradient-to-r from-[#4AEEFF] via-[#74ffed] to-[#0ea5e9]"
-                          }`}
-                          style={{ width: `${Math.min(100, fillPct)}%` }}
-                        />
-                      </div>
-
-                      {/* Availability & Percentage */}
-                      <div className="flex justify-between items-center text-xs pt-0.5">
-                        <span className="text-[11px]">
-                          {isFull ? (
-                            <span className="text-rose-400 font-bold">
-                              Bracket Full
-                            </span>
-                          ) : spotsLeft <= 4 ? (
-                            <span className="text-amber-300 font-bold">
-                              Only {spotsLeft} spot{spotsLeft === 1 ? "" : "s"} left
-                            </span>
-                          ) : (
-                            <span className="text-slate-300 font-medium">
-                              {spotsLeft} spots available
-                            </span>
-                          )}
-                        </span>
-                        <span className="font-mono text-slate-400 text-[11px] font-semibold">
-                          {fillPct}%
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Dedicated Action Button Area */}
-                  {(isSuperAdmin || canManageMatches) &&
-                    (category.stageFormat || tournamentType) === "KNOCKOUT" && (
-                      <div className="p-3.5 bg-black/25 border-t border-white/10 mt-auto">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setConfirmDrawCategory(category);
-                          }}
-                          disabled={generating === category.id}
-                          className="w-full rounded-xl border border-[#4AEEFF]/40 bg-[#4AEEFF]/15 hover:bg-[#4AEEFF] text-[#4AEEFF] hover:text-[#061D23] px-3.5 py-2 text-xs font-black uppercase tracking-wider transition-all duration-200 flex items-center justify-center gap-2 shadow-sm disabled:opacity-50 active:scale-[0.98]"
-                        >
-                          {generating === category.id ? (
-                            <>
-                              <span className="animate-spin text-sm">⏳</span>
-                              <span>Generating Bracket...</span>
-                            </>
-                          ) : (
-                            <>
-                              <span>🎲</span>
-                              <span>Generate / Update Bracket</span>
-                            </>
-                          )}
-                        </button>
-                      </div>
-                    )}
-                </div>
-              );
-            })}
+            {/* Category Info / Stats */}
+            <div className="flex flex-wrap items-center gap-2 sm:gap-2.5 text-xs text-white/70">
+              <span className="rounded-lg bg-white/5 border border-white/10 px-2.5 py-1 text-white font-medium">
+                <strong className="text-[#4AEEFF] font-bold">
+                  {activeCategory.currentParticipants || 0}
+                </strong>{" "}
+                / {activeCategory.maxParticipants}{" "}
+                {isDoublesCategory(activeCategory.type) ? "pairs" : "players"} registered
+              </span>
+              <span className="rounded-lg bg-white/5 border border-white/10 px-2.5 py-1 text-white/80 font-medium">
+                {formatAgeEligibility(activeCategory.minAge, activeCategory.maxAge)}
+              </span>
+              <span className="rounded-lg bg-[#4AEEFF]/10 border border-[#4AEEFF]/30 px-2.5 py-1 text-[#4AEEFF] font-bold uppercase tracking-wider text-[11px]">
+                {(activeCategory.stageFormat || tournamentType) === "GROUP_KNOCKOUT"
+                  ? "Group + Knockout"
+                  : "Knockout Draw"}
+              </span>
+            </div>
           </div>
-        )}
-      </div>
+        </section>
+      )}
 
       {/* Group Stage UI */}
-      {activeCategoryFormat === "GROUP_KNOCKOUT" && activeCategoryId && (
-        <div className="rounded-2xl border border-white/20 bg-[#061D23]/25 p-4 sm:p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl mb-6">
-          <h2 className="text-xl font-bold uppercase tracking-wider text-white mb-4">
-            Group Stage Management —{" "}
-            <span className="text-[#4AEEFF]">
-              {
-                tournament.categories.find((c) => c.id === activeCategoryId)
-                  ?.name
-              }
-            </span>
-          </h2>
-          <div className="flex flex-wrap gap-3 mb-6">
+      {viewingDivisionDetail &&
+        activeCategoryFormat === "GROUP_KNOCKOUT" &&
+        divisionStageTab === "GROUPS" &&
+        activeCategoryId && (
+          <div className="mb-6">
             {(isSuperAdmin || canManageMatches) && (
-              <>
+              <div className="flex flex-wrap items-center justify-end gap-2 mb-3">
                 <button
                   onClick={() => setShowGroupsModal(true)}
-                  className="rounded-xl bg-[#4AEEFF] px-4 py-2 text-xs font-black uppercase tracking-wider text-[#061D23] hover:bg-white transition-all shadow-md shadow-[#4AEEFF]/10"
+                  className="rounded-lg bg-[#4AEEFF] px-4 py-2 text-xs font-bold uppercase tracking-wider text-[#061D23] hover:bg-white transition-all shadow-sm"
                 >
                   Create / Edit Groups
                 </button>
                 <button
                   onClick={handleGenerateGroupMatches}
-                  className="rounded-xl border border-[#4AEEFF]/40 bg-[#4AEEFF]/15 px-4 py-2 text-xs font-black uppercase tracking-wider text-[#4AEEFF] hover:bg-[#4AEEFF] hover:text-[#061D23] transition-all"
+                  className="rounded-lg border border-white/20 bg-white/10 px-4 py-2 text-xs font-bold uppercase tracking-wider text-white hover:bg-white/20 transition-all"
                 >
-                  Generate Group Matches
+                  Generate Matches
                 </button>
                 <button
                   onClick={() => setShowKnockoutModal(true)}
-                  className="rounded-xl border border-[#4AEEFF]/40 bg-[#4AEEFF]/15 px-4 py-2 text-xs font-black uppercase tracking-wider text-[#4AEEFF] hover:bg-[#4AEEFF] hover:text-[#061D23] transition-all"
+                  className="rounded-lg border border-white/20 bg-white/10 px-4 py-2 text-xs font-bold uppercase tracking-wider text-white hover:bg-white/20 transition-all"
                 >
-                  Generate Knockout Stage
+                  Generate Knockout
                 </button>
                 <button
                   onClick={() => setShowResetConfirm(true)}
-                  className="rounded-xl border border-red-500/40 bg-red-500/15 px-4 py-2 text-xs font-black uppercase tracking-wider text-red-300 hover:bg-red-500 hover:text-white transition-all"
+                  className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-4 py-2 text-xs font-bold uppercase tracking-wider text-rose-300 hover:bg-rose-500 hover:text-white transition-all"
                 >
-                  Reset Knockout Stage
+                  Reset Knockout
                 </button>
-              </>
+              </div>
             )}
+
+            <GroupStandings
+              tournamentId={id}
+              categoryId={activeCategoryId}
+              isAdminOrReferee={
+                isSuperAdmin || canManageMatches || canManageResults || isReferee
+              }
+              onScoreUpdate={fetchTournamentDetails}
+              key={`groups-${activeCategoryId}-${refreshGroups}`}
+            />
           </div>
-          <GroupStandings
-            tournamentId={id}
-            categoryId={activeCategoryId}
-            isAdminOrReferee={
-              isSuperAdmin || canManageMatches || canManageResults || isReferee
-            }
-            onScoreUpdate={fetchTournamentDetails}
-            key={`groups-${activeCategoryId}-${refreshGroups}`}
-          />
-        </div>
-      )}
+        )}
 
       {/* Knockout Bracket Section */}
-      {activeCategoryId && (
-        <div
-          className="relative w-full min-w-0 max-w-full mb-8 pt-4 pb-8 bg-transparent"
-          style={{ minHeight: 200 }}
-        >
-          {(isSuperAdmin || canManageMatches) &&
-            activeCategoryFormat === "KNOCKOUT" && (
-              <div className="flex justify-end mb-4">
+      {viewingDivisionDetail &&
+        activeCategoryId &&
+        divisionStageTab === "KNOCKOUT" && (
+          <div
+            className="relative w-full min-w-0 max-w-full mb-8 pt-4 pb-8 bg-transparent"
+            style={{ minHeight: 200 }}
+          >
+            {(isSuperAdmin || canManageMatches) && (
+              <div className="flex items-center justify-end gap-2.5 mb-4">
+                {activeCategoryFormat === "KNOCKOUT" && (
+                  <button
+                    onClick={() => {
+                      const cat = tournament.categories.find(
+                        (c) => c.id === activeCategoryId,
+                      );
+                      if (cat) setConfirmDrawCategory(cat);
+                    }}
+                    disabled={generating === activeCategoryId}
+                    className="rounded-xl bg-[#0D5C63] hover:bg-[#094348] text-white px-3.5 py-2 text-xs font-black uppercase tracking-wider transition-all shadow-sm flex items-center gap-2"
+                  >
+                    {generating === activeCategoryId ? (
+                      <>
+                        <span className="animate-spin text-sm">⏳</span>
+                        <span>Generating Bracket...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>🎲</span>
+                        <span>Generate / Update Bracket</span>
+                      </>
+                    )}
+                  </button>
+                )}
+
                 <button
                   onClick={() => setShowResetConfirm(true)}
                   className="rounded-xl border border-red-500/40 bg-red-500/15 px-4 py-2 text-xs font-black uppercase tracking-wider text-red-300 hover:bg-red-500 hover:text-white transition-all shadow-md shadow-red-500/10"
@@ -2195,235 +2450,429 @@ const TournamentDetails: React.FC = () => {
                 </button>
               </div>
             )}
-          <KnockoutBracket
-            tournamentId={id}
-            categoryId={activeCategoryId}
-            onScoreRecorded={fetchTournamentDetails}
-            key={`knockout-${activeCategoryId}-${refreshKnockout}`}
-            refreshTrigger={refreshKnockout}
-          />
-        </div>
-      )}
+
+            <KnockoutBracket
+              tournamentId={id}
+              categoryId={activeCategoryId}
+              onScoreRecorded={fetchTournamentDetails}
+              key={`knockout-${activeCategoryId}-${refreshKnockout}`}
+              refreshTrigger={refreshKnockout}
+            />
+          </div>
+        )}
 
       {/* Winners Section */}
-      {showWinners && (
-        <div
-          id="winners-section"
-          className="rounded-[16px] border border-amber-400/30 bg-[#061D23]/35 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl mb-6"
-        >
-          {/* Heading and Category Selector */}
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6 pb-4 border-b border-white/10">
-            <div className="text-center sm:text-left">
-              <h2 className="text-2xl font-black uppercase tracking-widest text-amber-300">
-                🏆{" "}
-                {winners?.categoryId === activeCategoryId
-                  ? winners.categoryName
-                  : tournament?.categories?.find(
-                      (c) => c.id === activeCategoryId,
-                    )?.name || "Category"}{" "}
-                Champions 🏆
+      {viewingDivisionDetail &&
+        activeCategoryId &&
+        divisionStageTab === "CHAMPIONS" && (
+          <div id="winners-section" className="mb-6">
+            {/* Centered Heading: "The winners" */}
+            <div className="text-center pt-0.5 pb-9 md:pb-10">
+              <h2 className="text-4xl sm:text-5xl font-heading font-bold text-white tracking-tight">
+                The winners
               </h2>
-
-              <p className="text-xs text-white/60 mt-0.5">
-                Official podium and results for this category
-              </p>
             </div>
 
-            {/* Category Dropdown */}
-            {tournament && tournament.categories.length > 1 && (
-              <div className="flex items-center gap-2 bg-black/40 border border-white/10 px-3 py-1.5 rounded-xl">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-[#4AEEFF]">
-                  Category:
-                </span>
+            {/* Show results only for the selected category */}
+            {winners?.categoryId === activeCategoryId ? (
+              (() => {
+                const isDoubles =
+                  activeCategory?.type === "DOUBLES" ||
+                  activeCategory?.type === "MIXED_DOUBLES";
 
-                <select
-                  value={activeCategoryId}
-                  onChange={(e) => {
-                    setActiveCategoryId(e.target.value);
-                  }}
-                  className="rounded-lg border border-white/15 bg-[#061D23] px-2.5 py-1 text-xs font-bold text-white outline-none focus:border-amber-400 cursor-pointer"
-                >
-                  {tournament.categories.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name} ({c.type})
-                    </option>
-                  ))}
-                </select>
+                const isChampionTBD =
+                  !winners.first ||
+                  !winners.first.name ||
+                  winners.first.name.includes("In Progress") ||
+                  winners.first.name.includes("TBD");
+
+                const isRunnerUpTBD =
+                  !winners.second ||
+                  !winners.second.name ||
+                  winners.second.name.includes("In Progress") ||
+                  winners.second.name.includes("TBD");
+
+                const championPlayers = getPlayersFromParticipant(
+                  winners.first,
+                  isDoubles,
+                );
+                const runnerUpPlayers = getPlayersFromParticipant(
+                  winners.second,
+                  isDoubles,
+                );
+
+                const hasOfficialThird = Boolean(
+                  winners.thirdPlace &&
+                    winners.thirdPlace.name &&
+                    !winners.thirdPlace.name.includes("In Progress") &&
+                    !winners.thirdPlace.name.includes("TBD"),
+                );
+
+                const thirdPlacePlayers = hasOfficialThird
+                  ? getPlayersFromParticipant(winners.thirdPlace, isDoubles)
+                  : [];
+
+                const semifinalTeams = (winners.jointThird || []).map((t: any) => ({
+                  name:
+                    t.name ||
+                    `${t.firstName || ""} ${t.lastName || ""}`.trim() ||
+                    "Team",
+                  players: getPlayersFromParticipant(t, isDoubles),
+                }));
+
+                const shouldAnimate = !animatedCategoriesRef.current.has(activeCategoryId);
+
+                return (
+                  <div className="w-full max-w-5xl mx-auto px-2 sm:px-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
+                      {/* Left Card: RUNNER-UP (order-2 on mobile, order-1 on desktop) */}
+                      <div className="order-2 md:order-1 flex flex-col h-full">
+                        <div
+                          className={`w-full flex-1 flex flex-col justify-between bg-white rounded-2xl p-6 sm:p-7 shadow-sm border border-slate-100 min-h-[380px] ${
+                            shouldAnimate ? "animate-showcase-runnerup" : ""
+                          }`}
+                        >
+                          {/* Top: Silver Medal Icon + Label */}
+                          <div className="flex flex-col items-center">
+                            <SilverMedalIcon className="w-8 h-8 sm:w-9 sm:h-9" />
+                            <span className="text-xs font-bold tracking-wider text-slate-500 uppercase mt-2.5">
+                              {isDoubles ? "RUNNERS-UP" : "RUNNER-UP"}
+                            </span>
+                          </div>
+
+                          {/* Middle: Avatars & Names */}
+                          {isRunnerUpTBD ? (
+                            <div className="my-auto py-8 flex flex-col items-center">
+                              <div className="w-16 h-16 rounded-full border-2 border-dashed border-slate-200 bg-slate-50 flex items-center justify-center text-slate-400 font-bold text-xs">
+                                2ND
+                              </div>
+                              <p className="mt-3 text-sm font-semibold text-slate-400">
+                                Final match pending
+                              </p>
+                            </div>
+                          ) : (
+                            <div className="my-auto py-6 w-full flex items-center justify-center gap-4 sm:gap-6">
+                              {runnerUpPlayers.map((player, idx) => (
+                                <React.Fragment key={player.id || idx}>
+                                  {idx > 0 && (
+                                    <span className="text-slate-400 font-bold text-sm self-center select-none pb-5">
+                                      &amp;
+                                    </span>
+                                  )}
+                                  {player.id ? (
+                                    <Link
+                                      to={`/profile/${player.id}`}
+                                      className="group flex flex-col items-center gap-2.5 min-w-0 max-w-[120px]"
+                                      title={player.name}
+                                    >
+                                      <div className="transition-transform group-hover:scale-105">
+                                        <WinnerAvatar
+                                          image={player.image}
+                                          name={player.name}
+                                          initials={player.initials}
+                                          sizeClass="w-16 h-16 sm:w-20 sm:h-20"
+                                          bgClass="bg-[#EBF3FB]"
+                                          textClass="text-[#1E3A5F] text-lg sm:text-xl"
+                                          borderClass="border-[#D5E2EE]"
+                                        />
+                                      </div>
+                                      <p className="text-xs sm:text-sm font-bold text-slate-900 group-hover:text-sky-600 group-hover:underline transition-colors leading-tight text-center break-words">
+                                        {player.name}
+                                      </p>
+                                    </Link>
+                                  ) : (
+                                    <div className="flex flex-col items-center gap-2.5 min-w-0 max-w-[120px]">
+                                      <WinnerAvatar
+                                        image={player.image}
+                                        name={player.name}
+                                        initials={player.initials}
+                                        sizeClass="w-16 h-16 sm:w-20 sm:h-20"
+                                        bgClass="bg-[#EBF3FB]"
+                                        textClass="text-[#1E3A5F] text-lg sm:text-xl"
+                                        borderClass="border-[#D5E2EE]"
+                                      />
+                                      <p className="text-xs sm:text-sm font-bold text-slate-900 leading-tight text-center break-words">
+                                        {player.name}
+                                      </p>
+                                    </div>
+                                  )}
+                                </React.Fragment>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* Bottom: Subtle Divider + 2nd place label */}
+                          <div className="w-full border-t border-slate-100 pt-3 text-center">
+                            <span className="text-xs text-slate-400 font-medium">
+                              2nd place
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Centre Card: CHAMPION (order-1 on mobile, order-2 on desktop, elevated -translate-y-7 on desktop) */}
+                      <div className="order-1 md:order-2 md:-translate-y-7 flex flex-col h-full">
+                        <div
+                          className={`w-full flex-1 flex flex-col justify-between bg-white rounded-2xl p-6 sm:p-7 shadow-sm border border-slate-100 min-h-[400px] relative overflow-hidden ${
+                            shouldAnimate ? "animate-showcase-champion" : ""
+                          }`}
+                        >
+                          {/* Thin restrained gold accent along the top */}
+                          <div className="absolute top-0 inset-x-0 h-1 bg-[#F59E0B]" />
+
+                          {/* Top: Gold Trophy Icon + Label */}
+                          <div className="flex flex-col items-center">
+                            <TrophyOutlineIcon className="w-9 h-9 sm:w-10 sm:h-10 text-amber-500" />
+                            <span className="text-xs font-bold tracking-wider text-[#D97706] uppercase mt-2.5">
+                              {isDoubles ? "CHAMPIONS" : "CHAMPION"}
+                            </span>
+                          </div>
+
+                          {/* Middle: Avatars & Names */}
+                          {isChampionTBD ? (
+                            <div className="my-auto py-8 flex flex-col items-center">
+                              <div className="w-20 h-20 rounded-full border-2 border-dashed border-amber-200 bg-amber-50/60 flex items-center justify-center text-amber-500 font-bold text-sm">
+                                1ST
+                              </div>
+                              <p className="mt-3 text-sm font-semibold text-slate-400">
+                                Final match pending
+                              </p>
+                            </div>
+                          ) : (
+                            <div className="my-auto py-6 w-full flex items-center justify-center gap-4 sm:gap-6">
+                              {championPlayers.map((player, idx) => (
+                                <React.Fragment key={player.id || idx}>
+                                  {idx > 0 && (
+                                    <span className="text-amber-500/70 font-bold text-sm self-center select-none pb-5">
+                                      &amp;
+                                    </span>
+                                  )}
+                                  {player.id ? (
+                                    <Link
+                                      to={`/profile/${player.id}`}
+                                      className="group flex flex-col items-center gap-2.5 min-w-0 max-w-[130px]"
+                                      title={player.name}
+                                    >
+                                      <div className="transition-transform group-hover:scale-105">
+                                        <WinnerAvatar
+                                          image={player.image}
+                                          name={player.name}
+                                          initials={player.initials}
+                                          sizeClass="w-20 h-20 sm:w-24 sm:h-24"
+                                          bgClass="bg-[#FFFBEB]"
+                                          textClass="text-[#92400E] text-xl sm:text-2xl"
+                                          borderClass="border-[#FDE68A]"
+                                        />
+                                      </div>
+                                      <p className="text-sm sm:text-base font-bold text-slate-900 group-hover:text-amber-600 group-hover:underline transition-colors leading-tight text-center break-words">
+                                        {player.name}
+                                      </p>
+                                    </Link>
+                                  ) : (
+                                    <div className="flex flex-col items-center gap-2.5 min-w-0 max-w-[130px]">
+                                      <WinnerAvatar
+                                        image={player.image}
+                                        name={player.name}
+                                        initials={player.initials}
+                                        sizeClass="w-20 h-20 sm:w-24 sm:h-24"
+                                        bgClass="bg-[#FFFBEB]"
+                                        textClass="text-[#92400E] text-xl sm:text-2xl"
+                                        borderClass="border-[#FDE68A]"
+                                      />
+                                      <p className="text-sm sm:text-base font-bold text-slate-900 leading-tight text-center break-words">
+                                        {player.name}
+                                      </p>
+                                    </div>
+                                  )}
+                                </React.Fragment>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* Bottom: Subtle Divider + 1st place label */}
+                          <div className="w-full border-t border-slate-100 pt-3 text-center">
+                            <span className="text-xs text-slate-400 font-medium">
+                              1st place
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Right Card: Third-place or Semifinalists (order-3 on mobile and desktop) */}
+                      <div className="order-3 md:order-3 flex flex-col h-full">
+                        <div
+                          className={`w-full flex-1 flex flex-col justify-between bg-white rounded-2xl p-6 sm:p-7 shadow-sm border border-slate-100 min-h-[380px] ${
+                            shouldAnimate ? "animate-showcase-third" : ""
+                          }`}
+                        >
+                          {/* Top: Bronze Medal Icon + Label */}
+                          <div className="flex flex-col items-center">
+                            <BronzeMedalIcon className="w-8 h-8 sm:w-9 sm:h-9" />
+                            <span className="text-xs font-bold tracking-wider text-[#B45309] uppercase mt-2.5">
+                              {hasOfficialThird ? "3RD PLACE" : "SEMI-FINALISTS"}
+                            </span>
+                          </div>
+
+                          {/* Middle: Either 3rd place winner OR 2 Semifinalists */}
+                          {hasOfficialThird ? (
+                            <div className="my-auto py-6 w-full flex items-center justify-center gap-4 sm:gap-6">
+                              {thirdPlacePlayers.map((player, idx) => (
+                                <React.Fragment key={player.id || idx}>
+                                  {idx > 0 && (
+                                    <span className="text-slate-400 font-bold text-sm self-center select-none pb-5">
+                                      &amp;
+                                    </span>
+                                  )}
+                                  {player.id ? (
+                                    <Link
+                                      to={`/profile/${player.id}`}
+                                      className="group flex flex-col items-center gap-2.5 min-w-0 max-w-[120px]"
+                                      title={player.name}
+                                    >
+                                      <div className="transition-transform group-hover:scale-105">
+                                        <WinnerAvatar
+                                          image={player.image}
+                                          name={player.name}
+                                          initials={player.initials}
+                                          sizeClass="w-16 h-16 sm:w-20 sm:h-20"
+                                          bgClass="bg-[#FFF7ED]"
+                                          textClass="text-[#9A3412] text-lg sm:text-xl"
+                                          borderClass="border-[#FED7AA]"
+                                        />
+                                      </div>
+                                      <p className="text-xs sm:text-sm font-bold text-slate-900 group-hover:text-amber-700 group-hover:underline transition-colors leading-tight text-center break-words">
+                                        {player.name}
+                                      </p>
+                                    </Link>
+                                  ) : (
+                                    <div className="flex flex-col items-center gap-2.5 min-w-0 max-w-[120px]">
+                                      <WinnerAvatar
+                                        image={player.image}
+                                        name={player.name}
+                                        initials={player.initials}
+                                        sizeClass="w-16 h-16 sm:w-20 sm:h-20"
+                                        bgClass="bg-[#FFF7ED]"
+                                        textClass="text-[#9A3412] text-lg sm:text-xl"
+                                        borderClass="border-[#FED7AA]"
+                                      />
+                                      <p className="text-xs sm:text-sm font-bold text-slate-900 leading-tight text-center break-words">
+                                        {player.name}
+                                      </p>
+                                    </div>
+                                  )}
+                                </React.Fragment>
+                              ))}
+                            </div>
+                          ) : semifinalTeams.length > 0 ? (
+                            <div className="my-auto py-4 w-full flex flex-col justify-center gap-3.5">
+                              {semifinalTeams.map((team, idx) => (
+                                <React.Fragment key={idx}>
+                                  {idx > 0 && <div className="border-t border-slate-100 w-full" />}
+                                  <div className="flex items-center gap-3 w-full px-1">
+                                    <div className="flex items-center -space-x-2 shrink-0">
+                                      {team.players.map((p, pIdx) => {
+                                        const av = (
+                                          <WinnerAvatar
+                                            image={p.image}
+                                            name={p.name}
+                                            initials={p.initials}
+                                            sizeClass="w-9 h-9 sm:w-10 sm:h-10"
+                                            bgClass="bg-[#FFF7ED]"
+                                            textClass="text-[#9A3412] text-xs font-bold"
+                                            borderClass="border-[#FED7AA] ring-2 ring-white"
+                                          />
+                                        );
+                                        return p.id ? (
+                                          <Link
+                                            key={p.id || pIdx}
+                                            to={`/profile/${p.id}`}
+                                            title={p.name}
+                                            className="transition-transform hover:scale-110 relative"
+                                            style={{ zIndex: 10 - pIdx }}
+                                          >
+                                            {av}
+                                          </Link>
+                                        ) : (
+                                          <div
+                                            key={pIdx}
+                                            className="relative"
+                                            style={{ zIndex: 10 - pIdx }}
+                                          >
+                                            {av}
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                    <div className="min-w-0 flex items-center flex-wrap gap-x-1.5 leading-snug">
+                                      {team.players.map((p, pIdx) => (
+                                        <React.Fragment key={p.id || pIdx}>
+                                          {pIdx > 0 && (
+                                            <span className="text-slate-400 font-bold text-xs select-none">
+                                              &amp;
+                                            </span>
+                                          )}
+                                          {p.id ? (
+                                            <Link
+                                              to={`/profile/${p.id}`}
+                                              className="text-xs sm:text-sm font-bold text-slate-900 hover:text-amber-700 hover:underline transition-colors truncate max-w-[120px] inline-block"
+                                              title={p.name}
+                                            >
+                                              {p.name}
+                                            </Link>
+                                          ) : (
+                                            <span
+                                              className="text-xs sm:text-sm font-bold text-slate-900 truncate max-w-[120px] inline-block"
+                                              title={p.name}
+                                            >
+                                              {p.name}
+                                            </span>
+                                          )}
+                                        </React.Fragment>
+                                      ))}
+                                    </div>
+                                  </div>
+                                </React.Fragment>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="my-auto py-8 flex flex-col items-center">
+                              <div className="w-16 h-16 rounded-full border-2 border-dashed border-slate-200 bg-slate-50 flex items-center justify-center text-slate-400 font-bold text-xs">
+                                3RD
+                              </div>
+                              <p className="mt-3 text-sm font-semibold text-slate-400">
+                                Semifinals pending
+                              </p>
+                            </div>
+                          )}
+
+                          {/* Bottom: Subtle Divider + Label */}
+                          <div className="w-full border-t border-slate-100 pt-3 text-center">
+                            <span className="text-xs text-slate-400 font-medium">
+                              {hasOfficialThird ? "3rd place" : "Semi-finalists"}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()
+            ) : (
+              /* Loading State */
+              <div className="flex flex-col items-center justify-center py-12 rounded-xl bg-white/5 border border-white/10">
+                <div className="h-8 w-8 animate-spin rounded-full border-4 border-amber-400/20 border-t-amber-400 mb-3" />
+
+                <p className="text-xs font-semibold text-white/70">
+                  Loading champions for the selected category...
+                </p>
               </div>
             )}
           </div>
-
-          {/* Show results only for the selected category */}
-          {winners?.categoryId === activeCategoryId ? (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
-              {/* Champion */}
-              <div className="rounded-2xl border border-yellow-400/40 bg-yellow-400/10 p-6 backdrop-blur-md">
-                {winners.first ? (
-                  <div className="relative mx-auto mb-2 h-20 w-20">
-                    <div className="flex h-full w-full items-center justify-center rounded-full border-2 border-yellow-300 bg-[#061D23] text-xl font-black text-white">
-                      {getWinnerInitials(winners.first)}
-                    </div>
-                    {getWinnerProfileImage(winners.first) && (
-                      <img
-                        src={getWinnerProfileImage(winners.first)}
-                        alt="Champion profile"
-                        className="absolute inset-0 h-full w-full rounded-full border-2 border-yellow-300 object-cover"
-                        onError={(event) => {
-                          console.warn("[Champions] failed to load image", {
-                            playerId: winners.first?.id || null,
-                            imageUrl: event.currentTarget.src,
-                          });
-                          event.currentTarget.style.display = "none";
-                        }}
-                      />
-                    )}
-                  </div>
-                ) : (
-                  <div className="mb-2 flex h-20 items-center justify-center text-5xl">
-                    🥇
-                  </div>
-                )}
-
-                <h3 className="font-black text-xs uppercase tracking-wider text-yellow-300">
-                  Champion
-                </h3>
-
-                <p className="text-xl font-bold text-white mt-1">
-                  {winners.first?.name ||
-                    `${winners.first?.firstName || ""} ${
-                      winners.first?.lastName || ""
-                    }`.trim() ||
-                    "In Progress (TBD)"}
-                </p>
-              </div>
-
-              {/* Runner-up */}
-              <div className="rounded-2xl border border-slate-300/40 bg-slate-300/10 p-6 backdrop-blur-md">
-                {winners.second ? (
-                  <div className="relative mx-auto mb-2 h-20 w-20">
-                    <div className="flex h-full w-full items-center justify-center rounded-full border-2 border-slate-300 bg-[#061D23] text-xl font-black text-white">
-                      {getWinnerInitials(winners.second)}
-                    </div>
-                    {getWinnerProfileImage(winners.second) && (
-                      <img
-                        src={getWinnerProfileImage(winners.second)}
-                        alt="Runner-up profile"
-                        className="absolute inset-0 h-full w-full rounded-full border-2 border-slate-300 object-cover"
-                        onError={(event) => {
-                          console.warn("[Champions] failed to load image", {
-                            playerId: winners.second?.id || null,
-                            imageUrl: event.currentTarget.src,
-                          });
-                          event.currentTarget.style.display = "none";
-                        }}
-                      />
-                    )}
-                  </div>
-                ) : (
-                  <div className="mb-2 flex h-20 items-center justify-center text-5xl">
-                    🥈
-                  </div>
-                )}
-
-                <h3 className="font-black text-xs uppercase tracking-wider text-slate-300">
-                  Runner-up
-                </h3>
-
-                <p className="text-xl font-bold text-white mt-1">
-                  {winners.second?.name ||
-                    `${winners.second?.firstName || ""} ${
-                      winners.second?.lastName || ""
-                    }`.trim() ||
-                    "In Progress (TBD)"}
-                </p>
-              </div>
-
-              {/* Joint Third Place */}
-              <div className="rounded-2xl border border-amber-600/40 bg-amber-600/10 p-6 backdrop-blur-md">
-                {winners.jointThird.length === 2 ? (
-                  <div className="mb-2 flex justify-center gap-2">
-                    {winners.jointThird.map(
-                      (participant: any, index: number) => {
-                        const profileImage = getWinnerProfileImage(participant);
-                        return (
-                          <div
-                            key={participant.id || index}
-                            className="relative h-16 w-16"
-                          >
-                            <div className="flex h-full w-full items-center justify-center rounded-full border-2 border-amber-400 bg-[#061D23] text-sm font-black text-white">
-                              {getWinnerInitials(participant)}
-                            </div>
-                            {profileImage && (
-                              <img
-                                src={profileImage}
-                                alt="Third place profile"
-                                className="absolute inset-0 h-full w-full rounded-full border-2 border-amber-400 object-cover"
-                                onError={(event) => {
-                                  console.warn(
-                                    "[Champions] failed to load image",
-                                    {
-                                      playerId: participant.id || null,
-                                      imageUrl: event.currentTarget.src,
-                                    },
-                                  );
-                                  event.currentTarget.style.display = "none";
-                                }}
-                              />
-                            )}
-                          </div>
-                        );
-                      },
-                    )}
-                  </div>
-                ) : (
-                  <div className="mb-2 flex h-16 items-center justify-center text-5xl">
-                    🥉
-                  </div>
-                )}
-
-                <h3 className="font-black text-xs uppercase tracking-wider text-amber-400">
-                  Joint 3rd Place
-                </h3>
-
-                <div className="mt-3 space-y-2">
-                  {winners.jointThird.length === 2 ? (
-                    winners.jointThird.map(
-                      (participant: any, index: number) => (
-                        <p
-                          key={participant.id || index}
-                          className="text-lg font-bold text-white"
-                        >
-                          {participant.name ||
-                            `${participant.firstName || ""} ${
-                              participant.lastName || ""
-                            }`.trim()}
-                        </p>
-                      ),
-                    )
-                  ) : (
-                    <p className="text-lg font-bold text-white/60">
-                      Awaiting semifinal results
-                    </p>
-                  )}
-                </div>
-              </div>
-            </div>
-          ) : (
-            /* Loading State */
-            <div className="flex flex-col items-center justify-center py-12">
-              <div className="h-9 w-9 animate-spin rounded-full border-4 border-amber-400/20 border-t-amber-400 mb-4" />
-
-              <p className="text-sm font-semibold text-amber-300">
-                Loading champions for the selected category...
-              </p>
-            </div>
-          )}
-        </div>
-      )}
+        )}
 
       {/* Professional Tournament Division Entry Section */}
       {canRegister && tournament.categories.length > 0 && (
-        <div className="rounded-[18px] border border-white/20 bg-[#061D23]/30 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl mb-6">
+        <div className="rounded-2xl border border-white/[0.08] bg-[#061D23]/40 p-6 shadow-xl backdrop-blur-md mb-6">
           {/* Athlete Passport & Eligibility Bar */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-white/10">
             <div className="flex items-center gap-3">
@@ -2492,13 +2941,12 @@ const TournamentDetails: React.FC = () => {
               return (
                 <div
                   key={category.id}
-                  className={`rounded-xl border transition-all p-4 ${
-                    isAlreadyRegistered
+                  className={`rounded-xl border transition-all p-4 ${isAlreadyRegistered
                       ? "border-emerald-500/50 bg-gradient-to-r from-emerald-950/40 via-emerald-900/15 to-[#061D23]/60 shadow-sm"
                       : isSelected
                         ? "border-[#4AEEFF] bg-[#4AEEFF]/15 shadow-md shadow-[#4AEEFF]/10"
                         : "border-white/10 bg-[#061D23]/40 hover:border-white/20"
-                  }`}
+                    }`}
                 >
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div className="flex items-center gap-3.5 flex-1 min-w-0">
@@ -2527,11 +2975,10 @@ const TournamentDetails: React.FC = () => {
                       <div className="min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <h4
-                            className={`font-black text-sm sm:text-base ${
-                              isAlreadyRegistered
+                            className={`font-black text-sm sm:text-base ${isAlreadyRegistered
                                 ? "text-emerald-100"
                                 : "text-white"
-                            }`}
+                              }`}
                           >
                             {category.name}
                           </h4>
@@ -2656,11 +3103,10 @@ const TournamentDetails: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => toggleCategory(category.id)}
-                          className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider border transition-all ${
-                            isSelected
+                          className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider border transition-all ${isSelected
                               ? "bg-[#4AEEFF] text-[#061D23] border-[#4AEEFF]"
                               : "bg-white/5 text-white/70 border-white/10 hover:border-white/20"
-                          }`}
+                            }`}
                         >
                           {isSelected ? "Selected" : "Select"}
                         </button>
@@ -2895,13 +3341,12 @@ const TournamentDetails: React.FC = () => {
                       </div>
 
                       <span
-                        className={`rounded-lg border px-3 py-1.5 text-xs font-black ${
-                          category.paymentStatus === "APPROVED"
+                        className={`rounded-lg border px-3 py-1.5 text-xs font-black ${category.paymentStatus === "APPROVED"
                             ? "border-emerald-500/40 bg-emerald-500/15 text-emerald-300"
                             : category.paymentStatus === "REJECTED"
                               ? "border-red-500/40 bg-red-500/15 text-red-300"
                               : "border-amber-500/40 bg-amber-500/15 text-amber-300"
-                        }`}
+                          }`}
                       >
                         {category.paymentStatus}
                       </span>
@@ -3039,7 +3484,7 @@ const TournamentDetails: React.FC = () => {
                     >
                       <td className="px-6 py-4 whitespace-nowrap">
                         {registration.team?.members &&
-                        registration.team.members.length > 0 ? (
+                          registration.team.members.length > 0 ? (
                           <div className="flex flex-col">
                             <span className="text-white font-bold text-sm">
                               {registration.team.members
@@ -3071,11 +3516,11 @@ const TournamentDetails: React.FC = () => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-white/70">
                         {registration.team?.members &&
-                        registration.team.members.length > 0
+                          registration.team.members.length > 0
                           ? registration.team.members
-                              .map((m) => m.player?.email)
-                              .filter(Boolean)
-                              .join(", ")
+                            .map((m) => m.player?.email)
+                            .filter(Boolean)
+                            .join(", ")
                           : registration.player?.email}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-xs text-white/50 font-mono">
@@ -3576,6 +4021,42 @@ const TournamentDetails: React.FC = () => {
           </div>,
           document.body,
         )}
+
+      {/* Delete Tournament Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showDeleteConfirm}
+        onClose={() => {
+          if (!isDeletingTournament) setShowDeleteConfirm(false);
+        }}
+        onConfirm={handleDelete}
+        title="Delete Tournament"
+        message="Are you sure you want to delete this tournament? This action cannot be undone."
+        itemName={tournament?.name}
+        itemBadge="PERMANENT"
+        details="Warning: All categories, fixtures, brackets, matches, scores, and participant registrations for this tournament will be permanently removed."
+        confirmText="Yes, Delete Tournament"
+        cancelText="Cancel"
+        variant="danger"
+        isLoading={isDeletingTournament}
+      />
+
+      {/* Mark Complete Tournament Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showCompleteConfirm}
+        onClose={() => {
+          if (!isCompletingTournament) setShowCompleteConfirm(false);
+        }}
+        onConfirm={handleMarkComplete}
+        title="Mark Tournament Complete"
+        message="Are you sure you want to mark this tournament as completed?"
+        itemName={tournament?.name}
+        itemBadge="FINALIZE"
+        details="This will officially mark the tournament as completed, record final standings, and reveal the champions podium."
+        confirmText="Yes, Mark Complete"
+        cancelText="Cancel"
+        variant="success"
+        isLoading={isCompletingTournament}
+      />
     </>,
   );
 };

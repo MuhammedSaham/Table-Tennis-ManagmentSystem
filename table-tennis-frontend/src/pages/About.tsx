@@ -41,28 +41,29 @@ const About: React.FC = () => (
     <div className="fixed inset-0 bg-[#061D23]/25" />
     <div className="fixed inset-0 bg-gradient-to-b from-[#061D23]/20 via-transparent to-[#061D23]/35" />
 
-    <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-7xl flex-col space-y-6 px-3.5 sm:px-6 lg:px-8 py-6 sm:py-8">
-      {/* ─── HEADER MODULE (Unified with Players & Leaderboard) ─── */}
-      <header className="animate-fade-up-1 flex flex-col justify-between gap-4 rounded-[16px] border border-white/20 bg-[#061D23]/15 p-4 sm:p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl sm:flex-row sm:items-center">
-        <div className="text-left">
-          <div className="mb-2 sm:mb-3 h-[3px] w-12 sm:w-16 bg-[#4AEEFF] animate-laser-flow" />
-          <span className="inline-block px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-md bg-[#4AEEFF]/20 text-[#4AEEFF] border border-[#4AEEFF]/40 align-middle mb-1.5">
-            Academy Profile
+    <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-[1600px] flex-col space-y-6 px-3.5 sm:px-6 lg:px-10 xl:px-14 py-6 sm:py-8">
+      {/* ─── COMPACT GLASS HEADER MODULE ─── */}
+      <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 rounded-2xl border border-white/20 bg-[#061D23]/20 p-4 sm:p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl text-left">
+        <div>
+          <span className="text-[11px] font-bold uppercase tracking-wider text-[#4AEEFF]">
+            Academy Overview
           </span>
-          <h1 className="text-2xl font-black uppercase tracking-[0.15em] sm:tracking-[0.2em] text-white sm:text-4xl animate-light-sweep">
+          <h1 className="text-2xl sm:text-3xl lg:text-[34px] font-heading font-bold text-white tracking-tight leading-tight mt-0.5">
             About Sam&apos;s College
           </h1>
-          <p className="mt-1 text-xs uppercase tracking-[0.15em] sm:tracking-[0.25em] text-[#4AEEFF]/90 font-medium">
-            Where Education Meets Opportunity • Established in Northern Sri Lanka
+          <p className="mt-1 text-xs sm:text-sm text-white/70">
+            Where education meets opportunity • Established in Northern Sri Lanka
           </p>
         </div>
 
-        {/* 4 Training Hubs Badge */}
-        <div className="rounded-xl border border-white/10 bg-[#061D23]/40 px-4 py-2.5 sm:px-5 sm:py-3 text-left sm:text-right shrink-0">
-          <span className="inline-block px-2 py-0.5 text-[10px] font-black uppercase tracking-wider rounded bg-[#4AEEFF]/20 text-[#4AEEFF] border border-[#4AEEFF]/30 mb-1">
+        {/* Milestone Quick Badges */}
+        <div className="flex flex-wrap items-center gap-2 text-xs text-white/80 shrink-0">
+          <span className="px-3 py-1.5 rounded-lg bg-white/10 border border-white/15 font-semibold text-white/90">
             Northern Sri Lanka
           </span>
-          <p className="text-xs sm:text-sm font-bold text-white">4 Training Hubs</p>
+          <span className="px-3 py-1.5 rounded-lg bg-white/10 border border-white/15 font-semibold text-white/90">
+            4 Academy Hubs
+          </span>
         </div>
       </header>
 

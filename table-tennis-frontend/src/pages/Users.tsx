@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import BackButton from "../components/BackButton";
+import GlassSelect from "../components/GlassSelect";
 import { useAuth } from "../context/AuthContext";
 import api from "../services/api";
 import toast from "react-hot-toast";
@@ -11,6 +13,15 @@ import {
   MagnifyingGlassIcon,
   XMarkIcon,
   EyeIcon,
+  TrophyIcon,
+  KeyIcon,
+  PhoneIcon,
+  ArrowPathIcon,
+  ClipboardDocumentIcon,
+  CheckCircleIcon,
+  ExclamationTriangleIcon,
+  UserGroupIcon,
+  ShieldCheckIcon,
 } from "@heroicons/react/24/outline";
 
 interface User {
@@ -315,7 +326,7 @@ const Users: React.FC = () => {
       <div className="fixed inset-0 bg-[#061D23]/25" />
       <div className="fixed inset-0 bg-gradient-to-b from-[#061D23]/20 via-transparent to-[#061D23]/35" />
 
-      <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-7xl flex-col space-y-6 p-4 sm:p-6 lg:p-8">
+      <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-[1600px] flex-col space-y-6 px-4 sm:px-6 lg:px-10 xl:px-14 py-4 sm:py-6 lg:py-8">
         {children}
       </div>
     </div>
@@ -344,20 +355,24 @@ const Users: React.FC = () => {
 
   return wrapInBaseLayout(
     <>
-      {/* PREMIUM HEADER CONTROLS MODULE */}
-      <header className="rounded-[16px] border border-white/20 bg-[#061D23]/15 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      {/* COLLEGIATE HEADER CONTROLS */}
+      <header className="rounded-2xl border border-white/20 bg-[#061D23]/20 p-5 sm:p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <div className="mb-3 h-[3px] w-16 bg-[#4AEEFF]" />
-          <h1 className="text-2xl font-black uppercase tracking-[0.2em] text-white sm:text-4xl">
-            User Records
+          <BackButton to="/app/dashboard" label="Back to Dashboard" className="mb-3" />
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#4AEEFF]/10 border border-[#4AEEFF]/30 text-[#4AEEFF] text-[11px] font-bold uppercase tracking-wider mb-2.5">
+            <UserGroupIcon className="w-3.5 h-3.5" />
+            <span>Administration · User Directory</span>
+          </div>
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-heading font-extrabold text-white tracking-tight">
+            User Directory
           </h1>
-          <p className="text-xs uppercase tracking-[0.3em] text-[#4AEEFF]/90 mt-1">
-            Manage system permissions, profiles, and tournament rankings
+          <p className="text-xs sm:text-sm text-cyan-200/80 mt-1">
+            Manage athlete profiles, club memberships, tournament rankings, and system roles.
           </p>
         </div>
         <button
           onClick={openAddPlayerModal}
-          className="flex items-center justify-center gap-2 rounded-lg bg-[#4AEEFF] px-5 py-3 text-xs font-black uppercase tracking-wider text-[#061D23] transition-all duration-200 hover:bg-white self-start sm:self-center"
+          className="flex items-center justify-center gap-2 rounded-xl bg-[#4AEEFF] px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-[#061D23] transition-all duration-200 hover:bg-white hover:shadow-lg hover:shadow-[#4AEEFF]/20 self-start sm:self-center shrink-0"
         >
           <PlusCircleIcon className="w-4 h-4 stroke-[2.5]" />
           Add User
@@ -365,116 +380,116 @@ const Users: React.FC = () => {
       </header>
 
       {/* SEARCH AND TABS CONTROL BAR */}
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        {/* TABS */}
-        <div className="flex flex-wrap items-center gap-3">
-          <button
-            id="tab-club-members-admin"
-            onClick={() => {
-              setActiveTab("CLUB");
-              setClubGenderTab("ALL");
-            }}
-            className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-black text-xs uppercase tracking-wider transition-all duration-200 focus:outline-none ${
-              activeTab === "CLUB"
-                ? "bg-[#4AEEFF] text-[#061D23] shadow-lg"
-                : "bg-white/5 text-white/70 border border-white/10 hover:bg-white/10"
-            }`}
-          >
-            🏅 Club Members
-            <span
-              className={`px-1.5 py-0.5 rounded-full text-[10px] font-black ${
+      <div className="space-y-3">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          {/* ROLE TABS */}
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              id="tab-club-members-admin"
+              onClick={() => {
+                setActiveTab("CLUB");
+                setClubGenderTab("ALL");
+              }}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all duration-200 focus:outline-none ${
                 activeTab === "CLUB"
-                  ? "bg-[#061D23]/30 text-[#061D23]"
-                  : "bg-[#4AEEFF]/20 text-[#4AEEFF]"
+                  ? "bg-[#4AEEFF]/15 text-[#4AEEFF] border border-[#4AEEFF]/45 shadow-[0_0_14px_rgba(74,238,255,0.18)] font-bold backdrop-blur-md"
+                  : "bg-white/5 text-white/70 border border-white/10 hover:bg-white/10 hover:text-white"
               }`}
             >
-              {clubMembers.length}
-            </span>
-          </button>
+              <span>Club Members</span>
+              <span
+                className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
+                  activeTab === "CLUB"
+                    ? "bg-[#4AEEFF]/25 text-[#4AEEFF]"
+                    : "bg-white/10 text-white/60"
+                }`}
+              >
+                {clubMembers.length}
+              </span>
+            </button>
 
-          <button
-            id="tab-guest-players-admin"
-            onClick={() => {
-              setActiveTab("GUEST");
-              setClubGenderTab("ALL");
-            }}
-            className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-black text-xs uppercase tracking-wider transition-all duration-200 focus:outline-none ${
-              activeTab === "GUEST"
-                ? "bg-[#4AEEFF] text-[#061D23] shadow-lg"
-                : "bg-white/5 text-white/70 border border-white/10 hover:bg-white/10"
-            }`}
-          >
-            👤 Guest Players
-            <span
-              className={`px-1.5 py-0.5 rounded-full text-[10px] font-black ${
+            <button
+              id="tab-guest-players-admin"
+              onClick={() => {
+                setActiveTab("GUEST");
+                setClubGenderTab("ALL");
+              }}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all duration-200 focus:outline-none ${
                 activeTab === "GUEST"
-                  ? "bg-[#061D23]/30 text-[#061D23]"
-                  : "bg-[#4AEEFF]/20 text-[#4AEEFF]"
+                  ? "bg-[#4AEEFF]/15 text-[#4AEEFF] border border-[#4AEEFF]/45 shadow-[0_0_14px_rgba(74,238,255,0.18)] font-bold backdrop-blur-md"
+                  : "bg-white/5 text-white/70 border border-white/10 hover:bg-white/10 hover:text-white"
               }`}
             >
-              {guestPlayers.length}
-            </span>
-          </button>
-
-          {/* Referees Button - Only displays when there are Referees */}
-          {referees.length > 0 && (
-            <button
-              id="tab-referees-admin"
-              onClick={() => setActiveTab("REFEREE")}
-              className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-black text-xs uppercase tracking-wider transition-all duration-200 focus:outline-none ${
-                activeTab === "REFEREE"
-                  ? "bg-[#4AEEFF] text-[#061D23] shadow-lg"
-                  : "bg-white/5 text-white/70 border border-white/10 hover:bg-white/10"
-              }`}
-            >
-              🛡️ Referees
+              <span>Guest Players</span>
               <span
-                className={`px-1.5 py-0.5 rounded-full text-[10px] font-black ${
+                className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
+                  activeTab === "GUEST"
+                    ? "bg-[#4AEEFF]/25 text-[#4AEEFF]"
+                    : "bg-white/10 text-white/60"
+                }`}
+              >
+                {guestPlayers.length}
+              </span>
+            </button>
+
+            {/* Referees Button - Only displays when there are Referees */}
+            {referees.length > 0 && (
+              <button
+                id="tab-referees-admin"
+                onClick={() => setActiveTab("REFEREE")}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all duration-200 focus:outline-none ${
                   activeTab === "REFEREE"
-                    ? "bg-[#061D23]/30 text-[#061D23]"
-                    : "bg-[#4AEEFF]/20 text-[#4AEEFF]"
+                    ? "bg-[#4AEEFF]/15 text-[#4AEEFF] border border-[#4AEEFF]/45 shadow-[0_0_14px_rgba(74,238,255,0.18)] font-bold backdrop-blur-md"
+                    : "bg-white/5 text-white/70 border border-white/10 hover:bg-white/10 hover:text-white"
                 }`}
               >
-                {referees.length}
-              </span>
-            </button>
-          )}
+                <span>Referees</span>
+                <span
+                  className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
+                    activeTab === "REFEREE"
+                      ? "bg-[#4AEEFF]/25 text-[#4AEEFF]"
+                      : "bg-white/10 text-white/60"
+                  }`}
+                >
+                  {referees.length}
+                </span>
+              </button>
+            )}
 
-          {/* Admins Button - Only displays when there are Admins */}
-          {admins.length > 0 && (
-            <button
-              id="tab-admins-admin"
-              onClick={() => setActiveTab("ADMIN")}
-              className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-black text-xs uppercase tracking-wider transition-all duration-200 focus:outline-none ${
-                activeTab === "ADMIN"
-                  ? "bg-[#4AEEFF] text-[#061D23] shadow-lg"
-                  : "bg-white/5 text-white/70 border border-white/10 hover:bg-white/10"
-              }`}
-            >
-              👑 Admins
-              <span
-                className={`px-1.5 py-0.5 rounded-full text-[10px] font-black ${
+            {/* Admins Button - Only displays when there are Admins */}
+            {admins.length > 0 && (
+              <button
+                id="tab-admins-admin"
+                onClick={() => setActiveTab("ADMIN")}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all duration-200 focus:outline-none ${
                   activeTab === "ADMIN"
-                    ? "bg-[#061D23]/30 text-[#061D23]"
-                    : "bg-[#4AEEFF]/20 text-[#4AEEFF]"
+                    ? "bg-[#4AEEFF]/15 text-[#4AEEFF] border border-[#4AEEFF]/45 shadow-[0_0_14px_rgba(74,238,255,0.18)] font-bold backdrop-blur-md"
+                    : "bg-white/5 text-white/70 border border-white/10 hover:bg-white/10 hover:text-white"
                 }`}
               >
-                {admins.length}
-              </span>
-            </button>
-          )}
-        </div>
+                <span>Admins</span>
+                <span
+                  className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
+                    activeTab === "ADMIN"
+                      ? "bg-[#4AEEFF]/25 text-[#4AEEFF]"
+                      : "bg-white/10 text-white/60"
+                  }`}
+                >
+                  {admins.length}
+                </span>
+              </button>
+            )}
+          </div>
 
-        {/* PLAYER SEARCH MODULE */}
-        <div className="flex items-center gap-2 w-full lg:w-96">
-          <div className="relative flex-1">
+          {/* SEARCH INPUT */}
+          <div className="relative w-full lg:w-80">
             <MagnifyingGlassIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#4AEEFF]/80" />
             <input
               type="text"
-              placeholder="Search player by name or email..."
+              placeholder="Search user by name or email..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-9 py-2.5 rounded-xl border border-white/20 bg-[#061D23]/60 text-xs text-white placeholder-white/40 focus:outline-none focus:border-[#4AEEFF] transition-all shadow-inner font-mono"
+              className="w-full pl-10 pr-9 py-2 rounded-xl border border-white/20 bg-[#061D23]/60 text-xs text-white placeholder-white/40 focus:outline-none focus:border-[#4AEEFF] transition-all shadow-inner font-mono"
             />
             {searchQuery && (
               <button
@@ -486,59 +501,67 @@ const Users: React.FC = () => {
               </button>
             )}
           </div>
-          <button
-            onClick={() => {}}
-            className="px-4 py-2.5 rounded-xl bg-[#4AEEFF] text-[#061D23] hover:bg-white text-xs font-black uppercase tracking-wider transition-all shadow-md shrink-0"
-          >
-            Search
-          </button>
         </div>
-      </div>
 
-      {(activeTab === "CLUB" || activeTab === "GUEST") && (
-        <div className="flex items-center gap-3">
-          {(["MALE", "FEMALE"] as const).map((gender) => {
-            const genderCount = displayedUsers.filter(
-              (userItem) => userItem.gender === gender,
-            ).length;
-            const isActive = clubGenderTab === gender;
-
-            return (
+        {/* GENDER SUB-FILTERS FOR PLAYERS */}
+        {(activeTab === "CLUB" || activeTab === "GUEST") && (
+          <div className="flex items-center gap-2 pt-1">
+            <span className="text-[11px] font-semibold text-white/50 uppercase tracking-wider mr-1">Filter:</span>
+            <div className="flex items-center gap-1 bg-white/5 p-1 rounded-xl border border-white/10 backdrop-blur-md">
               <button
-                key={gender}
-                onClick={() => setClubGenderTab(gender)}
-                className={`flex items-center gap-2 rounded-lg px-5 py-2.5 text-xs font-black uppercase tracking-wider transition-all ${
-                  isActive
-                    ? "bg-[#4AEEFF] text-[#061D23] shadow-lg"
-                    : "border border-white/10 bg-white/5 text-white/70 hover:bg-white/10"
+                onClick={() => setClubGenderTab("ALL")}
+                className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                  clubGenderTab === "ALL"
+                    ? "bg-[#4AEEFF]/15 text-[#4AEEFF] border border-[#4AEEFF]/45 shadow-[0_0_14px_rgba(74,238,255,0.18)] backdrop-blur-md"
+                    : "text-white/70 hover:text-white hover:bg-white/5 border border-transparent"
                 }`}
               >
-                {gender === "MALE" ? "Men" : "Women"}
-                <span
-                  className={`rounded-full px-1.5 py-0.5 text-[10px] font-black ${
-                    isActive
-                      ? "bg-[#061D23]/30 text-[#061D23]"
-                      : "bg-[#4AEEFF]/20 text-[#4AEEFF]"
-                  }`}
-                >
-                  {genderCount}
-                </span>
+                All ({displayedUsers.length})
               </button>
-            );
-          })}
-        </div>
-      )}
+              {(["MALE", "FEMALE"] as const).map((gender) => {
+                const genderCount = displayedUsers.filter(
+                  (userItem) => userItem.gender === gender,
+                ).length;
+                const isActive = clubGenderTab === gender;
 
-      {/* CORE INDUSTRIAL DATA LAYER */}
-      <main className="rounded-[16px] border border-white/20 bg-[#061D23]/10 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl overflow-hidden">
-        {/* DESKTOP TABLE VIEW (Visible on tablet and desktop screens) */}
+                return (
+                  <button
+                    key={gender}
+                    onClick={() => setClubGenderTab(gender)}
+                    className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                      isActive
+                        ? "bg-[#4AEEFF]/15 text-[#4AEEFF] border border-[#4AEEFF]/45 shadow-[0_0_14px_rgba(74,238,255,0.18)] backdrop-blur-md"
+                        : "text-white/70 hover:text-white hover:bg-white/5 border border-transparent"
+                    }`}
+                  >
+                    <span>{gender === "MALE" ? "Men" : "Women"}</span>
+                    <span
+                      className={`rounded-full px-1.5 py-0.2 text-[10px] font-bold ${
+                        isActive
+                          ? "bg-[#4AEEFF]/25 text-[#4AEEFF]"
+                          : "bg-white/10 text-white/50"
+                      }`}
+                    >
+                      {genderCount}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* DATA LAYER */}
+      <main className="rounded-2xl border border-white/20 bg-[#061D23]/20 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl overflow-hidden">
+        {/* DESKTOP TABLE VIEW */}
         <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-white/10 bg-[#061D23]/30 text-xs font-black uppercase tracking-widest text-[#4AEEFF]">
+              <tr className="border-b border-white/10 bg-[#061D23]/30 text-xs font-bold uppercase tracking-wider text-[#4AEEFF]">
                 <th className="px-6 py-4">User</th>
                 <th className="px-6 py-4">Email</th>
-                <th className="px-6 py-4">Role Matrix</th>
+                <th className="px-6 py-4">Role</th>
                 {activeTab === "CLUB" && (
                   <th className="px-6 py-4">Leaderboard Rank</th>
                 )}
@@ -713,7 +736,7 @@ const Users: React.FC = () => {
                                   : "Set Ranking"
                               }
                             >
-                              🏆
+                              <TrophyIcon className="w-3.5 h-3.5" />
                             </button>
                           ))}
 
@@ -727,31 +750,32 @@ const Users: React.FC = () => {
                               currentIsSuperAdmin || hasPermission("MANAGE_USERS");
 
                             return canChangeRole ? (
-                              <select
+                              <GlassSelect
                                 value={userItem.role}
                                 onChange={(e) =>
                                   handleRoleChange(userItem.id, e.target.value)
                                 }
-                                className="text-xs border border-white/10 rounded-md bg-[#061D23] text-white py-1.5 px-2 focus:outline-none focus:border-[#4AEEFF] cursor-pointer"
+                                className="!py-1 !px-2.5 !text-xs !pr-7"
                               >
-                                <option value="PLAYER">Player</option>
-                                <option value="REFEREE">Referee</option>
+                                <option value="PLAYER" className="bg-[#061D23] text-white">Player</option>
+                                <option value="REFEREE" className="bg-[#061D23] text-white">Referee</option>
                                 {currentIsSuperAdmin && (
-                                  <option value="ADMIN">Admin</option>
+                                  <option value="ADMIN" className="bg-[#061D23] text-white">Admin</option>
                                 )}
-                              </select>
+                              </GlassSelect>
                             ) : null;
                           })()}
 
                         {/* Badges Stack */}
                         {userItem.isSuperAdmin && (
-                          <span className="px-2.5 py-1 text-[10px] font-black uppercase tracking-wider rounded-md bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                            ⭐ Main Admin
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider rounded-md bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                            <ShieldCheckIcon className="w-3 h-3 text-amber-400" />
+                            <span>Main Admin</span>
                           </span>
                         )}
 
                         {userItem.id === user?.id && (
-                          <span className="px-2.5 py-1 text-[10px] font-black uppercase tracking-wider rounded-md bg-white/10 text-white/60 border border-white/10">
+                          <span className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider rounded-md bg-white/10 text-white/60 border border-white/10">
                             You
                           </span>
                         )}
@@ -760,10 +784,11 @@ const Users: React.FC = () => {
                         {isSuperAdmin && userItem.role === "ADMIN" && (
                           <button
                             onClick={() => setUserForPermissions(userItem)}
-                            className="rounded-lg px-2.5 py-1.5 text-xs font-black uppercase tracking-wider text-[#4AEEFF] border border-[#4AEEFF]/30 bg-[#4AEEFF]/10 hover:bg-[#4AEEFF]/20 transition-all flex items-center gap-1"
+                            className="rounded-lg px-2.5 py-1.5 text-xs font-semibold text-[#4AEEFF] border border-[#4AEEFF]/30 bg-[#4AEEFF]/10 hover:bg-[#4AEEFF]/20 transition-all flex items-center gap-1.5"
                             title="Manage Permissions"
                           >
-                            🔑 Permissions
+                            <KeyIcon className="w-3.5 h-3.5" />
+                            <span>Permissions</span>
                           </button>
                         )}
 
@@ -773,7 +798,7 @@ const Users: React.FC = () => {
                           userItem.isClubMember && (
                             <button
                               onClick={() => setMemberToRemove(userItem)}
-                              className="rounded-lg px-3 py-2 text-xs font-black uppercase tracking-wider text-amber-300 border border-amber-500/20 bg-[#061D23]/40 hover:border-amber-400 hover:bg-amber-500/10 transition-all"
+                              className="rounded-lg px-2.5 py-1.5 text-xs font-semibold text-amber-300 border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 transition-all"
                               title="Remove Club Membership"
                             >
                               Remove Membership
@@ -827,8 +852,9 @@ const Users: React.FC = () => {
                       {userItem.firstName} {userItem.lastName}
                     </p>
                     {userItem.phone && (
-                      <p className="text-xs text-gray-400 font-mono mt-0.5">
-                        📞 {userItem.phone}
+                      <p className="text-xs text-gray-400 font-mono mt-0.5 flex items-center gap-1">
+                        <PhoneIcon className="w-3 h-3 text-[#4AEEFF] shrink-0" />
+                        <span>{userItem.phone}</span>
                       </p>
                     )}
                   </div>
@@ -843,12 +869,13 @@ const Users: React.FC = () => {
                     {userItem.role}
                   </span>
                   {userItem.isSuperAdmin && (
-                    <span className="px-2 py-0.5 text-[9px] font-black uppercase tracking-wider rounded-md bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                      ⭐ Main
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider rounded-md bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                      <ShieldCheckIcon className="w-2.5 h-2.5 text-amber-400" />
+                      <span>Main</span>
                     </span>
                   )}
                   {userItem.id === user?.id && (
-                    <span className="px-2 py-0.5 text-[9px] font-black uppercase tracking-wider rounded-md bg-white/10 text-white/60 border border-white/10">
+                    <span className="px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider rounded-md bg-white/10 text-white/60 border border-white/10">
                       You
                     </span>
                   )}
@@ -958,10 +985,11 @@ const Users: React.FC = () => {
                           setRankingInput(userItem.ranking?.toString() || "");
                           setRankingNote(userItem.rankingNote || "");
                         }}
-                        className="rounded-lg px-2.5 py-1.5 text-xs font-bold text-white/80 border border-white/10 bg-[#061D23]/60 hover:border-[#4AEEFF] hover:text-[#4AEEFF]"
+                        className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-white/80 border border-white/10 bg-[#061D23]/60 hover:border-[#4AEEFF] hover:text-[#4AEEFF]"
                         title="Set / Edit Rank"
                       >
-                        🏆 Rank
+                        <TrophyIcon className="w-3.5 h-3.5" />
+                        <span>Rank</span>
                       </button>
                     )}
 
@@ -975,19 +1003,19 @@ const Users: React.FC = () => {
                         currentIsSuperAdmin || hasPermission("MANAGE_USERS");
 
                       return canChangeRole ? (
-                        <select
+                        <GlassSelect
                           value={userItem.role}
                           onChange={(e) =>
                             handleRoleChange(userItem.id, e.target.value)
                           }
-                          className="text-xs border border-white/10 rounded-lg bg-[#061D23] text-white py-1.5 px-2 focus:outline-none focus:border-[#4AEEFF] cursor-pointer"
+                          className="!py-1 !px-2.5 !text-xs !pr-7"
                         >
-                          <option value="PLAYER">Player</option>
-                          <option value="REFEREE">Referee</option>
+                          <option value="PLAYER" className="bg-[#061D23] text-white">Player</option>
+                          <option value="REFEREE" className="bg-[#061D23] text-white">Referee</option>
                           {currentIsSuperAdmin && (
-                            <option value="ADMIN">Admin</option>
+                            <option value="ADMIN" className="bg-[#061D23] text-white">Admin</option>
                           )}
-                        </select>
+                        </GlassSelect>
                       ) : null;
                     })()}
 
@@ -995,10 +1023,11 @@ const Users: React.FC = () => {
                   {isSuperAdmin && userItem.role === "ADMIN" && (
                     <button
                       onClick={() => setUserForPermissions(userItem)}
-                      className="rounded-lg px-2.5 py-1.5 text-xs font-bold text-[#4AEEFF] border border-[#4AEEFF]/30 bg-[#4AEEFF]/10 hover:bg-[#4AEEFF]/20"
+                      className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-[#4AEEFF] border border-[#4AEEFF]/30 bg-[#4AEEFF]/10 hover:bg-[#4AEEFF]/20"
                       title="Manage Permissions"
                     >
-                      🔑 Permissions
+                      <KeyIcon className="w-3.5 h-3.5" />
+                      <span>Permissions</span>
                     </button>
                   )}
 
@@ -1008,7 +1037,7 @@ const Users: React.FC = () => {
                     userItem.isClubMember && (
                       <button
                         onClick={() => setMemberToRemove(userItem)}
-                        className="rounded-lg px-2.5 py-1.5 text-xs font-bold text-amber-300 border border-amber-500/20 bg-[#061D23]/60 hover:bg-amber-500/10"
+                        className="rounded-lg px-2.5 py-1.5 text-xs font-semibold text-amber-300 border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20"
                         title="Remove Club Membership"
                       >
                         Remove Membership
@@ -1039,29 +1068,29 @@ const Users: React.FC = () => {
           <div className="w-full max-w-4xl rounded-2xl border border-white/20 bg-[#061D23]/90 p-6 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.8)] backdrop-blur-2xl sm:p-8">
             {createdPlayerData ? (
               <div className="text-center py-2 space-y-6">
-                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[#4AEEFF]/20 border border-[#4AEEFF]/40 text-3xl">
-                  ✅
+                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[#4AEEFF]/15 border border-[#4AEEFF]/40 text-[#4AEEFF]">
+                  <CheckCircleIcon className="w-10 h-10" />
                 </div>
                 <div>
-                  <h2 className="text-2xl font-black uppercase tracking-widest text-white">
-                    User Created Successfully!
+                  <h2 className="text-2xl font-black uppercase tracking-wider text-white">
+                    User Created Successfully
                   </h2>
-                  <p className="text-sm text-[#4AEEFF] uppercase tracking-wider mt-1">
+                  <p className="text-sm text-cyan-200/80 mt-1">
                     Save or share the login credentials with the new user
                   </p>
                 </div>
 
                 <div className="rounded-xl border border-white/10 bg-[#061D23]/80 p-5 text-left space-y-4">
                   <div>
-                    <span className="text-xs font-black uppercase tracking-wider text-white/50 block mb-1">
-                      Player Name
+                    <span className="text-xs font-bold uppercase tracking-wider text-white/50 block mb-1">
+                      User Name
                     </span>
                     <span className="text-sm font-semibold text-white">
                       {createdPlayerData.name}
                     </span>
                   </div>
                   <div>
-                    <span className="text-xs font-black uppercase tracking-wider text-white/50 block mb-1">
+                    <span className="text-xs font-bold uppercase tracking-wider text-white/50 block mb-1">
                       Login Email
                     </span>
                     <span className="text-sm font-mono text-[#4AEEFF] break-all">
@@ -1069,7 +1098,7 @@ const Users: React.FC = () => {
                     </span>
                   </div>
                   <div>
-                    <span className="text-xs font-black uppercase tracking-wider text-white/50 block mb-1">
+                    <span className="text-xs font-bold uppercase tracking-wider text-white/50 block mb-1">
                       Temporary Password
                     </span>
                     <div className="flex items-center gap-2">
@@ -1084,7 +1113,7 @@ const Users: React.FC = () => {
                           );
                           toast.success("Password copied to clipboard!");
                         }}
-                        className="px-4 py-2.5 rounded-lg bg-[#4AEEFF] text-sm font-black uppercase tracking-wider text-[#061D23] hover:bg-white transition-all shadow-md"
+                        className="px-4 py-2.5 rounded-lg bg-[#4AEEFF] text-sm font-bold uppercase tracking-wider text-[#061D23] hover:bg-white transition-all shadow-md"
                       >
                         Copy Password
                       </button>
@@ -1100,9 +1129,10 @@ const Users: React.FC = () => {
                       navigator.clipboard.writeText(creds);
                       toast.success("Full credentials copied!");
                     }}
-                    className="flex-1 rounded-lg border border-white/20 bg-transparent py-3 text-sm font-black uppercase tracking-widest text-white hover:bg-white/10 transition-all"
+                    className="flex-1 inline-flex items-center justify-center gap-2 rounded-lg border border-white/20 bg-transparent py-3 text-sm font-bold uppercase tracking-wider text-white hover:bg-white/10 transition-all"
                   >
-                    📋 Copy Full Details
+                    <ClipboardDocumentIcon className="w-4 h-4" />
+                    <span>Copy Full Details</span>
                   </button>
                   <button
                     type="button"
@@ -1131,7 +1161,7 @@ const Users: React.FC = () => {
                       <label className="block text-xs font-black uppercase tracking-wider text-white/70 mb-1.5">
                         Account Type *
                       </label>
-                      <select
+                      <GlassSelect
                         value={
                           newPlayer.role === "PLAYER"
                             ? newPlayer.isClubMember
@@ -1150,13 +1180,13 @@ const Users: React.FC = () => {
                             isClubMember: e.target.value === "CLUB_PLAYER",
                           })
                         }
-                        className="w-full rounded-lg border border-white/10 bg-[#061D23] p-2.5 text-sm text-white focus:border-[#4AEEFF] focus:outline-none"
+                        className="w-full"
                       >
-                        <option value="CLUB_PLAYER">Club Player</option>
-                        <option value="GUEST_PLAYER">Guest Player</option>
-                        <option value="REFEREE">Referee</option>
-                        <option value="ADMIN">Admin</option>
-                      </select>
+                        <option value="CLUB_PLAYER" className="bg-[#061D23] text-white">Club Player</option>
+                        <option value="GUEST_PLAYER" className="bg-[#061D23] text-white">Guest Player</option>
+                        <option value="REFEREE" className="bg-[#061D23] text-white">Referee</option>
+                        <option value="ADMIN" className="bg-[#061D23] text-white">Admin</option>
+                      </GlassSelect>
                     </div>
 
                     <div>
@@ -1211,8 +1241,8 @@ const Users: React.FC = () => {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-black uppercase tracking-wider text-white/70 mb-1.5">
-                      Automated Security Access Token
+                    <label className="block text-xs font-bold uppercase tracking-wider text-white/70 mb-1.5">
+                      Temporary Access Password
                     </label>
                     <div className="flex gap-2">
                       <input
@@ -1233,14 +1263,15 @@ const Users: React.FC = () => {
                         onClick={() =>
                           setGeneratedPassword(generateRandomPassword())
                         }
-                        className="rounded-lg bg-[#4AEEFF] px-3 text-[#061D23] hover:bg-white transition-all"
-                        title="Regenerate string"
+                        className="rounded-lg bg-[#4AEEFF] px-3 py-2 text-[#061D23] hover:bg-white transition-all flex items-center justify-center"
+                        title="Regenerate password"
                       >
-                        🔄
+                        <ArrowPathIcon className="w-4 h-4 text-[#061D23]" />
                       </button>
                     </div>
-                    <p className="text-xs font-bold text-amber-400 mt-1.5 uppercase tracking-wide">
-                      ⚠️ Save credential. Hidden past submission phase.
+                    <p className="text-xs font-semibold text-amber-300 mt-1.5 flex items-center gap-1.5">
+                      <ExclamationTriangleIcon className="w-4 h-4 text-amber-400 shrink-0" />
+                      <span>Save this password now. It will not be displayed again after creation.</span>
                     </p>
                   </div>
 
@@ -1267,18 +1298,18 @@ const Users: React.FC = () => {
                         Gender *
                       </label>
 
-                      <select
+                      <GlassSelect
                         value={newPlayer.gender}
                         onChange={(e) =>
                           setNewPlayer({ ...newPlayer, gender: e.target.value })
                         }
                         required={newPlayer.role === "PLAYER"}
-                        className="w-full rounded-lg border border-white/10 bg-[#061D23] p-2.5 text-sm text-white focus:border-[#4AEEFF] focus:outline-none"
+                        className="w-full"
                       >
-                        <option value="">Select Gender</option>
-                        <option value="MALE">Male</option>
-                        <option value="FEMALE">Female</option>
-                      </select>
+                        <option value="" className="bg-[#061D23] text-white">Select Gender</option>
+                        <option value="MALE" className="bg-[#061D23] text-white">Male</option>
+                        <option value="FEMALE" className="bg-[#061D23] text-white">Female</option>
+                      </GlassSelect>
                     </div>
 
                     <div>
@@ -1304,7 +1335,7 @@ const Users: React.FC = () => {
                       <label className="block text-xs font-black uppercase tracking-wider text-white/70 mb-1.5">
                         Skill Classification
                       </label>
-                      <select
+                      <GlassSelect
                         value={newPlayer.skillLevel}
                         onChange={(e) =>
                           setNewPlayer({
@@ -1312,12 +1343,12 @@ const Users: React.FC = () => {
                             skillLevel: e.target.value,
                           })
                         }
-                        className="w-full rounded-lg border border-white/10 bg-[#061D23] p-2.5 text-sm text-white focus:border-[#4AEEFF] focus:outline-none"
+                        className="w-full"
                       >
-                        <option value="Beginner">Beginner</option>
-                        <option value="Intermediate">Intermediate</option>
-                        <option value="Advanced">Advanced</option>
-                      </select>
+                        <option value="Beginner" className="bg-[#061D23] text-white">Beginner</option>
+                        <option value="Intermediate" className="bg-[#061D23] text-white">Intermediate</option>
+                        <option value="Advanced" className="bg-[#061D23] text-white">Advanced</option>
+                      </GlassSelect>
                     </div>
 
                     <div>
@@ -1381,8 +1412,9 @@ const Users: React.FC = () => {
                 </span>
                 ?
               </p>
-              <p className="text-xs text-red-400 font-mono mt-1 font-semibold">
-                ⚠️ This operation is permanent and cannot be undone.
+              <p className="text-xs text-red-300 font-medium mt-1 flex items-center justify-center gap-1.5">
+                <ExclamationTriangleIcon className="w-3.5 h-3.5 text-red-400 shrink-0" />
+                <span>This operation is permanent and cannot be undone.</span>
               </p>
             </div>
 

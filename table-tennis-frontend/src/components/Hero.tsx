@@ -24,7 +24,7 @@ const Hero: React.FC = () => {
       </div>
 
       {/* 3. Main Content Container */}
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-14 lg:py-20 w-full flex flex-col justify-center">
+      <div className="relative z-10 max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-10 xl:px-14 2xl:px-16 py-8 sm:py-14 lg:py-20 w-full flex flex-col justify-center">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
           
           {/* Left Column: Heading, Copy, Buttons, Tagline */}
@@ -35,7 +35,7 @@ const Hero: React.FC = () => {
             </div>
 
             {/* Main Headline */}
-            <h1 className="animate-fade-up-2 font-jakarta text-4xl sm:text-6xl lg:text-7xl xl:text-8xl font-black text-white tracking-tight leading-[1.05] mb-3 sm:mb-6 drop-shadow-[0_2px_10px_rgba(0,0,0,0.7)]">
+            <h1 className="animate-fade-up-2 font-heading text-4xl sm:text-6xl lg:text-7xl xl:text-8xl font-black text-white tracking-tight leading-[1.05] mb-3 sm:mb-6 drop-shadow-[0_2px_10px_rgba(0,0,0,0.7)]">
               The art of
               <span className="block text-[#A5F3FC] mt-1 sm:mt-2 drop-shadow-[0_2px_10px_rgba(0,0,0,0.7)]">
                 the next point.

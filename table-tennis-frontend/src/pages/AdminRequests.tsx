@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
 import api, { getProfileImageUrl } from "../services/api";
 import toast from "react-hot-toast";
+import BackButton from "../components/BackButton";
+import GlassSelect from "../components/GlassSelect";
 import {
   CheckCircleIcon,
   XCircleIcon,
@@ -649,7 +651,7 @@ const AdminRequests: React.FC = () => {
       <div className="fixed inset-0 bg-[#061D23]/25" />
       <div className="fixed inset-0 bg-gradient-to-b from-[#061D23]/20 via-transparent to-[#061D23]/35" />
 
-      <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-7xl flex-col space-y-6 p-4 sm:p-6 lg:p-8">
+      <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-[1600px] flex-col space-y-6 px-4 sm:px-6 lg:px-10 xl:px-14 py-4 sm:py-6 lg:py-8">
         {children}
       </div>
     </div>
@@ -672,12 +674,12 @@ const AdminRequests: React.FC = () => {
   return wrapInBaseLayout(
     <>
       {/* GLASS HEADER */}
-      <header className="rounded-[16px] border border-white/20 bg-[#061D23]/15 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl sm:p-8">
-        <div className="mb-4 h-[3px] w-16 bg-[#4AEEFF]" />
-        <h1 className="mb-2 text-2xl font-black uppercase tracking-[0.2em] text-[#FFFFFF] sm:text-4xl">
+      <header className="rounded-2xl border border-white/20 bg-[#061D23]/20 p-5 sm:p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl">
+        <BackButton to="/app/dashboard" label="Back to Dashboard" className="mb-4" />
+        <h1 className="mb-2 text-2xl font-black uppercase tracking-[0.15em] text-[#FFFFFF] sm:text-3xl lg:text-4xl">
           Pending Requests
         </h1>
-        <p className="text-xs uppercase tracking-[0.3em] text-[#4AEEFF]/90">
+        <p className="text-xs uppercase tracking-[0.2em] text-[#4AEEFF]">
           Review and manage administrative, player membership, and payment
           requests
         </p>
@@ -1047,19 +1049,19 @@ const AdminRequests: React.FC = () => {
                   <label className="mb-2 block text-xs font-bold text-white/70">
                     Membership
                   </label>
-                  <select
+                  <GlassSelect
                     value={paymentMembershipFilter}
                     onChange={(e) =>
                       setPaymentMembershipFilter(
                         e.target.value as "ALL" | "CLUB" | "GUEST",
                       )
                     }
-                    className="w-full rounded-lg border border-white/20 bg-[#061D23] px-3 py-2.5 text-sm text-white outline-none focus:border-[#4AEEFF]"
+                    className="w-full"
                   >
-                    <option value="ALL">All Players</option>
-                    <option value="CLUB">Club Players</option>
-                    <option value="GUEST">Guest Players</option>
-                  </select>
+                    <option value="ALL" className="bg-[#061D23] text-white">All Players</option>
+                    <option value="CLUB" className="bg-[#061D23] text-white">Club Players</option>
+                    <option value="GUEST" className="bg-[#061D23] text-white">Guest Players</option>
+                  </GlassSelect>
                 </div>
 
                 {/* GENDER FILTER */}
@@ -1067,19 +1069,19 @@ const AdminRequests: React.FC = () => {
                   <label className="mb-2 block text-xs font-bold text-white/70">
                     Gender
                   </label>
-                  <select
+                  <GlassSelect
                     value={paymentGenderFilter}
                     onChange={(e) =>
                       setPaymentGenderFilter(
                         e.target.value as "ALL" | "MALE" | "FEMALE",
                       )
                     }
-                    className="w-full rounded-lg border border-white/20 bg-[#061D23] px-3 py-2.5 text-sm text-white outline-none focus:border-[#4AEEFF]"
+                    className="w-full"
                   >
-                    <option value="ALL">All Genders</option>
-                    <option value="MALE">Men</option>
-                    <option value="FEMALE">Women</option>
-                  </select>
+                    <option value="ALL" className="bg-[#061D23] text-white">All Genders</option>
+                    <option value="MALE" className="bg-[#061D23] text-white">Men</option>
+                    <option value="FEMALE" className="bg-[#061D23] text-white">Women</option>
+                  </GlassSelect>
                 </div>
 
                 {/* TOURNAMENT FILTER */}
@@ -1087,18 +1089,18 @@ const AdminRequests: React.FC = () => {
                   <label className="mb-2 block text-xs font-bold text-white/70">
                     Tournament
                   </label>
-                  <select
+                  <GlassSelect
                     value={paymentTournamentFilter}
                     onChange={(e) => setPaymentTournamentFilter(e.target.value)}
-                    className="w-full rounded-lg border border-white/20 bg-[#061D23] px-3 py-2.5 text-sm text-white outline-none focus:border-[#4AEEFF]"
+                    className="w-full"
                   >
-                    <option value="ALL">All Tournaments</option>
+                    <option value="ALL" className="bg-[#061D23] text-white">All Tournaments</option>
                     {paymentTournaments.map((tournament) => (
-                      <option key={tournament.id} value={tournament.id}>
+                      <option key={tournament.id} value={tournament.id} className="bg-[#061D23] text-white">
                         {tournament.name}
                       </option>
                     ))}
-                  </select>
+                  </GlassSelect>
                 </div>
 
                 {/* EVENT TYPE FILTER */}
@@ -1106,7 +1108,7 @@ const AdminRequests: React.FC = () => {
                   <label className="mb-2 block text-xs font-bold text-white/70">
                     Event Type
                   </label>
-                  <select
+                  <GlassSelect
                     value={paymentEventFilter}
                     onChange={(e) =>
                       setPaymentEventFilter(
@@ -1117,13 +1119,13 @@ const AdminRequests: React.FC = () => {
                           | "MIXED_DOUBLES",
                       )
                     }
-                    className="w-full rounded-lg border border-white/20 bg-[#061D23] px-3 py-2.5 text-sm text-white outline-none focus:border-[#4AEEFF]"
+                    className="w-full"
                   >
-                    <option value="ALL">All Events</option>
-                    <option value="SINGLES">Singles</option>
-                    <option value="DOUBLES">Doubles</option>
-                    <option value="MIXED_DOUBLES">Mixed Doubles</option>
-                  </select>
+                    <option value="ALL" className="bg-[#061D23] text-white">All Events</option>
+                    <option value="SINGLES" className="bg-[#061D23] text-white">Singles</option>
+                    <option value="DOUBLES" className="bg-[#061D23] text-white">Doubles</option>
+                    <option value="MIXED_DOUBLES" className="bg-[#061D23] text-white">Mixed Doubles</option>
+                  </GlassSelect>
                 </div>
               </div>
 

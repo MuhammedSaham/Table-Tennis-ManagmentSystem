@@ -19,6 +19,7 @@ async getTournamentStandings(tournamentId: string, categoryId?: string) {
               id: true,
               firstName: true,
               lastName: true,
+              profileImage: true,
             },
           },
           team: {
@@ -30,6 +31,7 @@ async getTournamentStandings(tournamentId: string, categoryId?: string) {
                       id: true,
                       firstName: true,
                       lastName: true,
+                      profileImage: true,
                     },
                   },
                 },
@@ -61,10 +63,12 @@ async getTournamentStandings(tournamentId: string, categoryId?: string) {
     const createStats = (
       id: string,
       name: string,
-      members: { playerId: string; playerName: string }[] = []
+      members: { playerId: string; playerName: string; profileImage?: string | null }[] = [],
+      profileImage?: string | null
     ) => ({
       playerId: id,
       playerName: name,
+      profileImage: profileImage || null,
       teamId: isDoubles ? id : null,
       participantType: isDoubles ? 'TEAM' : 'PLAYER',
       members,
@@ -87,6 +91,7 @@ async getTournamentStandings(tournamentId: string, categoryId?: string) {
           playerId: member.player.id,
           playerName:
             `${member.player.firstName} ${member.player.lastName}`,
+          profileImage: member.player.profileImage || null,
         }));
 
         const teamName =
@@ -97,7 +102,7 @@ async getTournamentStandings(tournamentId: string, categoryId?: string) {
         if (!stats.has(team.id)) {
           stats.set(
             team.id,
-            createStats(team.id, teamName, members)
+            createStats(team.id, teamName, members, members[0]?.profileImage || null)
           );
         }
       } else {
@@ -108,7 +113,9 @@ async getTournamentStandings(tournamentId: string, categoryId?: string) {
             player.id,
             createStats(
               player.id,
-              `${player.firstName} ${player.lastName}`
+              `${player.firstName} ${player.lastName}`,
+              [],
+              player.profileImage || null
             )
           );
         }
@@ -779,12 +786,13 @@ async getGlobalCategoryStandings(
     for (const player of sortedStats) {
       const user = await prisma.user.findUnique({
         where: { id: player.playerId },
-        select: { firstName: true, lastName: true },
+        select: { firstName: true, lastName: true, profileImage: true },
       });
 
       if (user) {
         player.playerName =
           `${user.firstName} ${user.lastName}`;
+        player.profileImage = user.profileImage || null;
       }
 
       player.participantType = 'PLAYER';
@@ -807,6 +815,7 @@ async getGlobalCategoryStandings(
             id: true,
             firstName: true,
             lastName: true,
+            profileImage: true,
           },
         },
       },
@@ -901,6 +910,7 @@ async getGlobalCategoryStandings(
       playerId: member.player.id,
       playerName:
         `${member.player.firstName} ${member.player.lastName}`,
+      profileImage: member.player.profileImage || null,
     }))
     .sort((a: any, b: any) =>
       a.playerId.localeCompare(b.playerId)
@@ -909,6 +919,7 @@ async getGlobalCategoryStandings(
   teamStats.set(partnershipKey, {
     playerId: partnershipKey,
     teamId: team.id,
+    profileImage: team.members[0]?.player?.profileImage || null,
     playerName: members
       .map((member: any) => member.playerName)
       .join(' & '),

@@ -1156,17 +1156,17 @@ const GroupStandings: React.FC<Props> = ({
         return (
           <div
             key={group.id}
-            className="rounded-xl border border-white/10 bg-[#061D23]/50 shadow-md backdrop-blur-md overflow-hidden"
+            className="rounded-xl bg-white border border-slate-200/90 shadow-sm hover:shadow-md transition-shadow overflow-hidden"
           >
             {/* Group header */}
-            <div className="bg-[#04151a] border-b border-white/10 px-4 py-3 sm:px-6 sm:py-4 flex items-center justify-between gap-3 flex-wrap">
+            <div className="bg-slate-900 border-b border-slate-800 px-4 py-3 sm:px-6 sm:py-3.5 flex items-center justify-between gap-3 flex-wrap">
               <div className="flex items-center gap-2.5">
-                <span className="text-xl">🏆</span>
-                <h3 className="m-0 text-white font-black text-base sm:text-lg uppercase tracking-wider">
+                <span className="text-lg">🏆</span>
+                <h3 className="m-0 text-white font-bold text-base sm:text-lg tracking-wide uppercase">
                   {group.name}
                 </h3>
               </div>
-              <span className="text-xs text-[#4AEEFF] font-mono font-bold px-2.5 py-0.5 rounded-full bg-[#4AEEFF]/15 border border-[#4AEEFF]/30">
+              <span className="text-xs text-slate-950 font-bold px-2.5 py-0.5 rounded-full bg-[#4AEEFF]">
                 {entries.length} {isDoubles ? "teams" : "players"}
               </span>
             </div>
@@ -1462,21 +1462,21 @@ const GroupStandings: React.FC<Props> = ({
             </div>
 
             {/* Legend */}
-            <div className="p-3 sm:p-4 border-t border-white/10 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-300 bg-[#04151a] font-mono">
+            <div className="p-3 sm:p-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-600 bg-slate-50 font-sans">
               <div className="flex items-center gap-3 sm:gap-4 flex-wrap">
                 <span className="flex items-center gap-1.5">
                   <span className="inline-block w-3 h-3 rounded bg-[#dcfce7] border border-[#166534]/30" />
-                  <span className="text-slate-200">Win</span>
+                  <span className="text-slate-700 font-medium">Win</span>
                 </span>
                 <span className="flex items-center gap-1.5">
                   <span className="inline-block w-3 h-3 rounded bg-[#fee2e2] border border-[#991b1b]/30" />
-                  <span className="text-slate-200">Loss</span>
+                  <span className="text-slate-700 font-medium">Loss</span>
                 </span>
-                <span className="text-slate-400">
+                <span className="text-slate-500">
                   MP = Match Points · R = Rank
                 </span>
               </div>
-              <span className="text-xs text-amber-300 font-bold flex items-center gap-1">
+              <span className="text-xs text-emerald-700 font-bold flex items-center gap-1.5">
                 <span>🏆</span> Top 2 advance to knockout
               </span>
             </div>

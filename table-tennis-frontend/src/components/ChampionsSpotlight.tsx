@@ -1,4 +1,4 @@
-
+/*  */
 import React, { useEffect, useState, useRef } from "react";
 import { Link } from "react-router-dom";
 import api from "../services/api";
@@ -143,11 +143,11 @@ const ChampionsSpotlight: React.FC = () => {
           winnersRes.data.data.winners;
         //console.log("WINNERS API RESPONSE:", winnersRes.data.data.winners);
 
-          /*console.log(
-            "FULL WINNERS RESPONSE:",
-            JSON.stringify(winnersRes.data.data.winners, null, 2)
-          );
-          console.log("API BASE URL:", api.defaults.baseURL);*/
+        /*console.log(
+          "FULL WINNERS RESPONSE:",
+          JSON.stringify(winnersRes.data.data.winners, null, 2)
+        );
+        console.log("API BASE URL:", api.defaults.baseURL);*/
 
         for (const category of categoryWinners) {
           if (category.winner) {
@@ -195,13 +195,12 @@ const ChampionsSpotlight: React.FC = () => {
       {/* Background Decoration */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-[#12679E]/10 blur-[120px] rounded-full pointer-events-none" />
 
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+      <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-10 xl:px-14 2xl:px-16 relative z-10">
 
         {/* Section Heading */}
         <div
-          className={`text-center mb-14 scroll-fade-up ${
-            isVisible ? "is-visible" : ""
-          }`}
+          className={`text-center mb-14 scroll-fade-up ${isVisible ? "is-visible" : ""
+            }`}
         >
           <div className="inline-flex items-center gap-2 bg-[#7DC6C7]/10 border border-[#7DC6C7]/25 rounded-full px-4 py-1.5 mb-5">
             <TrophyIcon className="w-4 h-4 text-yellow-400" />
@@ -210,7 +209,7 @@ const ChampionsSpotlight: React.FC = () => {
             </span>
           </div>
 
-          <h2 className="text-3xl md:text-5xl font-extrabold text-white tracking-tight mb-4 font-display">
+          <h2 className="text-3xl md:text-5xl font-extrabold text-white tracking-tight mb-4 font-heading">
             Recent Tournament{" "}
             <span className="bg-gradient-to-r from-yellow-400 via-amber-200 to-white bg-clip-text text-transparent">
               Champions
@@ -229,9 +228,8 @@ const ChampionsSpotlight: React.FC = () => {
             <Link
               key={`${winner.tournamentId}-${winner.categoryName}`}
               to={`/tournaments/${winner.tournamentId}`}
-              className={`group block scroll-fade-up ${
-                isVisible ? "is-visible" : ""
-              }`}
+              className={`group block scroll-fade-up ${isVisible ? "is-visible" : ""
+                }`}
             >
               <div className="h-full bg-[#113842]/90 border border-white/10 rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl hover:border-[#4AEEFF]/40 transition-all duration-300 transform hover:-translate-y-2">
 

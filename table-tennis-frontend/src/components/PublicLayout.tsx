@@ -49,7 +49,7 @@ const PublicLayout: React.FC = () => {
     <div className={`min-h-screen flex flex-col ${wrapperBgClass} w-full overflow-x-hidden max-w-full`}>
       {/* Navbar - Solid Consistent Dark Petrol Teal */}
       <nav className="fixed top-0 left-0 right-0 z-50 bg-[#0D3843] border-b border-white/10 shadow-md transition-all duration-300 w-full">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="w-full px-4 sm:px-6 lg:px-10 xl:px-14 2xl:px-16">
           <div className="flex justify-between items-center h-16 sm:h-20">
             {/* Logo */}
             <Link to="/" className="flex items-center gap-2 group shrink-0">
@@ -227,7 +227,7 @@ const PublicLayout: React.FC = () => {
         <div style={{ position: 'absolute', inset: 0, zIndex: 0 }}>
           <div style={{ position: 'absolute', inset: 0, background: '#061D23', opacity: 0.62, zIndex: 0 }} />
         </div>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12" style={{ position: 'relative', zIndex: 2 }}>
+        <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-10 xl:px-14 2xl:px-16 py-12" style={{ position: 'relative', zIndex: 2 }}>
           <div className="grid grid-cols-1 md:grid-cols-12 gap-6 lg:gap-8">
             <div className="md:col-span-3">
               <div className="flex items-center gap-2 mb-4 slow-blink">
@@ -238,7 +238,7 @@ const PublicLayout: React.FC = () => {
                 />
                 <span className="font-bold text-xl text-white">SAM'S COLLEGE</span>
               </div>
-              <p className="font-bold text-white text-base">
+              <p className="font-script text-white text-lg tracking-wide">
                 Where education meets opportunities
               </p>
             </div>

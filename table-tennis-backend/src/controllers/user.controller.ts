@@ -122,6 +122,13 @@ export const getPublicProfile = catchAsync(async (req: Request, res: Response) =
           dateOfBirth: true,
           ranking: true,
           rankingNote: true,
+          gender: true,
+          isClubMember: true,
+        },
+      },
+      _count: {
+        select: {
+          tournamentRegistrations: true,
         },
       },
     },
@@ -152,6 +159,7 @@ export const getPublicProfile = catchAsync(async (req: Request, res: Response) =
 
   sendResponse(res, 200, 'Public profile retrieved successfully', {
     ...user,
+    tournamentsCount: user._count?.tournamentRegistrations ?? 0,
     totalFavorites,
     isFavorited,
   });
@@ -180,6 +188,7 @@ export const getPublicPlayers = catchAsync(async (req: Request, res: Response) =
           clubAffiliation: true,
           dateOfBirth: true,
           ranking: true,
+          gender: true,
           isClubMember: true,
         },
       },
@@ -192,9 +201,10 @@ export const getPublicPlayers = catchAsync(async (req: Request, res: Response) =
     orderBy: { firstName: 'asc' },
   });
 
-  // Flatten isClubMember, ranking, and totalFavorites to root level
+  // Flatten isClubMember, ranking, gender, and totalFavorites to root level
   const result = players.map(p => ({
     ...p,
+    gender: p.playerProfile?.gender ?? null,
     ranking: p.playerProfile?.ranking ?? null,
     isClubMember: p.playerProfile?.isClubMember ?? false,
     totalFavorites: p._count?.favoritesReceived ?? 0,
