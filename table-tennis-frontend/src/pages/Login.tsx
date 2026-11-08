@@ -501,6 +501,20 @@ const Login: React.FC = () => {
           padding: 18px 20px !important;
         }
       }
+
+      /* Tablet and smaller screens */
+@media (min-width: 601px) and (max-width: 900px) {
+  .login-root {
+    justify-content: flex-end !important;
+  }
+
+  .login-card {
+    width: 48% !important;
+    max-width: 440px !important;
+    margin: 12px 12px 12px 0 !important;
+    padding: 18px 20px !important;
+  }
+}
     `}</style>
 
       <div className="login-root" style={styles.root}>
@@ -523,7 +537,7 @@ const Login: React.FC = () => {
         </div>
 
         {/* ── RIGHT: Transparent sign-in card ── */}
-        <div style={styles.card}>
+        <div className="login-card" style={styles.card}>
           <div style={styles.accentBar} />
 
           {!showForgotPassword ? (

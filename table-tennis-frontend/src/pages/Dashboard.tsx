@@ -7,6 +7,7 @@ import {
   TrophyIcon,
   CalendarIcon,
   ChartBarIcon,
+  ClipboardDocumentCheckIcon,
   UserGroupIcon,
   InboxStackIcon,
   ChevronRightIcon,
@@ -97,8 +98,7 @@ const Dashboard: React.FC = () => {
         const players = res.data?.data || [];
         const ranked = players
           .filter(
-            (p: any) =>
-              p.playerProfile?.ranking && p.playerProfile.ranking > 0,
+            (p: any) => p.playerProfile?.ranking && p.playerProfile.ranking > 0,
           )
           .sort(
             (a: any, b: any) =>
@@ -121,9 +121,7 @@ const Dashboard: React.FC = () => {
           const guests = allUsers.filter(
             (u: any) => u.role === "PLAYER" && !u.isClubMember,
           ).length;
-          const refs = allUsers.filter(
-            (u: any) => u.role === "REFEREE",
-          ).length;
+          const refs = allUsers.filter((u: any) => u.role === "REFEREE").length;
           setUserDirectoryStats({ members, guests, referees: refs });
         })
         .catch(() => {});
@@ -274,13 +272,19 @@ const Dashboard: React.FC = () => {
       {/* HEADER CONTROLS MODULE */}
       <header className="rounded-2xl border border-white/20 bg-[#061D23]/20 p-5 sm:p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#4AEEFF]/10 border border-[#4AEEFF]/30 text-[#4AEEFF] text-[11px] font-bold uppercase tracking-wider mb-2.5">
-          <span>Administration · Tournament Operations</span>
+          <span>
+            {isPlayer
+              ? "Player Dashboard"
+              : "Administration · Tournament Operations"}
+          </span>
         </div>
         <h1 className="text-2xl sm:text-3xl lg:text-4xl font-heading font-extrabold text-white tracking-tight">
           Welcome back, {user?.firstName}!
         </h1>
         <p className="text-xs sm:text-sm text-cyan-200/80 mt-1">
-          Monitor club activity, process pending requests, and manage tournament leaderboards.
+          {isPlayer
+            ? "Manage your tournaments, matches and registrations."
+            : "Monitor club activity, process pending requests, and manage tournament leaderboards."}
         </p>
       </header>
 
@@ -294,12 +298,16 @@ const Dashboard: React.FC = () => {
                 Management Hub
               </h2>
             </div>
-            <span className="text-xs text-white/50">Club administration shortcuts</span>
+            <span className="text-xs text-white/50">
+              Club administration shortcuts
+            </span>
           </div>
 
           <main className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {/* Card 1: Requests */}
-            {(isSuperAdmin || hasPermission("MANAGE_CLUB_MEMBERSHIPS") || hasPermission("MANAGE_REGISTRATIONS")) && (
+            {(isSuperAdmin ||
+              hasPermission("MANAGE_CLUB_MEMBERSHIPS") ||
+              hasPermission("MANAGE_REGISTRATIONS")) && (
               <Link
                 to="/app/admin-requests"
                 className="group relative flex flex-col justify-between rounded-2xl border border-white/20 bg-[#061D23]/20 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl transition-all duration-300 hover:border-[#4AEEFF]/60 hover:-translate-y-1"
@@ -393,7 +401,8 @@ const Dashboard: React.FC = () => {
                     Player Rankings
                   </h3>
                   <p className="text-xs text-white/70 mt-1 leading-relaxed">
-                    Club rankings, match statistics, and global tournament leaderboards.
+                    Club rankings, match statistics, and global tournament
+                    leaderboards.
                   </p>
 
                   {/* Live Top 3 Podium Preview */}
@@ -410,8 +419,8 @@ const Dashboard: React.FC = () => {
                                 idx === 0
                                   ? "bg-amber-400 text-slate-950"
                                   : idx === 1
-                                  ? "bg-slate-300 text-slate-900"
-                                  : "bg-amber-700 text-white"
+                                    ? "bg-slate-300 text-slate-900"
+                                    : "bg-amber-700 text-white"
                               }`}
                             >
                               {idx + 1}
@@ -460,7 +469,8 @@ const Dashboard: React.FC = () => {
                     User Directory
                   </h3>
                   <p className="text-xs text-white/70 mt-1 leading-relaxed">
-                    Manage club members, guest players, referees, and permissions.
+                    Manage club members, guest players, referees, and
+                    permissions.
                   </p>
 
                   {/* Live Breakdown Stats */}
@@ -588,48 +598,83 @@ const Dashboard: React.FC = () => {
         </section>
       )}
 
-      {/* NEW TOURNAMENTS MODULE (ONLY FOR PLAYERS / REFEREES) */}
-      {!isAdmin && newTournaments.length > 0 && (
-        <section className="rounded-2xl border border-white/20 bg-[#061D23]/10 p-4 sm:p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl">
+      {/* PLAYER DASHBOARD QUICK ACCESS */}
+      {isPlayer && (
+        <section className="grid grid-cols-1 gap-5 md:grid-cols-3">
+          {/* TOURNAMENTS */}
+          <Link
+            to="/app/tournaments"
+            className="group rounded-2xl border border-white/20 bg-[#061D23]/20 p-6 backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:border-[#4AEEFF]/60 hover:bg-[#061D23]/40"
+          >
+            <TrophyIcon className="mb-4 h-9 w-9 text-[#4AEEFF]" />
+
+            <h3 className="text-lg font-bold text-white group-hover:text-[#4AEEFF]">
+              Tournaments
+            </h3>
+
+            <p className="mt-2 text-sm text-white/65">
+              Browse available tournaments and register for upcoming events.
+            </p>
+          </Link>
+
+          {/* MY MATCHES */}
+          <Link
+            to="/app/my-matches"
+            className="group rounded-2xl border border-white/20 bg-[#061D23]/20 p-6 backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:border-[#4AEEFF]/60 hover:bg-[#061D23]/40"
+          >
+            <CalendarIcon className="mb-4 h-9 w-9 text-[#4AEEFF]" />
+
+            <h3 className="text-lg font-bold text-white group-hover:text-[#4AEEFF]">
+              My Matches
+            </h3>
+
+            <p className="mt-2 text-sm text-white/65">
+              View your upcoming matches, schedules and results.
+            </p>
+          </Link>
+
+          {/* MY REGISTRATIONS */}
+          <Link
+            to="/app/my-registrations"
+            className="group rounded-2xl border border-white/20 bg-[#061D23]/20 p-6 backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:border-[#4AEEFF]/60 hover:bg-[#061D23]/40"
+          >
+            <ClipboardDocumentCheckIcon className="mb-4 h-9 w-9 text-[#4AEEFF]" />
+
+            <h3 className="text-lg font-bold text-white group-hover:text-[#4AEEFF]">
+              My Registrations
+            </h3>
+
+            <p className="mt-2 text-sm text-white/65">
+              Track tournament registrations, approvals and pending requests.
+            </p>
+          </Link>
+        </section>
+      )}
+
+      {/* REFEREE UPCOMING TOURNAMENTS */}
+      {user?.role === "REFEREE" && newTournaments.length > 0 && (
+        <section className="rounded-2xl border border-white/20 bg-[#061D23]/10 p-4 sm:p-6 backdrop-blur-xl">
           <div className="mb-4 flex items-center gap-2">
-            <TrophyIcon className="h-5 w-5 text-[#4AEEFF] shrink-0" />
+            <TrophyIcon className="h-5 w-5 text-[#4AEEFF]" />
             <h2 className="text-xs font-black uppercase tracking-widest text-[#4AEEFF]">
               New Tournaments Available!
             </h2>
           </div>
-          <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
             {newTournaments.map((tournament) => (
               <Link
                 key={tournament.id}
                 to={`/app/tournaments/${tournament.id}`}
-                className="group flex flex-col justify-between rounded-xl border border-white/10 bg-[#061D23]/40 p-4 sm:p-5 transition-all hover:border-[#4AEEFF]/60 hover:bg-[#061D23]/70 shadow-lg"
+                className="group rounded-xl border border-white/10 bg-[#061D23]/40 p-5 hover:border-[#4AEEFF]/60"
               >
-                <div>
-                  <h3 className="font-bold text-base sm:text-lg text-white group-hover:text-[#4AEEFF] transition-colors line-clamp-2 leading-snug">
-                    {tournament.name}
-                  </h3>
-                  <p className="mt-2 text-xs text-white/70 font-mono flex items-center gap-1.5 truncate">
-                    <MapPinIcon className="h-3.5 w-3.5 text-[#4AEEFF] shrink-0" />
-                    <span className="truncate">{tournament.venue}</span>
-                  </p>
-                  <p className="mt-1.5 text-xs text-white/50 font-mono">
-                    Register by:{" "}
-                    {new Date(
-                      tournament.registrationDeadline,
-                    ).toLocaleDateString(undefined, {
-                      year: "numeric",
-                      month: "short",
-                      day: "numeric",
-                    })}
-                  </p>
-                </div>
-                <div className="mt-4 pt-3 border-t border-white/10 flex items-center justify-between">
-                  <span className="w-full sm:w-auto text-center rounded-xl bg-[#4AEEFF] px-4 py-2 text-xs font-black uppercase tracking-wider text-[#061D23] transition-all group-hover:bg-white shadow-md shadow-[#4AEEFF]/20">
-                    {user?.role === "REFEREE"
-                      ? "View Tournament →"
-                      : "Register Now →"}
-                  </span>
-                </div>
+                <h3 className="font-bold text-white">{tournament.name}</h3>
+
+                <p className="mt-2 text-xs text-white/70">{tournament.venue}</p>
+
+                <p className="mt-2 text-xs font-bold text-[#4AEEFF]">
+                  View Tournament →
+                </p>
               </Link>
             ))}
           </div>
@@ -648,22 +693,6 @@ const Dashboard: React.FC = () => {
           Email: {user?.email}
         </p>
       </section>
-
-      {/* QUICK LINKS GRID */}
-      {isPlayer && (
-        <main className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          <Link
-            to="/app/my-matches"
-            className="group rounded-[16px] border border-white/20 bg-[#061D23]/10 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl transition-all hover:border-[#4AEEFF]"
-          >
-            <CalendarIcon className="mb-3 h-8 w-8 text-[#4AEEFF]" />
-            <h3 className="mb-2 font-black uppercase tracking-wider text-white group-hover:text-[#4AEEFF] transition-colors">
-              My Matches
-            </h3>
-            <p className="text-xs text-white/70">Check your upcoming matches</p>
-          </Link>
-        </main>
-      )}
     </>,
   );
 };
