@@ -77,7 +77,7 @@ const FeaturedTournaments: React.FC = () => {
       ref={sectionRef}
       className="py-16 sm:py-24 bg-[#0D3039] relative border-t border-white/10 overflow-hidden w-full"
     >
-      <div className="relative container mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="relative max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-10 xl:px-14 2xl:px-16">
         {/* Header with prominent, smooth down-to-up entrance */}
         <div
           className={`text-center mb-12 sm:mb-16 scroll-fade-up ${
@@ -94,7 +94,7 @@ const FeaturedTournaments: React.FC = () => {
             </span>
           </div>
 
-          <h2 className="font-jakarta text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight mb-4">
+          <h2 className="font-heading text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight mb-4">
             Upcoming Tournaments
           </h2>
           <p className="text-slate-200 text-sm sm:text-base lg:text-lg max-w-2xl mx-auto leading-relaxed">

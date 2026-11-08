@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import api from "../services/api";
 import toast from "react-hot-toast";
+import BackButton from "../components/BackButton";
 import { UmpireSheet } from "../components/GroupStandings";
 import type { GroupMatch, GameScore } from "../components/GroupStandings";
 import { UmpireSheet as KnockoutUmpireSheet } from "../components/KnockoutBracket";
@@ -333,7 +334,7 @@ const RefereeMatches: React.FC = () => {
       <div className="fixed inset-0 bg-[#061D23]/25" />
       <div className="fixed inset-0 bg-gradient-to-b from-[#061D23]/20 via-transparent to-[#061D23]/35" />
 
-      <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-7xl flex-col space-y-6">
+      <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-[1600px] flex-col space-y-6 px-4 sm:px-6 lg:px-10 xl:px-14 py-4 sm:py-6 lg:py-8">
         {children}
       </div>
     </div>
@@ -392,6 +393,7 @@ const RefereeMatches: React.FC = () => {
       <div className="pt-6 sm:pt-8">
         <header className="flex flex-col gap-3 rounded-[20px] border border-white/20 bg-[#061D23]/35 p-4 sm:p-5 lg:p-5 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.6)] backdrop-blur-xl">
           <div>
+            <BackButton to="/" label="Back to Home" className="mb-3" />
             <div className="flex items-center gap-2 mb-2 flex-wrap">
               <span className="w-2 h-5 bg-[#4AEEFF] rounded-full shadow-[0_0_10px_#4AEEFF]"></span>
               <span className="px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-md bg-[#4AEEFF]/15 text-[#4AEEFF] border border-[#4AEEFF]/30">
@@ -572,20 +574,20 @@ const RefereeMatches: React.FC = () => {
         <div className="flex gap-2">
           <button
             onClick={() => setMatchType("knockout")}
-            className={`rounded-xl border px-4 py-2 text-xs font-black uppercase tracking-wider transition-all ${
+            className={`rounded-xl px-4 py-2 text-xs font-bold uppercase tracking-wider transition-all duration-200 ${
               matchType === "knockout"
-                ? "border-[#4AEEFF] bg-[#4AEEFF] text-[#061D23] shadow-md shadow-[#4AEEFF]/20"
-                : "border-white/10 bg-[#061D23]/40 text-white/70 hover:border-[#4AEEFF]/40 hover:text-white"
+                ? "bg-[#4AEEFF]/15 text-[#4AEEFF] border border-[#4AEEFF]/45 shadow-[0_0_14px_rgba(74,238,255,0.18)] backdrop-blur-md"
+                : "border border-white/10 bg-white/5 text-white/70 hover:bg-white/10 hover:text-white"
             }`}
           >
             Knockout Stage
           </button>
           <button
             onClick={() => setMatchType("group")}
-            className={`rounded-xl border px-4 py-2 text-xs font-black uppercase tracking-wider transition-all ${
+            className={`rounded-xl px-4 py-2 text-xs font-bold uppercase tracking-wider transition-all duration-200 ${
               matchType === "group"
-                ? "border-[#4AEEFF] bg-[#4AEEFF] text-[#061D23] shadow-md shadow-[#4AEEFF]/20"
-                : "border-white/10 bg-[#061D23]/40 text-white/70 hover:border-[#4AEEFF]/40 hover:text-white"
+                ? "bg-[#4AEEFF]/15 text-[#4AEEFF] border border-[#4AEEFF]/45 shadow-[0_0_14px_rgba(74,238,255,0.18)] backdrop-blur-md"
+                : "border border-white/10 bg-white/5 text-white/70 hover:bg-white/10 hover:text-white"
             }`}
           >
             Group Stage
@@ -593,33 +595,33 @@ const RefereeMatches: React.FC = () => {
         </div>
 
         {/* Status filters */}
-        <div className="flex gap-2 border-t lg:border-t-0 lg:border-l border-white/10 pt-3 lg:pt-0  lg:pl-3 flex-wrap">
+        <div className="flex gap-2 border-t lg:border-t-0 lg:border-l border-white/10 pt-3 lg:pt-0 lg:pl-3 flex-wrap">
           <button
             onClick={() => setFilter("all")}
-            className={`rounded-xl border px-3.5 py-1.5 text-xs font-black uppercase tracking-wider transition-all ${
+            className={`rounded-xl px-3.5 py-1.5 text-xs font-bold uppercase tracking-wider transition-all duration-200 ${
               filter === "all"
-                ? "border-[#4AEEFF] bg-[#4AEEFF] text-[#061D23] shadow-md shadow-[#4AEEFF]/20"
-                : "border-white/10 bg-[#061D23]/40 text-white/70 hover:border-[#4AEEFF]/40 hover:text-white"
+                ? "bg-[#4AEEFF]/15 text-[#4AEEFF] border border-[#4AEEFF]/45 shadow-[0_0_14px_rgba(74,238,255,0.18)] backdrop-blur-md"
+                : "border border-white/10 bg-white/5 text-white/70 hover:bg-white/10 hover:text-white"
             }`}
           >
             All
           </button>
           <button
             onClick={() => setFilter("pending")}
-            className={`rounded-xl border px-3.5 py-1.5 text-xs font-black uppercase tracking-wider transition-all ${
+            className={`rounded-xl px-3.5 py-1.5 text-xs font-bold uppercase tracking-wider transition-all duration-200 ${
               filter === "pending"
-                ? "border-[#4AEEFF] bg-[#4AEEFF] text-[#061D23] shadow-md shadow-[#4AEEFF]/20"
-                : "border-white/10 bg-[#061D23]/40 text-white/70 hover:border-[#4AEEFF]/40 hover:text-white"
+                ? "bg-[#4AEEFF]/15 text-[#4AEEFF] border border-[#4AEEFF]/45 shadow-[0_0_14px_rgba(74,238,255,0.18)] backdrop-blur-md"
+                : "border border-white/10 bg-white/5 text-white/70 hover:bg-white/10 hover:text-white"
             }`}
           >
             Pending
           </button>
           <button
             onClick={() => setFilter("completed")}
-            className={`rounded-xl border px-3.5 py-1.5 text-xs font-black uppercase tracking-wider transition-all ${
+            className={`rounded-xl px-3.5 py-1.5 text-xs font-bold uppercase tracking-wider transition-all duration-200 ${
               filter === "completed"
-                ? "border-[#4AEEFF] bg-[#4AEEFF] text-[#061D23] shadow-md shadow-[#4AEEFF]/20"
-                : "border-white/10 bg-[#061D23]/40 text-white/70 hover:border-[#4AEEFF]/40 hover:text-white"
+                ? "bg-[#4AEEFF]/15 text-[#4AEEFF] border border-[#4AEEFF]/45 shadow-[0_0_14px_rgba(74,238,255,0.18)] backdrop-blur-md"
+                : "border border-white/10 bg-white/5 text-white/70 hover:bg-white/10 hover:text-white"
             }`}
           >
             Completed

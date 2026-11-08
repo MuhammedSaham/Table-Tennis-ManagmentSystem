@@ -940,6 +940,7 @@ const MatchCard: React.FC<{
   onEdit: (m: KnockoutMatch) => void; // ← NEW
   onAssignReferee?: (m: KnockoutMatch) => void;
   accent?: string;
+  cardWidth?: number;
 }> = ({
   match,
   matchLabel,
@@ -949,6 +950,7 @@ const MatchCard: React.FC<{
   onEdit,
   onAssignReferee,
   accent,
+  cardWidth = CW,
 }) => {
   const isWalkover = match.status === "WALKOVER" || match.score === "W/O";
   const isBye = match.score === "BYE";
@@ -1000,7 +1002,7 @@ const MatchCard: React.FC<{
     <div
       onClick={() => !isBye && !isWalkover && onOpen(match)}
       style={{
-        width: CW,
+        width: cardWidth,
         cursor: isBye || isWalkover ? "default" : "pointer",
         fontFamily: "'Segoe UI',system-ui,sans-serif",
       }}
@@ -1354,10 +1356,43 @@ const BracketCanvas: React.FC<{
   const mainCols = cols.filter((c) => c.label !== "3rd Place Playoff");
   const tpCol = cols.find((c) => c.label === "3rd Place Playoff");
 
+  // Dynamic layout calculations based on the number of rounds (Bracket Size):
+  // - 5+ rounds (R32/R64): compact cards (220px) with 36px gap so wide brackets fit cleanly
+  // - 4 rounds (Round of 16): wider cards (265px) with 56px gap so it fills standard viewports
+  // - 3 rounds (Quarter-Finals / 8 players): 285px cards with 68px gap, centered
+  // - 2 rounds (Semi-Finals / 4 players): 300px cards with 80px gap, centered
+  // - 1 round (Final only): 320px championship card, centered
+  const colCount = mainCols.length;
+  let currentCW = CW;
+  let currentHG = HG;
+  let isCentered = false;
+
+  if (colCount >= 5) {
+    currentCW = 220;
+    currentHG = 36;
+    isCentered = false;
+  } else if (colCount === 4) {
+    currentCW = 265;
+    currentHG = 56;
+    isCentered = true;
+  } else if (colCount === 3) {
+    currentCW = 285;
+    currentHG = 68;
+    isCentered = true;
+  } else if (colCount === 2) {
+    currentCW = 300;
+    currentHG = 80;
+    isCentered = true;
+  } else if (colCount <= 1) {
+    currentCW = 320;
+    currentHG = 40;
+    isCentered = true;
+  }
+
   // Determine height from the first/largest round (Round of 32 or Round of 16)
   const n0 = mainCols.length > 0 ? mainCols[0].entries.length : 1;
   const bodyH = Math.max(n0 * CH + (n0 - 1) * VGAP, CH);
-  const totalW = cols.length * CW + (cols.length - 1) * HG;
+  const totalW = cols.length * currentCW + (cols.length - 1) * currentHG;
 
   // cyMap[ci][mi] stores the exact vertical center-Y of match mi in column ci
   const cyMap: number[][] = [];
@@ -1399,9 +1434,9 @@ const BracketCanvas: React.FC<{
   for (let ci = 0; ci < mainCols.length - 1; ci++) {
     const lc = mainCols[ci],
       rc = mainCols[ci + 1];
-    const lx = ci * (CW + HG) + CW;
-    const rx = (ci + 1) * (CW + HG);
-    const mx = lx + HG / 2;
+    const lx = ci * (currentCW + currentHG) + currentCW;
+    const rx = (ci + 1) * (currentCW + currentHG);
+    const mx = lx + currentHG / 2;
 
     rc.entries.forEach((rEntry, ri) => {
       const rY = cyMap[ci + 1]?.[ri] ?? ri * (CH + VGAP) + CH / 2;
@@ -1497,7 +1532,12 @@ const BracketCanvas: React.FC<{
 
   return (
     <div
-      style={{ position: "relative", width: totalW, height: bodyH + LH + 16 }}
+      style={{
+        position: "relative",
+        width: totalW,
+        height: bodyH + LH + 16,
+        margin: isCentered ? "0 auto" : undefined,
+      }}
     >
       {/* Column labels */}
       {cols.map((col, ci) => (
@@ -1507,36 +1547,23 @@ const BracketCanvas: React.FC<{
           style={{
             position: "absolute",
             top: 0,
-            left: ci * (CW + HG),
-            width: CW,
+            left: ci * (currentCW + currentHG),
+            width: currentCW,
             display: "flex",
             justifyContent: "center",
           }}
         >
-          <div
+          <span
             style={{
-              padding: "4px 12px",
-              borderRadius: 14,
-              background: col.accent
-                ? `${col.accent}20`
-                : "rgba(255, 255, 255, 0.08)",
-              border: `1px solid ${
-                col.accent ? `${col.accent}60` : "rgba(255, 255, 255, 0.15)"
-              }`,
               color: col.accent ?? "#4AEEFF",
               fontWeight: 800,
-              fontSize: 10,
-              letterSpacing: 1,
+              fontSize: 11,
+              letterSpacing: 1.5,
               textTransform: "uppercase",
-              display: "flex",
-              alignItems: "center",
-              gap: 5,
             }}
           >
-            {col.label === "Final" && "🏆"}
-            {col.label === "3rd Place Playoff" && "🥉"}
             {col.label}
-          </div>
+          </span>
         </div>
       ))}
 
@@ -1584,7 +1611,7 @@ const BracketCanvas: React.FC<{
               style={{
                 position: "absolute",
                 top: LH + 16 + topY,
-                left: ci * (CW + HG),
+                left: ci * (currentCW + currentHG),
               }}
             >
               <MatchCard
@@ -1596,6 +1623,7 @@ const BracketCanvas: React.FC<{
                 onEdit={onEdit}
                 onAssignReferee={onAssignReferee}
                 accent={col.accent}
+                cardWidth={currentCW}
               />
             </div>
           );
@@ -1985,161 +2013,9 @@ const KnockoutBracket: React.FC<KnockoutBracketProps> = ({
         overflow: "visible",
       }}
     >
-      {/* Header */}
-      <div style={{ textAlign: "center", marginBottom: 28 }}>
-        <div
-          style={{
-            fontSize: 11,
-            fontWeight: 900,
-            color: "#4AEEFF",
-            letterSpacing: 2,
-            textTransform: "uppercase",
-            marginBottom: 6,
-          }}
-        >
-          Knockout Draw
-        </div>
-        <h2
-          style={{
-            margin: 0,
-            fontSize: 26,
-            fontWeight: 900,
-            color: "#ffffff",
-            letterSpacing: 1,
-            textTransform: "uppercase",
-          }}
-        >
-          Tournament Bracket
-        </h2>
-        <p
-          style={{
-            margin: "6px 0 0",
-            fontSize: 13,
-            color: "rgba(255, 255, 255, 0.6)",
-          }}
-        >
-          All matches best of 5 games · Click any match to record score
-        </p>
-      </div>
-
-      {/* Toolbar */}
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          gap: 12,
-          marginBottom: 20,
-          flexWrap: "wrap",
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
-            flexWrap: "wrap",
-          }}
-        >
-          {isAdmin && (
-            <span
-              style={{
-                fontSize: 12,
-                color: "#4AEEFF",
-                fontWeight: 600,
-              }}
-            >
-              💡 Click any match card to open umpire sheet · ✏️ Edit to change
-              players
-            </span>
-          )}
-          {isReferee && (
-            <span
-              style={{
-                fontSize: 12,
-                color: "#4AEEFF",
-                fontWeight: 600,
-              }}
-            >
-              💡 Click your assigned match to record score
-            </span>
-          )}
-          {/* Quick jump pills */}
-          <div
-            style={{
-              display: "flex",
-              gap: 6,
-              flexWrap: "wrap",
-              alignItems: "center",
-            }}
-          >
-            <span
-              style={{
-                fontSize: 10,
-                fontWeight: 800,
-                color: "rgba(255, 255, 255, 0.45)",
-                textTransform: "uppercase",
-                letterSpacing: 0.5,
-              }}
-            >
-              Jump:
-            </span>
-            {cols.map((c, idx) => (
-              <button
-                key={c.label}
-                onClick={() => {
-                  const el = document.getElementById(`bracket-col-${idx}`);
-                  if (el) {
-                    el.scrollIntoView({
-                      behavior: "smooth",
-                      inline: "center",
-                      block: "nearest",
-                    });
-                  }
-                }}
-                style={{
-                  padding: "4px 10px",
-                  borderRadius: 16,
-                  background: c.accent
-                    ? `${c.accent}25`
-                    : "rgba(255, 255, 255, 0.08)",
-                  border: `1px solid ${c.accent ? `${c.accent}70` : "rgba(255, 255, 255, 0.2)"}`,
-                  color: c.accent ?? "#4AEEFF",
-                  fontSize: 11,
-                  fontWeight: 800,
-                  cursor: "pointer",
-                  transition: "all 0.15s ease",
-                }}
-              >
-                {c.label === "Final" ? "🏆 Final" : c.label}
-              </button>
-            ))}
-          </div>
-        </div>
-        <button
-          onClick={load}
-          style={{
-            padding: "8px 18px",
-            background: "rgba(74, 238, 255, 0.12)",
-            color: "#4AEEFF",
-            border: "1px solid rgba(74, 238, 255, 0.35)",
-            borderRadius: 10,
-            fontWeight: 700,
-            fontSize: 12,
-            textTransform: "uppercase",
-            letterSpacing: 0.5,
-            cursor: "pointer",
-            transition: "all 0.2s",
-          }}
-        >
-          🔄 Refresh Draw
-        </button>
-      </div>
-
       {/* Mobile Swipe Hint */}
       <div className="sm:hidden px-3.5 py-2 mb-3 rounded-xl bg-[#4AEEFF]/10 border border-[#4AEEFF]/25 text-xs text-[#4AEEFF] flex items-center justify-between font-mono">
         <span>↔ Swipe across bracket</span>
-        <span className="text-[10px] text-white/60">Use Jump pills above</span>
       </div>
 
       {/* Bracket */}
@@ -2158,7 +2034,7 @@ const KnockoutBracket: React.FC<KnockoutBracketProps> = ({
         <div
           style={{
             display: "flex",
-            justifyContent: "flex-start",
+            justifyContent: "center",
             width: "max-content",
             minWidth: "100%",
             padding: "8px 24px 20px 24px",
@@ -2174,48 +2050,6 @@ const KnockoutBracket: React.FC<KnockoutBracketProps> = ({
             onEdit={setEditingMatch}
             onAssignReferee={isAdmin ? setAssignRefereeMatch : undefined}
           />
-        </div>
-      </div>
-
-      {/* Footer */}
-      <div
-        style={{
-          marginTop: 12,
-          padding: "12px 18px",
-          background: "rgba(6, 29, 35, 0.5)",
-          border: "1px solid rgba(255, 255, 255, 0.1)",
-          borderRadius: 12,
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          fontSize: 12,
-          color: "rgba(255, 255, 255, 0.6)",
-          flexWrap: "wrap",
-          gap: 12,
-        }}
-      >
-        <span>Matches are standard best of 5 games</span>
-        <div style={{ display: "flex", gap: 20 }}>
-          {[
-            ["#22c55e", "Winner / Completed"],
-            ["rgba(74, 238, 255, 0.3)", "Upcoming Match"],
-          ].map(([c, l]) => (
-            <span
-              key={l}
-              style={{ display: "flex", alignItems: "center", gap: 6 }}
-            >
-              <div
-                style={{
-                  width: 14,
-                  height: 14,
-                  borderRadius: 4,
-                  background: c,
-                  border: "1px solid rgba(255, 255, 255, 0.2)",
-                }}
-              />
-              {l}
-            </span>
-          ))}
         </div>
       </div>
 

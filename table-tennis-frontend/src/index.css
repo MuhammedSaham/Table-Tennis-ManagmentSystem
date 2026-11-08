@@ -9,6 +9,7 @@
   
   html,
   body {
+    font-family: 'Ebrima', 'Inter', system-ui, -apple-system, sans-serif;
     margin: 0;
     padding: 0;
     min-height: 100%;
@@ -22,7 +23,8 @@
   }
 
   body {
-    @apply bg-gray-50 font-sans text-gray-900 antialiased;
+    font-family: 'Ebrima', 'Inter', system-ui, -apple-system, sans-serif;
+    @apply bg-gray-50 text-gray-900 antialiased;
     line-height: 1.55;
   }
 
@@ -34,7 +36,8 @@
   }
   
   h1, h2, h3, h4, h5, h6 {
-    @apply font-heading font-semibold;
+    font-family: 'Ebrima', 'Inter', system-ui, -apple-system, sans-serif;
+    @apply font-semibold;
     line-height: 1.2;
   }
 }
@@ -171,22 +174,22 @@
   @keyframes fadeUpEntrance {
     0% {
       opacity: 0;
-      transform: translateY(38px);
+      transform: translateY(42px) scale(0.96);
     }
     100% {
       opacity: 1;
-      transform: translateY(0);
+      transform: translateY(0) scale(1);
     }
   }
 
   .animate-fade-up-1 {
-    animation: fadeUpEntrance 0.85s cubic-bezier(0.16, 1, 0.3, 1) 0.1s both;
+    animation: fadeUpEntrance 0.75s cubic-bezier(0.16, 1, 0.3, 1) 0.05s both;
   }
   .animate-fade-up-2 {
-    animation: fadeUpEntrance 0.9s cubic-bezier(0.16, 1, 0.3, 1) 0.25s both;
+    animation: fadeUpEntrance 0.85s cubic-bezier(0.16, 1, 0.3, 1) 0.18s both;
   }
   .animate-fade-up-3 {
-    animation: fadeUpEntrance 0.9s cubic-bezier(0.16, 1, 0.3, 1) 0.4s both;
+    animation: fadeUpEntrance 0.85s cubic-bezier(0.16, 1, 0.3, 1) 0.32s both;
   }
   .animate-fade-up-4 {
     animation: fadeUpEntrance 0.95s cubic-bezier(0.16, 1, 0.3, 1) 0.55s both;
@@ -298,6 +301,97 @@
 
   .animate-button-aura {
     animation: buttonAura 2.6s ease-in-out infinite;
+  }
+
+  /* Showcase Winners Entrance Animations */
+  @keyframes showcaseChampionIn {
+    from {
+      opacity: 0;
+      transform: translateX(50px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes showcaseRunnerUpIn {
+    from {
+      opacity: 0;
+      transform: translateX(-50px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes showcaseThirdIn {
+    from {
+      opacity: 0;
+      transform: translateX(-50px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  @media (max-width: 767px) {
+    @keyframes showcaseChampionIn {
+      from {
+        opacity: 0;
+        transform: translateX(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    @keyframes showcaseRunnerUpIn {
+      from {
+        opacity: 0;
+        transform: translateX(-20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    @keyframes showcaseThirdIn {
+      from {
+        opacity: 0;
+        transform: translateX(-20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+  }
+
+  .animate-showcase-champion {
+    animation: showcaseChampionIn 600ms cubic-bezier(0.22, 1, 0.36, 1) 0ms both;
+  }
+
+  .animate-showcase-runnerup {
+    animation: showcaseRunnerUpIn 600ms cubic-bezier(0.22, 1, 0.36, 1) 120ms both;
+  }
+
+  .animate-showcase-third {
+    animation: showcaseThirdIn 600ms cubic-bezier(0.22, 1, 0.36, 1) 240ms both;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .animate-showcase-champion,
+    .animate-showcase-runnerup,
+    .animate-showcase-third {
+      animation: none !important;
+      opacity: 1 !important;
+      transform: none !important;
+    }
   }
   
   /* Table styles */

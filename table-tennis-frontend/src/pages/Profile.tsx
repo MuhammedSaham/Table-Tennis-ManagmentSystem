@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
+import BackButton from "../components/BackButton";
+import GlassSelect from "../components/GlassSelect";
 import { useAuth } from "../context/AuthContext";
 import api, { getProfileImageUrl } from "../services/api";
 import toast from "react-hot-toast";
@@ -456,7 +458,7 @@ const Profile: React.FC = () => {
       <div className="fixed inset-0 bg-[#061D23]/25" />
       <div className="fixed inset-0 bg-gradient-to-b from-[#061D23]/20 via-transparent to-[#061D23]/35" />
 
-      <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-7xl flex-col space-y-6 p-4 sm:p-6 lg:p-8">
+      <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-[1600px] flex-col space-y-6 px-4 sm:px-6 lg:px-10 xl:px-14 py-4 sm:py-6 lg:py-8">
         {children}
       </div>
     </div>
@@ -483,28 +485,24 @@ const Profile: React.FC = () => {
   return wrapInBaseLayout(
     <>
       {/* ─── HEADER ─── */}
-      <header className="flex flex-col justify-between gap-4 rounded-[16px] border border-white/20 bg-[#061D23]/8 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl sm:flex-row sm:items-center sm:p-8">
+      <header className="flex flex-col justify-between gap-4 rounded-2xl border border-white/20 bg-[#061D23]/20 p-5 sm:p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl sm:flex-row sm:items-center">
         <div>
-          <div className="mb-4 h-[3px] w-16 bg-[#4AEEFF]" />
-          <h1 className="mb-2 text-2xl font-black uppercase tracking-[0.2em] text-[#FFFFFF] sm:text-4xl">
+          <BackButton
+            to={isViewingOtherProfile ? "/app/users" : "/app/dashboard"}
+            label={isViewingOtherProfile ? "Back to Users" : "Back to Dashboard"}
+            className="mb-3"
+          />
+          <h1 className="mb-1 text-2xl font-black uppercase tracking-[0.15em] text-[#FFFFFF] sm:text-3xl lg:text-4xl">
             {isViewingOtherProfile ? "User Profile" : "My Profile"}
           </h1>
-          <p className="text-xs uppercase tracking-[0.3em] text-[#4AEEFF]/90">
+          <p className="text-xs uppercase tracking-[0.2em] text-[#4AEEFF]">
             Manage personal credentials and overview stats
           </p>
         </div>
-        {isViewingOtherProfile && (
-          <Link
-            to="/app/users"
-            className="inline-flex h-11 items-center justify-center rounded-lg border border-white/20 px-6 text-xs font-black uppercase tracking-wider text-[#4AEEFF] transition-all duration-200 hover:bg-white/5"
-          >
-            Back to Users
-          </Link>
-        )}
         {!editing && !isViewingOtherProfile && (
           <button
             onClick={() => setEditing(true)}
-            className="inline-flex h-11 items-center justify-center rounded-lg bg-[#4AEEFF] px-6 text-xs font-black uppercase tracking-wider text-[#061D23] transition-all duration-200 hover:bg-[#FFFFFF]"
+            className="inline-flex h-11 items-center justify-center rounded-xl bg-[#4AEEFF] px-6 text-xs font-black uppercase tracking-wider text-[#061D23] transition-all duration-200 hover:bg-[#FFFFFF] shadow-md shadow-[#4AEEFF]/20"
           >
             Edit Profile
           </button>
@@ -1140,36 +1138,39 @@ const Profile: React.FC = () => {
                 </div>
 
                 {/* Sub-tabs */}
-                <div className="flex items-center gap-1.5 p-1 rounded-xl bg-black/40 border border-white/10 self-start sm:self-auto">
+                <div className="flex items-center gap-1.5 p-1 rounded-xl bg-black/40 border border-white/10 self-start sm:self-auto backdrop-blur-md">
                   <button
                     onClick={() => setActiveDoublesTab("ACTIVE")}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all ${activeDoublesTab === "ACTIVE"
-                        ? "bg-[#4AEEFF] text-[#061D23] shadow-md shadow-[#4AEEFF]/20"
-                        : "text-white/60 hover:text-white"
-                      }`}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${
+                      activeDoublesTab === "ACTIVE"
+                        ? "bg-[#4AEEFF]/15 text-[#4AEEFF] border border-[#4AEEFF]/45 shadow-[0_0_14px_rgba(74,238,255,0.18)] backdrop-blur-md"
+                        : "text-white/60 hover:text-white border border-transparent"
+                    }`}
                   >
                     Active Pairs ({doublesRegistrations.length})
                   </button>
                   <button
                     onClick={() => setActiveDoublesTab("RECEIVED")}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all relative ${activeDoublesTab === "RECEIVED"
-                        ? "bg-[#4AEEFF] text-[#061D23] shadow-md shadow-[#4AEEFF]/20"
-                        : "text-white/60 hover:text-white"
-                      }`}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all relative ${
+                      activeDoublesTab === "RECEIVED"
+                        ? "bg-[#4AEEFF]/15 text-[#4AEEFF] border border-[#4AEEFF]/45 shadow-[0_0_14px_rgba(74,238,255,0.18)] backdrop-blur-md"
+                        : "text-white/60 hover:text-white border border-transparent"
+                    }`}
                   >
                     Received ({profileReceivedInvites.length})
                     {profileReceivedInvites.length > 0 && (
-                      <span className="ml-1 px-1.5 py-0.2 rounded-full bg-cyan-400 text-black text-[9px] font-bold">
+                      <span className="ml-1 px-1.5 py-0.2 rounded-full bg-[#4AEEFF]/30 text-[#4AEEFF] text-[9px] font-bold">
                         {profileReceivedInvites.length}
                       </span>
                     )}
                   </button>
                   <button
                     onClick={() => setActiveDoublesTab("SENT")}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all ${activeDoublesTab === "SENT"
-                        ? "bg-[#4AEEFF] text-[#061D23] shadow-md shadow-[#4AEEFF]/20"
-                        : "text-white/60 hover:text-white"
-                      }`}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${
+                      activeDoublesTab === "SENT"
+                        ? "bg-[#4AEEFF]/15 text-[#4AEEFF] border border-[#4AEEFF]/45 shadow-[0_0_14px_rgba(74,238,255,0.18)] backdrop-blur-md"
+                        : "text-white/60 hover:text-white border border-transparent"
+                    }`}
                   >
                     Sent ({profileSentInvites.length})
                   </button>
@@ -1532,11 +1533,11 @@ const Profile: React.FC = () => {
                 <label className="block text-xs font-black uppercase tracking-widest text-[#4AEEFF] mb-2">
                   Skill Rating Tier
                 </label>
-                <select
+                <GlassSelect
                   name="skillLevel"
                   value={formData.playerProfile.skillLevel}
                   onChange={handleChange}
-                  className="w-full rounded-lg border border-white/10 bg-[#061D23]/60 px-4 py-3 text-sm text-white focus:border-[#4AEEFF] focus:outline-none focus:ring-1 focus:ring-[#4AEEFF]"
+                  className="w-full"
                 >
                   <option value="Beginner" className="bg-[#061D23] text-white">
                     Beginner
@@ -1550,17 +1551,17 @@ const Profile: React.FC = () => {
                   <option value="Advanced" className="bg-[#061D23] text-white">
                     Advanced
                   </option>
-                </select>
+                </GlassSelect>
               </div>
               <div>
                 <label className="block text-xs font-black uppercase tracking-widest text-[#4AEEFF] mb-2">
                   Gender
                 </label>
-                <select
+                <GlassSelect
                   name="gender"
                   value={formData.playerProfile.gender}
                   onChange={handleChange}
-                  className="w-full rounded-lg border border-white/10 bg-[#061D23]/60 px-4 py-3 text-sm text-white focus:border-[#4AEEFF] focus:outline-none focus:ring-1 focus:ring-[#4AEEFF]"
+                  className="w-full"
                 >
                   <option value="" className="bg-[#061D23] text-white">
                     Select Gender
@@ -1571,7 +1572,7 @@ const Profile: React.FC = () => {
                   <option value="FEMALE" className="bg-[#061D23] text-white">
                     Female
                   </option>
-                </select>
+                </GlassSelect>
               </div>
               <div>
                 <label className="block text-xs font-black uppercase tracking-widest text-[#4AEEFF] mb-2">

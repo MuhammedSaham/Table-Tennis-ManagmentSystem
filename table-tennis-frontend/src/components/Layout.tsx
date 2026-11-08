@@ -133,10 +133,10 @@ const Layout: React.FC = () => {
       : "Player";
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-[#061D23] text-white flex flex-col w-full overflow-x-hidden max-w-full">
       {/* Modern Responsive Navbar */}
       <nav className="fixed top-0 left-0 right-0 z-50 bg-[#0D3843] border-b border-white/10 shadow-md transition-all duration-300 w-full">
-        <div className="max-w-[1440px] mx-auto px-3 sm:px-6 lg:px-8">
+        <div className="w-full px-4 sm:px-6 lg:px-10 xl:px-14 2xl:px-16">
           <div className="flex justify-between items-center h-16 sm:h-20">
             {/* Logo */}
             <Link to="/" className="flex items-center gap-2 group shrink-0">
@@ -329,11 +329,11 @@ const Layout: React.FC = () => {
       )}
 
       {/* Main content with proper top navbar offset */}
-      <main>
+      <main className="flex-1 w-full overflow-x-hidden">
         {!user && location.pathname === "/" ? (
           <Hero />
         ) : (
-          <div className="pt-16 sm:pt-20 pb-8 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+          <div className="pt-16 sm:pt-20 w-full">
             <Outlet />
           </div>
         )}

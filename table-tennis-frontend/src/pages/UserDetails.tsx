@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeftIcon, EnvelopeIcon, PhoneIcon, UserIcon } from "@heroicons/react/24/outline";
+import { useNavigate, useParams } from "react-router-dom";
+import BackButton from "../components/BackButton";
+import { EnvelopeIcon, PhoneIcon, UserIcon } from "@heroicons/react/24/outline";
 import toast from "react-hot-toast";
 import api, { getProfileImageUrl } from "../services/api";
 
@@ -74,7 +75,7 @@ const UserDetails: React.FC = () => {
       />
       <div className="fixed inset-0 bg-[#061D23]/25" />
       <div className="fixed inset-0 bg-gradient-to-b from-[#061D23]/20 via-transparent to-[#061D23]/35" />
-      <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-7xl flex-col space-y-6 p-4 sm:p-6 lg:p-8">
+      <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-[1600px] flex-col space-y-6 px-4 sm:px-6 lg:px-10 xl:px-14 py-4 sm:py-6 lg:py-8">
         {children}
       </div>
     </div>
@@ -109,9 +110,7 @@ const UserDetails: React.FC = () => {
 
   return wrapInProfileLayout(
     <>
-      <Link to="/app/users" className="inline-flex items-center gap-2 text-sm font-bold text-white/60 hover:text-[#4AEEFF]">
-        <ArrowLeftIcon className="h-4 w-4" /> Back to Users
-      </Link>
+      <BackButton to="/app/users" label="Back to Users" className="mb-4 self-start" />
 
       <section className="relative overflow-hidden rounded-2xl border border-white/10 bg-[#061D23]/60 p-6 shadow-2xl backdrop-blur-xl sm:p-8">
         <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />

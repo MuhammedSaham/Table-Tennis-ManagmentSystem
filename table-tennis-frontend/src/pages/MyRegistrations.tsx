@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import api from "../services/api";
 import toast from "react-hot-toast";
+import BackButton from "../components/BackButton";
 
 interface Registration {
   id: string;
@@ -91,10 +92,18 @@ const MyRegistrations: React.FC = () => {
   }
 
   return (
-    <div>
-      <h1 className="text-3xl font-bold text-gray-900 mb-8">
-        My Tournament Registrations
-      </h1>
+    <div className="space-y-6">
+      <header className="flex flex-col justify-between gap-4 rounded-2xl border border-white/20 bg-[#061D23]/20 p-5 sm:p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl sm:flex-row sm:items-center">
+        <div>
+          <BackButton to="/app/dashboard" label="Back to Dashboard" className="mb-3" />
+          <h1 className="text-2xl font-black uppercase tracking-[0.15em] text-white sm:text-3xl lg:text-4xl">
+            My Registrations
+          </h1>
+          <p className="mt-1 text-xs uppercase tracking-[0.2em] text-[#4AEEFF]">
+            Track your tournament entries and registration statuses
+          </p>
+        </div>
+      </header>
 
       {registrations.length === 0 ? (
         <div className="card text-center py-12">

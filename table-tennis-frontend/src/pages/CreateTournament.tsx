@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import api from "../services/api";
 import toast from "react-hot-toast";
+import BackButton from "../components/BackButton";
+import GlassSelect from "../components/GlassSelect";
 import {
   UserIcon,
   EnvelopeIcon,
@@ -243,7 +245,7 @@ const CreateTournament: React.FC = () => {
       <div className="fixed inset-0 bg-[#061D23]/25" />
       <div className="fixed inset-0 bg-gradient-to-b from-[#061D23]/20 via-transparent to-[#061D23]/35" />
 
-      <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-7xl flex-col space-y-6 p-4 sm:p-6 lg:p-8">
+      <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-[1600px] flex-col space-y-6 px-4 sm:px-6 lg:px-10 xl:px-14 py-4 sm:py-6 lg:py-8">
         {children}
       </div>
     </div>
@@ -258,13 +260,13 @@ if (user?.role !== "ADMIN" && user?.role !== "SUPER_ADMIN") {
   return wrapInBaseLayout(
     <>
       {/* PREMIUM HEADER CONTROLS MODULE */}
-      <header className="rounded-[16px] border border-white/20 bg-[#061D23]/15 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <header className="rounded-2xl border border-white/20 bg-[#061D23]/20 p-5 sm:p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <div className="mb-3 h-[3px] w-16 bg-[#4AEEFF]" />
-          <h1 className="text-2xl font-black uppercase tracking-[0.2em] text-white sm:text-4xl">
+          <BackButton to="/tournaments" label="Back to Tournaments" className="mb-3" />
+          <h1 className="text-2xl font-black uppercase tracking-[0.15em] text-white sm:text-3xl lg:text-4xl">
             Create New Tournament
           </h1>
-          <p className="text-xs uppercase tracking-[0.3em] text-[#4AEEFF]/90 mt-1">
+          <p className="text-xs uppercase tracking-[0.2em] text-[#4AEEFF] mt-1">
             Configure event details, format, and player categories
           </p>
         </div>
@@ -374,7 +376,7 @@ if (user?.role !== "ADMIN" && user?.role !== "SUPER_ADMIN") {
 
             <div>
               <label className={labelStyles}>Default Tournament Format *</label>
-              <select
+              <GlassSelect
                 value={tournamentType}
                 onChange={(e) => {
                   const newType = e.target.value;
@@ -386,15 +388,15 @@ if (user?.role !== "ADMIN" && user?.role !== "SUPER_ADMIN") {
                     })),
                   );
                 }}
-                className={inputStyles}
+                className="w-full"
               >
-                <option value="KNOCKOUT">
+                <option value="KNOCKOUT" className="bg-[#061D23] text-white">
                   🏆 Knockout (Direct Elimination)
                 </option>
-                <option value="GROUP_KNOCKOUT">
+                <option value="GROUP_KNOCKOUT" className="bg-[#061D23] text-white">
                   🏅 Group Stage + Knockout
                 </option>
-              </select>
+              </GlassSelect>
               <p className="text-xs text-white/50 mt-1.5">
                 Default for new categories. You can also customize each category
                 individually below.
@@ -603,7 +605,7 @@ if (user?.role !== "ADMIN" && user?.role !== "SUPER_ADMIN") {
 
                   <div>
                     <label className={labelStyles}>Match Type *</label>
-                    <select
+                    <GlassSelect
                       value={category.type}
                       onChange={(e) =>
                         handleCategoryChange(
@@ -612,17 +614,17 @@ if (user?.role !== "ADMIN" && user?.role !== "SUPER_ADMIN") {
                           e.target.value as "SINGLES" | "DOUBLES" | "TEAM",
                         )
                       }
-                      className={inputStyles}
+                      className="w-full"
                     >
-                      <option value="SINGLES">Singles</option>
-                      <option value="DOUBLES">Doubles</option>
-                      <option value="TEAM">Team</option>
-                    </select>
+                      <option value="SINGLES" className="bg-[#061D23] text-white">Singles</option>
+                      <option value="DOUBLES" className="bg-[#061D23] text-white">Doubles</option>
+                      <option value="TEAM" className="bg-[#061D23] text-white">Team</option>
+                    </GlassSelect>
                   </div>
 
                   <div>
                     <label className={labelStyles}>Draw Format *</label>
-                    <select
+                    <GlassSelect
                       value={category.stageFormat || "KNOCKOUT"}
                       onChange={(e) =>
                         handleCategoryChange(
@@ -631,13 +633,13 @@ if (user?.role !== "ADMIN" && user?.role !== "SUPER_ADMIN") {
                           e.target.value as "KNOCKOUT" | "GROUP_KNOCKOUT",
                         )
                       }
-                      className={inputStyles}
+                      className="w-full"
                     >
-                      <option value="KNOCKOUT">🏆 Knockout</option>
-                      <option value="GROUP_KNOCKOUT">
+                      <option value="KNOCKOUT" className="bg-[#061D23] text-white">🏆 Knockout</option>
+                      <option value="GROUP_KNOCKOUT" className="bg-[#061D23] text-white">
                         🏅 Group + Knockout
                       </option>
-                    </select>
+                    </GlassSelect>
                   </div>
                 </div>
 
@@ -688,7 +690,7 @@ if (user?.role !== "ADMIN" && user?.role !== "SUPER_ADMIN") {
 
                   <div>
                     <label className={labelStyles}>Gender (Optional)</label>
-                    <select
+                    <GlassSelect
                       value={category.gender || ""}
                       onChange={(e) =>
                         handleCategoryChange(
@@ -698,12 +700,12 @@ if (user?.role !== "ADMIN" && user?.role !== "SUPER_ADMIN") {
                             undefined,
                         )
                       }
-                      className={inputStyles}
+                      className="w-full"
                     >
-                      <option value="">Mixed / Open</option>
-                      <option value="MALE">Men's Only</option>
-                      <option value="FEMALE">Women's Only</option>
-                    </select>
+                      <option value="" className="bg-[#061D23] text-white">Mixed / Open</option>
+                      <option value="MALE" className="bg-[#061D23] text-white">Men's Only</option>
+                      <option value="FEMALE" className="bg-[#061D23] text-white">Women's Only</option>
+                    </GlassSelect>
                   </div>
                 </div>
 
