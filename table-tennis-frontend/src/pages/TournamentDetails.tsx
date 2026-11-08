@@ -12,6 +12,7 @@ import GuestRegistrationModal from "../components/GuestRegistrationModal";
 import { Link } from "react-router-dom";
 import BackButton from "../components/BackButton";
 import GlassSelect from "../components/GlassSelect";
+import ConfirmModal from "../components/ConfirmModal";
 import CreateKnockoutModal from "../components/CreateKnockoutModal";
 import DoublesPartnerModal from "../components/DoublesPartnerModal";
 
@@ -299,6 +300,10 @@ const TournamentDetails: React.FC = () => {
   const [showGuestModal, setShowGuestModal] = useState(false);
   const [showKnockoutModal, setShowKnockoutModal] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeletingTournament, setIsDeletingTournament] = useState(false);
+  const [showCompleteConfirm, setShowCompleteConfirm] = useState(false);
+  const [isCompletingTournament, setIsCompletingTournament] = useState(false);
   const [showIneligible, setShowIneligible] = useState(false);
   const [confirmDrawCategory, setConfirmDrawCategory] =
     useState<Category | null>(null);
@@ -762,14 +767,32 @@ const TournamentDetails: React.FC = () => {
   };
 
   const handleDelete = async () => {
-    if (window.confirm("Are you sure you want to delete this tournament?")) {
-      try {
-        await api.delete(`/tournaments/${id}`);
-        toast.success("Tournament deleted successfully");
-        navigate(user ? "/app/tournaments" : "/tournaments");
-      } catch (error) {
-        toast.error("Failed to delete tournament");
-      }
+    try {
+      setIsDeletingTournament(true);
+      await api.delete(`/tournaments/${id}`);
+      toast.success("Tournament deleted successfully");
+      navigate(user ? "/app/tournaments" : "/tournaments");
+    } catch (error) {
+      toast.error("Failed to delete tournament");
+      setIsDeletingTournament(false);
+      setShowDeleteConfirm(false);
+    }
+  };
+
+  const handleMarkComplete = async () => {
+    try {
+      setIsCompletingTournament(true);
+      await api.patch(`/tournaments/${id}`, {
+        status: "COMPLETED",
+      });
+      toast.success("Tournament marked as completed!");
+      fetchTournamentDetails();
+      setShowWinners(true);
+      setShowCompleteConfirm(false);
+    } catch {
+      toast.error("Failed to update status");
+    } finally {
+      setIsCompletingTournament(false);
     }
   };
 
@@ -1685,7 +1708,7 @@ const TournamentDetails: React.FC = () => {
               {canManageTournaments && (
                 <>
                   <button
-                    onClick={handleDelete}
+                    onClick={() => setShowDeleteConfirm(true)}
                     className="rounded-lg border border-red-500/40 bg-red-500/15 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-red-300 hover:bg-red-500 hover:text-white transition-colors shadow-sm"
                   >
                     Delete Tournament
@@ -1723,21 +1746,7 @@ const TournamentDetails: React.FC = () => {
 
                   {tournament.status !== "COMPLETED" && (
                     <button
-                      onClick={async () => {
-                        try {
-                          await api.patch(`/tournaments/${id}`, {
-                            status: "COMPLETED",
-                          });
-
-                          toast.success("Tournament marked as completed!");
-
-                          fetchTournamentDetails();
-
-                          setShowWinners(true);
-                        } catch {
-                          toast.error("Failed to update status");
-                        }
-                      }}
+                      onClick={() => setShowCompleteConfirm(true)}
                       className="rounded-lg border border-emerald-500/40 bg-emerald-500/15 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-emerald-300 hover:bg-emerald-500 hover:text-[#061D23] transition-colors shadow-sm"
                     >
                       Mark Complete
@@ -4012,6 +4021,42 @@ const TournamentDetails: React.FC = () => {
           </div>,
           document.body,
         )}
+
+      {/* Delete Tournament Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showDeleteConfirm}
+        onClose={() => {
+          if (!isDeletingTournament) setShowDeleteConfirm(false);
+        }}
+        onConfirm={handleDelete}
+        title="Delete Tournament"
+        message="Are you sure you want to delete this tournament? This action cannot be undone."
+        itemName={tournament?.name}
+        itemBadge="PERMANENT"
+        details="Warning: All categories, fixtures, brackets, matches, scores, and participant registrations for this tournament will be permanently removed."
+        confirmText="Yes, Delete Tournament"
+        cancelText="Cancel"
+        variant="danger"
+        isLoading={isDeletingTournament}
+      />
+
+      {/* Mark Complete Tournament Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showCompleteConfirm}
+        onClose={() => {
+          if (!isCompletingTournament) setShowCompleteConfirm(false);
+        }}
+        onConfirm={handleMarkComplete}
+        title="Mark Tournament Complete"
+        message="Are you sure you want to mark this tournament as completed?"
+        itemName={tournament?.name}
+        itemBadge="FINALIZE"
+        details="This will officially mark the tournament as completed, record final standings, and reveal the champions podium."
+        confirmText="Yes, Mark Complete"
+        cancelText="Cancel"
+        variant="success"
+        isLoading={isCompletingTournament}
+      />
     </>,
   );
 };

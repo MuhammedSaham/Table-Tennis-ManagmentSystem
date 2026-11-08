@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import api from "../services/api";
 import toast from "react-hot-toast";
 import BackButton from "../components/BackButton";
+import ConfirmModal from "../components/ConfirmModal";
 
 interface Registration {
   id: string;
@@ -25,6 +26,8 @@ interface Registration {
 const MyRegistrations: React.FC = () => {
   const [registrations, setRegistrations] = useState<Registration[]>([]);
   const [loading, setLoading] = useState(true);
+  const [cancelModalRegistration, setCancelModalRegistration] = useState<Registration | null>(null);
+  const [isCancelling, setIsCancelling] = useState(false);
 
   useEffect(() => {
     fetchRegistrations();
@@ -41,15 +44,18 @@ const MyRegistrations: React.FC = () => {
     }
   };
 
-  const handleCancel = async (registrationId: string) => {
-    if (window.confirm("Are you sure you want to cancel this registration?")) {
-      try {
-        await api.delete(`/registrations/${registrationId}/cancel`);
-        toast.success("Registration cancelled successfully");
-        fetchRegistrations();
-      } catch (error) {
-        // Error handled by interceptor
-      }
+  const handleConfirmCancel = async () => {
+    if (!cancelModalRegistration) return;
+    try {
+      setIsCancelling(true);
+      await api.delete(`/registrations/${cancelModalRegistration.id}/cancel`);
+      toast.success("Registration cancelled successfully");
+      setCancelModalRegistration(null);
+      fetchRegistrations();
+    } catch (error) {
+      // Error handled by interceptor
+    } finally {
+      setIsCancelling(false);
     }
   };
 
@@ -164,8 +170,8 @@ const MyRegistrations: React.FC = () => {
                   </span>
                   {registration.status === "PENDING" && (
                     <button
-                      onClick={() => handleCancel(registration.id)}
-                      className="block mt-2 text-sm text-red-600 hover:text-red-700"
+                      onClick={() => setCancelModalRegistration(registration)}
+                      className="block mt-2 text-sm text-red-600 hover:text-red-700 font-semibold"
                     >
                       Cancel Registration
                     </button>
@@ -176,6 +182,24 @@ const MyRegistrations: React.FC = () => {
           ))}
         </div>
       )}
+
+      {/* Cancel Registration Confirmation Modal */}
+      <ConfirmModal
+        isOpen={Boolean(cancelModalRegistration)}
+        onClose={() => {
+          if (!isCancelling) setCancelModalRegistration(null);
+        }}
+        onConfirm={handleConfirmCancel}
+        title="Cancel Registration"
+        message="Are you sure you want to cancel your tournament registration?"
+        itemName={cancelModalRegistration?.tournament.name}
+        itemBadge="PENDING"
+        details="Your entry will be cancelled and your reserved slot will be released."
+        confirmText="Yes, Cancel Registration"
+        cancelText="Keep Registration"
+        variant="warning"
+        isLoading={isCancelling}
+      />
     </div>
   );
 };
