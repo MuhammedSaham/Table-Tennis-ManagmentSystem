@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useSearchParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import api from "../services/api";
 import toast from "react-hot-toast";
@@ -28,14 +28,21 @@ interface Tournament {
 
 const Tournaments: React.FC = () => {
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
-  const [pendingTournamentIds, setPendingTournamentIds] = useState<Set<string>>(new Set());
+  const [pendingTournamentIds, setPendingTournamentIds] = useState<Set<string>>(
+    new Set(),
+  );
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const { user, hasPermission } = useAuth();
-  const canManageTournaments = user?.role === "SUPER_ADMIN" || hasPermission("MANAGE_TOURNAMENTS");
+  const canManageTournaments =
+    user?.role === "SUPER_ADMIN" || hasPermission("MANAGE_TOURNAMENTS");
   const location = useLocation();
   const isAppScope = location.pathname.startsWith("/app") || !!user;
+  const [searchParams] = useSearchParams();
+
+  const showUpcomingThree =
+    user?.role === "PLAYER" && searchParams.get("view") === "upcoming3";
 
   useEffect(() => {
     const fetchTournaments = async () => {
@@ -49,7 +56,7 @@ const Tournaments: React.FC = () => {
             const ids = new Set<string>(
               (invitesRes.data.data || [])
                 .map((i: any) => i.tournamentId || i.tournament?.id)
-                .filter(Boolean)
+                .filter(Boolean),
             );
             setPendingTournamentIds(ids);
           } catch {
@@ -83,11 +90,19 @@ const Tournaments: React.FC = () => {
     const start = new Date(startStr);
     if (isNaN(start.getTime())) return "";
     if (!endStr) {
-      return start.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+      return start.toLocaleDateString("en-GB", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      });
     }
     const end = new Date(endStr);
     if (isNaN(end.getTime()) || start.toDateString() === end.toDateString()) {
-      return start.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+      return start.toLocaleDateString("en-GB", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      });
     }
     const startDay = start.getDate();
     const endDay = end.getDate();
@@ -126,9 +141,46 @@ const Tournaments: React.FC = () => {
     return matchesStatus && matchesSearch;
   });
 
-  const upcomingCount = tournaments.filter((t) => t.status === "UPCOMING").length;
+  // Show the 3 nearest upcoming tournaments for Player Dashboard
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const upcomingThreeTournaments = tournaments
+    .filter((t) => {
+      const startDate = new Date(t.startDate);
+
+      return (
+        t.status === "UPCOMING" &&
+        !Number.isNaN(startDate.getTime()) &&
+        startDate >= today
+      );
+    })
+    .sort(
+      (a, b) =>
+        new Date(a.startDate).getTime() - new Date(b.startDate).getTime(),
+    )
+    .slice(0, 3);
+
+  // Apply search within the selected 3 tournaments
+  const displayedTournaments = showUpcomingThree
+    ? upcomingThreeTournaments.filter((t) => {
+        const q = searchQuery.trim().toLowerCase();
+
+        return (
+          !q ||
+          t.name.toLowerCase().includes(q) ||
+          (t.venue || "").toLowerCase().includes(q)
+        );
+      })
+    : filteredTournaments;
+
+  const upcomingCount = tournaments.filter(
+    (t) => t.status === "UPCOMING",
+  ).length;
   const ongoingCount = tournaments.filter((t) => t.status === "ONGOING").length;
-  const completedCount = tournaments.filter((t) => t.status === "COMPLETED").length;
+  const completedCount = tournaments.filter(
+    (t) => t.status === "COMPLETED",
+  ).length;
 
   const wrapInBaseLayout = (children: React.ReactNode) => (
     <div className="relative min-h-screen w-full overflow-hidden bg-[#061D23] text-white">
@@ -154,7 +206,7 @@ const Tournaments: React.FC = () => {
         <p className="mt-4 text-xs font-semibold text-white/70">
           Loading tournaments...
         </p>
-      </div>
+      </div>,
     );
   }
 
@@ -166,47 +218,51 @@ const Tournaments: React.FC = () => {
         <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-6 min-w-0">
           <div className="flex items-center gap-3">
             <h1 className="text-2xl sm:text-3xl font-heading font-bold text-white tracking-tight leading-none">
-              Tournaments
+              {showUpcomingThree ? "Upcoming Tournaments" : "Tournaments"}
             </h1>
             <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-white/10 text-white/80 border border-white/15">
-              {tournaments.length}
+              {showUpcomingThree
+                ? upcomingThreeTournaments.length
+                : tournaments.length}
             </span>
           </div>
 
           {/* Status Filter Tabs (Segmented Capsule) */}
-          <div className="flex items-center gap-1 bg-white/5 p-1 rounded-xl border border-white/10 backdrop-blur-md overflow-x-auto scrollbar-none">
-            {[
-              { key: "ALL", label: "All", count: tournaments.length },
-              { key: "UPCOMING", label: "Upcoming", count: upcomingCount },
-              { key: "ONGOING", label: "Ongoing", count: ongoingCount },
-              { key: "COMPLETED", label: "Completed", count: completedCount },
-            ].map((tab) => {
-              const isActive = statusFilter === tab.key;
-              return (
-                <button
-                  key={tab.key}
-                  type="button"
-                  onClick={() => setStatusFilter(tab.key)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all duration-200 ${
-                    isActive
-                      ? "bg-[#4AEEFF]/15 text-[#4AEEFF] border border-[#4AEEFF]/45 shadow-[0_0_14px_rgba(74,238,255,0.18)] backdrop-blur-md"
-                      : "text-white/70 hover:text-white hover:bg-white/5 border border-transparent"
-                  }`}
-                >
-                  <span>{tab.label}</span>
-                  <span
-                    className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+          {!showUpcomingThree && (
+            <div className="flex items-center gap-1 bg-white/5 p-1 rounded-xl border border-white/10 backdrop-blur-md overflow-x-auto scrollbar-none">
+              {[
+                { key: "ALL", label: "All", count: tournaments.length },
+                { key: "UPCOMING", label: "Upcoming", count: upcomingCount },
+                { key: "ONGOING", label: "Ongoing", count: ongoingCount },
+                { key: "COMPLETED", label: "Completed", count: completedCount },
+              ].map((tab) => {
+                const isActive = statusFilter === tab.key;
+                return (
+                  <button
+                    key={tab.key}
+                    type="button"
+                    onClick={() => setStatusFilter(tab.key)}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all duration-200 ${
                       isActive
-                        ? "bg-[#4AEEFF]/25 text-[#4AEEFF]"
-                        : "bg-white/10 text-white/60"
+                        ? "bg-[#4AEEFF]/15 text-[#4AEEFF] border border-[#4AEEFF]/45 shadow-[0_0_14px_rgba(74,238,255,0.18)] backdrop-blur-md"
+                        : "text-white/70 hover:text-white hover:bg-white/5 border border-transparent"
                     }`}
                   >
-                    {tab.count}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
+                    <span>{tab.label}</span>
+                    <span
+                      className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                        isActive
+                          ? "bg-[#4AEEFF]/25 text-[#4AEEFF]"
+                          : "bg-white/10 text-white/60"
+                      }`}
+                    >
+                      {tab.count}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* Right: Search Bar + Create Tournament Button */}
@@ -245,13 +301,32 @@ const Tournaments: React.FC = () => {
         </div>
       </header>
 
+      {showUpcomingThree && (
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-sm text-white/70">
+            Showing your next 3 upcoming tournaments based on today's date.
+          </p>
+
+          <Link
+            to="/app/tournaments"
+            className="rounded-xl border border-[#4AEEFF]/40 bg-[#4AEEFF]/10 px-4 py-2 text-xs font-bold text-[#4AEEFF] transition-all hover:bg-[#4AEEFF] hover:text-[#061D23]"
+          >
+            View All Tournaments →
+          </Link>
+        </div>
+      )}
+
       {/* TOURNAMENTS GRID */}
-      {filteredTournaments.length > 0 ? (
+      {displayedTournaments.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-          {filteredTournaments.map((tournament) => (
+          {displayedTournaments.map((tournament) => (
             <div key={tournament.id} className="h-full">
               <Link
-                to={isAppScope ? `/app/tournaments/${tournament.id}` : `/tournaments/${tournament.id}`}
+                to={
+                  isAppScope
+                    ? `/app/tournaments/${tournament.id}`
+                    : `/tournaments/${tournament.id}`
+                }
                 className="group flex flex-col justify-between h-full rounded-2xl border border-white/20 bg-[#061D23]/20 p-5 sm:p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl transition-all duration-200 hover:border-[#4AEEFF]/60 hover:-translate-y-1"
               >
                 <div>
@@ -262,7 +337,7 @@ const Tournaments: React.FC = () => {
                     <div className="flex flex-col items-end gap-1.5 shrink-0">
                       <span
                         className={`px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-md border ${getStatusBadge(
-                          tournament.status
+                          tournament.status,
                         )}`}
                       >
                         {tournament.status}
@@ -288,7 +363,10 @@ const Tournaments: React.FC = () => {
                   <div className="flex items-center gap-2">
                     <CalendarIcon className="w-4 h-4 text-[#4AEEFF] shrink-0" />
                     <span>
-                      {formatDateRange(tournament.startDate, tournament.endDate)}
+                      {formatDateRange(
+                        tournament.startDate,
+                        tournament.endDate,
+                      )}
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
@@ -310,18 +388,20 @@ const Tournaments: React.FC = () => {
         <div className="text-center py-16 rounded-xl border border-dashed border-white/15 bg-white/5 p-8">
           <TrophyIcon className="mx-auto mb-3 h-10 w-10 text-white/30" />
           <h3 className="text-lg font-semibold text-white">
-            {searchQuery
-              ? `No tournaments matching "${searchQuery}"`
-              : statusFilter === "ALL"
-              ? "No Tournaments Found"
-              : `No ${statusFilter.toLowerCase()} tournaments`}
+            {showUpcomingThree && !searchQuery
+              ? "No Upcoming Tournaments"
+              : searchQuery
+                ? `No tournaments matching "${searchQuery}"`
+                : statusFilter === "ALL"
+                  ? "No Tournaments Found"
+                  : `No ${statusFilter.toLowerCase()} tournaments`}
           </h3>
           <p className="mt-1 text-xs text-white/60">
             {searchQuery
               ? "Try checking for spelling errors or clearing your search filter."
               : statusFilter === "ALL"
-              ? "There are currently no tournaments available."
-              : `There are currently no tournaments in ${statusFilter.toLowerCase()} status.`}
+                ? "There are currently no tournaments available."
+                : `There are currently no tournaments in ${statusFilter.toLowerCase()} status.`}
           </p>
           {(searchQuery || statusFilter !== "ALL") && (
             <button
@@ -346,7 +426,7 @@ const Tournaments: React.FC = () => {
           )}
         </div>
       )}
-    </>
+    </>,
   );
 };
 

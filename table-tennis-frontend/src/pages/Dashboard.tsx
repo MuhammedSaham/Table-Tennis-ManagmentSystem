@@ -603,7 +603,7 @@ const Dashboard: React.FC = () => {
         <section className="grid grid-cols-1 gap-5 md:grid-cols-3">
           {/* TOURNAMENTS */}
           <Link
-            to="/app/tournaments"
+            to="/app/tournaments?view=upcoming3"
             className="group rounded-2xl border border-white/20 bg-[#061D23]/20 p-6 backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:border-[#4AEEFF]/60 hover:bg-[#061D23]/40"
           >
             <TrophyIcon className="mb-4 h-9 w-9 text-[#4AEEFF]" />
