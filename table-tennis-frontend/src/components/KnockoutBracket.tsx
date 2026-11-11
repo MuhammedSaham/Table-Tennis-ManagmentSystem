@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import toast from "react-hot-toast";
@@ -285,18 +286,19 @@ export const UmpireSheet: React.FC<{
   const p1n = getMatchSlotName(match, 1),
     p2n = getMatchSlotName(match, 2);
 
-  return (
+  return createPortal(
     <div
       style={{
         position: "fixed",
         inset: 0,
         background: "rgba(0,0,0,0.7)",
         display: "flex",
-        alignItems: "center",
+        alignItems: "flex-start",
         justifyContent: "center",
         zIndex: 1000,
         padding: 16,
         overflowY: "auto",
+        boxSizing: "border-box",
       }}
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
@@ -307,8 +309,10 @@ export const UmpireSheet: React.FC<{
           borderRadius: 16,
           width: "100%",
           maxWidth: 640,
+          maxHeight: "calc(100dvh - 32px)",
           boxShadow: "0 24px 60px rgba(0,0,0,0.35)",
-          overflow: "hidden",
+          overflowX: "hidden",
+          overflowY: "auto",
           fontFamily: "'Segoe UI',system-ui,sans-serif",
           margin: "auto",
         }}
@@ -381,7 +385,7 @@ export const UmpireSheet: React.FC<{
           </button>
         </div>
 
-        <div style={{ padding: "24px" }}>
+        <div style={{ padding: "16px 24px" }}>
           {/* Date + round + format */}
           <div
             style={{
@@ -745,11 +749,11 @@ export const UmpireSheet: React.FC<{
           {/* Won by + Signature */}
           <div
             style={{
-              marginTop: 20,
+              marginTop: 12,
               display: "flex",
               justifyContent: "space-between",
               flexWrap: "wrap",
-              gap: 12,
+              gap: 10,
             }}
           >
             <div style={{ fontSize: 13, color: "#475569" }}>
@@ -763,7 +767,7 @@ export const UmpireSheet: React.FC<{
               )}
             </div>
             <div>
-              <p className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-500">
+              <p className="mb-1 text-xs font-bold uppercase tracking-wide text-slate-500">
                 Scoring Referee
               </p>
               <RefereeProfileCard referee={match.referee?.user} />
@@ -772,7 +776,7 @@ export const UmpireSheet: React.FC<{
           {done && (
             <div
               style={{
-                marginTop: 14,
+                marginTop: 8,
                 background: "#dcfce7",
                 color: "#166534",
                 fontSize: 12,
@@ -790,7 +794,7 @@ export const UmpireSheet: React.FC<{
         {/* Footer */}
         <div
           style={{
-            padding: "14px 24px",
+            padding: "10px 24px",
             borderTop: "1px solid #e2e8f0",
             display: "flex",
             justifyContent: "flex-end",
@@ -925,7 +929,8 @@ export const UmpireSheet: React.FC<{
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 };
 
