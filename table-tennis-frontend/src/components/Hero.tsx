@@ -72,9 +72,6 @@ const Hero: React.FC = () => {
           <div className="hidden lg:flex lg:col-span-5 flex-col justify-end h-[420px] xl:h-[480px] pointer-events-none">
             {/* Bottom Right Club Tag */}
             <div className="animate-fade-up-5 self-end text-left pl-6 drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]">
-              <div className="text-[11px] text-[#7DC6C7] font-semibold tracking-wider uppercase mb-1">
-                SAM&apos;S COLLEGE &nbsp;/&nbsp; TABLE TENNIS
-              </div>
               <div className="text-xl xl:text-2xl font-bold text-white leading-snug">
                 One club.
               </div>
