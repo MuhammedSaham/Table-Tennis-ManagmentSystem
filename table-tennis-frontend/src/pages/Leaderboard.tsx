@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import api, { getProfileImageUrl } from "../services/api";
 import toast from "react-hot-toast";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import GlassSelect from "../components/GlassSelect";
 import { TrophyIcon, CalendarIcon } from "@heroicons/react/24/outline";
 
@@ -315,6 +315,10 @@ const ParticipantDisplay: React.FC<ParticipantDisplayProps> = ({
 };
 
 const Leaderboard: React.FC = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const urlTournamentId = searchParams.get("tournament");
+  const urlCategoryId = searchParams.get("category");
+
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [selectedTournament, setSelectedTournament] = useState<string>("");
   const [standings, setStandings] = useState<CategoryStanding[]>([]);
@@ -353,9 +357,13 @@ const Leaderboard: React.FC = () => {
   const fetchTournaments = async () => {
     try {
       const response = await api.get("/tournaments");
-      setTournaments(response.data.data);
-      if (response.data.data.length > 0) {
-        setSelectedTournament(response.data.data[0].id);
+      const list = response.data.data;
+      setTournaments(list);
+      if (list.length > 0) {
+        const matched = urlTournamentId
+          ? list.find((t: Tournament) => t.id === urlTournamentId)
+          : null;
+        setSelectedTournament(matched ? matched.id : list[0].id);
       }
     } catch (error) {
       toast.error("Failed to fetch tournaments");
@@ -407,6 +415,9 @@ const Leaderboard: React.FC = () => {
       setStandings(filteredStandings);
       if (filteredStandings.length > 0) {
         setSelectedCategory((prev) => {
+          if (urlCategoryId && filteredStandings.some((cat) => cat.categoryId === urlCategoryId)) {
+            return urlCategoryId;
+          }
           const exists = filteredStandings.some((cat) => cat.categoryId === prev);
           return exists && prev ? prev : filteredStandings[0].categoryId;
         });
@@ -463,7 +474,11 @@ const Leaderboard: React.FC = () => {
               ) : (
                 <GlassSelect
                   value={selectedTournament}
-                  onChange={(e) => setSelectedTournament(e.target.value)}
+                  onChange={(e) => {
+                    const newTId = e.target.value;
+                    setSelectedTournament(newTId);
+                    setSearchParams({ tournament: newTId });
+                  }}
                   aria-label="Select tournament"
                 >
                   {tournaments.map((tournament) => (
@@ -487,7 +502,15 @@ const Leaderboard: React.FC = () => {
                 </span>
                 <GlassSelect
                   value={selectedCategory || standings[0]?.categoryId}
-                  onChange={(e) => setSelectedCategory(e.target.value)}
+                  onChange={(e) => {
+                    const newCId = e.target.value;
+                    setSelectedCategory(newCId);
+                    setSearchParams((prev) => {
+                      const next = new URLSearchParams(prev);
+                      next.set("category", newCId);
+                      return next;
+                    });
+                  }}
                   aria-label="Select category"
                 >
                   {standings.map((cat) => (
