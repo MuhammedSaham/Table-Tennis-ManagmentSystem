@@ -4,6 +4,7 @@ import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import toast from "react-hot-toast";
 import RefereeProfileCard from "./RefereeProfileCard";
+import invertedLogo from "../assets/Logo  with Name inverted.png";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -340,58 +341,59 @@ export const UmpireSheet: React.FC<UmpireSheetProps> = ({
         {/* Header */}
         <div
           style={{
-            background: "#0f172a",
-            padding: "18px 24px",
+            background: "#061D23",
+            padding: "16px 24px",
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
+            borderBottom: "1px solid rgba(255,255,255,0.1)",
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+            <img
+              src={invertedLogo}
+              alt="Sam's College"
+              style={{
+                height: 42,
+                width: "auto",
+                maxWidth: 160,
+                objectFit: "contain",
+                display: "block",
+              }}
+            />
             <div
               style={{
-                width: 44,
-                height: 44,
-                borderRadius: "50%",
-                border: "2px solid #38bdf8",
-                background: "#1e3a5f",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: 22,
+                height: 28,
+                width: 1,
+                background: "rgba(255, 255, 255, 0.2)",
               }}
-            >
-              <img
-                src="/club-logo.png"
-                alt="Table Tennis Club Logo"
-                style={{
-                  width: "100%",
-                  height: "100%",
-                  objectFit: "contain",
-                }}
-              />
-            </div>
+            />
             <div>
               <div
                 style={{
-                  color: "#38bdf8",
-                  fontSize: 11,
-                  fontWeight: 700,
-                  letterSpacing: 1.5,
+                  color: "#FFFFFF",
+                  fontSize: 14,
+                  fontWeight: 800,
+                  letterSpacing: 1.2,
                   textTransform: "uppercase",
-                }}
-              >
-                Sam's College
-              </div>
-              <div
-                style={{
-                  color: "#fff",
-                  fontSize: 16,
-                  fontWeight: 900,
-                  letterSpacing: -0.5,
+                  fontFamily: "'Segoe UI', Arial, sans-serif",
+                  lineHeight: 1.2,
                 }}
               >
                 TABLE TENNIS TOURNAMENT
+              </div>
+              <div
+                style={{
+                  color: "#4AEEFF",
+                  fontSize: 10,
+                  fontWeight: 700,
+                  letterSpacing: 1,
+                  textTransform: "uppercase",
+                  fontFamily: "'Segoe UI', Arial, sans-serif",
+                  marginTop: 2,
+                }}
+              >
+                OFFICIAL MATCH SCORECARD
               </div>
             </div>
           </div>
