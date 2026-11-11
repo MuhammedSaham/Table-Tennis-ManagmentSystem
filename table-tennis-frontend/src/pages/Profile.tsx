@@ -82,6 +82,12 @@ const Profile: React.FC = () => {
   const { userId: viewedUserId } = useParams<{ userId: string }>();
   const isViewingOtherProfile = Boolean(viewedUserId);
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const isOwnProfile = Boolean(user?.id && profile?.id === user.id);
+
+  const [activeProfileTab, setActiveProfileTab] = useState<
+    "OVERVIEW" | "PERFORMANCE" | "TEAMS" | "ACCOUNT"
+  >("OVERVIEW");
+
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [showChangePassword, setShowChangePassword] = useState(false);
@@ -224,7 +230,7 @@ const Profile: React.FC = () => {
 
       toast.success(
         response.data.message ||
-        "Club membership request submitted successfully!",
+          "Club membership request submitted successfully!",
       );
 
       await fetchMembershipStatus();
@@ -484,439 +490,467 @@ const Profile: React.FC = () => {
 
   return wrapInBaseLayout(
     <>
-      {/* ─── HEADER ─── */}
-      <header className="flex flex-col justify-between gap-4 rounded-2xl border border-white/20 bg-[#061D23]/20 p-5 sm:p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl sm:flex-row sm:items-center">
-        <div>
+      {/* ─── COMPACT PROFILE HEADER ─── */}
+      <header className="rounded-2xl border border-white/15 bg-[#061D23]/25 p-4 shadow-lg backdrop-blur-xl sm:p-5">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <BackButton
             to={isViewingOtherProfile ? "/app/users" : "/app/dashboard"}
-            label={isViewingOtherProfile ? "Back to Users" : "Back to Dashboard"}
-            className="mb-3"
+            label={
+              isViewingOtherProfile ? "Back to Users" : "Back to Dashboard"
+            }
           />
-          <h1 className="mb-1 text-2xl font-black uppercase tracking-[0.15em] text-[#FFFFFF] sm:text-3xl lg:text-4xl">
-            {isViewingOtherProfile ? "User Profile" : "My Profile"}
-          </h1>
-          <p className="text-xs uppercase tracking-[0.2em] text-[#4AEEFF]">
-            Manage personal credentials and overview stats
-          </p>
+
+          {!editing && !isViewingOtherProfile && (
+            <button
+              onClick={() => setEditing(true)}
+              className="rounded-lg bg-[#4AEEFF] px-4 py-2 text-xs font-bold uppercase text-[#061D23] transition-colors hover:bg-white"
+            >
+              Edit Profile
+            </button>
+          )}
         </div>
-        {!editing && !isViewingOtherProfile && (
-          <button
-            onClick={() => setEditing(true)}
-            className="inline-flex h-11 items-center justify-center rounded-xl bg-[#4AEEFF] px-6 text-xs font-black uppercase tracking-wider text-[#061D23] transition-all duration-200 hover:bg-[#FFFFFF] shadow-md shadow-[#4AEEFF]/20"
-          >
-            Edit Profile
-          </button>
-        )}
+
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+          <div className="flex shrink-0 items-center justify-center">
+            {profile.profileImage ? (
+              <img
+                src={getProfileImageUrl(profile.profileImage)}
+                alt="Profile"
+                className="h-16 w-16 rounded-full border-2 border-[#4AEEFF]/60 object-cover sm:h-20 sm:w-20"
+              />
+            ) : (
+              <div className="flex h-16 w-16 items-center justify-center rounded-full border-2 border-[#4AEEFF]/50 bg-[#061D23]/60 text-lg font-bold text-[#4AEEFF] sm:h-20 sm:w-20 sm:text-xl">
+                {(profile.firstName?.[0] || "").toUpperCase()}
+                {(profile.lastName?.[0] || "").toUpperCase()}
+              </div>
+            )}
+          </div>
+
+          <div className="min-w-0 flex-1">
+            <h1 className="text-xl font-black uppercase tracking-wide text-white sm:text-2xl">
+              {profile.firstName} {profile.lastName}
+            </h1>
+
+            <span className="mt-1 inline-block rounded-md border border-[#4AEEFF]/30 bg-[#4AEEFF]/15 px-2 py-1 text-[10px] font-bold uppercase text-[#4AEEFF]">
+              {profile.role === "SUPER_ADMIN" ? "SUPER ADMIN" : profile.role}
+            </span>
+
+            <div className="mt-3 flex flex-col gap-2 text-xs text-white/75 sm:flex-row sm:flex-wrap sm:gap-x-6">
+              <span className="flex items-center gap-2 break-all">
+                <EnvelopeIcon className="h-4 w-4 shrink-0 text-[#4AEEFF]" />
+                {profile.email}
+              </span>
+
+              <span className="flex items-center gap-2">
+                <PhoneIcon className="h-4 w-4 shrink-0 text-[#4AEEFF]" />
+                {profile.phone || "Not provided"}
+              </span>
+            </div>
+          </div>
+        </div>
       </header>
 
-      {!editing ? (
-        <div className="space-y-6">
-          {/* ─── PRIMARY DETAILED OVERVIEW ─── */}
-          <section className="rounded-[16px] border border-white/20 bg-[#061D23]/5 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl sm:p-8">
-            <div className="flex flex-col items-start gap-5 pb-6 border-b border-white/10 sm:flex-row sm:items-center">
-              {profile.profileImage ? (
-                <img
-                  src={getProfileImageUrl(profile.profileImage)}
-                  alt="Profile"
-                  className="h-24 w-24 rounded-full object-cover border-2 border-[#4AEEFF] shadow-[0_0_20px_rgba(74,238,255,0.3)]"
-                />
-              ) : (
-                <div className="flex h-24 w-24 items-center justify-center rounded-full border-2 border-[#4AEEFF]/40 bg-[#061D23]/60 shadow-inner">
-                  <span className="text-3xl font-black tracking-tighter text-[#4AEEFF]">
-                    {(profile.firstName?.[0] || "").toUpperCase()}
-                    {(profile.lastName?.[0] || "").toUpperCase()}
-                  </span>
-                </div>
-              )}
-              <div>
-                <h2 className="text-2xl font-black text-white uppercase tracking-wide">
-                  {profile.firstName} {profile.lastName}
-                </h2>
-                <div
-                  className={`mt-2 inline-flex items-center rounded px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider ${profile.role === "SUPER_ADMIN"
-                      ? "bg-amber-500/20 text-amber-300 border border-amber-500/40"
-                      : profile.role === "ADMIN"
-                        ? "bg-purple-500/20 text-purple-300 border border-purple-500/40"
-                        : "bg-[#4AEEFF]/20 text-[#4AEEFF]"
-                    }`}
+      {/* ─── PROFILE NAVIGATION TABS ─── */}
+      {!editing && (
+        <div className="flex w-full items-center gap-2 overflow-x-auto rounded-xl border border-white/10 bg-[#061D23]/25 p-1.5 backdrop-blur-xl sm:p-2">
+          {[
+            { id: "OVERVIEW", label: "Overview", icon: UserIcon },
+            { id: "PERFORMANCE", label: "Performance", icon: ChartBarIcon },
+            { id: "TEAMS", label: "Doubles Teams", icon: UserGroupIcon },
+            {
+              id: "ACCOUNT",
+              label: "Account Settings",
+              icon: IdentificationIcon,
+            },
+          ]
+            .filter((tab) => {
+              if (tab.id === "ACCOUNT" && !isOwnProfile) return false;
+              if (
+                (tab.id === "PERFORMANCE" || tab.id === "TEAMS") &&
+                profile.role !== "PLAYER"
+              )
+                return false;
+              if (tab.id === "TEAMS" && !isOwnProfile) return false;
+              return true;
+            })
+            .map((tab) => {
+              const Icon = tab.icon;
+
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() =>
+                    setActiveProfileTab(
+                      tab.id as
+                        | "OVERVIEW"
+                        | "PERFORMANCE"
+                        | "TEAMS"
+                        | "ACCOUNT",
+                    )
+                  }
+                  className={`flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-lg px-3 py-2.5 text-[11px] font-bold uppercase tracking-wide transition-colors sm:px-4 sm:text-xs ${
+                    activeProfileTab === tab.id
+                      ? "bg-[#4AEEFF] text-[#061D23]"
+                      : "text-white/65 hover:bg-white/10 hover:text-white"
+                  }`}
                 >
-                  {profile.role === "SUPER_ADMIN"
-                    ? "SUPER ADMIN"
-                    : profile.role}
-                </div>
-                {isViewingOtherProfile && profile.role === "PLAYER" && (
-                  <button
-                    type="button"
-                    // onClick={handleToggleFavorite}
-                    disabled={favoriteLoading}
-                    className={`mt-3 flex items-center gap-2 rounded-xl border px-4 py-2 text-xs font-bold transition-all ${isFavorited
-                        ? "border-[#FF4B72]/70 bg-[#FF4B72]/20 text-[#FF4B72]"
-                        : "border-white/15 bg-white/[0.05] text-white/80 hover:border-[#FF4B72]/50 hover:text-[#FF4B72]"
-                      }`}
-                  >
-                    <span>{isFavorited ? "❤️" : "🤍"}</span>
-                    <span>
-                      {totalFavorites}{" "}
-                      {totalFavorites === 1 ? "Fan" : "Fans"}
-                    </span>
-                  </button>
-                )}
-              </div>
-            </div>
+                  <Icon className="h-4 w-4" />
+                  {tab.label}
+                </button>
+              );
+            })}
+        </div>
+      )}
 
-            {/* Core credentials info cards */}
-            <div className="grid gap-4 mt-6 sm:grid-cols-2">
-              <div className="rounded-[12px] border border-white/10 bg-[#061D23]/40 p-5">
-                <p className="text-xs font-bold uppercase tracking-wider text-[#4AEEFF]/80 mb-1 flex items-center gap-2">
-                  <EnvelopeIcon className="h-4 w-4" /> Email Address
-                </p>
-                <p className="font-semibold text-white break-all">
-                  {profile.email}
-                </p>
-              </div>
-              <div className="rounded-[12px] border border-white/10 bg-[#061D23]/40 p-5">
-                <p className="text-xs font-bold uppercase tracking-wider text-[#4AEEFF]/80 mb-1 flex items-center gap-2">
-                  <PhoneIcon className="h-4 w-4" /> Contact Number
-                </p>
-                <p className="font-semibold text-white">
-                  {profile.phone || "Not provided"}
-                </p>
-              </div>
-            </div>
-          </section>
-
+      {!editing ? (
+        <div className="space-y-4">
           {/* ─── SECURITY SETTINGS ─── */}
-          <section className="rounded-[16px] border border-white/20 bg-[#061D23]/5 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl sm:p-8">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <h2 className="text-lg font-bold uppercase tracking-wider text-white">
-                  Security Settings
-                </h2>
-                <p className="mt-1 text-xs text-white/60">
-                  Update your account password to keep your profile secure.
-                </p>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setShowChangePassword(!showChangePassword)}
-                className="rounded-lg bg-[#4AEEFF] px-5 py-3 text-xs font-black uppercase tracking-wider text-[#061D23] transition-all hover:bg-white"
-              >
-                {showChangePassword ? "Cancel" : "Change Password"}
-              </button>
-            </div>
-
-            {showChangePassword && (
-              <form
-                onSubmit={handleChangePassword}
-                className="mt-6 space-y-4 border-t border-white/10 pt-6"
-              >
-                {[
-                  { name: "currentPassword", label: "Current Password" },
-                  { name: "newPassword", label: "New Password" },
-                  { name: "confirmPassword", label: "Confirm New Password" },
-                ].map((field) => (
-                  <div key={field.name}>
-                    <label className="mb-2 block text-xs font-black uppercase tracking-wider text-[#4AEEFF]">
-                      {field.label}
-                    </label>
-
-                    <div className="relative">
-                      <input
-                        type={
-                          showPasswords[
-                            field.name as keyof typeof showPasswords
-                          ]
-                            ? "text"
-                            : "password"
-                        }
-                        name={field.name}
-                        value={
-                          passwordData[field.name as keyof typeof passwordData]
-                        }
-                        onChange={(e) =>
-                          setPasswordData((prev) => ({
-                            ...prev,
-                            [e.target.name]: e.target.value,
-                          }))
-                        }
-                        required
-                        autoComplete={
-                          field.name === "currentPassword"
-                            ? "current-password"
-                            : "new-password"
-                        }
-                        className="w-full rounded-lg border border-white/10 bg-[#061D23]/60 px-4 py-3 pr-12 text-sm text-white focus:border-[#4AEEFF] focus:outline-none focus:ring-1 focus:ring-[#4AEEFF]"
-                      />
-
-                      <button
-                        type="button"
-                        aria-label={
-                          showPasswords[
-                            field.name as keyof typeof showPasswords
-                          ]
-                            ? `Hide ${field.label}`
-                            : `Show ${field.label}`
-                        }
-                        aria-pressed={
-                          showPasswords[
-                          field.name as keyof typeof showPasswords
-                          ]
-                        }
-                        onClick={() =>
-                          setShowPasswords((prev) => ({
-                            ...prev,
-                            [field.name]:
-                              !prev[field.name as keyof typeof prev],
-                          }))
-                        }
-                        className="absolute inset-y-0 right-3 flex items-center text-white/60 transition-colors hover:text-[#4AEEFF]"
-                      >
-                        {showPasswords[
-                          field.name as keyof typeof showPasswords
-                        ] ? (
-                          <EyeSlashIcon className="h-5 w-5" />
-                        ) : (
-                          <EyeIcon className="h-5 w-5" />
-                        )}
-                      </button>
-                    </div>
-                  </div>
-                ))}
-
-                <p className="text-xs text-white/60">
-                  Password must contain at least 8 characters, including an
-                  uppercase letter, lowercase letter, and number.
-                </p>
+          {isOwnProfile && activeProfileTab === "ACCOUNT" && (
+            <section className="rounded-xl border border-white/15 bg-[#061D23]/20 p-4 backdrop-blur-xl sm:p-5">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h2 className="text-sm font-bold uppercase tracking-wider text-white">
+                    Security Settings
+                  </h2>
+                  <p className="mt-1 text-xs text-white/55">
+                    Manage your account password and security.
+                  </p>
+                </div>
 
                 <button
-                  type="submit"
-                  disabled={changingPassword}
-                  className="rounded-lg bg-[#4AEEFF] px-6 py-3 text-xs font-black uppercase tracking-wider text-[#061D23] transition-all hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {changingPassword ? "Updating..." : "Update Password"}
-                </button>
-              </form>
-            )}
-          </section>
+                  type="button"
+                  onClick={() => {
+                    if (showChangePassword) {
+                      setPasswordData({
+                        currentPassword: "",
+                        newPassword: "",
+                        confirmPassword: "",
+                      });
 
-          {/* ─── ROLE-SPECIFIC PROFILES ─── */}
-          {profile.role === "PLAYER" && profile.playerProfile && (
-            <section className="rounded-[16px] border border-white/20 bg-[#061D23]/5 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl">
-              <div className="mb-5 flex items-center gap-3">
-                <div className="rounded-lg bg-[#4AEEFF]/20 p-2 text-[#4AEEFF]">
-                  <UserIcon className="h-5 w-5" />
-                </div>
-                <h2 className="text-lg font-bold uppercase tracking-wider text-[#FFFFFF]">
-                  Player Affiliation & Bio
-                </h2>
+                      setShowPasswords({
+                        currentPassword: false,
+                        newPassword: false,
+                        confirmPassword: false,
+                      });
+                    }
+
+                    setShowChangePassword(!showChangePassword);
+                  }}
+                  className="w-fit rounded-lg border border-[#4AEEFF]/30 bg-[#4AEEFF]/10 px-4 py-2 text-xs font-bold uppercase text-[#4AEEFF] transition-colors hover:bg-[#4AEEFF]/20"
+                >
+                  {showChangePassword ? "Cancel" : "Change Password"}
+                </button>
               </div>
-              <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
-                <div className="rounded-[12px] border border-white/10 bg-[#061D23]/60 p-4">
-                  <p className="text-xs text-[#4AEEFF] font-semibold uppercase tracking-wider">
-                    Skill Level
+
+              {showChangePassword && (
+                <form
+                  onSubmit={handleChangePassword}
+                  className="mt-4 space-y-4 border-t border-white/10 pt-4"
+                >
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    {[
+                      { name: "currentPassword", label: "Current Password" },
+                      { name: "newPassword", label: "New Password" },
+                      {
+                        name: "confirmPassword",
+                        label: "Confirm New Password",
+                      },
+                    ].map((field) => (
+                      <div
+                        key={field.name}
+                        className={
+                          field.name === "currentPassword"
+                            ? "md:col-span-2"
+                            : ""
+                        }
+                      >
+                        <label
+                          htmlFor={`profile-${field.name}`}
+                          className="mb-2 block text-xs font-semibold text-white/70"
+                        >
+                          {field.label}
+                        </label>
+
+                        <div className="relative">
+                          <input
+                            id={`profile-${field.name}`}
+                            type={
+                              showPasswords[
+                                field.name as keyof typeof showPasswords
+                              ]
+                                ? "text"
+                                : "password"
+                            }
+                            name={field.name}
+                            value={
+                              passwordData[
+                                field.name as keyof typeof passwordData
+                              ]
+                            }
+                            onChange={(e) =>
+                              setPasswordData((prev) => ({
+                                ...prev,
+                                [e.target.name]: e.target.value,
+                              }))
+                            }
+                            required
+                            autoComplete={
+                              field.name === "currentPassword"
+                                ? "current-password"
+                                : "new-password"
+                            }
+                            className="w-full rounded-lg border border-white/15 bg-[#061D23]/40 px-3 py-2.5 pr-11 text-sm text-white outline-none transition-colors focus:border-[#4AEEFF]/60"
+                          />
+
+                          <button
+                            type="button"
+                            aria-label={
+                              showPasswords[
+                                field.name as keyof typeof showPasswords
+                              ]
+                                ? `Hide ${field.label}`
+                                : `Show ${field.label}`
+                            }
+                            aria-pressed={
+                              showPasswords[
+                                field.name as keyof typeof showPasswords
+                              ]
+                            }
+                            onClick={() =>
+                              setShowPasswords((prev) => ({
+                                ...prev,
+                                [field.name]:
+                                  !prev[field.name as keyof typeof prev],
+                              }))
+                            }
+                            className="absolute inset-y-0 right-3 flex items-center text-white/50 transition-colors hover:text-[#4AEEFF]"
+                          >
+                            {showPasswords[
+                              field.name as keyof typeof showPasswords
+                            ] ? (
+                              <EyeSlashIcon className="h-4 w-4" />
+                            ) : (
+                              <EyeIcon className="h-4 w-4" />
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <p className="text-xs text-white/50">
+                    Password must contain at least 8 characters, including an
+                    uppercase letter, lowercase letter, and number.
                   </p>
-                  <p className="mt-1 font-bold text-white">
-                    {profile.playerProfile.skillLevel}
-                  </p>
-                </div>
-                <div className="rounded-[12px] border border-white/10 bg-[#061D23]/60 p-4">
-                  <p className="text-xs text-[#4AEEFF] font-semibold uppercase tracking-wider">
-                    Age
-                  </p>
-                  <p className="mt-1 font-bold text-white">
-                    {profile.playerProfile.dateOfBirth
-                      ? `${getPlayerAgeCategory(new Date(profile.playerProfile.dateOfBirth)).age} years`
-                      : "Not provided"}
-                  </p>
-                </div>
-                <div className="rounded-[12px] border border-white/10 bg-[#061D23]/60 p-4">
-                  <p className="text-xs text-[#4AEEFF] font-semibold uppercase tracking-wider">
-                    Age Category
-                  </p>
-                  <p className="mt-1 font-bold text-white">
-                    {profile.playerProfile.dateOfBirth
-                      ? getPlayerAgeCategory(
-                        new Date(profile.playerProfile.dateOfBirth),
-                      ).category
-                      : "N/A"}
-                  </p>
-                </div>
-                <div className="rounded-[12px] border border-white/10 bg-[#061D23]/60 p-4">
-                  <p className="text-xs text-[#4AEEFF] font-semibold uppercase tracking-wider">
-                    Gender
-                  </p>
-                  <p className="mt-1 font-bold text-white">
-                    {profile.playerProfile.gender === "MALE"
-                      ? "Male"
-                      : profile.playerProfile.gender === "FEMALE"
-                        ? "Female"
-                        : "Not provided"}
-                  </p>
-                </div>
-                <div className="rounded-[12px] border border-white/10 bg-[#061D23]/60 p-4">
-                  <p className="text-xs text-[#4AEEFF] font-semibold uppercase tracking-wider">
-                    Club Affiliation
-                  </p>
-                  <p className="mt-1 font-bold text-white">
-                    {profile.playerProfile.clubAffiliation || "None Specified"}
-                  </p>
-                </div>
-                <div className="rounded-[12px] border border-white/10 bg-[#061D23]/60 p-4">
-                  <p className="text-xs text-[#4AEEFF] font-semibold uppercase tracking-wider">
-                    Date of Birth
-                  </p>
-                  <p className="mt-1 font-bold text-white">
-                    {profile.playerProfile.dateOfBirth
-                      ? new Date(
-                        profile.playerProfile.dateOfBirth,
-                      ).toLocaleDateString()
-                      : "Not provided"}
-                  </p>
-                </div>
-              </div>
+
+                  <div className="flex justify-end">
+                    <button
+                      type="submit"
+                      disabled={changingPassword}
+                      className="rounded-lg bg-[#4AEEFF] px-5 py-2.5 text-xs font-bold uppercase text-[#061D23] transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {changingPassword ? "Updating..." : "Update Password"}
+                    </button>
+                  </div>
+                </form>
+              )}
             </section>
           )}
 
-          {/* ─── CLUB MEMBERSHIP ─── */}
-          {!isViewingOtherProfile &&
+          {/* ─── ROLE-SPECIFIC PROFILES ─── */}
+
+          {activeProfileTab === "OVERVIEW" &&
             profile.role === "PLAYER" &&
             profile.playerProfile && (
-              <section className="rounded-[16px] border border-white/20 bg-[#061D23]/5 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl">
-                <div className="mb-5 flex items-center gap-3">
-                  <div className="rounded-lg bg-[#4AEEFF]/20 p-2 text-[#4AEEFF]">
-                    <UserGroupIcon className="h-5 w-5" />
+              <section className="rounded-xl border border-white/15 bg-[#061D23]/20 p-4 backdrop-blur-xl sm:p-5">
+                <div className="mb-4 flex items-center gap-2 border-b border-white/10 pb-3">
+                  <UserIcon className="h-5 w-5 text-[#4AEEFF]" />
+                  <h2 className="text-sm font-bold uppercase tracking-wider text-white">
+                    Player Information
+                  </h2>
+                </div>
+
+                <div className="grid grid-cols-2 gap-x-5 gap-y-4 sm:grid-cols-3">
+                  <div>
+                    <p className="text-xs text-white/50">Skill Level</p>
+                    <p className="mt-1 text-sm font-semibold text-white">
+                      {profile.playerProfile.skillLevel || "Not provided"}
+                    </p>
                   </div>
 
                   <div>
-                    <h2 className="text-lg font-bold uppercase tracking-wider text-white">
+                    <p className="text-xs text-white/50">Age</p>
+                    <p className="mt-1 text-sm font-semibold text-white">
+                      {profile.playerProfile.dateOfBirth
+                        ? `${
+                            getPlayerAgeCategory(
+                              new Date(profile.playerProfile.dateOfBirth),
+                            ).age
+                          } years`
+                        : "Not provided"}
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="text-xs text-white/50">Age Category</p>
+                    <p className="mt-1 text-sm font-semibold text-white">
+                      {profile.playerProfile.dateOfBirth
+                        ? getPlayerAgeCategory(
+                            new Date(profile.playerProfile.dateOfBirth),
+                          ).category
+                        : "N/A"}
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="text-xs text-white/50">Gender</p>
+                    <p className="mt-1 text-sm font-semibold text-white">
+                      {profile.playerProfile.gender === "MALE"
+                        ? "Male"
+                        : profile.playerProfile.gender === "FEMALE"
+                          ? "Female"
+                          : "Not provided"}
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="text-xs text-white/50">Club Affiliation</p>
+                    <p className="mt-1 text-sm font-semibold text-white">
+                      {profile.playerProfile.clubAffiliation ||
+                        "None Specified"}
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="text-xs text-white/50">Date of Birth</p>
+                    <p className="mt-1 text-sm font-semibold text-white">
+                      {profile.playerProfile.dateOfBirth
+                        ? new Date(
+                            profile.playerProfile.dateOfBirth,
+                          ).toLocaleDateString()
+                        : "Not provided"}
+                    </p>
+                  </div>
+                </div>
+              </section>
+            )}
+
+          {/* ─── CLUB MEMBERSHIP ─── */}
+          {activeProfileTab === "ACCOUNT" &&
+            isOwnProfile &&
+            profile.role === "PLAYER" &&
+            profile.playerProfile && (
+              <section className="rounded-xl border border-white/15 bg-[#061D23]/20 p-4 backdrop-blur-xl sm:p-5">
+                <div className="mb-4 flex items-center gap-3 border-b border-white/10 pb-3">
+                  <div className="rounded-lg border border-[#4AEEFF]/20 bg-[#4AEEFF]/10 p-2 text-[#4AEEFF]">
+                    <UserGroupIcon className="h-4 w-4" />
+                  </div>
+
+                  <div>
+                    <h2 className="text-sm font-bold uppercase tracking-wider text-white">
                       Club Membership
                     </h2>
-                    <p className="text-xs text-white/60">
+                    <p className="mt-1 text-xs text-white/50">
                       Manage your table tennis club membership
                     </p>
                   </div>
                 </div>
 
                 {membershipLoading ? (
-                  <div className="rounded-[12px] border border-white/10 bg-[#061D23]/60 p-5">
-                    <p className="text-sm text-white/70">
+                  <div className="rounded-lg border border-white/10 bg-white/5 p-4">
+                    <p className="text-xs text-white/60">
                       Checking membership status...
                     </p>
                   </div>
                 ) : membershipStatus?.isClubMember ? (
-                  /* APPROVED / MEMBER */
-                  <div className="rounded-[12px] border border-emerald-500/30 bg-emerald-500/10 p-5">
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                      <div>
-                        <p className="text-xs font-black uppercase tracking-wider text-emerald-300">
-                          Membership Status
-                        </p>
-                        <p className="mt-1 text-lg font-bold text-white">
-                          You are a Club Member
-                        </p>
-                        <p className="mt-1 text-xs text-white/60">
-                          Your club membership has been approved by an
-                          administrator.
-                        </p>
-                      </div>
-
-                      <span className="inline-flex w-fit rounded-lg border border-emerald-500/40 bg-emerald-500/20 px-4 py-2 text-xs font-black uppercase tracking-wider text-emerald-300">
-                        ✓ Approved
-                      </span>
+                  /* APPROVED */
+                  <div className="flex flex-col gap-3 rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-3 sm:flex-row sm:items-center sm:justify-between sm:p-4">
+                    <div>
+                      <p className="text-sm font-bold text-white">
+                        You are a Club Member
+                      </p>
+                      <p className="mt-1 text-xs text-white/55">
+                        Your membership has been approved by an administrator.
+                      </p>
                     </div>
+
+                    <span className="inline-flex w-fit shrink-0 rounded-md border border-emerald-500/25 bg-emerald-500/10 px-3 py-1.5 text-[10px] font-bold uppercase text-emerald-300">
+                      ✓ Approved
+                    </span>
                   </div>
                 ) : membershipStatus?.request?.status === "PENDING" ? (
                   /* PENDING */
-                  <div className="rounded-[12px] border border-amber-500/30 bg-amber-500/10 p-5">
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                      <div>
-                        <p className="text-xs font-black uppercase tracking-wider text-amber-300">
-                          Membership Status
-                        </p>
-                        <p className="mt-1 text-lg font-bold text-white">
-                          Membership Request Pending
-                        </p>
-                        <p className="mt-1 text-xs text-white/60">
-                          Your request has been submitted and is waiting for
-                          administrator approval.
-                        </p>
-                      </div>
-
-                      <span className="inline-flex w-fit rounded-lg border border-amber-500/40 bg-amber-500/20 px-4 py-2 text-xs font-black uppercase tracking-wider text-amber-300">
-                        ⏳ Pending
-                      </span>
+                  <div className="flex flex-col gap-3 rounded-lg border border-amber-500/20 bg-amber-500/5 p-3 sm:flex-row sm:items-center sm:justify-between sm:p-4">
+                    <div>
+                      <p className="text-sm font-bold text-white">
+                        Membership Request Pending
+                      </p>
+                      <p className="mt-1 text-xs text-white/55">
+                        Your request is waiting for administrator approval.
+                      </p>
                     </div>
+
+                    <span className="inline-flex w-fit shrink-0 rounded-md border border-amber-500/25 bg-amber-500/10 px-3 py-1.5 text-[10px] font-bold uppercase text-amber-300">
+                      Pending
+                    </span>
                   </div>
                 ) : membershipStatus?.request?.status === "REJECTED" ? (
                   /* REJECTED */
-                  <div className="rounded-[12px] border border-red-500/30 bg-red-500/10 p-5">
-                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                      <div>
-                        <p className="text-xs font-black uppercase tracking-wider text-red-300">
-                          Membership Status
-                        </p>
+                  <div className="flex flex-col gap-3 rounded-lg border border-red-500/20 bg-red-500/5 p-3 sm:flex-row sm:items-center sm:justify-between sm:p-4">
+                    <div className="min-w-0">
+                      <p className="text-sm font-bold text-white">
+                        Membership Request Rejected
+                      </p>
 
-                        <p className="mt-1 text-lg font-bold text-white">
-                          Membership Request Rejected
-                        </p>
-
-                        <p className="mt-1 text-xs text-white/60">
-                          Reason:{" "}
-                          <span className="text-red-200">
-                            {membershipStatus.request.rejectionReason ||
-                              "No reason provided"}
-                          </span>
-                        </p>
-                      </div>
-
-                      {membershipStatus.request.rejectionCount < 3 ? (
-                        <button
-                          type="button"
-                          onClick={handleRequestMembership}
-                          disabled={membershipRequesting}
-                          className="inline-flex h-10 items-center justify-center rounded-lg bg-[#4AEEFF] px-5 text-xs font-black uppercase tracking-wider text-[#061D23] transition-all hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
-                        >
-                          {membershipRequesting
-                            ? "Submitting..."
-                            : "Request Again"}
-                        </button>
-                      ) : (
-                        <span className="inline-flex w-fit rounded-lg border border-red-500/40 bg-red-500/20 px-4 py-2 text-xs font-black uppercase tracking-wider text-red-300">
-                          Permanently Rejected
+                      <p className="mt-1 break-words text-xs text-white/60">
+                        Reason:{" "}
+                        <span className="text-red-300">
+                          {membershipStatus.request.rejectionReason ||
+                            "No reason provided"}
                         </span>
-                      )}
+                      </p>
                     </div>
-                  </div>
-                ) : (
-                  /* NO REQUEST */
-                  <div className="rounded-[12px] border border-white/10 bg-[#061D23]/60 p-5">
-                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                      <div>
-                        <p className="text-xs font-black uppercase tracking-wider text-[#4AEEFF]">
-                          Membership Status
-                        </p>
 
-                        <p className="mt-1 text-lg font-bold text-white">
-                          You are not a club member
-                        </p>
-
-                        <p className="mt-1 text-xs text-white/60">
-                          Submit a request to become a member of the club.
-                        </p>
-                      </div>
-
+                    {membershipStatus.request.rejectionCount < 3 ? (
                       <button
                         type="button"
                         onClick={handleRequestMembership}
                         disabled={membershipRequesting}
-                        className="inline-flex h-10 items-center justify-center rounded-lg bg-[#4AEEFF] px-5 text-xs font-black uppercase tracking-wider text-[#061D23] transition-all hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
+                        className="shrink-0 rounded-lg bg-[#4AEEFF] px-4 py-2.5 text-xs font-bold uppercase text-[#061D23] transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         {membershipRequesting
                           ? "Submitting..."
-                          : "Request Club Membership"}
+                          : "Request Again"}
                       </button>
+                    ) : (
+                      <span className="inline-flex w-fit shrink-0 rounded-md border border-red-500/25 bg-red-500/10 px-3 py-1.5 text-[10px] font-bold uppercase text-red-300">
+                        Permanently Rejected
+                      </span>
+                    )}
+                  </div>
+                ) : (
+                  /* NOT A MEMBER */
+                  <div className="flex flex-col gap-3 rounded-lg border border-white/10 bg-white/5 p-3 sm:flex-row sm:items-center sm:justify-between sm:p-4">
+                    <div>
+                      <p className="text-sm font-bold text-white">
+                        You are not a club member
+                      </p>
+                      <p className="mt-1 text-xs text-white/55">
+                        Submit a request to become a member of the club.
+                      </p>
                     </div>
+
+                    <button
+                      type="button"
+                      onClick={handleRequestMembership}
+                      disabled={membershipRequesting}
+                      className="shrink-0 rounded-lg bg-[#4AEEFF] px-4 py-2.5 text-xs font-bold uppercase text-[#061D23] transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {membershipRequesting
+                        ? "Submitting..."
+                        : "Request Club Membership"}
+                    </button>
                   </div>
                 )}
               </section>
@@ -954,447 +988,541 @@ const Profile: React.FC = () => {
             )}
 
           {/* ─── PERFORMANCE PERFORMANCE GRAPH MATRIX ─── */}
-          {profile.role === "PLAYER" && playerStats && (
-            <section className="rounded-[16px] border border-white/20 bg-[#061D23]/5 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl">
-              <div className="mb-5 flex items-center gap-3">
-                <div className="rounded-lg bg-[#4AEEFF]/20 p-2 text-[#4AEEFF]">
-                  <ChartBarIcon className="h-5 w-5" />
-                </div>
-                <h2 className="text-lg font-bold uppercase tracking-wider text-[#FFFFFF]">
-                  Performance Analysis
-                </h2>
-              </div>
 
-              {/* Core numbers breakdown */}
-              <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 mb-6">
-                <div className="rounded-[12px] border border-white/10 bg-[#061D23]/60 p-4 text-center">
-                  <p className="text-3xl font-black text-[#4AEEFF]">
-                    {playerStats.totalMatches}
-                  </p>
-                  <p className="text-xs uppercase font-bold tracking-wider text-white/70 mt-1">
-                    Total Matches
-                  </p>
+          {/* ─── COMPACT PERFORMANCE ANALYSIS ─── */}
+          {activeProfileTab === "PERFORMANCE" &&
+            profile.role === "PLAYER" &&
+            playerStats && (
+              <section className="space-y-4">
+                {/* SECTION TITLE */}
+                <div className="flex items-center gap-2">
+                  <ChartBarIcon className="h-5 w-5 text-[#4AEEFF]" />
+                  <h2 className="text-base font-bold uppercase tracking-wider text-white">
+                    Performance Analysis
+                  </h2>
                 </div>
-                <div className="rounded-[12px] border border-white/10 bg-[#061D23]/60 p-4 text-center">
-                  <p className="text-3xl font-black text-[#4AEEFF]">
-                    {playerStats.wins}
-                  </p>
-                  <p className="text-xs uppercase font-bold tracking-wider text-white/70 mt-1">
-                    Wins
-                  </p>
-                </div>
-                <div className="rounded-[12px] border border-white/10 bg-[#061D23]/60 p-4 text-center">
-                  <p className="text-3xl font-black text-red-400">
-                    {playerStats.losses}
-                  </p>
-                  <p className="text-xs uppercase font-bold tracking-wider text-white/70 mt-1">
-                    Losses
-                  </p>
-                </div>
-                <div className="rounded-[12px] border border-white/10 bg-[#061D23]/60 p-4 text-center">
-                  <p className="text-3xl font-black text-[#4AEEFF]">
-                    {playerStats.winRate}
-                  </p>
-                  <p className="text-xs uppercase font-bold tracking-wider text-white/70 mt-1">
-                    Win Rate
-                  </p>
-                </div>
-              </div>
 
-              <div className="grid gap-6 md:grid-cols-2 mb-6">
-                {/* Games Slider stats */}
-                <div className="rounded-[12px] border border-white/10 bg-[#061D23]/40 p-5">
-                  <h4 className="text-xs font-black uppercase tracking-wider text-white/90 mb-3">
-                    Games Progress Bar
-                  </h4>
-                  <div className="flex justify-between items-center text-sm mb-2">
-                    <div>
-                      <span className="text-xs text-white/60 block">Won</span>
-                      <strong className="text-lg text-[#4AEEFF]">
-                        {playerStats.gamesStats.won}
-                      </strong>
-                    </div>
-                    <div className="text-xs font-black text-white/30 uppercase">
-                      VS
-                    </div>
-                    <div className="text-right">
-                      <span className="text-xs text-white/60 block">Lost</span>
-                      <strong className="text-lg text-red-400">
-                        {playerStats.gamesStats.lost}
-                      </strong>
-                    </div>
-                  </div>
-                  <div className="w-full bg-white/10 rounded-full h-2.5 overflow-hidden">
+                {/* MATCH STATISTICS */}
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                  {[
+                    {
+                      label: "Total Matches",
+                      value: playerStats.totalMatches,
+                      color: "text-[#4AEEFF]",
+                    },
+                    {
+                      label: "Wins",
+                      value: playerStats.wins,
+                      color: "text-emerald-400",
+                    },
+                    {
+                      label: "Losses",
+                      value: playerStats.losses,
+                      color: "text-red-400",
+                    },
+                    {
+                      label: "Win Rate",
+                      value: playerStats.winRate,
+                      color: "text-[#4AEEFF]",
+                    },
+                  ].map((stat) => (
                     <div
-                      className="bg-[#4AEEFF] h-full transition-all duration-500"
-                      style={{
-                        width: `${playerStats.gamesStats.total > 0 ? (playerStats.gamesStats.won / playerStats.gamesStats.total) * 100 : 0}%`,
-                      }}
-                    />
-                  </div>
-                  <p className="mt-2 text-right text-xs text-white/60">
-                    Total sets: {playerStats.gamesStats.total}
-                  </p>
+                      key={stat.label}
+                      className="rounded-xl border border-white/10 bg-[#061D23]/30 p-4 text-center backdrop-blur-xl"
+                    >
+                      <p className={`text-2xl font-black ${stat.color}`}>
+                        {stat.value}
+                      </p>
+                      <p className="mt-1 text-[11px] font-bold uppercase tracking-wide text-white/55">
+                        {stat.label}
+                      </p>
+                    </div>
+                  ))}
                 </div>
 
-                {/* Points mini block */}
-                <div className="rounded-[12px] border border-white/10 bg-[#061D23]/40 p-5 flex flex-col justify-between">
-                  <h4 className="text-xs font-black uppercase tracking-wider text-white/90 mb-2">
-                    Points Metrics
-                  </h4>
-                  <div className="grid grid-cols-3 gap-2 text-center">
-                    <div>
-                      <p className="text-xs text-white/60">Scored</p>
-                      <p className="text-base font-bold text-[#4AEEFF]">
-                        {playerStats.pointsStats.scored}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-white/60">Conceded</p>
-                      <p className="text-base font-bold text-red-400">
-                        {playerStats.pointsStats.conceded}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-white/60">Avg/Game</p>
-                      <p className="text-base font-bold text-white">
-                        {playerStats.pointsStats.averagePerGame}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
+                {/* GAME & POINTS ANALYSIS */}
+                <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                  {/* GAME PERFORMANCE */}
+                  <div className="rounded-xl border border-white/10 bg-[#061D23]/25 p-4 backdrop-blur-xl sm:p-5">
+                    <h3 className="mb-4 text-xs font-bold uppercase tracking-wider text-white">
+                      Games Performance
+                    </h3>
 
-              {/* Match log timeline */}
-              {playerStats.recentMatches.length > 0 ? (
-                <div>
-                  <h4 className="text-xs font-black uppercase tracking-widest text-[#4AEEFF] mb-3 flex items-center gap-2">
-                    <CalendarIcon className="h-4 w-4" /> History Timeline
-                  </h4>
-                  <div className="space-y-3">
-                    {playerStats.recentMatches.map((match) => (
-                      <div
-                        key={match.id}
-                        className="group flex justify-between items-center rounded-[12px] border border-white/5 bg-[#061D23]/40 p-4 transition-all duration-200 hover:border-[#4AEEFF]/40 hover:bg-[#12679E]/20"
-                      >
-                        <div>
-                          <p className="font-bold text-white group-hover:text-[#4AEEFF] transition-colors">
-                            {match.tournamentName}
-                          </p>
-                          <p className="text-xs text-white/70">
-                            Against: {match.opponent}
-                          </p>
-                          <p className="text-[10px] text-white/40 mt-1">
-                            {new Date(match.date).toLocaleDateString()}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <span
-                            className={`inline-block px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-md ${match.result === "Win"
-                                ? "bg-[#4AEEFF]/20 text-[#4AEEFF]"
-                                : "bg-red-500/20 text-red-400"
-                              }`}
-                          >
-                            {match.result}
-                          </span>
-                          <p className="text-xs font-bold text-white mt-1.5">
-                            {match.score}
-                          </p>
-                        </div>
+                    <div className="mb-3 flex items-center justify-between">
+                      <div>
+                        <p className="text-[11px] text-white/50">Games Won</p>
+                        <p className="text-xl font-bold text-[#4AEEFF]">
+                          {playerStats.gamesStats.won}
+                        </p>
                       </div>
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                playerStats.totalMatches === 0 && (
-                  <div className="text-center py-8 rounded-[12px] bg-[#061D23]/30 border border-white/5">
-                    <TrophyIcon className="h-10 w-10 text-white/20 mx-auto mb-2" />
-                    <p className="text-sm font-semibold text-white/80">
-                      No competitive log entries
+
+                      <div className="text-right">
+                        <p className="text-[11px] text-white/50">Games Lost</p>
+                        <p className="text-xl font-bold text-red-400">
+                          {playerStats.gamesStats.lost}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="h-2 overflow-hidden rounded-full bg-white/10">
+                      <div
+                        className="h-full rounded-full bg-[#4AEEFF] transition-all duration-500"
+                        style={{
+                          width: `${
+                            playerStats.gamesStats.total > 0
+                              ? (playerStats.gamesStats.won /
+                                  playerStats.gamesStats.total) *
+                                100
+                              : 0
+                          }%`,
+                        }}
+                      />
+                    </div>
+
+                    <p className="mt-3 text-right text-[11px] text-white/50">
+                      Total Games: {playerStats.gamesStats.total}
                     </p>
                   </div>
-                )
-              )}
-            </section>
-          )}
+
+                  {/* POINTS PERFORMANCE */}
+                  <div className="rounded-xl border border-white/10 bg-[#061D23]/25 p-4 backdrop-blur-xl sm:p-5">
+                    <h3 className="mb-4 text-xs font-bold uppercase tracking-wider text-white">
+                      Points Performance
+                    </h3>
+
+                    <div className="grid grid-cols-3 gap-3 text-center">
+                      <div>
+                        <p className="text-[11px] text-white/50">Scored</p>
+                        <p className="mt-2 text-xl font-bold text-[#4AEEFF]">
+                          {playerStats.pointsStats.scored}
+                        </p>
+                      </div>
+
+                      <div>
+                        <p className="text-[11px] text-white/50">Conceded</p>
+                        <p className="mt-2 text-xl font-bold text-red-400">
+                          {playerStats.pointsStats.conceded}
+                        </p>
+                      </div>
+
+                      <div>
+                        <p className="text-[11px] text-white/50">Avg/Game</p>
+                        <p className="mt-2 text-xl font-bold text-white">
+                          {playerStats.pointsStats.averagePerGame}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* RECENT MATCH HISTORY */}
+                <div className="rounded-xl border border-white/10 bg-[#061D23]/25 p-4 backdrop-blur-xl sm:p-5">
+                  <div className="mb-4 flex items-center gap-2">
+                    <CalendarIcon className="h-4 w-4 text-[#4AEEFF]" />
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-white">
+                      Recent Match History
+                    </h3>
+                  </div>
+
+                  {playerStats.recentMatches.length > 0 ? (
+                    <div className="divide-y divide-white/10">
+                      {playerStats.recentMatches.map((match) => (
+                        <div
+                          key={match.id}
+                          className="flex flex-col gap-3 py-3 first:pt-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between"
+                        >
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-semibold text-white">
+                              {match.tournamentName}
+                            </p>
+
+                            <p className="mt-1 text-xs text-white/55">
+                              vs {match.opponent}
+                            </p>
+
+                            <p className="mt-1 text-[11px] text-white/40">
+                              {new Date(match.date).toLocaleDateString()}
+                            </p>
+                          </div>
+
+                          <div className="flex items-center gap-3">
+                            <span
+                              className={`rounded-md px-2.5 py-1 text-[10px] font-bold uppercase ${
+                                match.result === "Win"
+                                  ? "bg-emerald-500/15 text-emerald-300"
+                                  : "bg-red-500/15 text-red-300"
+                              }`}
+                            >
+                              {match.result}
+                            </span>
+
+                            <span className="min-w-[40px] text-right text-sm font-bold text-white">
+                              {match.score}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="py-6 text-center">
+                      <TrophyIcon className="mx-auto h-8 w-8 text-white/20" />
+                      <p className="mt-2 text-xs text-white/55">
+                        No competitive matches recorded yet.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </section>
+            )}
 
           {/* Doubles Teams & Partnerships Section (International Standard) */}
-          {!isViewingOtherProfile && profile.role === "PLAYER" && (
-            <section className="rounded-[16px] border border-white/20 bg-[#061D23]/5 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-white/10">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-xl bg-[#4AEEFF]/15 border border-[#4AEEFF]/30 text-[#4AEEFF]">
-                    <UserGroupIcon className="h-5 w-5" />
+          {activeProfileTab === "TEAMS" &&
+            isOwnProfile &&
+            profile.role === "PLAYER" && (
+              <section className="rounded-xl border border-white/20 bg-[#061D23]/5 p-4 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl">
+                <div className="mb-4 flex flex-col justify-between gap-3 border-b border-white/10 pb-3 lg:flex-row lg:items-center">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-xl bg-[#4AEEFF]/15 border border-[#4AEEFF]/30 text-[#4AEEFF]">
+                      <UserGroupIcon className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <h3 className="font-black uppercase tracking-wider text-white text-base">
+                        Doubles Partnerships & Teams
+                      </h3>
+                      <p className="text-xs text-white/60">
+                        Manage your tournament pairings, sent requests, and
+                        received invitations
+                      </p>
+                    </div>
                   </div>
+
+                  {/* Sub-tabs */}
+                  <div className="flex w-full flex-wrap items-center gap-1 rounded-lg border border-white/10 bg-black/25 p-1 lg:w-auto">
+                    <button
+                      onClick={() => setActiveDoublesTab("ACTIVE")}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${
+                        activeDoublesTab === "ACTIVE"
+                          ? "bg-[#4AEEFF]/15 text-[#4AEEFF] border border-[#4AEEFF]/45 shadow-[0_0_14px_rgba(74,238,255,0.18)] backdrop-blur-md"
+                          : "text-white/60 hover:text-white border border-transparent"
+                      }`}
+                    >
+                      Active Pairs ({doublesRegistrations.length})
+                    </button>
+                    <button
+                      onClick={() => setActiveDoublesTab("RECEIVED")}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all relative ${
+                        activeDoublesTab === "RECEIVED"
+                          ? "bg-[#4AEEFF]/15 text-[#4AEEFF] border border-[#4AEEFF]/45 shadow-[0_0_14px_rgba(74,238,255,0.18)] backdrop-blur-md"
+                          : "text-white/60 hover:text-white border border-transparent"
+                      }`}
+                    >
+                      Received ({profileReceivedInvites.length})
+                      {profileReceivedInvites.length > 0 && (
+                        <span className="ml-1 px-1.5 py-0.2 rounded-full bg-[#4AEEFF]/30 text-[#4AEEFF] text-[9px] font-bold">
+                          {profileReceivedInvites.length}
+                        </span>
+                      )}
+                    </button>
+                    <button
+                      onClick={() => setActiveDoublesTab("SENT")}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${
+                        activeDoublesTab === "SENT"
+                          ? "bg-[#4AEEFF]/15 text-[#4AEEFF] border border-[#4AEEFF]/45 shadow-[0_0_14px_rgba(74,238,255,0.18)] backdrop-blur-md"
+                          : "text-white/60 hover:text-white border border-transparent"
+                      }`}
+                    >
+                      Sent ({profileSentInvites.length})
+                    </button>
+                  </div>
+                </div>
+
+                {/* ACTIVE DOUBLES TAB */}
+                {activeDoublesTab === "ACTIVE" && (
                   <div>
-                    <h3 className="font-black uppercase tracking-wider text-white text-base">
-                      Doubles Partnerships & Teams
-                    </h3>
-                    <p className="text-xs text-white/60">
-                      Manage your tournament pairings, sent requests, and
-                      received invitations
+                    {doublesRegistrations.length === 0 ? (
+                      <div className="rounded-xl border border-white/10 bg-[#061D23]/25 px-4 py-8 text-center">
+                        <UserGroupIcon className="mx-auto mb-2 h-8 w-8 text-white/25" />
+
+                        <p className="text-sm font-semibold text-white/80">
+                          No active doubles teams yet
+                        </p>
+
+                        <p className="mt-1 text-xs text-white/50">
+                          Register for a doubles tournament and invite a partner
+                          to form a pair.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
+                        {doublesRegistrations.map((reg) => {
+                          const partnerMember = reg.team?.members?.find(
+                            (m: any) => m.playerId !== user?.id,
+                          );
+
+                          const partnerName = partnerMember
+                            ? `${partnerMember.player?.firstName || ""} ${
+                                partnerMember.player?.lastName || ""
+                              }`.trim()
+                            : reg.playerId !== user?.id
+                              ? `${reg.player?.firstName || ""} ${
+                                  reg.player?.lastName || ""
+                                }`.trim()
+                              : "Team Partner";
+
+                          return (
+                            <div
+                              key={reg.id}
+                              className="rounded-xl border border-white/10 bg-[#061D23]/30 p-3 transition-colors hover:border-[#4AEEFF]/35 sm:p-4"
+                            >
+                              {/* TOURNAMENT & STATUS */}
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="min-w-0 flex-1">
+                                  <h4 className="truncate text-sm font-bold text-white">
+                                    {reg.tournament?.name || "Tournament Event"}
+                                  </h4>
+
+                                  <span className="mt-2 inline-flex rounded-md border border-[#4AEEFF]/20 bg-[#4AEEFF]/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-[#4AEEFF]">
+                                    {reg.category?.name || "Doubles Division"}
+                                  </span>
+                                </div>
+
+                                <span className="shrink-0 rounded-md border border-emerald-500/25 bg-emerald-500/10 px-2 py-1 text-[10px] font-bold uppercase text-emerald-300">
+                                  {reg.status || "CONFIRMED"}
+                                </span>
+                              </div>
+
+                              {/* PARTNER INFORMATION */}
+                              <div className="mt-3 flex items-center gap-3 border-t border-white/10 pt-3">
+                                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[#4AEEFF]/20 bg-[#4AEEFF]/10">
+                                  <UserGroupIcon className="h-4 w-4 text-[#4AEEFF]" />
+                                </div>
+
+                                <div className="min-w-0">
+                                  <p className="text-[10px] font-semibold uppercase tracking-wide text-white/45">
+                                    Doubles Partner
+                                  </p>
+
+                                  <p className="truncate text-xs font-bold text-white sm:text-sm">
+                                    {partnerName || "Team Partner"}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* RECEIVED INVITES TAB */}
+                {activeDoublesTab === "RECEIVED" && (
+                  <div>
+                    {profileReceivedInvites.length === 0 ? (
+                      <div className="rounded-xl border border-white/10 bg-[#061D23]/25 px-4 py-8 text-center">
+                        <UserGroupIcon className="mx-auto mb-2 h-8 w-8 text-white/25" />
+
+                        <p className="text-sm font-semibold text-white/80">
+                          No pending partner invitations
+                        </p>
+
+                        <p className="mt-1 text-xs text-white/50">
+                          When someone invites you to play doubles, it will show
+                          up here.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
+                        {profileReceivedInvites.map((inv) => (
+                          <div
+                            key={inv.id}
+                            className="rounded-xl border border-white/10 bg-[#061D23]/30 p-3 transition-colors hover:border-[#4AEEFF]/35 sm:p-4"
+                          >
+                            {/* INVITER */}
+                            <div className="flex items-center gap-3">
+                              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-[#4AEEFF]/20 bg-[#4AEEFF]/10">
+                                <UserGroupIcon className="h-5 w-5 text-[#4AEEFF]" />
+                              </div>
+
+                              <div className="min-w-0 flex-1">
+                                <p className="text-[10px] font-semibold uppercase tracking-wide text-white/45">
+                                  Partnership Invitation
+                                </p>
+
+                                <p className="truncate text-sm font-bold text-white">
+                                  {inv.inviter?.firstName}{" "}
+                                  {inv.inviter?.lastName}
+                                </p>
+                              </div>
+
+                              <span className="shrink-0 rounded-md border border-amber-500/25 bg-amber-500/10 px-2 py-1 text-[10px] font-bold uppercase text-amber-300">
+                                Pending
+                              </span>
+                            </div>
+
+                            {/* TOURNAMENT DETAILS */}
+                            <div className="mt-3 border-t border-white/10 pt-3">
+                              <p className="truncate text-xs font-semibold text-white/85">
+                                {inv.tournament?.name || "Tournament Event"}
+                              </p>
+
+                              <span className="mt-2 inline-flex rounded-md border border-[#4AEEFF]/20 bg-[#4AEEFF]/10 px-2 py-1 text-[10px] font-semibold uppercase text-[#4AEEFF]">
+                                {inv.category?.name || "Doubles Division"}
+                              </span>
+                            </div>
+
+                            {/* INVITATION ACTIONS */}
+                            <div className="mt-3 flex flex-wrap items-center justify-end gap-2 border-t border-white/10 pt-3">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  handleProfileDeclineInvite(inv.id)
+                                }
+                                className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs font-bold text-red-300 transition-colors hover:bg-red-500/20"
+                              >
+                                Decline
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  handleProfileAcceptInvite(inv.id)
+                                }
+                                className="rounded-lg bg-[#4AEEFF] px-4 py-2 text-xs font-bold text-[#061D23] transition-colors hover:bg-white"
+                              >
+                                Accept Invitation
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* SENT INVITES TAB */}
+                {activeDoublesTab === "SENT" && (
+                  <div>
+                    {profileSentInvites.length === 0 ? (
+                      <div className="rounded-xl border border-white/10 bg-[#061D23]/25 px-4 py-8 text-center">
+                        <UserGroupIcon className="mx-auto mb-2 h-8 w-8 text-white/25" />
+
+                        <p className="text-sm font-semibold text-white/80">
+                          No sent partner invitations
+                        </p>
+
+                        <p className="mt-1 text-xs text-white/50">
+                          Invites you send to other players will be listed here.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
+                        {profileSentInvites.map((inv) => (
+                          <div
+                            key={inv.id}
+                            className="rounded-xl border border-white/10 bg-[#061D23]/30 p-3 transition-colors hover:border-[#4AEEFF]/35 sm:p-4"
+                          >
+                            {/* INVITEE */}
+                            <div className="flex items-center gap-3">
+                              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-[#4AEEFF]/20 bg-[#4AEEFF]/10">
+                                <UserGroupIcon className="h-5 w-5 text-[#4AEEFF]" />
+                              </div>
+
+                              <div className="min-w-0 flex-1">
+                                <p className="text-[10px] font-semibold uppercase tracking-wide text-white/45">
+                                  Invitation Sent To
+                                </p>
+
+                                <p className="truncate text-sm font-bold text-white">
+                                  {inv.invitee?.firstName}{" "}
+                                  {inv.invitee?.lastName}
+                                </p>
+                              </div>
+
+                              {/* INVITATION STATUS */}
+                              <span
+                                className={`shrink-0 rounded-md border px-2 py-1 text-[10px] font-bold uppercase ${
+                                  inv.status === "PENDING"
+                                    ? "border-amber-500/25 bg-amber-500/10 text-amber-300"
+                                    : inv.status === "ACCEPTED"
+                                      ? "border-emerald-500/25 bg-emerald-500/10 text-emerald-300"
+                                      : "border-red-500/25 bg-red-500/10 text-red-300"
+                                }`}
+                              >
+                                {inv.status}
+                              </span>
+                            </div>
+
+                            {/* TOURNAMENT DETAILS */}
+                            <div className="mt-3 border-t border-white/10 pt-3">
+                              <p className="truncate text-xs font-semibold text-white/85">
+                                {inv.tournament?.name || "Tournament Event"}
+                              </p>
+
+                              <span className="mt-2 inline-flex rounded-md border border-[#4AEEFF]/20 bg-[#4AEEFF]/10 px-2 py-1 text-[10px] font-semibold uppercase text-[#4AEEFF]">
+                                {inv.category?.name || "Doubles Division"}
+                              </span>
+                            </div>
+
+                            {/* CANCEL ACTION */}
+                            {inv.status === "PENDING" && (
+                              <div className="mt-3 flex justify-end border-t border-white/10 pt-3">
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    handleProfileCancelInvite(inv.id)
+                                  }
+                                  className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs font-bold text-red-300 transition-colors hover:bg-red-500/20"
+                                >
+                                  Cancel Invitation
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </section>
+            )}
+
+          {/* Referee credentials profile template */}
+          {activeProfileTab === "OVERVIEW" &&
+            profile.role === "REFEREE" &&
+            profile.refereeProfile && (
+              <section className="rounded-[16px] border border-white/20 bg-[#061D23]/5 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl">
+                <div className="mb-4 flex items-center gap-3">
+                  <AcademicCapIcon className="h-5 w-5 text-[#4AEEFF]" />
+                  <h3 className="font-bold uppercase tracking-wider text-white">
+                    Referee Credentials
+                  </h3>
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="rounded-[12px] bg-[#061D23]/60 p-4 border border-white/5">
+                    <p className="text-xs text-[#4AEEFF]/80 uppercase font-bold tracking-wider">
+                      Certification Awarded
+                    </p>
+                    <p className="font-semibold text-white mt-1">
+                      {profile.refereeProfile.certification || "Not Specified"}
+                    </p>
+                  </div>
+                  <div className="rounded-[12px] bg-[#061D23]/60 p-4 border border-white/5">
+                    <p className="text-xs text-[#4AEEFF]/80 uppercase font-bold tracking-wider">
+                      Experience Level
+                    </p>
+                    <p className="font-semibold text-white mt-1">
+                      {profile.refereeProfile.experienceYears || 0} Professional
+                      Years
                     </p>
                   </div>
                 </div>
-
-                {/* Sub-tabs */}
-                <div className="flex items-center gap-1.5 p-1 rounded-xl bg-black/40 border border-white/10 self-start sm:self-auto backdrop-blur-md">
-                  <button
-                    onClick={() => setActiveDoublesTab("ACTIVE")}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${
-                      activeDoublesTab === "ACTIVE"
-                        ? "bg-[#4AEEFF]/15 text-[#4AEEFF] border border-[#4AEEFF]/45 shadow-[0_0_14px_rgba(74,238,255,0.18)] backdrop-blur-md"
-                        : "text-white/60 hover:text-white border border-transparent"
-                    }`}
-                  >
-                    Active Pairs ({doublesRegistrations.length})
-                  </button>
-                  <button
-                    onClick={() => setActiveDoublesTab("RECEIVED")}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all relative ${
-                      activeDoublesTab === "RECEIVED"
-                        ? "bg-[#4AEEFF]/15 text-[#4AEEFF] border border-[#4AEEFF]/45 shadow-[0_0_14px_rgba(74,238,255,0.18)] backdrop-blur-md"
-                        : "text-white/60 hover:text-white border border-transparent"
-                    }`}
-                  >
-                    Received ({profileReceivedInvites.length})
-                    {profileReceivedInvites.length > 0 && (
-                      <span className="ml-1 px-1.5 py-0.2 rounded-full bg-[#4AEEFF]/30 text-[#4AEEFF] text-[9px] font-bold">
-                        {profileReceivedInvites.length}
-                      </span>
-                    )}
-                  </button>
-                  <button
-                    onClick={() => setActiveDoublesTab("SENT")}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${
-                      activeDoublesTab === "SENT"
-                        ? "bg-[#4AEEFF]/15 text-[#4AEEFF] border border-[#4AEEFF]/45 shadow-[0_0_14px_rgba(74,238,255,0.18)] backdrop-blur-md"
-                        : "text-white/60 hover:text-white border border-transparent"
-                    }`}
-                  >
-                    Sent ({profileSentInvites.length})
-                  </button>
-                </div>
-              </div>
-
-              {/* ACTIVE DOUBLES TAB */}
-              {activeDoublesTab === "ACTIVE" && (
-                <div>
-                  {doublesRegistrations.length === 0 ? (
-                    <div className="text-center py-8 rounded-[12px] bg-[#061D23]/30 border border-white/5">
-                      <UserGroupIcon className="h-10 w-10 text-white/20 mx-auto mb-2" />
-                      <p className="text-sm font-semibold text-white/80">
-                        No active doubles teams yet
-                      </p>
-                      <p className="text-xs text-white/50 mt-1">
-                        Register for a doubles tournament and invite a partner
-                        to form a pair.
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      {doublesRegistrations.map((reg) => {
-                        const partnerMember = reg.team?.members?.find(
-                          (m: any) => m.playerId !== user?.id,
-                        );
-                        const partnerName = partnerMember
-                          ? `${partnerMember.player?.firstName || ""} ${partnerMember.player?.lastName || ""}`.trim()
-                          : reg.playerId !== user?.id
-                            ? `${reg.player?.firstName || ""} ${reg.player?.lastName || ""}`.trim()
-                            : "Team Partner";
-
-                        return (
-                          <div
-                            key={reg.id}
-                            className="rounded-xl border border-white/10 bg-[#061D23]/40 p-4 hover:border-[#4AEEFF]/40 transition-all"
-                          >
-                            <div className="flex items-start justify-between gap-2 mb-2">
-                              <div>
-                                <span className="px-2 py-0.5 rounded bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 text-[10px] font-bold uppercase">
-                                  {reg.category?.name || "Doubles Division"}
-                                </span>
-                                <h4 className="font-bold text-white text-base mt-1.5">
-                                  {reg.tournament?.name || "Tournament Event"}
-                                </h4>
-                              </div>
-                              <span className="px-2 py-0.5 text-[10px] font-black uppercase tracking-wider rounded border border-emerald-500/40 bg-emerald-500/20 text-emerald-300">
-                                {reg.status || "CONFIRMED"}
-                              </span>
-                            </div>
-                            <div className="pt-3 border-t border-white/5 flex items-center justify-between text-xs">
-                              <span className="text-white/60">Partner:</span>
-                              <span className="font-bold text-[#4AEEFF] flex items-center gap-1">
-                                <span>🤝</span> {partnerName}
-                              </span>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* RECEIVED INVITES TAB */}
-              {activeDoublesTab === "RECEIVED" && (
-                <div>
-                  {profileReceivedInvites.length === 0 ? (
-                    <div className="text-center py-8 rounded-[12px] bg-[#061D23]/30 border border-white/5">
-                      <p className="text-sm font-semibold text-white/80">
-                        No pending partner invitations
-                      </p>
-                      <p className="text-xs text-white/50 mt-1">
-                        When someone invites you to play doubles, it will show
-                        up here.
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      {profileReceivedInvites.map((inv) => (
-                        <div
-                          key={inv.id}
-                          className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl bg-black/40 border border-cyan-500/30 hover:border-cyan-400/50 transition-all"
-                        >
-                          <div>
-                            <p className="font-bold text-white text-sm">
-                              <span className="text-[#4AEEFF] font-black">
-                                {inv.inviter?.firstName} {inv.inviter?.lastName}
-                              </span>{" "}
-                              invited you to partner!
-                            </p>
-                            <p className="text-xs text-white/60 mt-1">
-                              Tournament:{" "}
-                              <span className="text-white font-semibold">
-                                {inv.tournament?.name}
-                              </span>{" "}
-                              • Division:{" "}
-                              <span className="text-cyan-300 font-semibold">
-                                {inv.category?.name}
-                              </span>
-                            </p>
-                          </div>
-                          <div className="flex items-center gap-2 self-end sm:self-auto flex-shrink-0">
-                            <button
-                              onClick={() => handleProfileAcceptInvite(inv.id)}
-                              className="px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-cyan-400 to-teal-400 text-slate-950 text-xs font-black uppercase tracking-wider shadow-sm hover:brightness-110 active:scale-95 transition-all"
-                            >
-                              ✓ Accept
-                            </button>
-                            <button
-                              onClick={() => handleProfileDeclineInvite(inv.id)}
-                              className="px-3 py-1.5 rounded-lg border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-red-300 text-xs font-bold transition-all"
-                            >
-                              ✕ Decline
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* SENT INVITES TAB */}
-              {activeDoublesTab === "SENT" && (
-                <div>
-                  {profileSentInvites.length === 0 ? (
-                    <div className="text-center py-8 rounded-[12px] bg-[#061D23]/30 border border-white/5">
-                      <p className="text-sm font-semibold text-white/80">
-                        No sent partner invitations
-                      </p>
-                      <p className="text-xs text-white/50 mt-1">
-                        Invites you send to other players will be listed here.
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      {profileSentInvites.map((inv) => (
-                        <div
-                          key={inv.id}
-                          className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl bg-black/40 border border-white/10 hover:border-white/20 transition-all"
-                        >
-                          <div>
-                            <p className="font-bold text-white text-sm">
-                              Invited:{" "}
-                              <span className="text-cyan-300 font-bold">
-                                {inv.invitee?.firstName} {inv.invitee?.lastName}
-                              </span>
-                            </p>
-                            <p className="text-xs text-white/60 mt-1">
-                              Tournament:{" "}
-                              <span className="text-white font-semibold">
-                                {inv.tournament?.name}
-                              </span>{" "}
-                              • Division:{" "}
-                              <span className="text-white font-semibold">
-                                {inv.category?.name}
-                              </span>
-                            </p>
-                          </div>
-                          <div className="flex items-center gap-3 self-end sm:self-auto flex-shrink-0">
-                            <span
-                              className={`px-2.5 py-1 text-[10px] font-black uppercase tracking-wider rounded-md border ${inv.status === "PENDING"
-                                  ? "bg-amber-500/15 text-amber-300 border-amber-500/30"
-                                  : inv.status === "ACCEPTED"
-                                    ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/30"
-                                    : "bg-red-500/15 text-red-300 border-red-500/30"
-                                }`}
-                            >
-                              {inv.status}
-                            </span>
-                            {inv.status === "PENDING" && (
-                              <button
-                                onClick={() =>
-                                  handleProfileCancelInvite(inv.id)
-                                }
-                                className="px-3 py-1 rounded-lg border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-red-300 text-xs font-bold transition-all"
-                              >
-                                Cancel
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-            </section>
-          )}
-
-          {/* Referee credentials profile template */}
-          {profile.role === "REFEREE" && profile.refereeProfile && (
-            <section className="rounded-[16px] border border-white/20 bg-[#061D23]/5 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl">
-              <div className="mb-4 flex items-center gap-3">
-                <AcademicCapIcon className="h-5 w-5 text-[#4AEEFF]" />
-                <h3 className="font-bold uppercase tracking-wider text-white">
-                  Referee Credentials
-                </h3>
-              </div>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="rounded-[12px] bg-[#061D23]/60 p-4 border border-white/5">
-                  <p className="text-xs text-[#4AEEFF]/80 uppercase font-bold tracking-wider">
-                    Certification Awarded
-                  </p>
-                  <p className="font-semibold text-white mt-1">
-                    {profile.refereeProfile.certification || "Not Specified"}
-                  </p>
-                </div>
-                <div className="rounded-[12px] bg-[#061D23]/60 p-4 border border-white/5">
-                  <p className="text-xs text-[#4AEEFF]/80 uppercase font-bold tracking-wider">
-                    Experience Level
-                  </p>
-                  <p className="font-semibold text-white mt-1">
-                    {profile.refereeProfile.experienceYears || 0} Professional
-                    Years
-                  </p>
-                </div>
-              </div>
-            </section>
-          )}
+              </section>
+            )}
 
           {/* Admin properties profile template */}
-          {(profile.role === "ADMIN" || profile.role === "SUPER_ADMIN") &&
+          {activeProfileTab === "OVERVIEW" &&
+            (profile.role === "ADMIN" || profile.role === "SUPER_ADMIN") &&
             profile.adminProfile && (
               <section className="rounded-[16px] border border-white/20 bg-[#061D23]/5 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl">
                 <div className="mb-4 flex items-center gap-3">
