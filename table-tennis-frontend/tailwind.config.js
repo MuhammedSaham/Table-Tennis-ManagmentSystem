@@ -52,9 +52,10 @@ export default {
         },
       },
       fontFamily: {
-        'sans': ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
-        'heading': ['Poppins', 'Inter', 'system-ui', 'sans-serif'],
-        'display': ['Montserrat', 'Poppins', 'sans-serif'],
+        'sans': ['Ebrima', 'Inter', 'system-ui', 'sans-serif'],
+        'heading': ['Ebrima', 'Inter', 'system-ui', 'sans-serif'],
+        'display': ['Ebrima', 'Inter', 'system-ui', 'sans-serif'],
+        'script': ['Brush Creeping', 'cursive'],
       },
       animation: {
         'fade-in': 'fadeIn 0.6s ease-in-out',

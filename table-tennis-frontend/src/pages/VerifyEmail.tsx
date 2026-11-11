@@ -19,15 +19,15 @@ const VerifyEmail: React.FC = () => {
 
     api
       .get(`/auth/verify-email?token=${token}`)
-      .then(() => {
+      .then((res) => {
         setStatus("success");
-        setMessage("Email verified! You can now log in.");
+        setMessage(res.data?.message || "Email verified! You can now log in.");
       })
-      .catch(() => {
+      .catch((err) => {
         setStatus("error");
-        setMessage("This link is invalid or has expired.");
+        setMessage(err.response?.data?.message || "This link is invalid or has expired.");
       });
-  }, []);
+  }, [params]);
 
   return (
     <div
@@ -36,19 +36,25 @@ const VerifyEmail: React.FC = () => {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        background: "#f8fafc",
+        background: "#061D23",
+        backgroundImage: "url('/tablenew.png')",
+        backgroundSize: "cover",
+        backgroundPosition: "center center",
         fontFamily: "'Segoe UI',system-ui,sans-serif",
+        padding: "20px",
       }}
     >
       <div
         style={{
-          background: "#fff",
+          background: "rgba(6, 29, 35, 0.88)",
+          backdropFilter: "blur(14px)",
+          border: "1px solid rgba(74, 238, 255, 0.3)",
           borderRadius: 20,
           padding: 48,
-          maxWidth: 420,
+          maxWidth: 440,
           width: "100%",
           textAlign: "center",
-          boxShadow: "0 8px 32px rgba(0,0,0,0.1)",
+          boxShadow: "0 12px 40px rgba(0,0,0,0.4)",
         }}
       >
         {status === "loading" && (
@@ -57,34 +63,36 @@ const VerifyEmail: React.FC = () => {
               style={{
                 width: 48,
                 height: 48,
-                border: "3px solid #e2e8f0",
-                borderTopColor: "#0f172a",
+                border: "3px solid rgba(74, 238, 255, 0.2)",
+                borderTopColor: "#4AEEFF",
                 borderRadius: "50%",
                 animation: "spin 0.8s linear infinite",
                 margin: "0 auto 20px",
               }}
             />
             <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
-            <p style={{ color: "#64748b" }}>Verifying your email…</p>
+            <p style={{ color: "#ffffff", fontSize: "16px" }}>Verifying your email…</p>
           </>
         )}
         {status === "success" && (
           <>
             <div style={{ fontSize: 56, marginBottom: 16 }}>✅</div>
-            <h2 style={{ color: "#0f172a", fontWeight: 900, marginBottom: 8 }}>
+            <h2 style={{ color: "#4AEEFF", fontWeight: 800, marginBottom: 8, fontSize: "24px" }}>
               Email Verified!
             </h2>
-            <p style={{ color: "#64748b", marginBottom: 24 }}>{message}</p>
+            <p style={{ color: "#e2e8f0", marginBottom: 28, fontSize: "15px" }}>{message}</p>
             <Link
               to="/login"
               style={{
                 display: "inline-block",
                 padding: "12px 32px",
-                background: "#0f172a",
-                color: "#fff",
+                background: "linear-gradient(135deg, #12679E, #4AEEFF)",
+                color: "#061D23",
                 borderRadius: 10,
                 textDecoration: "none",
                 fontWeight: 700,
+                fontSize: "15px",
+                transition: "transform 0.2s ease",
               }}
             >
               Go to Login
@@ -94,20 +102,21 @@ const VerifyEmail: React.FC = () => {
         {status === "error" && (
           <>
             <div style={{ fontSize: 56, marginBottom: 16 }}>❌</div>
-            <h2 style={{ color: "#0f172a", fontWeight: 900, marginBottom: 8 }}>
+            <h2 style={{ color: "#f87171", fontWeight: 800, marginBottom: 8, fontSize: "24px" }}>
               Verification Failed
             </h2>
-            <p style={{ color: "#64748b", marginBottom: 24 }}>{message}</p>
+            <p style={{ color: "#e2e8f0", marginBottom: 28, fontSize: "15px" }}>{message}</p>
             <Link
               to="/login"
               style={{
                 display: "inline-block",
                 padding: "12px 32px",
-                background: "#0f172a",
-                color: "#fff",
+                background: "#12679E",
+                color: "#ffffff",
                 borderRadius: 10,
                 textDecoration: "none",
                 fontWeight: 700,
+                fontSize: "15px",
               }}
             >
               Back to Login

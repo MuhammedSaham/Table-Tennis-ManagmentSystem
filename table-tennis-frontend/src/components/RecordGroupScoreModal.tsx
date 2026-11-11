@@ -4,8 +4,16 @@ import toast from "react-hot-toast";
 
 interface GroupMatch {
   id: string;
-  player1: { firstName: string; lastName: string };
-  player2: { firstName: string; lastName: string };
+  player1?: { firstName: string; lastName: string } | null;
+  player2?: { firstName: string; lastName: string } | null;
+  team1?: {
+    name: string;
+    members?: Array<{ player?: { firstName: string; lastName: string } }>;
+  } | null;
+  team2?: {
+    name: string;
+    members?: Array<{ player?: { firstName: string; lastName: string } }>;
+  } | null;
   player1Score: number | null;
   player2Score: number | null;
   status: string;
@@ -17,6 +25,17 @@ interface RecordGroupScoreModalProps {
   onClose: () => void;
   onSuccess: () => void;
 }
+
+const getParticipantName = (team?: any, player?: any) => {
+  if (team?.members && team.members.length >= 2) {
+    const p1 = team.members[0]?.player;
+    const p2 = team.members[1]?.player;
+    if (p1 && p2) return `${p1.firstName} ${p1.lastName} & ${p2.firstName} ${p2.lastName}`;
+  }
+  if (team?.name) return team.name;
+  if (player) return `${player.firstName} ${player.lastName}`;
+  return "TBD";
+};
 
 const RecordGroupScoreModal: React.FC<RecordGroupScoreModalProps> = ({
   tournamentId,
@@ -65,26 +84,19 @@ const RecordGroupScoreModal: React.FC<RecordGroupScoreModalProps> = ({
     player: "player1" | "player2",
     value: string,
   ) => {
-    const numValue = parseInt(value) || 0;
-    setScores((prev) => ({
-      ...prev,
+    const numValue = value === "" ? 0 : parseInt(value);
+    setScores({
+      ...scores,
       [matchId]: {
-        ...prev[matchId],
+        ...scores[matchId],
         [player === "player1" ? "player1Score" : "player2Score"]: numValue,
       },
-    }));
+    });
   };
 
   const handleSubmitScore = async (matchId: string) => {
     const score = scores[matchId];
-    if (
-      !score ||
-      score.player1Score === undefined ||
-      score.player2Score === undefined
-    ) {
-      toast.error("Please enter both scores");
-      return;
-    }
+    if (!score) return;
 
     setSubmitting(matchId);
     try {
@@ -128,7 +140,7 @@ const RecordGroupScoreModal: React.FC<RecordGroupScoreModalProps> = ({
                 <div className="flex items-center justify-between">
                   <div className="flex-1">
                     <p className="font-medium text-gray-900">
-                      {match.player1.firstName} {match.player1.lastName}
+                      {getParticipantName(match.team1, match.player1)}
                     </p>
                   </div>
                   <div className="flex gap-2 items-center">
@@ -154,7 +166,7 @@ const RecordGroupScoreModal: React.FC<RecordGroupScoreModalProps> = ({
                   </div>
                   <div className="flex-1 text-right">
                     <p className="font-medium text-gray-900">
-                      {match.player2.firstName} {match.player2.lastName}
+                      {getParticipantName(match.team2, match.player2)}
                     </p>
                   </div>
                 </div>
@@ -173,8 +185,8 @@ const RecordGroupScoreModal: React.FC<RecordGroupScoreModalProps> = ({
                   <div className="mt-2 text-xs text-green-600">
                     ✓ Completed - Winner:{" "}
                     {match.player1Score! > match.player2Score!
-                      ? `${match.player1.firstName} ${match.player1.lastName}`
-                      : `${match.player2.firstName} ${match.player2.lastName}`}
+                      ? getParticipantName(match.team1, match.player1)
+                      : getParticipantName(match.team2, match.player2)}
                   </div>
                 )}
               </div>

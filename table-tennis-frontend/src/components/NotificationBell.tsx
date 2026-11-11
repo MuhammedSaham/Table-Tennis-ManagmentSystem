@@ -1,5 +1,7 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import api from "../services/api";
+import toast from "react-hot-toast";
+import { useAuth } from "../context/AuthContext";
 import {
   BellIcon,
   CheckCircleIcon,
@@ -7,8 +9,6 @@ import {
   UserGroupIcon,
   TrophyIcon,
 } from "@heroicons/react/24/outline";
-
-import { EyeIcon } from "@heroicons/react/24/outline";
 
 interface Notification {
   id: string;
@@ -20,30 +20,79 @@ interface Notification {
 }
 
 const NotificationBell: React.FC = () => {
+  const { user } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [pendingInvites, setPendingInvites] = useState<any[]>([]);
+  const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
   const [showDropdown, setShowDropdown] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading] = useState(false);
+  const bellContainerRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown when clicking or tapping anywhere outside
+  useEffect(() => {
+    if (!showDropdown) return;
+
+    const handleOutsideClick = (e: MouseEvent | TouchEvent) => {
+      if (
+        bellContainerRef.current &&
+        !bellContainerRef.current.contains(e.target as Node)
+      ) {
+        setShowDropdown(false);
+      }
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setShowDropdown(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleOutsideClick);
+    document.addEventListener("touchstart", handleOutsideClick, { passive: true });
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("mousedown", handleOutsideClick);
+      document.removeEventListener("touchstart", handleOutsideClick);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [showDropdown]);
 
   useEffect(() => {
+    if (!user) return;
     fetchNotifications();
-    // Poll for new notifications every 10 seconds
-    const interval = setInterval(fetchNotifications, 10000);
+    // Poll for new notifications every 15 seconds
+    const interval = setInterval(fetchNotifications, 15000);
     return () => clearInterval(interval);
-  }, []);
+  }, [user]);
 
   const fetchNotifications = async () => {
+    const token = localStorage.getItem("token");
+    if (!user || !token) return;
+
     try {
-      console.log("Fetching notifications..."); // Debug log
       const response = await api.get("/notifications");
-      console.log("Notifications response:", response.data); // Debug log
       const data = response.data.data;
       setNotifications(data);
       const unread = data.filter((n: Notification) => !n.isRead).length;
       setUnreadCount(unread);
-      console.log(`Found ${data.length} notifications, ${unread} unread`); // Debug log
-    } catch (error) {
-      console.error("Failed to fetch notifications:", error);
+
+      // Fetch pending doubles invites to enable quick actions (players only)
+      if (user?.role === "PLAYER") {
+        try {
+          const invitesRes = await api.get("/teams/invites/my-invites");
+          setPendingInvites(invitesRes.data.data || []);
+        } catch {
+          // Ignored if user not player
+        }
+      } else {
+        setPendingInvites([]);
+      }
+    } catch (error: any) {
+      if (error?.response?.status !== 401) {
+        console.error("Failed to fetch notifications:", error);
+      }
     }
   };
 
@@ -65,6 +114,50 @@ const NotificationBell: React.FC = () => {
     }
   };
 
+  const handleAcceptInvite = async (e: React.MouseEvent, inviteId: string, notifId: string) => {
+    e.stopPropagation();
+    setActionLoadingId(inviteId);
+    try {
+      await api.post(`/teams/invites/${inviteId}/accept`);
+      toast.success("Doubles invite accepted! Team confirmed 🎉");
+      await markAsRead(notifId);
+      fetchNotifications();
+    } catch (err: any) {
+      const msg = err.response?.data?.message || "Failed to accept invite";
+      if (msg.includes("already been responded to")) {
+        toast.success("This invite is already confirmed!");
+        await markAsRead(notifId);
+        fetchNotifications();
+      } else {
+        toast.error(msg);
+      }
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
+
+  const handleDeclineInvite = async (e: React.MouseEvent, inviteId: string, notifId: string) => {
+    e.stopPropagation();
+    setActionLoadingId(inviteId);
+    try {
+      await api.post(`/teams/invites/${inviteId}/decline`);
+      toast.success("Invite declined");
+      await markAsRead(notifId);
+      fetchNotifications();
+    } catch (err: any) {
+      const msg = err.response?.data?.message || "Failed to decline invite";
+      if (msg.includes("already been responded to")) {
+        toast.success("This invite has already been responded to");
+        await markAsRead(notifId);
+        fetchNotifications();
+      } else {
+        toast.error(msg);
+      }
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
+
   const handleNotificationClick = async (notif: Notification) => {
     await markAsRead(notif.id);
     setShowDropdown(false);
@@ -72,9 +165,20 @@ const NotificationBell: React.FC = () => {
     // Navigate based on notification type
     if (notif.type === "TOURNAMENT_CREATED") {
       window.location.href = "/tournaments";
-    } else if (notif.type === "NEW_ADMIN_REQUEST") {
-      window.location.href = "/admin-requests";
+    } else if (
+      notif.type === "CLUB_MEMBERSHIP_REQUEST" ||
+      notif.type === "NEW_ADMIN_REQUEST" ||
+      notif.type === "PAYMENT_VERIFICATION_REQUEST"
+    ) {
+      window.location.href = "/app/admin-requests";
+    } else if (notif.type === "DOUBLES_INVITE" || notif.type.includes("DOUBLES")) {
+      window.location.href = "/app/dashboard";
     }
+  };
+
+  const extractInviteId = (message: string): string | null => {
+    const match = message.match(/Invite ID:\s*([a-zA-Z0-9]+)/);
+    return match ? match[1] : null;
   };
 
   const getIcon = (type: string) => {
@@ -84,6 +188,9 @@ const NotificationBell: React.FC = () => {
     if (type === "NEW_ADMIN_REQUEST") {
       return <UserGroupIcon className="w-5 h-5 text-purple-500" />;
     }
+    if (type === "DOUBLES_INVITE" || type.includes("DOUBLES")) {
+      return <UserGroupIcon className="w-5 h-5 text-[#4AEEFF]" />;
+    }
     if (type.includes("APPROVED")) {
       return <CheckCircleIcon className="w-5 h-5 text-green-500" />;
     }
@@ -91,21 +198,17 @@ const NotificationBell: React.FC = () => {
       return <XCircleIcon className="w-5 h-5 text-red-500" />;
     }
     return <BellIcon className="w-5 h-5 text-blue-500" />;
-
-    if (type === "PROFILE_VIEW") {
-      return <EyeIcon className="w-5 h-5 text-blue-500" />;
-    }
   };
 
   return (
-    <div className="relative">
+    <div ref={bellContainerRef} className="relative">
       <button
         onClick={() => setShowDropdown(!showDropdown)}
-        className="relative p-2 text-gray-600 hover:text-gray-900 rounded-full hover:bg-gray-100 transition-colors"
+        className="relative p-1.5 sm:p-2 text-gray-300 hover:text-white rounded-full hover:bg-white/10 transition-colors"
       >
-        <BellIcon className="w-6 h-6" />
+        <BellIcon className="w-5 h-5 sm:w-6 sm:h-6" />
         {unreadCount > 0 && (
-          <span className="absolute top-0 right-0 inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-bold leading-none text-white bg-red-600 rounded-full min-w-[18px] min-h-[18px]">
+          <span className="absolute top-0 right-0 inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] sm:text-xs font-bold leading-none text-white bg-rose-500 rounded-full min-w-[16px] sm:min-w-[18px] min-h-[16px] sm:min-h-[18px]">
             {unreadCount > 9 ? "9+" : unreadCount}
           </span>
         )}
@@ -114,61 +217,103 @@ const NotificationBell: React.FC = () => {
       {showDropdown && (
         <>
           <div
-            className="fixed inset-0 z-40"
+            className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm sm:bg-transparent"
             onClick={() => setShowDropdown(false)}
+            onTouchStart={() => setShowDropdown(false)}
           />
 
-          <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-xl border z-50 overflow-hidden">
-            <div className="flex justify-between items-center p-3 border-b bg-gray-50">
-              <h3 className="font-semibold text-gray-900">Notifications</h3>
+          <div className="fixed sm:absolute inset-x-3 sm:inset-x-auto right-auto sm:right-0 top-16 sm:top-auto mt-2 w-auto sm:w-96 max-w-md bg-[#082229] rounded-2xl shadow-2xl border border-cyan-500/30 z-50 overflow-hidden backdrop-blur-xl text-white">
+            <div className="flex justify-between items-center p-3.5 border-b border-white/10 bg-[#061D23]/80">
+              <div className="flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full bg-[#4AEEFF]"></span>
+                <h3 className="font-black text-xs uppercase tracking-wider text-white">Notifications</h3>
+              </div>
               {unreadCount > 0 && (
                 <button
                   onClick={markAllAsRead}
-                  className="text-xs text-primary-600 hover:text-primary-700"
+                  className="text-[11px] font-bold text-[#4AEEFF] hover:underline"
                 >
                   Mark all as read
                 </button>
               )}
             </div>
 
-            <div className="max-h-96 overflow-y-auto">
+            <div className="max-h-96 overflow-y-auto divide-y divide-white/5">
               {loading ? (
                 <div className="text-center py-8">
-                  <p className="text-gray-500 text-sm">Loading...</p>
+                  <p className="text-white/50 text-xs">Loading...</p>
                 </div>
               ) : notifications.length === 0 ? (
                 <div className="text-center py-8">
-                  <BellIcon className="w-12 h-12 text-gray-300 mx-auto mb-2" />
-                  <p className="text-gray-500 text-sm">No notifications</p>
+                  <BellIcon className="w-10 h-10 text-white/20 mx-auto mb-2" />
+                  <p className="text-white/50 text-xs uppercase tracking-wider font-bold">No notifications</p>
                 </div>
               ) : (
-                notifications.map((notif) => (
-                  <div
-                    key={notif.id}
-                    className={`p-3 border-b hover:bg-gray-50 cursor-pointer transition-colors ${!notif.isRead ? "bg-blue-50" : ""}`}
-                    onClick={() => handleNotificationClick(notif)}
-                  >
-                    <div className="flex gap-3">
-                      <div className="flex-shrink-0 mt-1">
-                        {getIcon(notif.type)}
+                notifications.map((notif) => {
+                  const extractedId = extractInviteId(notif.message);
+                  const isPendingDoublesInvite =
+                    notif.type === "DOUBLES_INVITE" &&
+                    Boolean(extractedId && pendingInvites.some((inv) => inv.id === extractedId));
+
+                  return (
+                    <div
+                      key={notif.id}
+                      className={`p-3.5 hover:bg-white/5 cursor-pointer transition-colors ${!notif.isRead ? "bg-[#4AEEFF]/10" : ""}`}
+                      onClick={() => handleNotificationClick(notif)}
+                    >
+                      <div className="flex gap-3 items-start">
+                        <div className="flex-shrink-0 mt-0.5 p-1.5 rounded-lg bg-black/40 border border-white/10">
+                          {getIcon(notif.type)}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-bold text-xs text-white">
+                            {notif.title}
+                          </p>
+                          <p className="text-xs text-white/70 mt-1 leading-relaxed">
+                            {notif.message.replace(/Invite ID:\s*[a-zA-Z0-9]+/, "")}
+                          </p>
+                          <p className="text-[10px] text-white/40 font-mono mt-1">
+                            {new Date(notif.createdAt).toLocaleDateString("en-GB", {
+                              day: "numeric",
+                              month: "short",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </p>
+
+                          {/* Quick Interactive Actions for Doubles Invites */}
+                          {notif.type === "DOUBLES_INVITE" && (
+                            isPendingDoublesInvite && extractedId ? (
+                              <div className="flex items-center gap-2 mt-2.5 pt-2 border-t border-white/10">
+                                <button
+                                  onClick={(e) => handleAcceptInvite(e, extractedId, notif.id)}
+                                  disabled={actionLoadingId === extractedId}
+                                  className="px-3 py-1 rounded-lg bg-gradient-to-r from-cyan-400 to-teal-400 text-slate-950 text-[11px] font-black uppercase tracking-wider shadow-sm hover:brightness-110 active:scale-95 transition-all"
+                                >
+                                  {actionLoadingId === extractedId ? "..." : "✓ Accept"}
+                                </button>
+                                <button
+                                  onClick={(e) => handleDeclineInvite(e, extractedId, notif.id)}
+                                  disabled={actionLoadingId === extractedId}
+                                  className="px-2.5 py-1 rounded-lg border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-red-300 text-[11px] font-bold transition-all"
+                                >
+                                  ✕ Decline
+                                </button>
+                              </div>
+                            ) : (
+                              <div className="mt-2 text-[11px] font-bold text-emerald-400/90 flex items-center gap-1 pt-1.5 border-t border-white/10">
+                                <span>✓</span> Responded / Confirmed
+                              </div>
+                            )
+                          )}
+                        </div>
+                        {!notif.isRead && (
+                          <div className="w-2 h-2 bg-[#4AEEFF] rounded-full mt-1 flex-shrink-0 shadow-[0_0_8px_#4AEEFF]"></div>
+                        )}
                       </div>
-                      <div className="flex-1">
-                        <p className="font-medium text-sm text-gray-900">
-                          {notif.title}
-                        </p>
-                        <p className="text-xs text-gray-600 mt-1">
-                          {notif.message}
-                        </p>
-                        <p className="text-xs text-gray-400 mt-1">
-                          {new Date(notif.createdAt).toLocaleString()}
-                        </p>
-                      </div>
-                      {!notif.isRead && (
-                        <div className="w-2 h-2 bg-blue-600 rounded-full mt-2"></div>
-                      )}
                     </div>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
           </div>

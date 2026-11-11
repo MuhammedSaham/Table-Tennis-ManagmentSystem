@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import api from "../services/api";
 import toast from "react-hot-toast";
 
@@ -9,7 +10,7 @@ interface Props {
   onSuccess: () => void;
 }
 
-interface FormatOption {
+export interface FormatOption {
   groups: number;
   label: string;
   description: string;
@@ -33,7 +34,7 @@ const CreateGroupsModal: React.FC<Props> = ({
     const fetchCount = async () => {
       try {
         const res = await api.get(
-          `/tournaments/${tournamentId}/registrations?status=APPROVED&categoryId=${categoryId}`,
+          `/registrations/tournaments/${tournamentId}?status=APPROVED&categoryId=${categoryId}`,
         );
         const count = res.data.data?.length ?? 0;
         setPlayerCount(count);
@@ -56,47 +57,7 @@ const CreateGroupsModal: React.FC<Props> = ({
     return 8;
   };
 
-  const getOptions = (count: number | null): FormatOption[] => {
-    const recommended = count ? getRecommended(count) : 2;
-    return [
-      {
-        groups: 2,
-        icon: "⊞",
-        label: "2 Groups",
-        description: count
-          ? `~${Math.ceil(count / 2)} players/group`
-          : "Small tournament",
-        recommended: recommended === 2,
-      },
-      {
-        groups: 4,
-        icon: "⊟",
-        label: "4 Groups",
-        description: count
-          ? `~${Math.ceil(count / 4)} players/group`
-          : "Standard format",
-        recommended: recommended === 4,
-      },
-      {
-        groups: 6,
-        icon: "⊠",
-        label: "6 Groups",
-        description: count
-          ? `~${Math.ceil(count / 6)} players/group`
-          : "Medium tournament",
-        recommended: recommended === 6,
-      },
-      {
-        groups: 8,
-        icon: "⊡",
-        label: "8 Groups",
-        description: count
-          ? `~${Math.ceil(count / 8)} players/group`
-          : "Large tournament",
-        recommended: recommended === 8,
-      },
-    ];
-  };
+  // Removed fixed options array
 
   const handleCreate = async () => {
     if (!selected) return;
@@ -116,20 +77,22 @@ const CreateGroupsModal: React.FC<Props> = ({
     }
   };
 
-  const options = getOptions(playerCount);
+  // options removed
 
-  return (
+  return createPortal(
     <div
       style={{
         position: "fixed",
         inset: 0,
-        background: "rgba(0,0,0,0.5)",
+        backgroundColor: "rgba(0, 0, 0, 0.65)",
+        backdropFilter: "blur(4px)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        zIndex: 50,
+        zIndex: 9999,
         padding: 16,
       }}
+      onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <div
         style={{
@@ -216,108 +179,40 @@ const CreateGroupsModal: React.FC<Props> = ({
             </div>
           )}
 
-          {/* Format options grid */}
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: 12,
-              marginBottom: 20,
-            }}
-          >
-            {options.map((opt) => {
-              const isSelected = selected === opt.groups;
-              return (
-                <div
-                  key={opt.groups}
-                  onClick={() => setSelected(opt.groups)}
-                  style={{
-                    border: `2px solid ${isSelected ? "#0f172a" : "#e2e8f0"}`,
-                    borderRadius: 14,
-                    padding: "16px 14px",
-                    cursor: "pointer",
-                    background: isSelected ? "#0f172a" : "#fff",
-                    transition: "all 0.15s",
-                    position: "relative",
-                  }}
-                  onMouseEnter={(e) => {
-                    if (!isSelected)
-                      (e.currentTarget as HTMLElement).style.borderColor =
-                        "#94a3b8";
-                  }}
-                  onMouseLeave={(e) => {
-                    if (!isSelected)
-                      (e.currentTarget as HTMLElement).style.borderColor =
-                        "#e2e8f0";
-                  }}
-                >
-                  {/* Recommended badge */}
-                  {opt.recommended && (
-                    <div
-                      style={{
-                        position: "absolute",
-                        top: -10,
-                        right: 10,
-                        background: "#22c55e",
-                        color: "#fff",
-                        fontSize: 9,
-                        fontWeight: 800,
-                        padding: "2px 8px",
-                        borderRadius: 10,
-                        textTransform: "uppercase",
-                        letterSpacing: 0.8,
-                      }}
-                    >
-                      Recommended
-                    </div>
-                  )}
-
-                  {/* Group visual preview */}
-                  <div
-                    style={{
-                      display: "flex",
-                      gap: 4,
-                      marginBottom: 10,
-                      justifyContent: "center",
-                    }}
-                  >
-                    {Array.from({ length: opt.groups }).map((_, i) => (
-                      <div
-                        key={i}
-                        style={{
-                          width: opt.groups > 4 ? 18 : 24,
-                          height: opt.groups > 4 ? 18 : 24,
-                          borderRadius: 4,
-                          background: isSelected
-                            ? "rgba(255,255,255,0.25)"
-                            : "#e2e8f0",
-                          border: `2px solid ${isSelected ? "rgba(255,255,255,0.4)" : "#cbd5e1"}`,
-                        }}
-                      />
-                    ))}
-                  </div>
-
-                  <div
-                    style={{
-                      fontWeight: 800,
-                      fontSize: 16,
-                      color: isSelected ? "#fff" : "#0f172a",
-                      marginBottom: 2,
-                    }}
-                  >
-                    {opt.label}
-                  </div>
-                  <div
-                    style={{
-                      fontSize: 12,
-                      color: isSelected ? "#94a3b8" : "#64748b",
-                    }}
-                  >
-                    {opt.description}
-                  </div>
-                </div>
-              );
-            })}
+          {/* Group Count Input */}
+          <div style={{ marginBottom: 20 }}>
+            <label
+              style={{
+                display: "block",
+                marginBottom: 8,
+                fontWeight: 700,
+                color: "#0f172a",
+                fontSize: 14,
+              }}
+            >
+              Number of Groups:
+            </label>
+            <input
+              type="number"
+              min="2"
+              value={selected || 2}
+              onChange={(e) => setSelected(parseInt(e.target.value) || 2)}
+              style={{
+                width: "100%",
+                padding: "12px 16px",
+                borderRadius: 12,
+                border: "2px solid #cbd5e1",
+                fontSize: 16,
+                fontWeight: 700,
+                color: "#0f172a",
+                backgroundColor: "#ffffff",
+                outline: "none",
+                transition: "border-color 0.2s",
+                boxSizing: "border-box",
+              }}
+              onFocus={(e) => (e.target.style.borderColor = "#0f172a")}
+              onBlur={(e) => (e.target.style.borderColor = "#cbd5e1")}
+            />
           </div>
 
           {/* Selected summary */}
@@ -381,7 +276,8 @@ const CreateGroupsModal: React.FC<Props> = ({
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

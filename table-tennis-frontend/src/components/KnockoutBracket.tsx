@@ -3,6 +3,8 @@ import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import toast from "react-hot-toast";
 import EditKnockoutModal from "./EditKnockoutMatchModal";
+import { AssignRefereeModal } from "./AssignRefereeModal";
+import RefereeProfileCard from "./RefereeProfileCard";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Player {
@@ -10,18 +12,46 @@ interface Player {
   firstName: string;
   lastName: string;
 }
+interface TeamMember {
+  player: Player;
+}
+interface Team {
+  id: string;
+  name: string;
+  members: TeamMember[];
+}
 interface KnockoutMatch {
   id: string;
   round: string;
   matchNumber: number;
+  matchType?: string;
   player1Id: string | null;
   player2Id: string | null;
   player1: Player | null;
   player2: Player | null;
+  team1Id?: string | null;
+  team2Id?: string | null;
+  team1?: Team | null;
+  team2?: Team | null;
   winnerId: string | null;
+  winnerTeamId?: string | null;
   score: string | null;
   status: string;
   scheduledTime?: string;
+  startTime?: string | null;
+  endTime?: string | null;
+  referee?: {
+    id: string;
+    user: {
+      id?: string;
+      firstName: string;
+      lastName: string;
+      email?: string | null;
+      phone?: string | null;
+      profileImage?: string | null;
+    };
+  } | null;
+  resultDetails?: any;
 }
 interface GameScore {
   p1: string;
@@ -31,10 +61,29 @@ interface KnockoutBracketProps {
   tournamentId: string;
   categoryId: string;
   onScoreRecorded?: () => void;
+  refreshTrigger?: number;
 }
 
+/** Returns a display name for a singles player slot */
 const getName = (p: Player | null) =>
   p ? `${p.firstName} ${p.lastName}` : "TBD";
+
+/** Returns "Player A / Player B" for a doubles team slot, or "TBD" if no team */
+const getTeamName = (team: Team | null | undefined): string => {
+  if (!team) return "TBD";
+  const names = team.members.map(
+    (m) => `${m.player.firstName} ${m.player.lastName}`,
+  );
+  return names.length > 0 ? names.join(" / ") : team.name;
+};
+
+/** Smart name: uses team members for DOUBLES, individual player for SINGLES */
+const getMatchSlotName = (match: KnockoutMatch, slot: 1 | 2): string => {
+  if (match.matchType === "DOUBLES") {
+    return getTeamName(slot === 1 ? match.team1 : match.team2);
+  }
+  return getName(slot === 1 ? match.player1 : match.player2);
+};
 const fmtTime = (t?: string) =>
   t
     ? new Date(t).toLocaleDateString("en-GB", {
@@ -45,53 +94,178 @@ const fmtTime = (t?: string) =>
       })
     : "";
 
-const CW = 280;
-const CH = 88;
-const VGAP = 40;
-const HG = 56;
-const LH = 44;
+const CW = 220;
+const CH = 72;
+const VGAP = 24;
+const HG = 36;
+const LH = 34;
 
 // ─── Umpire Sheet ─────────────────────────────────────────────────────────────
-const UmpireSheet: React.FC<{
+export const UmpireSheet: React.FC<{
   match: KnockoutMatch;
   onClose: () => void;
-  onSave: (id: string, games: GameScore[], bestOf: 3 | 5) => Promise<void>;
+  onSave: (
+    id: string,
+    games: GameScore[],
+    bestOf: 3 | 5,
+    startTime?: string,
+    endTime?: string,
+  ) => Promise<void>;
   isAdminOrReferee: boolean;
-}> = ({ match, onClose, onSave, isAdminOrReferee }) => {
+  onCorrectScore?: (
+    id: string,
+    games: GameScore[],
+    bestOf: 3 | 5,
+    reason: string,
+  ) => Promise<void>;
+}> = ({ match, onClose, onSave, onCorrectScore, isAdminOrReferee }) => {
+  const { user } = useAuth();
   const today = new Date().toLocaleDateString("en-GB");
   const done = match.status === "COMPLETED";
+  // Only admins may edit a completed match.
+  const canEditCompleted =
+    (user?.role === "SUPER_ADMIN" || user?.role === "ADMIN") && done;
 
-  const initGames = (): GameScore[] => {
-    if (match.score && done) {
+  // Referees can only enter scores for unfinished matches.
+  const canEditScore = isAdminOrReferee && (!done || canEditCompleted);
+
+  const initBestOf = (): 3 | 5 => {
+    if (
+      match.resultDetails?.bestOf === 3 ||
+      match.resultDetails?.bestOf === 5
+    ) {
+      return match.resultDetails.bestOf;
+    }
+    if (match.score && done && match.score !== "BYE" && match.score !== "W/O") {
       const parts = match.score.split(",").map((s) => s.trim());
-      if (parts.length > 1)
+      let p1Wins = 0;
+      let p2Wins = 0;
+      for (const p of parts) {
+        const [a, b] = p.split("-").map(Number);
+        if (!isNaN(a) && !isNaN(b)) {
+          if (a > b) p1Wins++;
+          else if (b > a) p2Wins++;
+        }
+      }
+      const maxWins = Math.max(p1Wins, p2Wins);
+      if (maxWins === 2 || (parts.length <= 3 && maxWins < 3)) {
+        return 3;
+      }
+      if (maxWins >= 3 || parts.length > 3) {
+        return 5;
+      }
+    }
+    return 5;
+  };
+
+  const [bestOf, setBestOf] = useState<3 | 5>(initBestOf);
+
+  const initGames = (currentBestOf: 3 | 5 = initBestOf()): GameScore[] => {
+    if (match.score && done && match.score !== "BYE" && match.score !== "W/O") {
+      const parts = match.score.split(",").map((s) => s.trim());
+      if (parts.length > 0)
         return [
           ...parts.map((p) => {
             const n = p.split("-");
             return { p1: n[0]?.trim() ?? "", p2: n[1]?.trim() ?? "" };
           }),
-          ...Array(Math.max(0, 5 - parts.length)).fill({ p1: "", p2: "" }),
-        ].slice(0, 5);
+          ...Array(Math.max(0, currentBestOf - parts.length)).fill({
+            p1: "",
+            p2: "",
+          }),
+        ].slice(0, currentBestOf);
     }
-    return Array(5)
+    return Array(currentBestOf)
       .fill(null)
       .map(() => ({ p1: "", p2: "" }));
   };
 
-  const [bestOf, setBestOf] = useState<3 | 5>(5);
-  const [games, setGames] = useState<GameScore[]>(initGames);
+  const [games, setGames] = useState<GameScore[]>(() =>
+    initGames(initBestOf()),
+  );
+
+  useEffect(() => {
+    const bo = initBestOf();
+    setBestOf(bo);
+    setGames(initGames(bo));
+
+    setStartTime(formatSavedTime(match.startTime));
+    setEndTime(formatSavedTime(match.endTime));
+  }, [match.id, match.score, match.status, match.startTime, match.endTime]);
   const [saving, setSaving] = useState(false);
+  const [correctionReason, setCorrectionReason] = useState("");
+
+  const formatSavedTime = (value?: string | null) => {
+    if (!value) return "";
+
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) return "";
+
+    const hours = String(date.getHours()).padStart(2, "0");
+    const minutes = String(date.getMinutes()).padStart(2, "0");
+
+    return `${hours}:${minutes}`;
+  };
+
+  const [startTime, setStartTime] = useState(formatSavedTime(match.startTime));
+
+  const [endTime, setEndTime] = useState(formatSavedTime(match.endTime));
+  const calculateDuration = () => {
+    if (!startTime || !endTime) return null;
+
+    const [startHour, startMinute] = startTime.split(":").map(Number);
+    const [endHour, endMinute] = endTime.split(":").map(Number);
+
+    let duration = endHour * 60 + endMinute - (startHour * 60 + startMinute);
+
+    // Support matches ending after midnight
+    if (duration < 0) {
+      duration += 24 * 60;
+    }
+
+    return duration;
+  };
+
+  const matchDuration = calculateDuration();
+
+  const [pointsToWin, setPointsToWin] = useState<number>(11);
+  const targetPts =
+    typeof pointsToWin === "number" && !isNaN(pointsToWin) && pointsToWin > 0
+      ? pointsToWin
+      : 11;
+
+  const getGameWinner = (p1Str: string, p2Str: string): "p1" | "p2" | null => {
+    if (p1Str === "" || p2Str === "") return null;
+    const p1 = parseInt(p1Str);
+    const p2 = parseInt(p2Str);
+    if (isNaN(p1) || isNaN(p2)) return null;
+
+    if (p1 >= targetPts && p1 - p2 >= 2) return "p1";
+    if (p2 >= targetPts && p2 - p1 >= 2) return "p2";
+    return null;
+  };
+
+  const isGameValid = (p1Str: string, p2Str: string): boolean => {
+    if (p1Str === "" && p2Str === "") return true;
+    if (p1Str === "" || p2Str === "") return false;
+    const p1 = parseInt(p1Str);
+    const p2 = parseInt(p2Str);
+    if (isNaN(p1) || isNaN(p2)) return false;
+
+    const winner = Math.max(p1, p2);
+    const loser = Math.min(p1, p2);
+
+    if (winner < targetPts) return false;
+    if (winner === targetPts) return loser <= targetPts - 2;
+    if (winner > targetPts) return loser === winner - 2;
+
+    return false;
+  };
 
   const wn = Math.ceil(bestOf / 2);
   const cw = (s: "p1" | "p2") =>
-    games.filter(
-      (g) =>
-        g.p1 !== "" &&
-        g.p2 !== "" &&
-        (s === "p1"
-          ? parseInt(g.p1) > parseInt(g.p2)
-          : parseInt(g.p2) > parseInt(g.p1)),
-    ).length;
+    games.filter((g) => getGameWinner(g.p1, g.p2) === s).length;
   const p1W = cw("p1"),
     p2W = cw("p2");
   const over = p1W >= wn || p2W >= wn;
@@ -101,16 +275,15 @@ const UmpireSheet: React.FC<{
       w2 = 0;
     for (let i = 0; i < idx; i++) {
       const g = games[i];
-      if (g.p1 !== "" && g.p2 !== "") {
-        if (parseInt(g.p1) > parseInt(g.p2)) w1++;
-        else if (parseInt(g.p2) > parseInt(g.p1)) w2++;
-      }
+      const winner = getGameWinner(g.p1, g.p2);
+      if (winner === "p1") w1++;
+      if (winner === "p2") w2++;
     }
     return w1 < wn && w2 < wn;
   };
 
-  const p1n = getName(match.player1),
-    p2n = getName(match.player2);
+  const p1n = getMatchSlotName(match, 1),
+    p2n = getMatchSlotName(match, 2);
 
   return (
     <div
@@ -130,6 +303,7 @@ const UmpireSheet: React.FC<{
       <div
         style={{
           background: "#fff",
+          color: "#0f172a",
           borderRadius: 16,
           width: "100%",
           maxWidth: 640,
@@ -163,7 +337,15 @@ const UmpireSheet: React.FC<{
                 fontSize: 22,
               }}
             >
-              🏓
+              <img
+                src="/club-logo.png"
+                alt="Table Tennis Club Logo"
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "contain",
+                }}
+              />
             </div>
             <div>
               <div
@@ -227,36 +409,78 @@ const UmpireSheet: React.FC<{
               {match.round}
             </span>
             {!done && isAdminOrReferee ? (
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span
-                  style={{ fontSize: 12, color: "#64748b", fontWeight: 600 }}
-                >
-                  Format:
-                </span>
-                {([3, 5] as const).map((n) => (
-                  <button
-                    key={n}
-                    onClick={() => {
-                      setBestOf(n);
-                      setGames((prev) =>
-                        prev.map((g, i) => (i >= n ? { p1: "", p2: "" } : g)),
-                      );
+              <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span
+                    style={{ fontSize: 12, color: "#64748b", fontWeight: 600 }}
+                  >
+                    Pts to Win:
+                  </span>
+                  <input
+                    type="number"
+                    min={1}
+                    value={pointsToWin}
+                    placeholder="11"
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value);
+                      setPointsToWin(!isNaN(val) && val > 0 ? val : 11);
+                    }}
+                    onBlur={() => {
+                      if (
+                        !pointsToWin ||
+                        isNaN(pointsToWin) ||
+                        pointsToWin < 1
+                      ) {
+                        setPointsToWin(11);
+                      }
                     }}
                     style={{
-                      padding: "4px 14px",
-                      borderRadius: 20,
-                      border: "1.5px solid",
-                      borderColor: bestOf === n ? "#0f172a" : "#e2e8f0",
-                      background: bestOf === n ? "#0f172a" : "#fff",
-                      color: bestOf === n ? "#fff" : "#64748b",
+                      width: 45,
+                      padding: "4px",
+                      borderRadius: 6,
+                      border: "1.5px solid #cbd5e1",
+                      fontSize: 13,
                       fontWeight: 700,
-                      fontSize: 12,
-                      cursor: "pointer",
+                      textAlign: "center",
+                      outline: "none",
+                      color: "#0f172a",
+                      backgroundColor: "#ffffff",
                     }}
+                  />
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span
+                    style={{ fontSize: 12, color: "#64748b", fontWeight: 600 }}
                   >
-                    Best of {n}
-                  </button>
-                ))}
+                    Format:
+                  </span>
+                  {([3, 5] as const).map((n) => (
+                    <button
+                      key={n}
+                      onClick={() => {
+                        setBestOf(n);
+                        setGames((prev) => {
+                          const next = [...prev];
+                          while (next.length < n) next.push({ p1: "", p2: "" });
+                          return next.slice(0, n);
+                        });
+                      }}
+                      style={{
+                        padding: "4px 14px",
+                        borderRadius: 20,
+                        border: "1.5px solid",
+                        borderColor: bestOf === n ? "#0f172a" : "#e2e8f0",
+                        background: bestOf === n ? "#0f172a" : "#fff",
+                        color: bestOf === n ? "#fff" : "#64748b",
+                        fontWeight: 700,
+                        fontSize: 12,
+                        cursor: "pointer",
+                      }}
+                    >
+                      Best of {n}
+                    </button>
+                  ))}
+                </div>
               </div>
             ) : (
               <span
@@ -272,6 +496,62 @@ const UmpireSheet: React.FC<{
                 Best of {bestOf}
               </span>
             )}
+          </div>
+
+          {/* Optional Match Time */}
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              alignItems: "center",
+              gap: 16,
+              marginBottom: 16,
+              padding: 12,
+              background: "#f8fafc",
+              border: "1px solid #e2e8f0",
+              borderRadius: 10,
+            }}
+          >
+            <label style={{ fontSize: 13, fontWeight: 600 }}>
+              Start Time
+              <input
+                type="time"
+                value={startTime}
+                onChange={(e) => setStartTime(e.target.value)}
+                disabled={done || !canEditScore}
+                style={{
+                  display: "block",
+                  marginTop: 5,
+                  padding: 7,
+                  border: "1px solid #cbd5e1",
+                  borderRadius: 6,
+                }}
+              />
+            </label>
+
+            <label style={{ fontSize: 13, fontWeight: 600 }}>
+              End Time
+              <input
+                type="time"
+                value={endTime}
+                onChange={(e) => setEndTime(e.target.value)}
+                disabled={done || !canEditScore}
+                style={{
+                  display: "block",
+                  marginTop: 5,
+                  padding: 7,
+                  border: "1px solid #cbd5e1",
+                  borderRadius: 6,
+                }}
+              />
+            </label>
+
+            <div style={{ fontSize: 13 }}>
+              <strong>Duration:</strong>{" "}
+              {matchDuration === null
+                ? "Not entered"
+                : `${Math.floor(matchDuration / 60)} hr ${matchDuration % 60} min`}
+            </div>
           </div>
 
           {/* Live progress */}
@@ -413,29 +693,25 @@ const UmpireSheet: React.FC<{
                             min={0}
                             value={g[side]}
                             onChange={(e) => {
-                              if (!isAdminOrReferee || done || !nd) return;
+                              if (!canEditScore) return;
                               const nx = [...games];
                               nx[i] = { ...nx[i], [side]: e.target.value };
                               setGames(nx);
                             }}
-                            disabled={!isAdminOrReferee || done || !nd}
+                            disabled={!canEditScore}
                             style={{
                               width: 42,
                               height: 36,
                               textAlign: "center",
                               border: "1.5px solid",
                               borderColor:
-                                !isAdminOrReferee || done || !nd
-                                  ? "#e2e8f0"
-                                  : "#cbd5e1",
+                                !canEditScore || !nd ? "#e2e8f0" : "#cbd5e1",
                               borderRadius: 8,
                               fontSize: 15,
                               fontWeight: 700,
                               color: !nd ? "#cbd5e1" : "#0f172a",
                               background:
-                                !isAdminOrReferee || done || !nd
-                                  ? "#f8fafc"
-                                  : "#fff",
+                                !canEditScore || !nd ? "#f8fafc" : "#fff",
                               outline: "none",
                             }}
                             onFocus={(e) => {
@@ -486,9 +762,11 @@ const UmpireSheet: React.FC<{
                 <span style={{ color: "#94a3b8" }}>…………………………</span>
               )}
             </div>
-            <div style={{ fontSize: 13, color: "#475569" }}>
-              <strong>Umpire Signature:</strong>{" "}
-              <span style={{ color: "#94a3b8" }}>…………………………</span>
+            <div>
+              <p className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-500">
+                Scoring Referee
+              </p>
+              <RefereeProfileCard referee={match.referee?.user} />
             </div>
           </div>
           {done && (
@@ -535,15 +813,99 @@ const UmpireSheet: React.FC<{
           >
             Close
           </button>
+          {canEditCompleted && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              <input
+                type="text"
+                value={correctionReason}
+                onChange={(e) => setCorrectionReason(e.target.value)}
+                placeholder="Reason for correction"
+                style={{
+                  padding: "9px 12px",
+                  border: "1px solid #cbd5e1",
+                  borderRadius: 8,
+                  fontSize: 13,
+                  color: "#0f172a",
+                }}
+              />
+
+              <button
+                disabled={saving || !over}
+                onClick={async () => {
+                  if (correctionReason.trim().length < 5) {
+                    toast.error(
+                      "Please enter a correction reason (at least 5 characters)",
+                    );
+                    return;
+                  }
+
+                  for (let i = 0; i < games.length; i++) {
+                    const g = games[i];
+
+                    if (g.p1 === "" && g.p2 === "") continue;
+
+                    if (!isGameValid(g.p1, g.p2)) {
+                      toast.error(`Game ${i + 1} has an invalid score`);
+                      return;
+                    }
+                  }
+
+                  setSaving(true);
+                  try {
+                    if (onCorrectScore) {
+                      await onCorrectScore(
+                        match.id,
+                        games,
+                        bestOf,
+                        correctionReason.trim(),
+                      );
+                    }
+                  } finally {
+                    setSaving(false);
+                  }
+                }}
+                style={{
+                  padding: "9px 20px",
+                  border: "none",
+                  borderRadius: 10,
+                  background: saving || !over ? "#94a3b8" : "#0369a1",
+                  color: "#fff",
+                  fontWeight: 700,
+                  cursor: saving || !over ? "default" : "pointer",
+                }}
+              >
+                {saving ? "Saving..." : "Save Correction"}
+              </button>
+            </div>
+          )}
           {isAdminOrReferee && !done && (
             <button
               onClick={async () => {
+                if (Boolean(startTime) !== Boolean(endTime)) {
+                  toast.error(
+                    "Please enter both Start Time and End Time, or leave both empty.",
+                  );
+                  return;
+                }
+                for (let i = 0; i < games.length; i++) {
+                  const g = games[i];
+                  if (g.p1 === "" && g.p2 === "") continue;
+                  if (!isGameValid(g.p1, g.p2)) {
+                    toast.error(
+                      `Game ${i + 1} has an invalid score. A game is played to ${targetPts} points and must be won by 2 clear points.`,
+                    );
+                    return;
+                  }
+                }
+
                 if (!over) {
-                  toast.error(`Need ${wn} wins`);
+                  toast.error(
+                    `Match not complete. ${wn} game wins needed to win.`,
+                  );
                   return;
                 }
                 setSaving(true);
-                await onSave(match.id, games, bestOf);
+                await onSave(match.id, games, bestOf, startTime, endTime);
                 setSaving(false);
               }}
               disabled={saving || !over}
@@ -572,59 +934,116 @@ const UmpireSheet: React.FC<{
 const MatchCard: React.FC<{
   match: KnockoutMatch;
   matchLabel: string;
-  isAdminOrReferee: boolean;
+  isAdmin: boolean;
+  canRecordScore: boolean;
   onOpen: (m: KnockoutMatch) => void;
   onEdit: (m: KnockoutMatch) => void; // ← NEW
+  onAssignReferee?: (m: KnockoutMatch) => void;
   accent?: string;
-}> = ({ match, matchLabel, isAdminOrReferee, onOpen, onEdit, accent }) => {
-  const done = match.status === "COMPLETED";
-  const p1Won = done && match.winnerId === match.player1?.id;
-  const p2Won = done && match.winnerId === match.player2?.id;
-  const border = accent ?? (done ? "#22c55e" : "#e2e8f0");
+  cardWidth?: number;
+}> = ({
+  match,
+  matchLabel,
+  isAdmin,
+  canRecordScore,
+  onOpen,
+  onEdit,
+  onAssignReferee,
+  accent,
+  cardWidth = CW,
+}) => {
+  const isWalkover = match.status === "WALKOVER" || match.score === "W/O";
+  const isBye = match.score === "BYE";
+  const done = match.status === "COMPLETED" || isWalkover || isBye;
+  const isDoubles = match.matchType === "DOUBLES";
+  // For doubles the winnerId stores the winning team captain's userId;
+  // compare against team1Id/team2Id for the highlight logic.
+  const p1Won =
+    done &&
+    (isDoubles
+      ? match.winnerId === match.team1?.id ||
+        match.winnerTeamId === match.team1?.id
+      : match.winnerId === match.player1?.id);
+  const p2Won =
+    done &&
+    (isDoubles
+      ? match.winnerId === match.team2?.id ||
+        match.winnerTeamId === match.team2?.id
+      : match.winnerId === match.player2?.id);
 
-  const gameParts = match.score
-    ? match.score.split(",").map((s) => s.trim())
-    : [];
-  const p1Games = gameParts.filter((g) => {
-    const [a, b] = g.split("-").map(Number);
-    return a > b;
-  }).length;
-  const p2Games = gameParts.filter((g) => {
-    const [a, b] = g.split("-").map(Number);
-    return b > a;
-  }).length;
+  const gameParts =
+    match.score && match.score !== "BYE" && match.score !== "W/O"
+      ? match.score.split(",").map((s) => s.trim())
+      : [];
+  const p1Games =
+    match.score === "BYE" && p1Won
+      ? "BYE"
+      : isWalkover && p1Won
+        ? "W/O"
+        : isWalkover && !p1Won
+          ? "-"
+          : gameParts.filter((g) => {
+              const [a, b] = g.split("-").map(Number);
+              return a > b;
+            }).length;
+  const p2Games =
+    match.score === "BYE" && p2Won
+      ? "BYE"
+      : isWalkover && p2Won
+        ? "W/O"
+        : isWalkover && !p2Won
+          ? "-"
+          : gameParts.filter((g) => {
+              const [a, b] = g.split("-").map(Number);
+              return b > a;
+            }).length;
 
   return (
     <div
-      onClick={() => onOpen(match)}
+      onClick={() => !isBye && !isWalkover && onOpen(match)}
       style={{
-        width: CW,
-        cursor: "pointer",
+        width: cardWidth,
+        cursor: isBye || isWalkover ? "default" : "pointer",
         fontFamily: "'Segoe UI',system-ui,sans-serif",
       }}
-      title="Click to open umpire sheet"
+      title={
+        isBye
+          ? "BYE — Player advances automatically"
+          : isWalkover
+            ? "Walkover (W/O) — Opponent advanced"
+            : "Click to open umpire sheet"
+      }
     >
       <div
         style={{
-          border: `1.5px solid ${border}`,
-          borderRadius: 10,
+          border: `1.5px solid ${isBye ? "#e2e8f0" : done ? "#22c55e" : "#cbd5e1"}`,
+          borderRadius: 8,
           overflow: "hidden",
-          background: "#fff",
-          boxShadow: done
-            ? "0 1px 6px rgba(34,197,94,0.18)"
-            : "0 1px 4px rgba(0,0,0,0.07)",
-          transition: "all 0.15s",
+          background: "#ffffff",
+          boxShadow: isBye
+            ? "0 1px 4px rgba(0,0,0,0.05)"
+            : done
+              ? "0 2px 10px rgba(34,197,94,0.16)"
+              : "0 2px 8px rgba(0,0,0,0.08)",
+          opacity: 1,
+          transition: "all 0.15s ease",
         }}
         onMouseEnter={(e) => {
-          (e.currentTarget as HTMLElement).style.boxShadow =
-            "0 4px 18px rgba(0,0,0,0.13)";
-          (e.currentTarget as HTMLElement).style.transform = "translateY(-1px)";
+          if (!isBye && !isWalkover) {
+            (e.currentTarget as HTMLElement).style.boxShadow =
+              "0 4px 16px rgba(74, 238, 255, 0.4)";
+            (e.currentTarget as HTMLElement).style.borderColor = "#0284c7";
+          }
         }}
         onMouseLeave={(e) => {
-          (e.currentTarget as HTMLElement).style.boxShadow = done
-            ? "0 1px 6px rgba(34,197,94,0.18)"
-            : "0 1px 4px rgba(0,0,0,0.07)";
-          (e.currentTarget as HTMLElement).style.transform = "translateY(0)";
+          if (!isBye && !isWalkover) {
+            (e.currentTarget as HTMLElement).style.boxShadow = done
+              ? "0 2px 10px rgba(34,197,94,0.16)"
+              : "0 2px 8px rgba(0,0,0,0.08)";
+            (e.currentTarget as HTMLElement).style.borderColor = done
+              ? "#22c55e"
+              : "#cbd5e1";
+          }
         }}
       >
         {/* Match header bar */}
@@ -632,148 +1051,278 @@ const MatchCard: React.FC<{
           style={{
             background: "#f8fafc",
             borderBottom: "1px solid #e2e8f0",
-            padding: "5px 12px",
+            padding: "2px 8px",
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
+            height: 20,
+            boxSizing: "border-box",
           }}
         >
           <span
             style={{
-              fontSize: 11,
+              fontSize: 9,
               fontWeight: 800,
-              color: accent ? accent : "#475569",
+              color: isBye ? "#94a3b8" : accent ? accent : "#0284c7",
               letterSpacing: 0.5,
               textTransform: "uppercase",
             }}
           >
             {matchLabel}
           </span>
-          {match.scheduledTime && (
-            <span style={{ fontSize: 10, color: "#94a3b8" }}>
-              {fmtTime(match.scheduledTime)}
+          {isBye ? (
+            <span
+              style={{
+                fontSize: 8,
+                fontWeight: 800,
+                color: "#64748b",
+                background: "#f1f5f9",
+                border: "1px solid #e2e8f0",
+                padding: "1px 5px",
+                borderRadius: 6,
+                letterSpacing: 0.5,
+                textTransform: "uppercase",
+              }}
+            >
+              BYE
             </span>
+          ) : (
+            <>
+              {match.scheduledTime && (
+                <span
+                  style={{ fontSize: 9, color: "#64748b", fontWeight: 600 }}
+                >
+                  {fmtTime(match.scheduledTime)}
+                </span>
+              )}
+              <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                {done && (
+                  <span
+                    style={{
+                      fontSize: 8,
+                      color: isWalkover ? "#b45309" : "#166534",
+                      fontWeight: 800,
+                      background: isWalkover ? "#fef3c7" : "#dcfce7",
+                      border: `1px solid ${isWalkover ? "#fde68a" : "#86efac"}`,
+                      padding: "1px 5px",
+                      borderRadius: 6,
+                    }}
+                  >
+                    {isWalkover ? "✓ W/O" : "✓ Done"}
+                  </span>
+                )}
+                {isAdmin && !done && onAssignReferee && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onAssignReferee(match);
+                    }}
+                    style={{
+                      background: "#f0f9ff",
+                      border: "1px solid #bae6fd",
+                      cursor: "pointer",
+                      fontSize: 8,
+                      color: "#0284c7",
+                      padding: "1px 5px",
+                      borderRadius: 4,
+                      fontWeight: 700,
+                    }}
+                    title="Assign a referee to this match"
+                  >
+                    Ref
+                  </button>
+                )}
+                {isAdmin && !done && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onEdit(match);
+                    }}
+                    style={{
+                      background: "#fef2f2",
+                      border: "1px solid #fecaca",
+                      cursor: "pointer",
+                      fontSize: 8,
+                      color: "#b91c1c",
+                      padding: "1px 5px",
+                      borderRadius: 4,
+                      fontWeight: 700,
+                    }}
+                    title="Declare Walkover (W/O) / No-Show"
+                  >
+                    W/O
+                  </button>
+                )}
+              </div>
+            </>
           )}
-
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            {done && (
-              <span
-                style={{
-                  fontSize: 10,
-                  color: "#16a34a",
-                  fontWeight: 700,
-                  background: "#dcfce7",
-                  padding: "1px 8px",
-                  borderRadius: 10,
-                }}
-              >
-                ✓ Done
-              </span>
-            )}
-            {/* ← Edit button — only for admin/referee on non-completed matches */}
-            {isAdminOrReferee && !done && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onEdit(match);
-                }}
-                style={{
-                  background: "#f1f5f9",
-                  border: "1px solid #e2e8f0",
-                  cursor: "pointer",
-                  fontSize: 11,
-                  color: "#475569",
-                  padding: "2px 8px",
-                  borderRadius: 6,
-                  fontWeight: 600,
-                }}
-                title="Edit players in this match"
-              >
-                ✏️ Edit
-              </button>
-            )}
-          </div>
         </div>
 
-        {/* Player rows */}
-        {[
-          { player: match.player1, won: p1Won, games: p1Games },
-          { player: match.player2, won: p2Won, games: p2Games },
-        ].map(({ player, won, games: gs }, idx) => (
+        {/* BYE: show just the advancing player */}
+        {isBye ? (
           <div
-            key={idx}
             style={{
-              padding: "8px 12px",
+              padding: "6px 8px",
               display: "flex",
               alignItems: "center",
-              gap: 10,
-              borderBottom: idx === 0 ? "1px solid #f1f5f9" : "none",
-              background: won ? "#f0fdf4" : "#fff",
+              gap: 8,
+              background: "#ffffff",
+              height: 50,
+              boxSizing: "border-box",
             }}
           >
             <div
               style={{
-                width: 22,
-                height: 22,
-                borderRadius: 6,
-                background: won ? "#22c55e" : player ? "#e2e8f0" : "#f1f5f9",
+                width: 18,
+                height: 18,
+                borderRadius: 4,
+                background: "#f1f5f9",
+                border: "1px solid #e2e8f0",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                fontSize: 10,
+                fontSize: 9,
                 fontWeight: 800,
-                color: won ? "#fff" : "#475569",
+                color: "#64748b",
                 flexShrink: 0,
               }}
             >
-              {idx + 1}
+              1
             </div>
             <span
               style={{
-                fontSize: 13,
-                fontWeight: won ? 800 : 500,
-                color: won ? "#166534" : player ? "#0f172a" : "#94a3b8",
+                fontSize: 11,
+                fontWeight: 700,
+                color: "#0f172a",
                 flex: 1,
                 overflow: "hidden",
                 textOverflow: "ellipsis",
                 whiteSpace: "nowrap",
               }}
             >
-              {getName(player)}
+              {getMatchSlotName(match, 1)}
             </span>
-            {done && (
+            <span
+              style={{
+                fontSize: 9,
+                fontWeight: 800,
+                color: "#0284c7",
+                whiteSpace: "nowrap",
+              }}
+            >
+              → Advances
+            </span>
+          </div>
+        ) : (
+          /* Normal player rows */
+          [
+            { slot: 1 as const, won: p1Won, games: p1Games },
+            { slot: 2 as const, won: p2Won, games: p2Games },
+          ].map(({ slot, won, games: gs }) => {
+            const slotName = getMatchSlotName(match, slot);
+            const isFilled = isDoubles
+              ? slot === 1
+                ? !!match.team1
+                : !!match.team2
+              : slot === 1
+                ? !!match.player1
+                : !!match.player2;
+            const idx = slot - 1;
+            return (
               <div
+                key={idx}
                 style={{
-                  width: 28,
-                  height: 24,
-                  borderRadius: 6,
-                  background: won ? "#22c55e" : "#f1f5f9",
+                  padding: "3px 8px",
                   display: "flex",
                   alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: 13,
-                  fontWeight: 800,
-                  color: won ? "#fff" : "#64748b",
-                  flexShrink: 0,
+                  gap: 8,
+                  height: 25,
+                  boxSizing: "border-box",
+                  borderBottom: idx === 0 ? "1px solid #f1f5f9" : "none",
+                  background: won ? "#f0fdf4" : "#ffffff",
                 }}
               >
-                {gs}
+                <div
+                  style={{
+                    width: 17,
+                    height: 17,
+                    borderRadius: 4,
+                    background: won
+                      ? "#22c55e"
+                      : isFilled
+                        ? "#e0f2fe"
+                        : "#f1f5f9",
+                    border: won
+                      ? "none"
+                      : isFilled
+                        ? "1px solid #bae6fd"
+                        : "1px solid #e2e8f0",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: 8,
+                    fontWeight: 800,
+                    color: won ? "#ffffff" : isFilled ? "#0369a1" : "#94a3b8",
+                    flexShrink: 0,
+                  }}
+                >
+                  {slot}
+                </div>
+                <span
+                  style={{
+                    fontSize: 11,
+                    fontWeight: won ? 800 : isFilled ? 600 : 400,
+                    color: won ? "#15803d" : isFilled ? "#0f172a" : "#94a3b8",
+                    flex: 1,
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {slotName}
+                </span>
+                {done && (
+                  <div
+                    style={{
+                      minWidth: 20,
+                      padding: "0 4px",
+                      height: 17,
+                      borderRadius: 4,
+                      background: won ? "#22c55e" : "#f1f5f9",
+                      border: won ? "none" : "1px solid #e2e8f0",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: 10,
+                      fontWeight: 800,
+                      color: won ? "#ffffff" : "#64748b",
+                      flexShrink: 0,
+                    }}
+                  >
+                    {gs}
+                  </div>
+                )}
+                {!done && canRecordScore && slot === 1 && (
+                  <span
+                    style={{
+                      fontSize: 8,
+                      color: "#0284c7",
+                      fontWeight: 800,
+                      whiteSpace: "nowrap",
+                      textTransform: "uppercase",
+                      letterSpacing: 0.5,
+                      background: "#e0f2fe",
+                      padding: "1px 5px",
+                      borderRadius: 4,
+                    }}
+                  >
+                    Score
+                  </span>
+                )}
               </div>
-            )}
-            {!done && isAdminOrReferee && idx === 0 && (
-              <span
-                style={{
-                  fontSize: 9,
-                  color: "#3b82f6",
-                  fontWeight: 600,
-                  whiteSpace: "nowrap",
-                }}
-              >
-                click to score
-              </span>
-            )}
-          </div>
-        ))}
+            );
+          })
+        )}
       </div>
     </div>
   );
@@ -786,67 +1335,196 @@ interface ColDef {
   entries: { match: KnockoutMatch; tag: string }[];
 }
 
-// ← onEdit added to BracketCanvas props
 const BracketCanvas: React.FC<{
   cols: ColDef[];
-  isAdminOrReferee: boolean;
+  isAdmin: boolean;
+  isReferee: boolean;
+  currentUserId?: string;
   onOpen: (m: KnockoutMatch) => void;
-  onEdit: (m: KnockoutMatch) => void; // ← NEW
-}> = ({ cols, isAdminOrReferee, onOpen, onEdit }) => {
-  const maxN = Math.max(...cols.map((c) => c.entries.length));
-  const bodyH = maxN * CH + (maxN - 1) * VGAP;
-  const totalW = cols.length * CW + (cols.length - 1) * HG;
+  onEdit: (m: KnockoutMatch) => void;
+  onAssignReferee?: (m: KnockoutMatch) => void;
+}> = ({
+  cols,
+  isAdmin,
+  isReferee,
+  currentUserId,
+  onOpen,
+  onEdit,
+  onAssignReferee,
+}) => {
+  // Separate main knockout bracket columns from 3rd Place Playoff
+  const mainCols = cols.filter((c) => c.label !== "3rd Place Playoff");
+  const tpCol = cols.find((c) => c.label === "3rd Place Playoff");
 
-  const top = (n: number) => (bodyH - (n * CH + (n - 1) * VGAP)) / 2;
-  const cy = (n: number, i: number) => top(n) + i * (CH + VGAP) + CH / 2;
+  // Dynamic layout calculations based on the number of rounds (Bracket Size):
+  // - 5+ rounds (R32/R64): compact cards (220px) with 36px gap so wide brackets fit cleanly
+  // - 4 rounds (Round of 16): wider cards (265px) with 56px gap so it fills standard viewports
+  // - 3 rounds (Quarter-Finals / 8 players): 285px cards with 68px gap, centered
+  // - 2 rounds (Semi-Finals / 4 players): 300px cards with 80px gap, centered
+  // - 1 round (Final only): 320px championship card, centered
+  const colCount = mainCols.length;
+  let currentCW = CW;
+  let currentHG = HG;
+  let isCentered = false;
 
-  const lines: React.ReactElement[] = [];
-  for (let ci = 0; ci < cols.length - 1; ci++) {
-    const lc = cols[ci],
-      rc = cols[ci + 1];
-    const lx = ci * (CW + HG) + CW;
-    const rx = (ci + 1) * (CW + HG);
-    const mx = lx + HG / 2;
+  if (colCount >= 5) {
+    currentCW = 220;
+    currentHG = 36;
+    isCentered = false;
+  } else if (colCount === 4) {
+    currentCW = 265;
+    currentHG = 56;
+    isCentered = true;
+  } else if (colCount === 3) {
+    currentCW = 285;
+    currentHG = 68;
+    isCentered = true;
+  } else if (colCount === 2) {
+    currentCW = 300;
+    currentHG = 80;
+    isCentered = true;
+  } else if (colCount <= 1) {
+    currentCW = 320;
+    currentHG = 40;
+    isCentered = true;
+  }
 
-    rc.entries.forEach((_, ri) => {
-      const rY = cy(rc.entries.length, ri);
-      const pair = [ri * 2, ri * 2 + 1].filter((i) => i < lc.entries.length);
-      pair.forEach((li) => {
-        const lY = cy(lc.entries.length, li);
-        lines.push(
-          <line
-            key={`lh${ci}${li}${ri}`}
-            x1={lx}
-            y1={lY}
-            x2={mx}
-            y2={lY}
-            stroke="#d1d5db"
-            strokeWidth={1.5}
-          />,
-        );
+  // Determine height from the first/largest round (Round of 32 or Round of 16)
+  const n0 = mainCols.length > 0 ? mainCols[0].entries.length : 1;
+  const bodyH = Math.max(n0 * CH + (n0 - 1) * VGAP, CH);
+  const totalW = cols.length * currentCW + (cols.length - 1) * currentHG;
+
+  // cyMap[ci][mi] stores the exact vertical center-Y of match mi in column ci
+  const cyMap: number[][] = [];
+
+  mainCols.forEach((col, ci) => {
+    cyMap[ci] = [];
+    if (ci === 0) {
+      col.entries.forEach((_, mi) => {
+        cyMap[ci][mi] = mi * (CH + VGAP) + CH / 2;
       });
-      if (pair.length === 2) {
+    } else {
+      col.entries.forEach((_, mi) => {
+        const p1 = mi * 2;
+        const p2 = mi * 2 + 1;
+        const prevCY = cyMap[ci - 1] || [];
+        if (p1 < prevCY.length && p2 < prevCY.length) {
+          // Exactly halfway between its two parent matches
+          cyMap[ci][mi] = (prevCY[p1] + prevCY[p2]) / 2;
+        } else if (p1 < prevCY.length) {
+          cyMap[ci][mi] = prevCY[p1];
+        } else {
+          cyMap[ci][mi] = mi * (CH + VGAP) + CH / 2;
+        }
+      });
+    }
+  });
+
+  // Calculate 3rd Place Playoff center Y aligned with Final if present
+  let tpCY = bodyH / 2;
+  if (tpCol && tpCol.entries.length > 0) {
+    const finalColIdx = mainCols.findIndex((c) => c.label === "Final");
+    if (finalColIdx >= 0 && cyMap[finalColIdx]?.[0] !== undefined) {
+      tpCY = cyMap[finalColIdx][0];
+    }
+  }
+
+  // Draw connector lines between consecutive knockout rounds
+  const lines: React.ReactElement[] = [];
+  for (let ci = 0; ci < mainCols.length - 1; ci++) {
+    const lc = mainCols[ci],
+      rc = mainCols[ci + 1];
+    const lx = ci * (currentCW + currentHG) + currentCW;
+    const rx = (ci + 1) * (currentCW + currentHG);
+    const mx = lx + currentHG / 2;
+
+    rc.entries.forEach((rEntry, ri) => {
+      const rY = cyMap[ci + 1]?.[ri] ?? ri * (CH + VGAP) + CH / 2;
+      const p1 = ri * 2;
+      const p2 = ri * 2 + 1;
+      const prevCY = cyMap[ci] || [];
+
+      const p1Match = lc.entries[p1]?.match;
+      const p2Match = lc.entries[p2]?.match;
+
+      const p1Done =
+        p1Match?.status === "COMPLETED" ||
+        p1Match?.status === "WALKOVER" ||
+        p1Match?.score === "BYE" ||
+        p1Match?.score === "W/O";
+      const p2Done =
+        p2Match?.status === "COMPLETED" ||
+        p2Match?.status === "WALKOVER" ||
+        p2Match?.score === "BYE" ||
+        p2Match?.score === "W/O";
+
+      // Horizontal line from Parent 1 to midpoint X
+      if (p1 < prevCY.length) {
+        const lY1 = prevCY[p1];
         lines.push(
           <line
-            key={`lv${ci}${ri}`}
-            x1={mx}
-            y1={cy(lc.entries.length, pair[0])}
+            key={`lh1_${ci}_${p1}_${ri}`}
+            x1={lx}
+            y1={lY1}
             x2={mx}
-            y2={cy(lc.entries.length, pair[1])}
-            stroke="#d1d5db"
-            strokeWidth={1.5}
+            y2={lY1}
+            stroke={p1Done ? "#22c55e" : "rgba(74, 238, 255, 0.7)"}
+            strokeWidth={p1Done ? 2.5 : 2}
           />,
         );
       }
+
+      // Horizontal line from Parent 2 to midpoint X
+      if (p2 < prevCY.length) {
+        const lY2 = prevCY[p2];
+        lines.push(
+          <line
+            key={`lh2_${ci}_${p2}_${ri}`}
+            x1={lx}
+            y1={lY2}
+            x2={mx}
+            y2={lY2}
+            stroke={p2Done ? "#22c55e" : "rgba(74, 238, 255, 0.7)"}
+            strokeWidth={p2Done ? 2.5 : 2}
+          />,
+        );
+      }
+
+      // Vertical connector between the two parents
+      if (p1 < prevCY.length && p2 < prevCY.length) {
+        const lY1 = prevCY[p1];
+        const lY2 = prevCY[p2];
+        const topY = Math.min(lY1, lY2);
+        const botY = Math.max(lY1, lY2);
+
+        lines.push(
+          <line
+            key={`lv_${ci}_${ri}`}
+            x1={mx}
+            y1={topY}
+            x2={mx}
+            y2={botY}
+            stroke="rgba(74, 238, 255, 0.7)"
+            strokeWidth={2}
+          />,
+        );
+      }
+
+      // Horizontal line from midpoint X into child match
+      const childDone =
+        rEntry.match.status === "COMPLETED" ||
+        rEntry.match.status === "WALKOVER" ||
+        rEntry.match.score === "BYE" ||
+        rEntry.match.score === "W/O";
       lines.push(
         <line
-          key={`rh${ci}${ri}`}
+          key={`rh_${ci}_${ri}`}
           x1={mx}
           y1={rY}
           x2={rx}
           y2={rY}
-          stroke="#d1d5db"
-          strokeWidth={1.5}
+          stroke={childDone ? "#22c55e" : "rgba(74, 238, 255, 0.7)"}
+          strokeWidth={childDone ? 2.5 : 2}
         />,
       );
     });
@@ -854,35 +1532,38 @@ const BracketCanvas: React.FC<{
 
   return (
     <div
-      style={{ position: "relative", width: totalW, height: bodyH + LH + 16 }}
+      style={{
+        position: "relative",
+        width: totalW,
+        height: bodyH + LH + 16,
+        margin: isCentered ? "0 auto" : undefined,
+      }}
     >
       {/* Column labels */}
       {cols.map((col, ci) => (
         <div
           key={`lbl${ci}`}
+          id={`bracket-col-${ci}`}
           style={{
             position: "absolute",
             top: 0,
-            left: ci * (CW + HG),
-            width: CW,
+            left: ci * (currentCW + currentHG),
+            width: currentCW,
             display: "flex",
             justifyContent: "center",
           }}
         >
-          <div
+          <span
             style={{
-              padding: "6px 20px",
-              borderRadius: 6,
-              background: col.accent ? `${col.accent}15` : "#f1f5f9",
-              color: col.accent ?? "#374151",
-              fontSize: 13,
+              color: col.accent ?? "#4AEEFF",
               fontWeight: 800,
-              letterSpacing: 0.3,
-              border: `1px solid ${col.accent ? `${col.accent}40` : "#e5e7eb"}`,
+              fontSize: 11,
+              letterSpacing: 1.5,
+              textTransform: "uppercase",
             }}
           >
             {col.label}
-          </div>
+          </span>
         </div>
       ))}
 
@@ -901,28 +1582,53 @@ const BracketCanvas: React.FC<{
         {lines}
       </svg>
 
-      {/* Cards — pass onEdit down */}
-      {cols.map((col, ci) =>
-        col.entries.map(({ match, tag }, mi) => (
-          <div
-            key={match.id}
-            style={{
-              position: "absolute",
-              top: LH + 16 + top(col.entries.length) + mi * (CH + VGAP),
-              left: ci * (CW + HG),
-            }}
-          >
-            <MatchCard
-              match={match}
-              matchLabel={tag}
-              isAdminOrReferee={isAdminOrReferee}
-              onOpen={onOpen}
-              onEdit={onEdit} // ← pass through
-              accent={col.accent}
-            />
-          </div>
-        )),
-      )}
+      {/* Cards */}
+      {cols.map((col, ci) => {
+        const isTP = col.label === "3rd Place Playoff";
+        return col.entries.map(({ match, tag }, mi) => {
+          const isAssignedReferee =
+            isReferee &&
+            Boolean(
+              (match.referee?.user &&
+                (match.referee.user as any).id === currentUserId) ||
+              (match.referee as any)?.userId === currentUserId ||
+              (match as any).refereeUserId === currentUserId,
+            );
+          const canRecordScore = isAdmin || isAssignedReferee;
+
+          // Precise vertical card top placement
+          let topY: number;
+          if (isTP) {
+            topY = tpCY - CH / 2;
+          } else {
+            const cy = cyMap[ci]?.[mi] ?? mi * (CH + VGAP) + CH / 2;
+            topY = cy - CH / 2;
+          }
+
+          return (
+            <div
+              key={match.id}
+              style={{
+                position: "absolute",
+                top: LH + 16 + topY,
+                left: ci * (currentCW + currentHG),
+              }}
+            >
+              <MatchCard
+                match={match}
+                matchLabel={tag}
+                isAdmin={isAdmin}
+                canRecordScore={canRecordScore}
+                onOpen={onOpen}
+                onEdit={onEdit}
+                onAssignReferee={onAssignReferee}
+                accent={col.accent}
+                cardWidth={currentCW}
+              />
+            </div>
+          );
+        });
+      })}
     </div>
   );
 };
@@ -932,24 +1638,43 @@ const KnockoutBracket: React.FC<KnockoutBracketProps> = ({
   tournamentId,
   categoryId,
   onScoreRecorded,
+  refreshTrigger,
 }) => {
   const { user } = useAuth();
   const [matches, setMatches] = useState<KnockoutMatch[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeMatch, setActiveMatch] = useState<KnockoutMatch | null>(null);
-  const [editMatch, setEditMatch] = useState<KnockoutMatch | null>(null); // ← lives here now
+  const [selectedMatch, setSelectedMatch] = useState<KnockoutMatch | null>(
+    null,
+  );
+  const [editingMatch, setEditingMatch] = useState<KnockoutMatch | null>(null);
+  const [assignRefereeMatch, setAssignRefereeMatch] =
+    useState<KnockoutMatch | null>(null);
 
-  const isAdminOrReferee = user?.role === "ADMIN" || user?.role === "REFEREE";
+  useEffect(() => {
+    if (selectedMatch) {
+      const updatedMatch = matches.find((m) => m.id === selectedMatch.id);
+      if (
+        updatedMatch &&
+        JSON.stringify(updatedMatch.referee) !==
+          JSON.stringify(selectedMatch.referee)
+      ) {
+        setSelectedMatch(updatedMatch);
+      }
+    }
+  }, [matches]);
+
+  const isAdmin = user?.role === "ADMIN" || user?.role === "SUPER_ADMIN";
+  const isReferee = user?.role === "REFEREE";
 
   useEffect(() => {
     load();
-  }, [tournamentId, categoryId]);
+  }, [tournamentId, categoryId, refreshTrigger]);
 
   const load = async () => {
     try {
       setLoading(true);
       const res = await api.get(
-        `/matches/tournaments/${tournamentId}?t=${Date.now()}`,
+        `/matches/tournaments/${tournamentId}?categoryId=${categoryId}&t=${Date.now()}`,
       );
       const all: KnockoutMatch[] = res.data.data;
       for (const m of all) {
@@ -964,11 +1689,24 @@ const KnockoutBracket: React.FC<KnockoutBracketProps> = ({
           } catch {}
         }
       }
+      // Accept every recognisable knockout round — avoids dropping 'Final'
+      // or any size-variant round (e.g. "Round of 8") from the state.
+      const KNOCKOUT_ROUNDS = new Set([
+        "Round of 128",
+        "Round of 64",
+        "Round of 32",
+        "Round of 16",
+        "Quarter-Finals",
+        "Quarter-final",
+        "Semi-Finals",
+        "Semi-final",
+        "Final",
+        "Finals",
+        "3rd Place Playoff",
+      ]);
       setMatches(
-        all.filter((m) =>
-          ["Quarter-final", "Semi-final", "Final", "3rd Place"].includes(
-            m.round,
-          ),
+        all.filter(
+          (m) => KNOCKOUT_ROUNDS.has(m.round) || m.round.startsWith("Round of"),
         ),
       );
     } catch (e) {
@@ -978,18 +1716,77 @@ const KnockoutBracket: React.FC<KnockoutBracketProps> = ({
     }
   };
 
-  const round = (r: string) =>
-    matches
-      .filter((m) => m.round === r)
+  const round = (r: string) => {
+    const normTarget = (r || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+    return matches
+      .filter((m) => {
+        const normMatch = (m.round || "")
+          .toLowerCase()
+          .replace(/[^a-z0-9]/g, "");
+        if (normTarget === "semifinals" || normTarget === "semifinal") {
+          return normMatch === "semifinals" || normMatch === "semifinal";
+        }
+        if (normTarget === "quarterfinals" || normTarget === "quarterfinal") {
+          return normMatch === "quarterfinals" || normMatch === "quarterfinal";
+        }
+        return normMatch === normTarget;
+      })
       .sort((a, b) => a.matchNumber - b.matchNumber);
+  };
+
+  const handleCorrectScore = async (
+    matchId: string,
+    games: GameScore[],
+    bestOf: 3 | 5,
+    reason: string,
+  ) => {
+    if (user?.role !== "ADMIN") {
+      toast.error("Only admins can correct completed matches");
+      return;
+    }
+
+    const correctedGames = games
+      .filter((g) => g.p1 !== "" && g.p2 !== "")
+      .map((g, index) => ({
+        gameNumber: index + 1,
+        player1Score: Number(g.p1),
+        player2Score: Number(g.p2),
+      }));
+
+    try {
+      await api.patch(`/matches/${matchId}/correct-score`, {
+        games: correctedGames,
+        bestOf,
+        reason,
+      });
+
+      toast.success("Match score corrected successfully!");
+      setSelectedMatch(null);
+      await load();
+      onScoreRecorded?.();
+    } catch (error: any) {
+      toast.error(
+        error.response?.data?.message || "Failed to correct match score",
+      );
+      throw error;
+    }
+  };
 
   const handleSave = async (
     matchId: string,
     games: GameScore[],
     bestOf: 3 | 5,
+    startTime?: string,
+    endTime?: string,
   ) => {
     const match = matches.find((m) => m.id === matchId);
-    if (!match?.player1?.id || !match?.player2?.id) {
+    const isDoubles = match?.matchType === "DOUBLES";
+
+    // Guard: for singles both player slots must be filled;
+    //        for doubles both team slots must be filled.
+    const slot1Filled = isDoubles ? !!match?.team1 : !!match?.player1?.id;
+    const slot2Filled = isDoubles ? !!match?.team2 : !!match?.player2?.id;
+    if (!slot1Filled || !slot2Filled) {
       toast.error("Both players required");
       return;
     }
@@ -1011,55 +1808,70 @@ const KnockoutBracket: React.FC<KnockoutBracketProps> = ({
       return;
     }
 
-    const winnerId = p1W > p2W ? match.player1.id : match.player2.id;
+    // For doubles: winnerId = winning team's ID so the highlight logic works.
+    // For singles: winnerId = winning player's userId.
+    const winnerId = !isDoubles
+      ? p1W > p2W
+        ? match!.player1!.id
+        : match!.player2!.id
+      : undefined;
+
+    const winnerTeamId = isDoubles
+      ? p1W > p2W
+        ? match!.team1!.id
+        : match!.team2!.id
+      : undefined;
+
+    const matchDate = match?.scheduledTime
+      ? new Date(match.scheduledTime)
+      : new Date();
+
+    const toDateTime = (time?: string) => {
+      if (!time) return undefined;
+
+      const [hours, minutes] = time.split(":").map(Number);
+      const date = new Date(matchDate);
+      date.setHours(hours, minutes, 0, 0);
+
+      return date;
+    };
+
+    const startDate = toDateTime(startTime);
+    const endDate = toDateTime(endTime);
+
+    // A match may finish after midnight.
+    if (startDate && endDate && endDate < startDate) {
+      endDate.setDate(endDate.getDate() + 1);
+    }
+
+    const durationMinutes =
+      startDate && endDate
+        ? Math.round((endDate.getTime() - startDate.getTime()) / 60000)
+        : null;
+
     try {
+      const umpireName = match?.referee?.user
+        ? `${match.referee.user.firstName} ${match.referee.user.lastName}`
+        : user
+          ? `${user.firstName} ${user.lastName} (Admin)`
+          : undefined;
+
       await api.patch(`/matches/${matchId}`, {
         score: parts.join(", "),
         winnerId,
+        winnerTeamId,
         status: "COMPLETED",
-        endTime: new Date().toISOString(),
+        ...(startDate ? { startTime: startDate.toISOString() } : {}),
+        ...(endDate ? { endTime: endDate.toISOString() } : {}),
+        resultDetails: {
+          bestOf,
+          umpireName,
+          ...(durationMinutes !== null ? { durationMinutes } : {}),
+        },
       });
-      const fresh: KnockoutMatch[] = (
-        await api.get(`/matches/tournaments/${tournamentId}?t=${Date.now()}`)
-      ).data.data;
-
-      if (match.round === "Quarter-final") {
-        const sfs = fresh
-          .filter((m) => m.round === "Semi-final")
-          .sort((a, b) => a.matchNumber - b.matchNumber);
-        const qfs = fresh
-          .filter((m) => m.round === "Quarter-final")
-          .sort((a, b) => a.matchNumber - b.matchNumber);
-        const idx = qfs.findIndex((m) => m.id === matchId);
-        const sf = sfs[Math.floor(idx / 2)];
-        if (sf && sf.status !== "COMPLETED")
-          await api.patch(`/matches/${sf.id}`, {
-            [idx % 2 === 0 ? "player1Id" : "player2Id"]: winnerId,
-          });
-      }
-      if (match.round === "Semi-final") {
-        const fin = fresh.find((m) => m.round === "Final");
-        const tp = fresh.find((m) => m.round === "3rd Place");
-        const sfs = fresh
-          .filter((m) => m.round === "Semi-final")
-          .sort((a, b) => a.matchNumber - b.matchNumber);
-        const idx = sfs.findIndex((m) => m.id === matchId);
-        const loser =
-          match.player1?.id === winnerId
-            ? match.player2?.id
-            : match.player1?.id;
-        if (fin && fin.status !== "COMPLETED")
-          await api.patch(`/matches/${fin.id}`, {
-            [idx === 0 ? "player1Id" : "player2Id"]: winnerId,
-          });
-        if (tp && tp.status !== "COMPLETED" && loser)
-          await api.patch(`/matches/${tp.id}`, {
-            [idx === 0 ? "player1Id" : "player2Id"]: loser,
-          });
-      }
 
       toast.success("Score saved!");
-      setActiveMatch(null);
+      setSelectedMatch(null);
       await new Promise((r) => setTimeout(r, 400));
       await load();
       onScoreRecorded?.();
@@ -1070,20 +1882,30 @@ const KnockoutBracket: React.FC<KnockoutBracketProps> = ({
 
   if (loading)
     return (
-      <div style={{ textAlign: "center", padding: 60 }}>
+      <div style={{ textAlign: "center", padding: "80px 20px" }}>
         <div
           style={{
-            width: 40,
-            height: 40,
-            border: "3px solid #e2e8f0",
-            borderTopColor: "#e11d48",
+            width: 44,
+            height: 44,
+            border: "3px solid rgba(255, 255, 255, 0.15)",
+            borderTopColor: "#4AEEFF",
             borderRadius: "50%",
             animation: "spin 0.8s linear infinite",
             margin: "0 auto 16px",
           }}
         />
         <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
-        <p style={{ color: "#94a3b8" }}>Loading bracket…</p>
+        <p
+          style={{
+            color: "#4AEEFF",
+            fontSize: 13,
+            fontWeight: 700,
+            letterSpacing: 1,
+            textTransform: "uppercase",
+          }}
+        >
+          Loading bracket…
+        </p>
       </div>
     );
 
@@ -1092,214 +1914,186 @@ const KnockoutBracket: React.FC<KnockoutBracketProps> = ({
       <div
         style={{
           textAlign: "center",
-          padding: 60,
-          background: "#f8fafc",
+          padding: "60px 24px",
+          background: "rgba(6, 29, 35, 0.4)",
           borderRadius: 16,
-          border: "1px dashed #cbd5e1",
+          border: "1px dashed rgba(255, 255, 255, 0.2)",
+          backdropFilter: "blur(10px)",
         }}
       >
         <div style={{ fontSize: 48, marginBottom: 12 }}>🏆</div>
-        <p style={{ fontWeight: 700, color: "#1e293b", fontSize: 16 }}>
+        <p
+          style={{
+            fontWeight: 800,
+            color: "#ffffff",
+            fontSize: 18,
+            textTransform: "uppercase",
+            letterSpacing: 0.5,
+          }}
+        >
           No knockout matches yet
         </p>
-        <p style={{ color: "#94a3b8", fontSize: 13 }}>
-          Complete the group stage first.
+        <p
+          style={{
+            color: "rgba(255, 255, 255, 0.6)",
+            fontSize: 13,
+            marginTop: 4,
+          }}
+        >
+          Generate the bracket above to populate this tournament draw.
         </p>
         <button
           onClick={load}
           style={{
-            marginTop: 16,
-            padding: "8px 20px",
-            background: "#0f172a",
-            color: "#fff",
+            marginTop: 18,
+            padding: "10px 24px",
+            background: "#4AEEFF",
+            color: "#061D23",
             border: "none",
             borderRadius: 10,
-            fontWeight: 600,
+            fontWeight: 800,
+            fontSize: 12,
+            textTransform: "uppercase",
+            letterSpacing: 0.5,
             cursor: "pointer",
+            transition: "all 0.2s",
           }}
         >
-          🔄 Refresh
+          🔄 Refresh Draw
         </button>
       </div>
     );
 
-  const qf = round("Quarter-final");
-  const sf = round("Semi-final");
-  const fn = round("Final")[0] ?? null;
-  const tp = round("3rd Place")[0] ?? null;
+  const r32 = round("Round of 32");
+  const r16 = round("Round of 16");
+  const qf = round("Quarter-Finals");
+  const targetSf = round("Semi-Finals");
+  const fn =
+    matches.find(
+      (m) =>
+        m.round.trim().toLowerCase() === "final" ||
+        m.round.trim().toLowerCase() === "finals",
+    ) ?? null;
 
   const cols: ColDef[] = [];
+  if (r32.length)
+    cols.push({
+      label: "Round of 32",
+      entries: r32.map((m, i) => ({ match: m, tag: `R32 ${i + 1}` })),
+    });
+  if (r16.length)
+    cols.push({
+      label: "Round of 16",
+      entries: r16.map((m, i) => ({ match: m, tag: `R16 ${i + 1}` })),
+    });
   if (qf.length)
     cols.push({
       label: "Quarter Finals",
       entries: qf.map((m, i) => ({ match: m, tag: `QF ${i + 1}` })),
     });
-  if (sf.length)
+  if (targetSf.length)
     cols.push({
       label: "Semi Finals",
-      entries: sf.map((m, i) => ({ match: m, tag: `SF ${i + 1}` })),
+      entries: targetSf.map((m, i) => ({ match: m, tag: `SF ${i + 1}` })),
     });
   if (fn)
     cols.push({
       label: "Final",
-      accent: "#16a34a",
+      accent: "#22c55e",
       entries: [{ match: fn, tag: "F" }],
-    });
-  if (tp)
-    cols.push({
-      label: "3rd Place Playoff",
-      accent: "#b45309",
-      entries: [{ match: tp, tag: "3RD" }],
     });
 
   return (
-    <div style={{ fontFamily: "'Segoe UI',system-ui,sans-serif" }}>
-      {/* Header */}
-      <div style={{ textAlign: "center", marginBottom: 28 }}>
-        <div
-          style={{
-            fontSize: 11,
-            fontWeight: 800,
-            color: "#e11d48",
-            letterSpacing: 2,
-            textTransform: "uppercase",
-            marginBottom: 4,
-          }}
-        >
-          Knockout Draw
-        </div>
-        <h2
-          style={{
-            margin: 0,
-            fontSize: 28,
-            fontWeight: 900,
-            color: "#0f172a",
-            letterSpacing: -0.5,
-          }}
-        >
-          Tournament Bracket
-        </h2>
-        <p style={{ margin: "4px 0 0", fontSize: 13, color: "#64748b" }}>
-          All matches best of 5 games · Click any match to record score
-        </p>
-      </div>
-
-      {/* Toolbar */}
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "flex-end",
-          gap: 10,
-          marginBottom: 20,
-        }}
-      >
-        {isAdminOrReferee && (
-          <span
-            style={{
-              fontSize: 12,
-              color: "#3b82f6",
-              fontWeight: 600,
-              alignSelf: "center",
-            }}
-          >
-            💡 Click any match card to open umpire sheet · ✏️ Edit to change
-            players
-          </span>
-        )}
-        <button
-          onClick={load}
-          style={{
-            padding: "7px 16px",
-            background: "#fff",
-            color: "#374151",
-            border: "1.5px solid #e2e8f0",
-            borderRadius: 8,
-            fontWeight: 600,
-            fontSize: 13,
-            cursor: "pointer",
-          }}
-        >
-          🔄 Refresh
-        </button>
+    <div
+      style={{
+        fontFamily: "'Segoe UI',system-ui,sans-serif",
+        width: "100%",
+        maxWidth: "100%",
+        minWidth: 0,
+        overflow: "visible",
+      }}
+    >
+      {/* Mobile Swipe Hint */}
+      <div className="sm:hidden px-3.5 py-2 mb-3 rounded-xl bg-[#4AEEFF]/10 border border-[#4AEEFF]/25 text-xs text-[#4AEEFF] flex items-center justify-between font-mono">
+        <span>↔ Swipe across bracket</span>
       </div>
 
       {/* Bracket */}
-      <div style={{ overflowX: "auto", paddingBottom: 16 }}>
+      <div
+        style={{
+          width: "100%",
+          maxWidth: "100%",
+          minWidth: 0,
+          overflowX: "auto",
+          WebkitOverflowScrolling: "touch",
+          paddingBottom: 16,
+          scrollbarWidth: "thin",
+          scrollbarColor: "rgba(74, 238, 255, 0.6) transparent",
+        }}
+      >
         <div
           style={{
             display: "flex",
             justifyContent: "center",
-            padding: "8px 24px",
-            minWidth: "fit-content",
+            width: "max-content",
+            minWidth: "100%",
+            padding: "8px 24px 20px 24px",
+            boxSizing: "border-box",
           }}
         >
           <BracketCanvas
             cols={cols}
-            isAdminOrReferee={isAdminOrReferee}
-            onOpen={setActiveMatch}
-            onEdit={setEditMatch} // ← pass setEditMatch here
+            isAdmin={isAdmin}
+            isReferee={isReferee}
+            currentUserId={user?.id}
+            onOpen={setSelectedMatch}
+            onEdit={setEditingMatch}
+            onAssignReferee={isAdmin ? setAssignRefereeMatch : undefined}
           />
         </div>
       </div>
 
-      {/* Footer */}
-      <div
-        style={{
-          marginTop: 8,
-          padding: "10px 16px",
-          background: "#f8fafc",
-          border: "1px solid #e2e8f0",
-          borderRadius: 10,
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          fontSize: 12,
-          color: "#64748b",
-        }}
-      >
-        <span>All matches are best of 5 games</span>
-        <div style={{ display: "flex", gap: 16 }}>
-          {[
-            ["#22c55e", "Winner / Completed"],
-            ["#e2e8f0", "Pending"],
-          ].map(([c, l]) => (
-            <span
-              key={l}
-              style={{ display: "flex", alignItems: "center", gap: 5 }}
-            >
-              <div
-                style={{
-                  width: 16,
-                  height: 16,
-                  borderRadius: 4,
-                  background: c,
-                }}
-              />
-              {l}
-            </span>
-          ))}
-        </div>
-      </div>
-
       {/* Umpire sheet modal */}
-      {activeMatch && (
+      {selectedMatch && (
         <UmpireSheet
-          match={activeMatch}
-          onClose={() => setActiveMatch(null)}
+          match={selectedMatch}
+          onClose={() => setSelectedMatch(null)}
           onSave={handleSave}
-          isAdminOrReferee={isAdminOrReferee}
+          onCorrectScore={handleCorrectScore}
+          isAdminOrReferee={
+            isAdmin ||
+            (isReferee &&
+              Boolean(
+                (selectedMatch.referee?.user &&
+                  (selectedMatch.referee.user as any).id === user?.id) ||
+                (selectedMatch.referee as any)?.userId === user?.id ||
+                (selectedMatch as any).refereeUserId === user?.id,
+              ))
+          }
         />
       )}
 
       {/* Edit match modal */}
-      {editMatch && (
+      {editingMatch && (
         <EditKnockoutModal
-          match={editMatch}
+          match={editingMatch}
           tournamentId={tournamentId}
           categoryId={categoryId}
-          onClose={() => setEditMatch(null)}
+          onClose={() => setEditingMatch(null)}
           onSuccess={() => {
-            setEditMatch(null);
+            setEditingMatch(null);
+            load();
+          }}
+        />
+      )}
+
+      {assignRefereeMatch && (
+        <AssignRefereeModal
+          isOpen={true}
+          matchId={assignRefereeMatch.id}
+          onClose={() => setAssignRefereeMatch(null)}
+          onSuccess={() => {
+            setAssignRefereeMatch(null);
             load();
           }}
         />

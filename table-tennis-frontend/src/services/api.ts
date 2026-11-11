@@ -3,6 +3,13 @@ import toast from 'react-hot-toast';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api/v1';
 
+export const getProfileImageUrl = (path?: string | null): string => {
+  if (!path) return '';
+  if (path.startsWith('http://') || path.startsWith('https://')) return path;
+  const backendBase = (import.meta.env.VITE_API_URL || 'http://localhost:3000/api/v1').replace(/\/api\/v1\/?$/, '');
+  return `${backendBase}${path.startsWith('/') ? '' : '/'}${path}`;
+};
+
 const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
@@ -36,10 +43,15 @@ api.interceptors.response.use(
     
     // Handle specific error codes with user-friendly messages
     if (error.response?.status === 401) {
+      const hadToken = !!localStorage.getItem('token');
       localStorage.removeItem('token');
       localStorage.removeItem('user');
-      window.location.href = '/login';
-      toast.error('Your session has expired. Please login again.');
+
+      const isAuthPage = ['/login', '/register', '/reset-password', '/verify-email'].includes(window.location.pathname);
+      if (hadToken && !isAuthPage) {
+        toast.error('Your session has expired. Please login again.', { id: 'session-expired' });
+        window.location.href = '/login';
+      }
     } else if (error.response?.status === 403) {
       toast.error("You don't have permission to do that.");
     } else if (error.response?.status === 404) {
