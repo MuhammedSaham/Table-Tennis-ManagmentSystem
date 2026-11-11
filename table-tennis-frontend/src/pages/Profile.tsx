@@ -119,9 +119,9 @@ const Profile: React.FC = () => {
   const [uploading, setUploading] = useState(false);
   const [playerStats, setPlayerStats] = useState<PlayerStats | null>(null);
   const [_statsLoading, setStatsLoading] = useState(false);
-  const [isFavorited, setIsFavorited] = useState(false);
-  const [totalFavorites, setTotalFavorites] = useState(0);
-  const [favoriteLoading, _setFavoriteLoading] = useState(false);
+  const [_isFavorited, setIsFavorited] = useState(false);
+  const [_totalFavorites, setTotalFavorites] = useState(0);
+  const [_favoriteLoading, _setFavoriteLoading] = useState(false);
 
   const [membershipStatus, setMembershipStatus] = useState<any>(null);
   const [membershipLoading, setMembershipLoading] = useState(false);

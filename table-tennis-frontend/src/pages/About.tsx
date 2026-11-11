@@ -45,10 +45,7 @@ const About: React.FC = () => (
       {/* ─── COMPACT GLASS HEADER MODULE ─── */}
       <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 rounded-2xl border border-white/20 bg-[#061D23]/20 p-4 sm:p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl text-left">
         <div>
-          <span className="text-[11px] font-bold uppercase tracking-wider text-[#4AEEFF]">
-            Academy Overview
-          </span>
-          <h1 className="text-2xl sm:text-3xl lg:text-[34px] font-heading font-bold text-white tracking-tight leading-tight mt-0.5">
+          <h1 className="text-2xl sm:text-3xl lg:text-[34px] font-heading font-bold text-white tracking-tight leading-tight">
             About Sam&apos;s College
           </h1>
           <p className="mt-1 text-xs sm:text-sm text-white/70">
