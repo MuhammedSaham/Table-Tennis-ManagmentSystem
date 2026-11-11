@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import api from "../services/api";
 import toast from "react-hot-toast";
+import BackButton from "../components/BackButton";
 import { CalendarIcon, TrophyIcon } from "@heroicons/react/24/outline";
 
 interface Match {
@@ -130,14 +131,14 @@ const MyMatches: React.FC = () => {
       <div className="fixed inset-0 bg-[#061D23]/25" />
       <div className="fixed inset-0 bg-gradient-to-b from-[#061D23]/20 via-transparent to-[#061D23]/35" />
 
-      <main className="relative z-10 mx-auto flex min-h-screen w-full max-w-7xl flex-col space-y-6 p-4 sm:p-6 lg:p-8">
-        <header className="flex flex-col justify-between gap-4 rounded-[16px] border border-white/20 bg-[#061D23]/15 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl sm:flex-row sm:items-center">
+      <main className="relative z-10 mx-auto flex min-h-screen w-full max-w-[1600px] flex-col space-y-6 px-4 sm:px-6 lg:px-10 xl:px-14 py-4 sm:py-6 lg:py-8">
+        <header className="flex flex-col justify-between gap-4 rounded-2xl border border-white/20 bg-[#061D23]/20 p-5 sm:p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl sm:flex-row sm:items-center">
           <div>
-            <div className="mb-3 h-[3px] w-16 bg-[#4AEEFF]" />
-            <h1 className="text-2xl font-black uppercase tracking-[0.2em] text-white sm:text-4xl">
+            <BackButton to="/app/dashboard" label="Back to Dashboard" className="mb-3" />
+            <h1 className="text-2xl font-black uppercase tracking-[0.15em] text-white sm:text-3xl lg:text-4xl">
               My Matches
             </h1>
-            <p className="mt-1 text-xs uppercase tracking-[0.3em] text-[#4AEEFF]/90">
+            <p className="mt-1 text-xs uppercase tracking-[0.2em] text-[#4AEEFF]">
               Track your tournament fixtures and results
             </p>
           </div>
@@ -159,36 +160,39 @@ const MyMatches: React.FC = () => {
             <h2 className="text-xs font-black uppercase tracking-widest text-[#4AEEFF]">Match Log</h2>
           </div>
           <div className="flex flex-wrap gap-2">
-        <button
-          onClick={() => setFilter("all")}
-          className={`rounded-lg border px-4 py-2 text-xs font-black uppercase tracking-wider transition-all ${
-            filter === "all"
-              ? "border-[#4AEEFF] bg-[#4AEEFF] text-[#061D23]"
-              : "border-white/10 bg-[#061D23]/40 text-white/70 hover:border-[#4AEEFF] hover:text-[#4AEEFF]"
-          }`}
-        >
-          All Matches ({matches.length})
-        </button>
-        <button
-          onClick={() => setFilter("upcoming")}
-          className={`rounded-lg border px-4 py-2 text-xs font-black uppercase tracking-wider transition-all ${
-            filter === "upcoming"
-              ? "border-[#4AEEFF] bg-[#4AEEFF] text-[#061D23]"
-              : "border-white/10 bg-[#061D23]/40 text-white/70 hover:border-[#4AEEFF] hover:text-[#4AEEFF]"
-          }`}
-        >
-          Upcoming ({matches.filter((m) => m.status === "SCHEDULED").length})
-        </button>
-        <button
-          onClick={() => setFilter("completed")}
-          className={`rounded-lg border px-4 py-2 text-xs font-black uppercase tracking-wider transition-all ${
-            filter === "completed"
-              ? "border-[#4AEEFF] bg-[#4AEEFF] text-[#061D23]"
-              : "border-white/10 bg-[#061D23]/40 text-white/70 hover:border-[#4AEEFF] hover:text-[#4AEEFF]"
-          }`}
-        >
-          Completed ({completedMatches})
-        </button>
+            {[
+              { key: "all", label: "All Matches", count: matches.length },
+              {
+                key: "upcoming",
+                label: "Upcoming",
+                count: matches.filter((m) => m.status === "SCHEDULED").length,
+              },
+              { key: "completed", label: "Completed", count: completedMatches },
+            ].map((tab) => {
+              const isActive = filter === tab.key;
+              return (
+                <button
+                  key={tab.key}
+                  onClick={() => setFilter(tab.key as any)}
+                  className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-bold uppercase tracking-wider transition-all duration-200 ${
+                    isActive
+                      ? "bg-[#4AEEFF]/15 text-[#4AEEFF] border border-[#4AEEFF]/45 shadow-[0_0_14px_rgba(74,238,255,0.18)] backdrop-blur-md"
+                      : "border border-white/10 bg-white/5 text-white/70 hover:bg-white/10 hover:text-white"
+                  }`}
+                >
+                  <span>{tab.label}</span>
+                  <span
+                    className={`rounded-full px-1.5 py-0.2 text-[10px] font-bold ${
+                      isActive
+                        ? "bg-[#4AEEFF]/25 text-[#4AEEFF]"
+                        : "bg-white/10 text-white/60"
+                    }`}
+                  >
+                    {tab.count}
+                  </span>
+                </button>
+              );
+            })}
           </div>
         </section>
 

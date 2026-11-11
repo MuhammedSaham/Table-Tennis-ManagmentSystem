@@ -8,6 +8,8 @@ interface NormalizedMatch {
   round: string;
   matchNumber: number;
   scheduledTime: Date;
+  startTime?: Date | null;
+  endTime?: Date | null;
   status: string;
   score: string | null;
   winnerId: string | null;
@@ -104,8 +106,22 @@ export class MatchService {
         status: 'COMPLETED',
       },
       include: {
-        player1: { select: { id: true, firstName: true, lastName: true } },
-        player2: { select: { id: true, firstName: true, lastName: true } },
+        player1: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            profileImage: true,
+          },
+        },
+        player2: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            profileImage: true,
+          },
+        },
         tournament: { select: { id: true, name: true } },
         category: { select: { name: true } },
         games: true,
@@ -223,15 +239,36 @@ export class MatchService {
     const matches = await prisma.match.findMany({
       where: whereClause,
       include: {
-        player1: { select: { id: true, firstName: true, lastName: true } },
-        player2: { select: { id: true, firstName: true, lastName: true } },
+        player1: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            profileImage: true,
+          },
+        },
+        player2: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            profileImage: true,
+          },
+        },
         team1: {
           select: {
             id: true,
             name: true,
             members: {
               include: {
-                player: { select: { id: true, firstName: true, lastName: true } },
+                player: {
+                  select: {
+                    id: true,
+                    firstName: true,
+                    lastName: true,
+                    profileImage: true,
+                  },
+                },
               },
             },
           },
@@ -242,12 +279,32 @@ export class MatchService {
             name: true,
             members: {
               include: {
-                player: { select: { id: true, firstName: true, lastName: true } },
+                player: {
+                  select: {
+                    id: true,
+                    firstName: true,
+                    lastName: true,
+                    profileImage: true,
+                  },
+                },
               },
             },
           },
         },
-        referee: { include: { user: { select: { id: true, firstName: true, lastName: true } } } },
+        referee: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                email: true,
+                phone: true,
+                profileImage: true,
+              },
+            },
+          },
+        },
         category: { select: { name: true, type: true } },
       },
       orderBy: { scheduledTime: 'asc' },
@@ -304,6 +361,7 @@ export class MatchService {
       },
     },
   },
+
 });
 
     // Show approved registrations before brackets or groups have been generated.
@@ -417,24 +475,70 @@ export class MatchService {
     });
 
     const groupMatches = await prisma.groupMatch.findMany({
-      where: { refereeId: referee.id },
-      include: {
-        player1: { select: { id: true, firstName: true, lastName: true } },
-        player2: { select: { id: true, firstName: true, lastName: true } },
-        group: {
+  where: { refereeId: referee.id },
+  include: {
+    player1: {
+      select: { id: true, firstName: true, lastName: true },
+    },
+    player2: {
+      select: { id: true, firstName: true, lastName: true },
+    },
+    team1: {
+      select: {
+        id: true,
+        name: true,
+        members: {
           include: {
-            tournament: { select: { id: true, name: true, venue: true } },
-            category: { select: { name: true, type: true } },
+            player: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+              },
+            },
           },
         },
       },
-    });
+    },
+    team2: {
+      select: {
+        id: true,
+        name: true,
+        members: {
+          include: {
+            player: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+              },
+            },
+          },
+        },
+      },
+    },
+    group: {
+      include: {
+        tournament: {
+          select: { id: true, name: true, venue: true },
+        },
+        category: {
+          select: { name: true, type: true },
+        },
+      },
+    },
+  },
+});
 
     const normalizedKnockout: NormalizedMatch[] = matches.map((match) => ({
       id: match.id,
       round: match.round,
       matchNumber: match.matchNumber,
       scheduledTime: match.scheduledTime,
+
+      startTime: match.startTime,
+      endTime: match.endTime,
+
       status: match.status,
       score: match.score ?? null,
       winnerId: match.winnerId ?? null,
@@ -451,10 +555,19 @@ export class MatchService {
       isGroupMatch: false,
     }));
 
+   const groupMatchNumbers = new Map<string, number>();
+const matchNumbersById = new Map<string, number>();
+
+for (const match of groupMatches) {
+  const number = (groupMatchNumbers.get(match.groupId) ?? 0) + 1;
+  groupMatchNumbers.set(match.groupId, number);
+  matchNumbersById.set(match.id, number);
+}
+
     const normalizedGroup: NormalizedMatch[] = groupMatches.map((match: any) => ({
       id: match.id,
       round: `Group Stage - ${match.group?.name ?? ''}`,
-      matchNumber: match.round ?? 1,
+      matchNumber: matchNumbersById.get(match.id) ?? 1,
       scheduledTime: match.scheduledTime,
       status: match.status,
       score: match.player1Score !== null && match.player2Score !== null
@@ -467,6 +580,11 @@ export class MatchService {
       player2: match.player2
         ? { id: match.player2.id, firstName: match.player2.firstName, lastName: match.player2.lastName }
         : null,
+
+      team1: match.team1,
+      team2: match.team2,
+      startTime: match.startTime,
+      endTime: match.endTime,
       tournament: match.group?.tournament ?? { id: '', name: '', venue: '' },
       category: match.group?.category ?? { name: '', type: '' },
       isGroupMatch: true,
@@ -506,7 +624,20 @@ export class MatchService {
             members: { include: { player: { select: { firstName: true, lastName: true } } } },
           },
         },
-        referee: { include: { user: { select: { firstName: true, lastName: true, email: true } } } },
+        referee: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                email: true,
+                phone: true,
+                profileImage: true,
+              },
+            },
+          },
+        },
         tournament: true,
         category: true,
         games: { orderBy: { gameNumber: 'asc' } },
@@ -535,6 +666,16 @@ export class MatchService {
     } else if (userRole !== 'ADMIN' && userRole !== 'REFEREE') {
       throw new AppError('Only admins and referees can update match status', 403);
     }
+    // Referees cannot change the status of a finished match
+if (
+  userRole === 'REFEREE' &&
+  (match.status === 'COMPLETED' || match.status === 'WALKOVER')
+) {
+  throw new AppError(
+    'Only admins can change the status of completed matches',
+    403
+  );
+}
 
     const updatedMatch = await prisma.match.update({
       where: { id: matchId },
@@ -550,8 +691,13 @@ export class MatchService {
 
   // Assign referee to match (Admin only)
   async assignReferee(adminId: string, matchId: string, refereeUserId: string) {
-    const admin = await prisma.adminProfile.findUnique({ where: { userId: adminId } });
-    if (!admin) throw new AppError('Only admins can assign referees', 403);
+    const admin = await prisma.user.findUnique({
+      where: { id: adminId },
+      select: { role: true },
+    });
+    if (!admin || (admin.role !== 'ADMIN' && admin.role !== 'SUPER_ADMIN')) {
+      throw new AppError('Only admins can assign referees', 403);
+    }
 
     const match = await prisma.match.findUnique({ where: { id: matchId } });
     if (!match) throw new AppError('Match not found', 404);
@@ -584,9 +730,23 @@ export class MatchService {
       throw new AppError('Only admins and referees can record match scores', 403);
     }
 
-    if (match.status !== 'ONGOING' && match.status !== 'SCHEDULED') {
-      throw new AppError('Can only record scores for scheduled or ongoing matches', 400);
-    }
+    // Only admins can correct completed or walkover match results
+if (
+  (match.status === 'COMPLETED' || match.status === 'WALKOVER') &&
+  userRole !== 'ADMIN'
+) {
+  throw new AppError(
+    'Completed match results can only be edited by an admin',
+    403
+  );
+}
+
+// Other match statuses cannot be scored
+if (
+  !['SCHEDULED', 'ONGOING', 'COMPLETED', 'WALKOVER'].includes(match.status)
+) {
+  throw new AppError('This match cannot be scored', 400);
+}
 
     let player1Id: string | null = null;
     let player2Id: string | null = null;
@@ -639,6 +799,7 @@ export class MatchService {
     } 
     if (match.matchType !== 'SINGLES') {
       winnerTeamId = team1Id && team2Id ? (player1Wins > player2Wins ? team1Id : team2Id) : null;
+      winnerId = winnerTeamId;
     }
 
     const scoreString = games.map(g => `${g.player1Score}-${g.player2Score}`).join(', ');
@@ -771,4 +932,403 @@ export class MatchService {
       },
     };
   }
+  
+  async correctCompletedMatch(
+  adminId: string,
+  matchId: string,
+  games: {
+    gameNumber: number;
+    player1Score: number;
+    player2Score: number;
+  }[],
+  bestOf: number,
+  reason: string
+) {
+  // 1. Confirm admin permission
+  const admin = await prisma.adminProfile.findUnique({
+    where: { userId: adminId },
+  });
+
+  if (!admin) {
+    throw new AppError('Only admins can correct match scores', 403);
+  }
+
+  // 2. Find the existing match
+  const match = await prisma.match.findUnique({
+    where: { id: matchId },
+  });
+
+  if (!match) {
+    throw new AppError('Match not found', 404);
+  }
+
+  // 3. Only completed matches can be corrected
+  if (match.status !== 'COMPLETED') {
+    throw new AppError(
+      'Only completed matches can be corrected',
+      400
+    );
+  }
+
+  // 4. Require a correction reason
+  if (typeof reason !== 'string' || reason.trim().length < 5) {
+    throw new AppError(
+      'Please provide a correction reason (at least 5 characters)',
+      400
+    );
+  }
+
+  // 5. Validate match format
+  if (bestOf !== 3 && bestOf !== 5) {
+    throw new AppError('Best of must be 3 or 5', 400);
+  }
+
+  // 6. Validate games
+  if (!Array.isArray(games) || games.length === 0 || games.length > bestOf) {
+    throw new AppError('Invalid number of games', 400);
+  }
+
+  let player1Wins = 0;
+  let player2Wins = 0;
+  const winsNeeded = Math.ceil(bestOf / 2);
+
+  for (const [index, game] of games.entries()) {
+    if (
+      game.gameNumber !== index + 1 ||
+      !Number.isInteger(game.player1Score) ||
+      !Number.isInteger(game.player2Score) ||
+      game.player1Score < 0 ||
+      game.player2Score < 0
+    ) {
+      throw new AppError(`Invalid score for game ${index + 1}`, 400);
+    }
+
+    const high = Math.max(game.player1Score, game.player2Score);
+    const low = Math.min(game.player1Score, game.player2Score);
+
+    if (
+      high < 11 ||
+      (high === 11 && low > 9) ||
+      (high > 11 && high - low !== 2)
+    ) {
+      throw new AppError(
+        `Game ${index + 1} must be won by at least 2 points`,
+        400
+      );
+    }
+
+    if (player1Wins >= winsNeeded || player2Wins >= winsNeeded) {
+      throw new AppError(
+        'Extra games cannot be recorded after a match winner is decided',
+        400
+      );
+    }
+
+    if (game.player1Score > game.player2Score) {
+      player1Wins++;
+    } else {
+      player2Wins++;
+    }
+  }
+
+  if (Math.max(player1Wins, player2Wins) !== winsNeeded) {
+    throw new AppError(
+      `The winning player or team must win ${winsNeeded} games`,
+      400
+    );
+  }
+
+  // Determine the winner from corrected game scores
+const player1Won = player1Wins > player2Wins;
+
+const correctedWinnerId =
+  match.matchType === 'SINGLES'
+    ? (player1Won ? match.player1Id : match.player2Id)
+    : (player1Won ? match.team1Id : match.team2Id);
+
+// For now, prevent changing the winner.
+// Winner-changing corrections need additional bracket protection.
+const existingWinnerId =
+  match.matchType === 'SINGLES'
+    ? match.winnerId
+    : match.winnerTeamId ?? match.winnerId;
+
+if (!correctedWinnerId || !existingWinnerId) {
+  throw new AppError(
+    'Unable to identify the match winner',
+    400
+  );
+}
+
+const winnerChanged = correctedWinnerId !== existingWinnerId;
+
+// Save the corrected scores and match result together
+const correctedMatch = await prisma.$transaction(async (tx) => {
+  // Recheck the match inside the transaction
+  const currentMatch = await tx.match.findUnique({
+    where: { id: matchId },
+  });
+
+  if (!currentMatch || currentMatch.status !== 'COMPLETED') {
+    throw new AppError(
+      'Match is no longer available for correction',
+      400
+    );
+  }
+
+  const currentWinnerId =
+    currentMatch.matchType === 'SINGLES'
+      ? currentMatch.winnerId
+      : currentMatch.winnerTeamId ?? currentMatch.winnerId;
+
+  if (currentWinnerId !== existingWinnerId) {
+  throw new AppError(
+    'The match winner was changed by another request. Please reload and try again.',
+    409
+  );
+}
+
+// Identify the next knockout round
+const nextRoundMap: Record<string, string> = {
+  'Round of 128': 'Round of 64',
+  'Round of 64': 'Round of 32',
+  'Round of 32': 'Round of 16',
+  'Round of 16': 'Quarter-Finals',
+  'Quarter-Finals': 'Semi-Finals',
+  'Quarter-final': 'Semi-final',
+  'Semi-Finals': 'Final',
+  'Semi-final': 'Final',
+};
+
+const nextRound = nextRoundMap[currentMatch.round];
+
+let nextMatch: typeof currentMatch | null = null;
+let thirdPlaceMatch: typeof currentMatch | null = null;
+let isSlot1 = false;
+
+if (winnerChanged && nextRound) {
+  const currentRoundMatches = await tx.match.findMany({
+    where: {
+      tournamentId: currentMatch.tournamentId,
+      categoryId: currentMatch.categoryId,
+      round: currentMatch.round,
+    },
+    orderBy: { matchNumber: 'asc' },
+  });
+
+  const matchIndex = currentRoundMatches.findIndex(
+    (m) => m.id === currentMatch.id
+  );
+
+  if (matchIndex === -1) {
+    throw new AppError('Cannot determine bracket position', 400);
+  }
+
+  isSlot1 = matchIndex % 2 === 0;
+
+  const nextRoundMatches = await tx.match.findMany({
+    where: {
+      tournamentId: currentMatch.tournamentId,
+      categoryId: currentMatch.categoryId,
+      round: nextRound,
+    },
+    orderBy: { matchNumber: 'asc' },
+  });
+
+  nextMatch = nextRoundMatches[Math.floor(matchIndex / 2)] ?? null;
+
+  if (!nextMatch) {
+    throw new AppError(
+      'Next-round match not found. Winner correction was not saved.',
+      400
+    );
+  }
+
+  if (
+    nextMatch.status !== 'SCHEDULED' ||
+    nextMatch.startTime !== null ||
+    nextMatch.endTime !== null ||
+    nextMatch.score !== null ||
+    nextMatch.winnerId !== null ||
+    nextMatch.winnerTeamId !== null
+  ) {
+    throw new AppError(
+      'Cannot change the winner because the next-round match has already started or contains a result.',
+      400
+    );
+  }
+
+  if (nextRound === 'Final') {
+    thirdPlaceMatch = await tx.match.findFirst({
+      where: {
+        tournamentId: currentMatch.tournamentId,
+        categoryId: currentMatch.categoryId,
+        round: '3rd Place Playoff',
+      },
+    });
+
+    if (
+      thirdPlaceMatch &&
+      (
+        thirdPlaceMatch.status !== 'SCHEDULED' ||
+        thirdPlaceMatch.startTime !== null ||
+        thirdPlaceMatch.endTime !== null ||
+        thirdPlaceMatch.score !== null ||
+        thirdPlaceMatch.winnerId !== null ||
+        thirdPlaceMatch.winnerTeamId !== null
+      )
+    ) {
+      throw new AppError(
+        'Cannot change the semifinal winner because the third-place playoff has already started or contains a result.',
+        400
+      );
+    }
+  }
+}
+
+  // Preserve existing result details
+  const previousDetails =
+    currentMatch.resultDetails &&
+    typeof currentMatch.resultDetails === 'object' &&
+    !Array.isArray(currentMatch.resultDetails)
+      ? { ...currentMatch.resultDetails }
+      : {};
+
+  // Record the correction for future reference
+  const previousCorrections = Array.isArray(previousDetails.corrections)
+    ? previousDetails.corrections
+    : [];
+
+  const correctionRecord = {
+    correctedBy: adminId,
+    correctedAt: new Date().toISOString(),
+    reason: reason.trim(),
+    previousScore: currentMatch.score,
+    previousWinnerId: existingWinnerId,
+correctedWinnerId,
+    correctedScore: games
+      .map((game) => `${game.player1Score}-${game.player2Score}`)
+      .join(', '),
+  };
+
+  // Update bracket participants when the corrected winner changes
+if (winnerChanged && nextMatch) {
+  const isSingles = currentMatch.matchType === 'SINGLES';
+
+  const nextSlot = isSingles
+    ? (isSlot1 ? 'player1Id' : 'player2Id')
+    : (isSlot1 ? 'team1Id' : 'team2Id');
+
+  // Verify the next-round slot still contains the original winner
+  if (nextMatch[nextSlot] !== existingWinnerId) {
+    throw new AppError(
+      'The next-round participant does not match the original winner. Please review the bracket.',
+      409
+    );
+  }
+
+  await tx.match.update({
+    where: { id: nextMatch.id },
+    data: isSingles
+      ? isSlot1
+        ? { player1Id: correctedWinnerId }
+        : { player2Id: correctedWinnerId }
+      : isSlot1
+        ? { team1Id: correctedWinnerId }
+        : { team2Id: correctedWinnerId },
+  });
+
+  // A semifinal correction also changes the third-place participant
+  if (thirdPlaceMatch) {
+    const correctedLoserId = isSingles
+      ? (correctedWinnerId === currentMatch.player1Id
+          ? currentMatch.player2Id
+          : currentMatch.player1Id)
+      : (correctedWinnerId === currentMatch.team1Id
+          ? currentMatch.team2Id
+          : currentMatch.team1Id);
+
+    const originalLoserId = isSingles
+      ? (existingWinnerId === currentMatch.player1Id
+          ? currentMatch.player2Id
+          : currentMatch.player1Id)
+      : (existingWinnerId === currentMatch.team1Id
+          ? currentMatch.team2Id
+          : currentMatch.team1Id);
+
+    const thirdSlot = isSingles
+      ? (isSlot1 ? 'player1Id' : 'player2Id')
+      : (isSlot1 ? 'team1Id' : 'team2Id');
+
+    if (thirdPlaceMatch[thirdSlot] !== originalLoserId) {
+      throw new AppError(
+        'The third-place playoff participant does not match the original loser.',
+        409
+      );
+    }
+
+    await tx.match.update({
+      where: { id: thirdPlaceMatch.id },
+      data: isSingles
+        ? isSlot1
+          ? { player1Id: correctedLoserId }
+          : { player2Id: correctedLoserId }
+        : isSlot1
+          ? { team1Id: correctedLoserId }
+          : { team2Id: correctedLoserId },
+    });
+  }
+}
+
+  // Replace the existing game records
+  await tx.game.deleteMany({
+    where: { matchId },
+  });
+
+  await tx.game.createMany({
+    data: games.map((game) => ({
+      matchId,
+      gameNumber: game.gameNumber,
+      player1Score: game.player1Score,
+      player2Score: game.player2Score,
+      winnerId:
+        currentMatch.matchType === 'SINGLES'
+          ? game.player1Score > game.player2Score
+            ? currentMatch.player1Id
+            : currentMatch.player2Id
+          : null,
+    })),
+  });
+
+  // Update the match result without changing the winner
+  // Update the corrected match result and winner
+return tx.match.update({
+  where: { id: matchId },
+  data: {
+    winnerId: correctedWinnerId,
+    winnerTeamId:
+      currentMatch.matchType === 'SINGLES'
+        ? null
+        : correctedWinnerId,
+    score: correctionRecord.correctedScore,
+      resultDetails: {
+        ...previousDetails,
+        games,
+        bestOf,
+        player1Wins,
+        player2Wins,
+        totalGames: games.length,
+        corrections: [...previousCorrections, correctionRecord],
+      },
+    },
+    include: {
+      games: {
+        orderBy: { gameNumber: 'asc' },
+      },
+    },
+  });
+});
+
+return correctedMatch;
+}
 }

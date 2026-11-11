@@ -22,7 +22,14 @@ model User {
   resetPasswordToken  String?   @unique
   resetPasswordExpiry DateTime?
 
+  // Email verification
+  isEmailVerified         Boolean   @default(false)
+  emailVerificationToken  String?   @unique
+  emailVerificationExpiry DateTime?
+
   isSuperAdmin Boolean @default(false)
+
+  adminPermissions AdminPermission[]
 
   // Relations based on role
   playerProfile  PlayerProfile?
@@ -30,7 +37,7 @@ model User {
   adminProfile   AdminProfile?
   notifications  Notification[]
 
-  adminRequestStatus   String?   @default("NONE")
+  adminRequestStatus   AdminRequestStatus? @default(NONE)
   adminRequestedAt     DateTime?
   adminApprovedBy      String?
   adminApprovedAt      DateTime?
@@ -40,6 +47,7 @@ model User {
   teamCaptain             Team[]                   @relation("team_captain")
   teamMembers             TeamMember[]
   tournamentRegistrations TournamentRegistration[]
+  tournamentPaymentProofs TournamentPaymentProof[]
   matchesAsPlayer1        Match[]                  @relation("player1")
   matchesAsPlayer2        Match[]                  @relation("player2")
 
@@ -51,33 +59,79 @@ model User {
   // DOUBLES INVITE RELATIONS
   doublesInvitesSent     DoublesInvite[] @relation("doubles_inviter")
   doublesInvitesReceived DoublesInvite[] @relation("doubles_invitee")
+
+  // FAVORITES RELATIONS
+  favoritesSent     PlayerFavorite[] @relation("user_favorites")
+  favoritesReceived PlayerFavorite[] @relation("player_favorited_by")
 }
 
 enum UserRole {
+  SUPER_ADMIN
   ADMIN
   REFEREE
   PLAYER
 }
 
+enum AdminRequestStatus {
+  NONE
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum Permission {
+  MANAGE_USERS
+  MANAGE_PLAYERS
+  MANAGE_REFEREES
+  MANAGE_TOURNAMENTS
+  MANAGE_REGISTRATIONS
+  MANAGE_MATCHES
+  MANAGE_RESULTS
+  MANAGE_RANKINGS
+  MANAGE_CLUB_MEMBERSHIPS
+}
+
 // Player specific details
 model PlayerProfile {
-  id               String    @id @default(cuid())
-  userId           String    @unique
-  user             User      @relation(fields: [userId], references: [id])
-  dateOfBirth      DateTime?
-  skillLevel       String?
-  clubAffiliation  String?
-  ranking          Int?
-  gender           Gender?
-  rankingNote      String?
-  rankingUpdatedAt DateTime?
-  rankingUpdatedBy String?
-  isClubMember     Boolean   @default(false)
+  id                    String                 @id @default(cuid())
+  userId                String                 @unique
+  user                  User                   @relation(fields: [userId], references: [id])
+  dateOfBirth           DateTime?
+  skillLevel            String?
+  clubAffiliation       String?
+  ranking               Int?
+  gender                Gender?
+  rankingNote           String?
+  rankingUpdatedAt      DateTime?
+  rankingUpdatedBy      String?
+  isClubMember          Boolean                @default(false)
+  clubMembershipRequest ClubMembershipRequest?
 
   // Relations
   teamMemberships         TeamMember[]
   tournamentRegistrations TournamentRegistration[]
   matches                 Match[]
+}
+
+model ClubMembershipRequest {
+  id              String        @id @default(cuid())
+  playerProfileId String        @unique
+  playerProfile   PlayerProfile @relation(fields: [playerProfileId], references: [id], onDelete: Cascade)
+
+  status ClubMembershipRequestStatus @default(PENDING)
+
+  requestedAt     DateTime  @default(now())
+  reviewedAt      DateTime?
+  reviewedBy      String?
+  rejectionReason String?
+  rejectionCount  Int       @default(0)
+}
+
+
+enum ClubMembershipRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }
 
 // Referee specific details
@@ -101,6 +155,17 @@ model AdminProfile {
   department String?
 }
 
+model AdminPermission {
+  id         String     @id @default(cuid())
+  userId     String
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  permission Permission
+  createdAt  DateTime   @default(now())
+
+  @@unique([userId, permission])
+  @@index([userId])
+}
+
 // Tournaments
 model Tournament {
   id                   String           @id @default(cuid())
@@ -116,6 +181,11 @@ model Tournament {
   updatedAt            DateTime         @updatedAt
   tournamentType       TournamentType   @default(KNOCKOUT)
 
+  registrationFee          Decimal?
+  requirePaymentProofClub  Boolean  @default(false)
+  requirePaymentProofGuest Boolean  @default(false)
+  paymentInstructions      String?
+
   // Relations with cascade delete
   categories     Category[]
   registrations  TournamentRegistration[]
@@ -124,6 +194,8 @@ model Tournament {
   results        TournamentResult?
   groups         Group[]
   doublesInvites DoublesInvite[]
+
+  paymentProofs TournamentPaymentProof[]
 }
 
 enum TournamentStatus {
@@ -140,16 +212,17 @@ enum TournamentType {
 
 // Categories
 model Category {
-  id                  String       @id @default(cuid())
+  id                  String         @id @default(cuid())
   tournamentId        String
-  tournament          Tournament   @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  tournament          Tournament     @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
   name                String
   type                CategoryType
+  stageFormat         TournamentType @default(KNOCKOUT)
   minAge              Int?
   maxAge              Int?
   gender              Gender?
   maxParticipants     Int
-  currentParticipants Int          @default(0)
+  currentParticipants Int            @default(0)
 
   // Relations
   registrations  TournamentRegistration[]
@@ -191,6 +264,8 @@ model Team {
   winnerMatches          Match[]                  @relation("winnerTeam")
   TournamentRegistration TournamentRegistration[]
   doublesInvites         DoublesInvite[]
+  groupWinnerMatches     GroupMatch[]             @relation("groupWinnerTeam")
+  groupTeams             GroupTeam[]
 }
 
 model TeamMember {
@@ -209,23 +284,25 @@ model TeamMember {
 
 // Tournament Registrations
 model TournamentRegistration {
-  id              String             @id @default(cuid())
-  tournamentId    String
-  tournament      Tournament         @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
-  categoryId      String?
-  category        Category?          @relation(fields: [categoryId], references: [id])
-  playerId        String
-  partnerId       String?
-  player          User               @relation(fields: [playerId], references: [id])
-  teamId          String?
-  team            Team?              @relation(fields: [teamId], references: [id])
-  status          RegistrationStatus @default(PENDING)
-  approvedBy      String?
-  approvedAt      DateTime?
-  rejectionReason String?
-  registeredAt    DateTime           @default(now())
-  PlayerProfile   PlayerProfile?     @relation(fields: [playerProfileId], references: [id])
-  playerProfileId String?
+  id                   String                            @id @default(cuid())
+  tournamentId         String
+  tournament           Tournament                        @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  categoryId           String?
+  category             Category?                         @relation(fields: [categoryId], references: [id])
+  playerId             String
+  partnerId            String?
+  player               User                              @relation(fields: [playerId], references: [id])
+  teamId               String?
+  team                 Team?                             @relation(fields: [teamId], references: [id])
+  status               RegistrationStatus                @default(PENDING)
+  approvedBy           String?
+  approvedAt           DateTime?
+  rejectionReason      String?
+  registeredAt         DateTime                          @default(now())
+  PlayerProfile        PlayerProfile?                    @relation(fields: [playerProfileId], references: [id])
+  playerProfileId      String?
+  paymentProofs        TournamentPaymentProof[]
+  paymentVerifications RegistrationPaymentVerification[]
 
   @@unique([tournamentId, categoryId, playerId])
   @@unique([tournamentId, teamId])
@@ -236,6 +313,96 @@ enum RegistrationStatus {
   APPROVED
   REJECTED
   CANCELLED
+}
+
+model TournamentPaymentProof {
+  id           String     @id @default(cuid())
+  tournamentId String
+  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+
+  // Player who uploaded the receipt
+  playerId String
+  player   User   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  // Optional legacy registration association
+  registrationId String?
+  registration   TournamentRegistration? @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+
+  proofUrl String
+
+  // Submission status (category decisions are stored separately)
+  status PaymentProofStatus @default(PENDING)
+
+  submittedAt     DateTime  @default(now())
+  verifiedAt      DateTime?
+  verifiedBy      String?
+  rejectionReason String?
+
+  // Current category verifications
+  verifications RegistrationPaymentVerification[]
+
+  // Historical category decisions associated with this receipt
+  decisions PaymentVerificationHistory[]
+
+  // Allow multiple submissions from the same player
+  @@index([registrationId, playerId])
+  @@index([tournamentId, playerId])
+}
+
+enum PaymentProofStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model RegistrationPaymentVerification {
+  id String @id @default(cuid())
+
+  // Specific tournament category registration
+  registrationId String
+  registration   TournamentRegistration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+
+  // Player being verified
+  // Important for Doubles and Mixed Doubles
+  playerId String
+
+  // Currently submitted payment proof
+  proofId String?
+  proof   TournamentPaymentProof? @relation(fields: [proofId], references: [id], onDelete: SetNull)
+
+  status PaymentProofStatus @default(PENDING)
+
+  verifiedBy      String?
+  verifiedAt      DateTime?
+  rejectionReason String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // One verification per player per category registration
+  @@unique([registrationId, playerId])
+  @@index([playerId])
+  @@index([proofId])
+}
+
+model PaymentVerificationHistory {
+  id String @id @default(cuid())
+
+  registrationId String
+  playerId       String
+
+  proofId String
+  proof   TournamentPaymentProof @relation(fields: [proofId], references: [id], onDelete: Cascade)
+
+  status PaymentProofStatus
+
+  verifiedBy      String?
+  rejectionReason String?
+
+  createdAt DateTime @default(now())
+
+  @@index([registrationId, playerId])
+  @@index([proofId])
 }
 
 // Matches
@@ -364,6 +531,9 @@ enum NotificationType {
   DOUBLES_INVITE
   DOUBLES_INVITE_ACCEPTED
   DOUBLES_INVITE_DECLINED
+  PLAYER_FAVORITED
+  CLUB_MEMBERSHIP_REQUEST
+  PAYMENT_VERIFICATION_REQUEST
 }
 
 // Doubles Partner Invitations
@@ -403,6 +573,7 @@ model Group {
   category     Category   @relation(fields: [categoryId], references: [id])
 
   players   GroupPlayer[]
+  teams     GroupTeam[]
   matches   GroupMatch[]
   createdAt DateTime      @default(now())
 }
@@ -426,14 +597,33 @@ model GroupPlayer {
   @@unique([groupId, playerId])
 }
 
+model GroupTeam {
+  id      String @id @default(cuid())
+  groupId String
+  group   Group  @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  teamId  String
+  team    Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  matchesPlayed  Int @default(0)
+  wins           Int @default(0)
+  losses         Int @default(0)
+  points         Int @default(0)
+  gamesWon       Int @default(0)
+  gamesLost      Int @default(0)
+  pointsScored   Int @default(0)
+  pointsConceded Int @default(0)
+
+  @@unique([groupId, teamId])
+}
+
 model GroupMatch {
-  id        String @id @default(cuid())
+  id        String  @id @default(cuid())
   groupId   String
-  group     Group  @relation(fields: [groupId], references: [id])
-  player1Id String
-  player1   User   @relation("groupMatch_player1", fields: [player1Id], references: [id])
-  player2Id String
-  player2   User   @relation("groupMatch_player2", fields: [player2Id], references: [id])
+  group     Group   @relation(fields: [groupId], references: [id])
+  player1Id String?
+  player1   User?   @relation("groupMatch_player1", fields: [player1Id], references: [id])
+  player2Id String?
+  player2   User?   @relation("groupMatch_player2", fields: [player2Id], references: [id])
 
   //Doubles
   team1Id String?
@@ -445,6 +635,7 @@ model GroupMatch {
   player2Score Int?
   winnerId     String?
   winnerTeamId String?
+  winnerTeam   Team?           @relation("groupWinnerTeam", fields: [winnerTeamId], references: [id])
   status       MatchStatus     @default(SCHEDULED)
   refereeId    String?
   referee      RefereeProfile? @relation(fields: [refereeId], references: [id])
@@ -463,7 +654,24 @@ model GroupMatch {
 
   round         Int       @default(1)
   scheduledTime DateTime
+  startTime     DateTime?
+  endTime       DateTime?
   completedAt   DateTime?
 
   createdAt DateTime @default(now())
+}
+
+// Player Favorites / Likes
+model PlayerFavorite {
+  id        String   @id @default(cuid())
+  userId    String
+  playerId  String
+  createdAt DateTime @default(now())
+
+  user   User @relation("user_favorites", fields: [userId], references: [id], onDelete: Cascade)
+  player User @relation("player_favorited_by", fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, playerId])
+  @@index([playerId])
+  @@index([userId])
 }

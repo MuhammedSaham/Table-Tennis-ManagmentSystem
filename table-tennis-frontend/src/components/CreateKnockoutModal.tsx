@@ -86,7 +86,7 @@ const CreateKnockoutModal: React.FC<Props> = ({
         advancingPerGroup: selected,
         icon: "⚡",
         color: "#8b5cf6",
-        description: "8 players · 3 rounds + 3rd Place",
+        description: "8 players · 3 rounds",
       };
     if (advancing <= 16)
       return {
@@ -95,7 +95,7 @@ const CreateKnockoutModal: React.FC<Props> = ({
         advancingPerGroup: selected,
         icon: "🎯",
         color: "#0369a1",
-        description: "16 players · 4 rounds + 3rd Place",
+        description: "16 players · 4 rounds",
       };
     if (advancing <= 32)
       return {
@@ -104,7 +104,7 @@ const CreateKnockoutModal: React.FC<Props> = ({
         advancingPerGroup: selected,
         icon: "⚔️",
         color: "#ca8a04",
-        description: "32 players · 5 rounds + 3rd Place",
+        description: "32 players · 5 rounds",
       };
     return {
         label: "Round of 64",
@@ -112,7 +112,7 @@ const CreateKnockoutModal: React.FC<Props> = ({
         advancingPerGroup: selected,
         icon: "🔥",
         color: "#dc2626",
-        description: `${advancing} players · 6 rounds + 3rd Place`,
+        description: `${advancing} players · 6 rounds`,
     };
   };
 
@@ -367,19 +367,7 @@ const CreateKnockoutModal: React.FC<Props> = ({
                     </div>
                   </React.Fragment>
                 ))}
-                <span style={{ color: "#94a3b8", fontSize: 14 }}>→</span>
-                <div
-                  style={{
-                    fontSize: 11,
-                    fontWeight: 700,
-                    color: "#fff",
-                    background: "#b45309",
-                    padding: "4px 10px",
-                    borderRadius: 20,
-                  }}
-                >
-                  3rd Place
-                </div>
+
               </div>
             </div>
           )}

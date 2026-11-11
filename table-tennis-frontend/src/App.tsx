@@ -16,6 +16,7 @@ import PublicLayout from "./components/PublicLayout";
 import Home from "./pages/Home";
 import Tournaments from "./pages/Tournaments";
 import TournamentDetails from "./pages/TournamentDetails";
+import TournamentRegistration from "./pages/TournamentRegistration";
 import CreateTournament from "./pages/CreateTournament";
 import MyRegistrations from "./pages/MyRegistrations";
 import MyMatches from "./pages/MyMatches";
@@ -28,8 +29,10 @@ import PublicProfile from "./pages/PublicProfile";
 import GlobalLeaderboard from "./pages/GlobalLeaderboard";
 import Players from "./pages/Players";
 import RefereeMatches from "./pages/RefereeMatches";
+import About from "./pages/About";
 import ErrorBoundary from "./components/ErrorBoundary";
-//import VerifyEmail from "./pages/VerifyEmail";
+import ScrollToTop from "./components/ScrollToTop";
+import VerifyEmail from "./pages/VerifyEmail";
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({
   children,
@@ -100,24 +103,79 @@ const PublicGlobalLeaderboardRoute: React.FC = () => {
   return <GlobalLeaderboard />;
 };
 
+const PermissionRoute: React.FC<{
+  permission: any;
+  children: React.ReactNode;
+}> = ({ permission, children }) => {
+  const { user, hasPermission } = useAuth();
+  if (
+    user?.role === "SUPER_ADMIN" ||
+    user?.isSuperAdmin ||
+    hasPermission(permission)
+  ) {
+    return <>{children}</>;
+  }
+  return <Navigate to="/app/dashboard" replace />;
+};
+
+const AdminRequestsRoute: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
+  const { user, hasPermission } = useAuth();
+  if (
+    user?.role === "SUPER_ADMIN" ||
+    user?.isSuperAdmin ||
+    hasPermission("MANAGE_CLUB_MEMBERSHIPS") ||
+    hasPermission("MANAGE_REGISTRATIONS")
+  ) {
+    return <>{children}</>;
+  }
+  return <Navigate to="/app/dashboard" replace />;
+};
+
+const PlayerRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="spinner"></div>
+      </div>
+    );
+  }
+
+  if (user?.role !== "PLAYER") {
+    return <Navigate to="/app/dashboard" replace />;
+  }
+
+  return <>{children}</>;
+};
+
 function AppRoutes() {
   return (
     <Routes>
       {/* Public routes - no login required */}
       <Route path="/" element={<PublicLayout />}>
         <Route index element={<Home />} />
+        <Route path="about" element={<About />} />
         <Route path="tournaments" element={<PublicTournamentsRoute />} />
-        <Route path="tournaments/:id" element={<PublicTournamentDetailsRoute />} />
+        <Route
+          path="tournaments/:id"
+          element={<PublicTournamentDetailsRoute />}
+        />
         <Route path="leaderboard" element={<PublicLeaderboardRoute />} />
-        <Route path="global-leaderboard" element={<PublicGlobalLeaderboardRoute />} />
+        <Route
+          path="global-leaderboard"
+          element={<PublicGlobalLeaderboardRoute />}
+        />
         <Route path="profile/:userId" element={<PublicProfile />} />
         <Route path="players" element={<Players />} />
-        {/*<Route path="verify-email" element={<VerifyEmail />} />*/}
       </Route>
 
       {/* Auth routes */}
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+      <Route path="/verify-email" element={<VerifyEmail />} />
       <Route path="/reset-password" element={<ResetPassword />} />
 
       {/* Protected routes - require login */}
@@ -132,16 +190,55 @@ function AppRoutes() {
         <Route index element={<AppIndexRoute />} />
         <Route path="dashboard" element={<DashboardRoute />} />
         <Route path="tournaments" element={<Tournaments />} />
+
         <Route path="tournaments/:id" element={<TournamentDetails />} />
+
+        <Route
+          path="tournaments/:id/register"
+          element={
+            <PlayerRoute>
+              <TournamentRegistration />
+            </PlayerRoute>
+          }
+        />
         <Route path="leaderboard" element={<Leaderboard />} />
         <Route path="global-leaderboard" element={<GlobalLeaderboard />} />
-        <Route path="create-tournament" element={<CreateTournament />} />
+        <Route
+          path="create-tournament"
+          element={
+            <PermissionRoute permission="MANAGE_TOURNAMENTS">
+              <CreateTournament />
+            </PermissionRoute>
+          }
+        />
         <Route path="my-registrations" element={<MyRegistrations />} />
         <Route path="my-matches" element={<MyMatches />} />
         <Route path="referee/matches" element={<RefereeMatches />} />
         <Route path="profile" element={<Profile />} />
-        <Route path="users" element={<Users />} />
-        <Route path="admin-requests" element={<AdminRequests />} />
+        <Route
+          path="users"
+          element={
+            <PermissionRoute permission="MANAGE_USERS">
+              <Users />
+            </PermissionRoute>
+          }
+        />
+        <Route
+          path="users/:userId"
+          element={
+            <PermissionRoute permission="MANAGE_USERS">
+              <Profile />
+            </PermissionRoute>
+          }
+        />
+        <Route
+          path="admin-requests"
+          element={
+            <AdminRequestsRoute>
+              <AdminRequests />
+            </AdminRequestsRoute>
+          }
+        />
       </Route>
     </Routes>
   );
@@ -150,6 +247,7 @@ function AppRoutes() {
 function App() {
   return (
     <Router>
+      <ScrollToTop />
       <AuthProvider>
         <Toaster
           position="top-right"
@@ -163,7 +261,8 @@ function App() {
               border: "1px solid rgba(74, 238, 255, 0.25)",
               borderRadius: "14px",
               padding: "14px 18px",
-              boxShadow: "0 20px 40px -15px rgba(0, 0, 0, 0.8), 0 0 20px rgba(74, 238, 255, 0.08)",
+              boxShadow:
+                "0 20px 40px -15px rgba(0, 0, 0, 0.8), 0 0 20px rgba(74, 238, 255, 0.08)",
               fontSize: "13px",
               fontWeight: "600",
               letterSpacing: "0.015em",
@@ -179,7 +278,8 @@ function App() {
                 background: "rgba(6, 29, 35, 0.96)",
                 border: "1px solid rgba(16, 185, 129, 0.4)",
                 borderLeft: "4px solid #10b981",
-                boxShadow: "0 20px 40px -15px rgba(0, 0, 0, 0.8), 0 0 25px rgba(16, 185, 129, 0.15)",
+                boxShadow:
+                  "0 20px 40px -15px rgba(0, 0, 0, 0.8), 0 0 25px rgba(16, 185, 129, 0.15)",
                 color: "#ffffff",
               },
             },
@@ -193,7 +293,8 @@ function App() {
                 background: "rgba(15, 23, 42, 0.96)",
                 border: "1px solid rgba(244, 63, 94, 0.35)",
                 borderLeft: "4px solid #f43f5e",
-                boxShadow: "0 20px 40px -15px rgba(0, 0, 0, 0.8), 0 0 25px rgba(244, 63, 94, 0.15)",
+                boxShadow:
+                  "0 20px 40px -15px rgba(0, 0, 0, 0.8), 0 0 25px rgba(244, 63, 94, 0.15)",
                 color: "#ffffff",
               },
             },
@@ -206,7 +307,8 @@ function App() {
                 background: "rgba(6, 29, 35, 0.96)",
                 border: "1px solid rgba(74, 238, 255, 0.35)",
                 borderLeft: "4px solid #4AEEFF",
-                boxShadow: "0 20px 40px -15px rgba(0, 0, 0, 0.8), 0 0 25px rgba(74, 238, 255, 0.15)",
+                boxShadow:
+                  "0 20px 40px -15px rgba(0, 0, 0, 0.8), 0 0 25px rgba(74, 238, 255, 0.15)",
                 color: "#ffffff",
               },
             },

@@ -3,11 +3,18 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import api from "../services/api";
 import toast from "react-hot-toast";
-import { UserIcon, EnvelopeIcon, TrophyIcon } from "@heroicons/react/24/outline";
+import BackButton from "../components/BackButton";
+import GlassSelect from "../components/GlassSelect";
+import {
+  UserIcon,
+  EnvelopeIcon,
+  TrophyIcon,
+} from "@heroicons/react/24/outline";
 
 interface Category {
   name: string;
   type: "SINGLES" | "DOUBLES" | "TEAM";
+  stageFormat: "KNOCKOUT" | "GROUP_KNOCKOUT";
   minAge?: number;
   maxAge?: number;
   gender?: "MALE" | "FEMALE" | "MIXED";
@@ -22,6 +29,7 @@ const CreateTournament: React.FC = () => {
     {
       name: "",
       type: "SINGLES",
+      stageFormat: "KNOCKOUT",
       minAge: undefined,
       maxAge: undefined,
       gender: undefined,
@@ -38,6 +46,11 @@ const CreateTournament: React.FC = () => {
     endDate: "",
     registrationDeadline: "",
     maxPlayers: "",
+
+    registrationFee: "",
+    requirePaymentProofClub: false,
+    requirePaymentProofGuest: false,
+    paymentInstructions: "",
   });
 
   const handleChange = (
@@ -46,6 +59,15 @@ const CreateTournament: React.FC = () => {
     >,
   ) => {
     const { name, value } = e.target;
+
+    if (e.target instanceof HTMLInputElement && e.target.type === "checkbox") {
+      setFormData({
+        ...formData,
+        [name]: e.target.checked,
+      });
+      return;
+    }
+
     setFormData({
       ...formData,
       [name]: value,
@@ -72,6 +94,8 @@ const CreateTournament: React.FC = () => {
       {
         name: "",
         type: "SINGLES",
+        stageFormat:
+          (tournamentType as "KNOCKOUT" | "GROUP_KNOCKOUT") || "KNOCKOUT",
         minAge: undefined,
         maxAge: undefined,
         gender: undefined,
@@ -116,6 +140,19 @@ const CreateTournament: React.FC = () => {
       toast.error("Please fill all date fields");
       return;
     }
+    const paymentProofRequired =
+      formData.requirePaymentProofClub || formData.requirePaymentProofGuest;
+
+    if (paymentProofRequired) {
+      const fee = Number(formData.registrationFee);
+
+      if (!formData.registrationFee || fee <= 0) {
+        toast.error(
+          "Please enter a registration fee when payment proof is required",
+        );
+        return;
+      }
+    }
 
     // Validate categories
     for (const category of categories) {
@@ -155,6 +192,14 @@ const CreateTournament: React.FC = () => {
           ? parseInt(formData.maxPlayers)
           : undefined,
         tournamentType,
+
+        requirePaymentProofClub: formData.requirePaymentProofClub,
+        requirePaymentProofGuest: formData.requirePaymentProofGuest,
+        registrationFee:
+          formData.registrationFee !== ""
+            ? parseFloat(formData.registrationFee)
+            : undefined,
+        paymentInstructions: formData.paymentInstructions || undefined,
       });
 
       const tournamentId = tournamentResponse.data.data.id;
@@ -164,6 +209,7 @@ const CreateTournament: React.FC = () => {
         await api.post(`/tournaments/${tournamentId}/categories`, {
           name: category.name,
           type: category.type,
+          stageFormat: category.stageFormat || "KNOCKOUT",
           minAge: category.minAge,
           maxAge: category.maxAge,
           gender: category.gender,
@@ -185,7 +231,8 @@ const CreateTournament: React.FC = () => {
 
   const inputStyles =
     "w-full rounded-lg border border-white/10 bg-[#061D23]/60 p-2.5 text-sm text-white placeholder-white/20 focus:border-[#4AEEFF] focus:outline-none";
-  const labelStyles = "block text-[15px] font-black uppercase tracking-wider text-white/70 mb-1.5";
+  const labelStyles =
+    "block text-[15px] font-black uppercase tracking-wider text-white/70 mb-1.5";
 
   const wrapInBaseLayout = (children: React.ReactNode) => (
     <div className="relative min-h-screen w-full overflow-hidden bg-[#061D23] text-white">
@@ -198,28 +245,28 @@ const CreateTournament: React.FC = () => {
       <div className="fixed inset-0 bg-[#061D23]/25" />
       <div className="fixed inset-0 bg-gradient-to-b from-[#061D23]/20 via-transparent to-[#061D23]/35" />
 
-      <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-7xl flex-col space-y-6 p-4 sm:p-6 lg:p-8">
+      <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-[1600px] flex-col space-y-6 px-4 sm:px-6 lg:px-10 xl:px-14 py-4 sm:py-6 lg:py-8">
         {children}
       </div>
     </div>
   );
 
-  // Redirect if not admin
-  if (user?.role !== "ADMIN") {
-    navigate("/dashboard");
-    return null;
-  }
+  // Redirect if the user is not an admin or super admin
+if (user?.role !== "ADMIN" && user?.role !== "SUPER_ADMIN") {
+  navigate("/app/dashboard", { replace: true });
+  return null;
+}
 
   return wrapInBaseLayout(
     <>
       {/* PREMIUM HEADER CONTROLS MODULE */}
-      <header className="rounded-[16px] border border-white/20 bg-[#061D23]/15 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <header className="rounded-2xl border border-white/20 bg-[#061D23]/20 p-5 sm:p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <div className="mb-3 h-[3px] w-16 bg-[#4AEEFF]" />
-          <h1 className="text-2xl font-black uppercase tracking-[0.2em] text-white sm:text-4xl">
+          <BackButton to="/tournaments" label="Back to Tournaments" className="mb-3" />
+          <h1 className="text-2xl font-black uppercase tracking-[0.15em] text-white sm:text-3xl lg:text-4xl">
             Create New Tournament
           </h1>
-          <p className="text-xs uppercase tracking-[0.3em] text-[#4AEEFF]/90 mt-1">
+          <p className="text-xs uppercase tracking-[0.2em] text-[#4AEEFF] mt-1">
             Configure event details, format, and player categories
           </p>
         </div>
@@ -328,24 +375,173 @@ const CreateTournament: React.FC = () => {
             </div>
 
             <div>
-              <label className={labelStyles}>Tournament Format *</label>
-              <select
+              <label className={labelStyles}>Default Tournament Format *</label>
+              <GlassSelect
                 value={tournamentType}
-                onChange={(e) => setTournamentType(e.target.value)}
-                className={inputStyles}
+                onChange={(e) => {
+                  const newType = e.target.value;
+                  setTournamentType(newType);
+                  setCategories((prev) =>
+                    prev.map((c) => ({
+                      ...c,
+                      stageFormat: newType as "KNOCKOUT" | "GROUP_KNOCKOUT",
+                    })),
+                  );
+                }}
+                className="w-full"
               >
-                <option value="KNOCKOUT">
+                <option value="KNOCKOUT" className="bg-[#061D23] text-white">
                   🏆 Knockout (Direct Elimination)
                 </option>
-                <option value="GROUP_KNOCKOUT">
+                <option value="GROUP_KNOCKOUT" className="bg-[#061D23] text-white">
                   🏅 Group Stage + Knockout
                 </option>
-              </select>
+              </GlassSelect>
               <p className="text-xs text-white/50 mt-1.5">
-                {tournamentType === "KNOCKOUT"
-                  ? "Players are directly placed in elimination bracket"
-                  : "Players first play in groups, then top players advance to knockout"}
+                Default for new categories. You can also customize each category
+                individually below.
               </p>
+            </div>
+          </div>
+        </main>
+
+        {/* PAYMENT & REGISTRATION CONFIGURATION */}
+        <main className="rounded-[16px] border border-white/20 bg-[#061D23]/10 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl p-6">
+          <div className="mb-5">
+            <h2 className="text-lg font-black uppercase tracking-widest text-white">
+              Payment & Registration
+            </h2>
+
+            <p className="text-xs text-white/50 mt-1">
+              Configure whether club members or guest players must submit
+              payment proof.
+            </p>
+          </div>
+
+          <div className="space-y-5">
+            {/* Registration Fee */}
+            <div>
+              <label className={labelStyles}>Registration Fee (LKR)</label>
+
+              <input
+                type="number"
+                name="registrationFee"
+                value={formData.registrationFee}
+                onChange={handleChange}
+                min="0"
+                step="0.01"
+                className={inputStyles}
+                placeholder="e.g., 1500"
+              />
+
+              <p className="text-xs text-white/50 mt-1.5">
+                Leave empty if this tournament does not require payment.
+              </p>
+            </div>
+
+            {/* Payment proof requirements */}
+            <div>
+              <label className={labelStyles}>Require Payment Proof From</label>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {/* Club */}
+                <label className="flex items-center gap-3 rounded-lg border border-white/10 bg-[#061D23]/40 p-4 cursor-pointer hover:border-[#4AEEFF]/40 transition-colors">
+                  <input
+                    type="checkbox"
+                    name="requirePaymentProofClub"
+                    checked={formData.requirePaymentProofClub}
+                    onChange={handleChange}
+                    className="h-4 w-4 accent-[#4AEEFF]"
+                  />
+
+                  <div>
+                    <p className="text-sm font-bold text-white">Club Players</p>
+
+                    <p className="text-xs text-white/50">
+                      Club members must upload payment proof
+                    </p>
+                  </div>
+                </label>
+
+                {/* Guest */}
+                <label className="flex items-center gap-3 rounded-lg border border-white/10 bg-[#061D23]/40 p-4 cursor-pointer hover:border-[#4AEEFF]/40 transition-colors">
+                  <input
+                    type="checkbox"
+                    name="requirePaymentProofGuest"
+                    checked={formData.requirePaymentProofGuest}
+                    onChange={handleChange}
+                    className="h-4 w-4 accent-[#4AEEFF]"
+                  />
+
+                  <div>
+                    <p className="text-sm font-bold text-white">
+                      Guest Players
+                    </p>
+
+                    <p className="text-xs text-white/50">
+                      Guest players must upload payment proof
+                    </p>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            {/* Payment instructions */}
+            {(formData.requirePaymentProofClub ||
+              formData.requirePaymentProofGuest) && (
+              <div>
+                <label className={labelStyles}>Payment Instructions</label>
+
+                <textarea
+                  name="paymentInstructions"
+                  value={formData.paymentInstructions}
+                  onChange={handleChange}
+                  rows={4}
+                  className={inputStyles}
+                  placeholder="Example: Make the payment using the club's provided payment method and upload your receipt for verification."
+                />
+
+                <p className="text-xs text-white/50 mt-1.5">
+                  These instructions will be shown to players who need to submit
+                  payment proof.
+                </p>
+              </div>
+            )}
+
+            {/* Summary */}
+            <div className="rounded-lg border border-[#4AEEFF]/20 bg-[#4AEEFF]/5 p-4">
+              <p className="text-xs font-black uppercase tracking-wider text-[#4AEEFF] mb-2">
+                Registration Summary
+              </p>
+
+              <div className="space-y-1 text-xs text-white/70">
+                <p>
+                  Club Players:{" "}
+                  <span className="font-bold text-white">
+                    {formData.requirePaymentProofClub
+                      ? "Payment proof required"
+                      : "Direct registration"}
+                  </span>
+                </p>
+
+                <p>
+                  Guest Players:{" "}
+                  <span className="font-bold text-white">
+                    {formData.requirePaymentProofGuest
+                      ? "Payment proof required"
+                      : "Direct registration"}
+                  </span>
+                </p>
+
+                {formData.registrationFee && (
+                  <p>
+                    Registration Fee:{" "}
+                    <span className="font-bold text-white">
+                      LKR {formData.registrationFee}
+                    </span>
+                  </p>
+                )}
+              </div>
             </div>
           </div>
         </main>
@@ -368,7 +564,7 @@ const CreateTournament: React.FC = () => {
             </button>
           </div>
           <p className="text-xs text-white/50 mb-5">
-            Define age groups and match types for this tournament
+            Define age groups, match types, and draw formats for this tournament
           </p>
 
           <div className="space-y-4">
@@ -392,7 +588,7 @@ const CreateTournament: React.FC = () => {
                   )}
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
                     <label className={labelStyles}>Category Name *</label>
                     <input
@@ -409,7 +605,7 @@ const CreateTournament: React.FC = () => {
 
                   <div>
                     <label className={labelStyles}>Match Type *</label>
-                    <select
+                    <GlassSelect
                       value={category.type}
                       onChange={(e) =>
                         handleCategoryChange(
@@ -418,12 +614,32 @@ const CreateTournament: React.FC = () => {
                           e.target.value as "SINGLES" | "DOUBLES" | "TEAM",
                         )
                       }
-                      className={inputStyles}
+                      className="w-full"
                     >
-                      <option value="SINGLES">Singles</option>
-                      <option value="DOUBLES">Doubles</option>
-                      <option value="TEAM">Team</option>
-                    </select>
+                      <option value="SINGLES" className="bg-[#061D23] text-white">Singles</option>
+                      <option value="DOUBLES" className="bg-[#061D23] text-white">Doubles</option>
+                      <option value="TEAM" className="bg-[#061D23] text-white">Team</option>
+                    </GlassSelect>
+                  </div>
+
+                  <div>
+                    <label className={labelStyles}>Draw Format *</label>
+                    <GlassSelect
+                      value={category.stageFormat || "KNOCKOUT"}
+                      onChange={(e) =>
+                        handleCategoryChange(
+                          index,
+                          "stageFormat",
+                          e.target.value as "KNOCKOUT" | "GROUP_KNOCKOUT",
+                        )
+                      }
+                      className="w-full"
+                    >
+                      <option value="KNOCKOUT" className="bg-[#061D23] text-white">🏆 Knockout</option>
+                      <option value="GROUP_KNOCKOUT" className="bg-[#061D23] text-white">
+                        🏅 Group + Knockout
+                      </option>
+                    </GlassSelect>
                   </div>
                 </div>
 
@@ -474,7 +690,7 @@ const CreateTournament: React.FC = () => {
 
                   <div>
                     <label className={labelStyles}>Gender (Optional)</label>
-                    <select
+                    <GlassSelect
                       value={category.gender || ""}
                       onChange={(e) =>
                         handleCategoryChange(
@@ -484,12 +700,12 @@ const CreateTournament: React.FC = () => {
                             undefined,
                         )
                       }
-                      className={inputStyles}
+                      className="w-full"
                     >
-                      <option value="">Mixed / Open</option>
-                      <option value="MALE">Men's Only</option>
-                      <option value="FEMALE">Women's Only</option>
-                    </select>
+                      <option value="" className="bg-[#061D23] text-white">Mixed / Open</option>
+                      <option value="MALE" className="bg-[#061D23] text-white">Men's Only</option>
+                      <option value="FEMALE" className="bg-[#061D23] text-white">Women's Only</option>
+                    </GlassSelect>
                   </div>
                 </div>
 
@@ -569,7 +785,7 @@ const CreateTournament: React.FC = () => {
           )}
         </div>
       </footer>
-    </>
+    </>,
   );
 };
 

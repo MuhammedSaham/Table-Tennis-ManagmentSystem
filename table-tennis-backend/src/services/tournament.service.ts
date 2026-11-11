@@ -91,6 +91,29 @@ export class TournamentService {
                 email: true,
               },
             },
+            team: {
+              include: {
+                members: {
+                  include: {
+                    player: {
+                      select: {
+                        id: true,
+                        firstName: true,
+                        lastName: true,
+                        email: true,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            category: {
+              select: {
+                id: true,
+                name: true,
+                type: true,
+              },
+            },
           },
         },
         matches: {
@@ -363,6 +386,16 @@ async registerForTournament(playerId: string, data: {
     throw new AppError('Tournament not found', 404);
   }
 
+  const isClubMember = player.isClubMember;
+
+const paymentProofRequired = isClubMember
+  ? tournament.requirePaymentProofClub
+  : tournament.requirePaymentProofGuest;
+
+const initialRegistrationStatus = paymentProofRequired
+  ? 'PENDING'
+  : 'APPROVED';
+
   // Check registration deadline
   if (new Date() > tournament.registrationDeadline) {
     throw new AppError('Registration deadline has passed', 400);
@@ -442,18 +475,32 @@ async registerForTournament(playerId: string, data: {
         throw new AppError('Partner profile not found', 404);
       }
 
-      // Same-gender doubles: partner must also match category gender
-      if (category.type === 'DOUBLES' && category.gender && category.gender !== 'MIXED') {
-        if (!partner.gender) {
-          throw new AppError(
-            'Your partner must have a gender specified in their profile',
-            400
-          );
+      const nameLower = category.name.toLowerCase();
+      const isMixed =
+        category.type === 'MIXED_DOUBLES' ||
+        category.gender === 'MIXED' ||
+        nameLower.includes('mix');
+
+      const isWomen =
+        category.gender === 'FEMALE' ||
+        nameLower.includes('women') ||
+        nameLower.includes('girl') ||
+        nameLower.includes('female');
+
+      const isMen =
+        category.gender === 'MALE' ||
+        ((nameLower.includes('men') || nameLower.includes('boy') || nameLower.includes('male')) && !nameLower.includes('women'));
+
+      // Same-gender doubles: player and partner must match category gender
+      if (!isMixed && (isMen || isWomen)) {
+        const requiredGender = isMen ? 'MALE' : 'FEMALE';
+        const requiredLabel = isMen ? "men's" : "women's";
+        if (player.gender !== requiredGender) {
+          throw new AppError(`This category is restricted to ${requiredLabel} players only`, 400);
         }
-        if (partner.gender !== category.gender) {
-          const required = category.gender === 'MALE' ? "men's" : "women's";
+        if (!partner.gender || partner.gender !== requiredGender) {
           throw new AppError(
-            `Your partner must also be eligible for this ${required} category`,
+            `Your partner must also be eligible for this ${requiredLabel} category`,
             400
           );
         }
@@ -462,7 +509,7 @@ async registerForTournament(playerId: string, data: {
       // ------------------------------------------------------------
       // Mixed Doubles: players must have different genders
       // ------------------------------------------------------------
-      if (category.type === 'MIXED_DOUBLES') {
+      if (isMixed) {
         if (!player.gender || !partner.gender) {
           throw new AppError(
             'Both players must have a gender specified for mixed doubles',
@@ -595,8 +642,8 @@ async registerForTournament(playerId: string, data: {
         playerId,
         partnerId: data.partnerId,
         teamId: data.teamId,
-        status: 'APPROVED',
-        approvedAt: new Date(),
+        status: initialRegistrationStatus,
+        approvedAt:paymentProofRequired ? null : new Date(),  
       },
       include: {
         tournament: true,
@@ -620,7 +667,7 @@ async registerForTournament(playerId: string, data: {
     });
 
   // Update category participant count
-  if (data.categoryId) {
+  if (data.categoryId && initialRegistrationStatus === 'APPROVED') {
     await prisma.category.update({
       where: { id: data.categoryId },
       data: {
@@ -657,7 +704,12 @@ async registerForTournament(playerId: string, data: {
   // Get my registrations (Player)
   async getMyRegistrations(playerId: string) {
     const registrations = await prisma.tournamentRegistration.findMany({
-      where: { playerId },
+      where: {
+        OR: [
+          { playerId },
+          { team: { members: { some: { playerId } } } },
+        ],
+      },
       include: {
         tournament: true,
         category: true,
@@ -744,7 +796,11 @@ async registerForTournament(playerId: string, data: {
       include: {
         tournament: true,
         category: true,
-        player: true,
+        player: {
+          include: {
+            playerProfile: true,
+          },
+        },
       },
     });
 
@@ -757,6 +813,39 @@ async registerForTournament(playerId: string, data: {
     }
 
     if (action === 'APPROVE') {
+      // Check whether this player requires payment proof
+const isClubMember =
+  registration.player.playerProfile?.isClubMember ?? false;
+
+const paymentProofRequired = isClubMember
+  ? registration.tournament.requirePaymentProofClub
+  : registration.tournament.requirePaymentProofGuest;
+
+if (paymentProofRequired) {
+  const paymentProof =
+    await prisma.tournamentPaymentProof.findFirst({
+      where: {
+        tournamentId: registration.tournamentId,
+        playerId: registration.playerId,
+        registrationId: null,
+        status: 'APPROVED',
+      },
+    });
+
+  if (!paymentProof) {
+    throw new AppError(
+      'Payment proof must be submitted before approving this registration',
+      400
+    );
+  }
+
+  if (paymentProof.status !== 'APPROVED') {
+    throw new AppError(
+      'Payment proof must be approved before approving this registration',
+      400
+    );
+  }
+}
       // Check if category has space
       if (registration.category) {
         const category = await prisma.category.findUnique({
@@ -889,6 +978,103 @@ async registerForTournament(playerId: string, data: {
 
   return updated;
 }
+
+async removeRegistrationByAdmin(adminId: string, registrationId: string) {
+  const admin = await prisma.user.findUnique({
+    where: { id: adminId },
+    select: { role: true, isSuperAdmin: true },
+  });
+
+  if (
+    !admin ||
+    (admin.role !== 'ADMIN' &&
+      admin.role !== 'SUPER_ADMIN' &&
+      !admin.isSuperAdmin)
+  ) {
+    throw new AppError('Only admins can remove registrations', 403);
+  }
+
+  return await prisma.$transaction(async (tx) => {
+    const registration = await tx.tournamentRegistration.findUnique({
+      where: { id: registrationId },
+      include: {
+        category: true,
+        tournament: true,
+      },
+    });
+
+    if (!registration) {
+      throw new AppError('Registration not found', 404);
+    }
+
+    if (registration.status !== 'APPROVED') {
+      throw new AppError(
+        'Only approved registrations can be removed',
+        400
+      );
+    }
+
+    if (!registration.categoryId) {
+      throw new AppError('Registration category not found', 400);
+    }
+
+    if (registration.tournament.status === 'COMPLETED') {
+      throw new AppError(
+        'Cannot remove registrations from a completed tournament',
+        400
+      );
+    }
+
+    // Conservative safety rule:
+    // Do not remove registrations after tournament-stage data
+    // has been created for this category.
+    const [groupsCount, matchesCount, resultsCount] = await Promise.all([
+      tx.group.count({
+        where: {
+          tournamentId: registration.tournamentId,
+          categoryId: registration.categoryId,
+        },
+      }),
+      tx.match.count({
+        where: {
+          tournamentId: registration.tournamentId,
+          categoryId: registration.categoryId,
+        },
+      }),
+      tx.tournamentResult.count({
+        where: {
+          tournamentId: registration.tournamentId,
+        },
+      }),
+    ]);
+
+    if (groupsCount > 0 || matchesCount > 0 || resultsCount > 0) {
+      throw new AppError(
+        'Cannot remove this registration because tournament groups, matches, or published result data already exist. Use the tournament no-show or walkover process instead.',
+        400
+      );
+    }
+
+    // Update only this registration.
+    const updated = await tx.tournamentRegistration.update({
+      where: { id: registrationId },
+      data: { status: 'CANCELLED' },
+    });
+
+    // Approved registrations contribute one participant entry.
+    await tx.category.update({
+      where: { id: registration.categoryId },
+      data: {
+        currentParticipants: {
+          decrement: 1,
+        },
+      },
+    });
+
+    return updated;
+  });
+}
+
   // Helper method to calculate age
   private calculateAge(birthDate: Date): number {
     const today = new Date();

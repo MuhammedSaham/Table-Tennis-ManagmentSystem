@@ -25,6 +25,11 @@ export const getAllUsers = catchAsync(async (req: Request, res: Response) => {
   sendResponse(res, 200, 'Users retrieved successfully', users);
 });
 
+export const createUser = catchAsync(async (req: Request, res: Response) => {
+  const user = await userService.createUser(req.body);
+  sendResponse(res, 201, 'User created successfully', user);
+});
+
 // Get user by ID (Admin only)
 export const getUserById = catchAsync(async (req: Request, res: Response) => {
   const { id } = req.params;
@@ -36,6 +41,9 @@ export const getUserById = catchAsync(async (req: Request, res: Response) => {
 export const updateUserRole = catchAsync(async (req: Request, res: Response) => {
   const { id } = req.params;
   const { role } = req.body;
+  if (role === 'SUPER_ADMIN' && req.user!.role !== 'SUPER_ADMIN') {
+    throw new AppError('Only the Super Admin can assign the Super Admin role', 403);
+  }
   const updatedUser = await userService.updateUserRole(id, role);
   sendResponse(res, 200, 'User role updated successfully', updatedUser);
 });
@@ -114,6 +122,13 @@ export const getPublicProfile = catchAsync(async (req: Request, res: Response) =
           dateOfBirth: true,
           ranking: true,
           rankingNote: true,
+          gender: true,
+          isClubMember: true,
+        },
+      },
+      _count: {
+        select: {
+          tournamentRegistrations: true,
         },
       },
     },
@@ -123,12 +138,44 @@ export const getPublicProfile = catchAsync(async (req: Request, res: Response) =
     throw new AppError('Player not found', 404);
   }
 
-  sendResponse(res, 200, 'Public profile retrieved successfully', user);
+  // Count total favorites
+  const totalFavorites = await prisma.playerFavorite.count({
+    where: { playerId: id },
+  });
+
+  // Check if requesting user has favorited this player
+  let isFavorited = false;
+  if (req.user?.id) {
+    const existingFav = await prisma.playerFavorite.findUnique({
+      where: {
+        userId_playerId: {
+          userId: req.user.id,
+          playerId: id,
+        },
+      },
+    });
+    isFavorited = !!existingFav;
+  }
+
+  sendResponse(res, 200, 'Public profile retrieved successfully', {
+    ...user,
+    tournamentsCount: user._count?.tournamentRegistrations ?? 0,
+    totalFavorites,
+    isFavorited,
+  });
 });
 
 export const getPublicPlayers = catchAsync(async (req: Request, res: Response) => {
+
+  const isLoggedIn = !!req.user;
+
   const players = await prisma.user.findMany({
-    where: { role: 'PLAYER' },
+    where: {
+      role: 'PLAYER',
+      ...(isLoggedIn
+        ? {}
+        : { playerProfile: { is: { isClubMember: true } } }),
+    },
     select: {
       id: true,
       firstName: true,
@@ -141,21 +188,90 @@ export const getPublicPlayers = catchAsync(async (req: Request, res: Response) =
           clubAffiliation: true,
           dateOfBirth: true,
           ranking: true,
+          gender: true,
           isClubMember: true,
+        },
+      },
+      _count: {
+        select: {
+          favoritesReceived: true,
         },
       },
     },
     orderBy: { firstName: 'asc' },
   });
 
-  // Flatten isClubMember and ranking to root level
+  // Flatten isClubMember, ranking, gender, and totalFavorites to root level
   const result = players.map(p => ({
     ...p,
+    gender: p.playerProfile?.gender ?? null,
     ranking: p.playerProfile?.ranking ?? null,
     isClubMember: p.playerProfile?.isClubMember ?? false,
+    totalFavorites: p._count?.favoritesReceived ?? 0,
   }));
 
   sendResponse(res, 200, 'Players retrieved successfully', result);
+});
+
+export const togglePlayerFavorite = catchAsync(async (req: Request, res: Response) => {
+  const { id: playerId } = req.params;
+  const userId = req.user!.id;
+
+  const player = await prisma.user.findUnique({
+    where: { id: playerId },
+  });
+
+  if (!player || player.role !== 'PLAYER') {
+    throw new AppError('Player not found', 404);
+  }
+
+  const existing = await prisma.playerFavorite.findUnique({
+    where: {
+      userId_playerId: {
+        userId,
+        playerId,
+      },
+    },
+  });
+
+  let favorited = false;
+  if (existing) {
+    await prisma.playerFavorite.delete({
+      where: { id: existing.id },
+    });
+    favorited = false;
+  } else {
+    await prisma.playerFavorite.create({
+      data: {
+        userId,
+        playerId,
+      },
+    });
+    favorited = true;
+
+    // Send in-app notification to player if someone else favorited them
+    if (userId !== playerId) {
+      const fanName = `${req.user!.firstName} ${req.user!.lastName}`.trim();
+      await prisma.notification.create({
+        data: {
+          userId: playerId,
+          type: 'PLAYER_FAVORITED' as any,
+          title: '❤️ New Fan Favorite!',
+          message: `${fanName} added you to their favorites!`,
+          isRead: false,
+        },
+      });
+    }
+  }
+
+  const totalFavorites = await prisma.playerFavorite.count({
+    where: { playerId },
+  });
+
+  sendResponse(res, 200, favorited ? 'Player favorited successfully' : 'Player unfavorited successfully', {
+    favorited,
+    totalFavorites,
+  });
 });
 export const updatePlayerRanking = catchAsync(async (req: Request, res: Response) => {
   const { id } = req.params;                        // player userId
@@ -204,4 +320,120 @@ export const updatePlayerRanking = catchAsync(async (req: Request, res: Response
   }
 
   sendResponse(res, 200, 'Player ranking updated successfully', updated);
+});
+
+// Get user permissions (Admin / Super Admin)
+export const getUserPermissions = catchAsync(async (req: Request, res: Response) => {
+  const { id } = req.params;
+
+  const targetUser = await prisma.user.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      role: true,
+      adminPermissions: {
+        select: {
+          permission: true,
+        },
+      },
+    },
+  });
+
+  if (!targetUser) {
+    throw new AppError('User not found', 404);
+  }
+
+  const allPermissions = [
+    'MANAGE_USERS',
+    'MANAGE_PLAYERS',
+    'MANAGE_REFEREES',
+    'MANAGE_TOURNAMENTS',
+    'MANAGE_REGISTRATIONS',
+    'MANAGE_MATCHES',
+    'MANAGE_RESULTS',
+    'MANAGE_RANKINGS',
+    'MANAGE_CLUB_MEMBERSHIPS',
+  ];
+
+  let permissions: string[] = [];
+  if (targetUser.role === 'SUPER_ADMIN') {
+    permissions = allPermissions;
+  } else if (targetUser.role === 'ADMIN') {
+    permissions = targetUser.adminPermissions.map((p) => p.permission);
+  }
+
+  sendResponse(res, 200, 'User permissions retrieved', {
+    userId: id,
+    role: targetUser.role,
+    permissions,
+  });
+});
+
+// Assign / Update permissions for an ADMIN user (SUPER_ADMIN only)
+export const updateUserPermissions = catchAsync(async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const { permissions } = req.body; // Array of permission strings
+
+  if (req.user!.role !== 'SUPER_ADMIN') {
+    throw new AppError('Only the Super Admin can assign or change permissions', 403);
+  }
+
+  const targetUser = await prisma.user.findUnique({
+    where: { id },
+  });
+
+  if (!targetUser) {
+    throw new AppError('User not found', 404);
+  }
+
+  if (targetUser.role === 'SUPER_ADMIN') {
+    throw new AppError('SUPER_ADMIN always retains permanent full access and permissions cannot be revoked', 400);
+  }
+
+  if (targetUser.role !== 'ADMIN') {
+    throw new AppError('Permissions can only be assigned to ADMIN users', 400);
+  }
+
+  if (!Array.isArray(permissions)) {
+    throw new AppError('Permissions must be an array of valid permission strings', 400);
+  }
+
+  const validPermissions = [
+    'MANAGE_USERS',
+    'MANAGE_PLAYERS',
+    'MANAGE_REFEREES',
+    'MANAGE_TOURNAMENTS',
+    'MANAGE_REGISTRATIONS',
+    'MANAGE_MATCHES',
+    'MANAGE_RESULTS',
+    'MANAGE_RANKINGS',
+    'MANAGE_CLUB_MEMBERSHIPS',
+  ];
+
+  const filteredPermissions = Array.from(new Set(permissions)).filter((p: string) =>
+    validPermissions.includes(p)
+  );
+
+  // Update permissions in transaction
+  await prisma.$transaction(async (tx) => {
+    // Delete existing permissions for user
+    await tx.adminPermission.deleteMany({
+      where: { userId: id },
+    });
+
+    // Create new permission entries
+    if (filteredPermissions.length > 0) {
+      await tx.adminPermission.createMany({
+        data: filteredPermissions.map((perm) => ({
+          userId: id,
+          permission: perm as any,
+        })),
+      });
+    }
+  });
+
+  sendResponse(res, 200, 'User permissions updated successfully', {
+    userId: id,
+    permissions: filteredPermissions,
+  });
 });

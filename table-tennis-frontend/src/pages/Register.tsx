@@ -16,6 +16,75 @@ interface FormErrors {
   profileImage?: string;
 }
 
+const styles: Record<string, React.CSSProperties> = {
+  root: {
+    minHeight: "100vh",
+    width: "100%",
+    fontFamily: "'Segoe UI', Arial, sans-serif",
+    position: "relative",
+    display: "flex",
+    alignItems: "flex-start",
+    justifyContent: "flex-end",
+    overflowX: "hidden",
+  },
+  bgImage: {
+    position: "fixed",
+    inset: 0,
+    backgroundImage: "url('/tablenew.png')",
+    backgroundSize: "cover",
+    backgroundPosition: "center center",
+    backgroundRepeat: "no-repeat",
+    zIndex: 0,
+  },
+  bgOverlay: {
+    position: "fixed",
+    inset: 0,
+    background: "#061D23",
+    opacity: 0.2,
+    zIndex: 1,
+  },
+  geo1: {
+    position: "fixed",
+    top: 0,
+    left: "-50px",
+    width: "200px",
+    height: "100%",
+    background: "#12679E",
+    opacity: 0.6,
+    zIndex: 2,
+    transform: "skewX(-30deg)",
+    transformOrigin: "left",
+  },
+  geo2: {
+    position: "fixed",
+    top: 0,
+    left: "120px",
+    width: "200px",
+    height: "100%",
+    background: "#4AEEFF",
+    opacity: 0.5,
+    zIndex: 2,
+    transform: "skewX(-30deg)",
+    transformOrigin: "left",
+  },
+  leftBrand: {
+    position: "fixed",
+    top: "40%",
+    left: "1%",
+    transform: "translateY(-50%)",
+    zIndex: 5,
+    flexDirection: "column",
+    alignItems: "flex-start",
+  },
+  card: {
+    zIndex: 20,
+    boxSizing: "border-box",
+    background: "rgba(6, 29, 35, 0.30)",
+    backdropFilter: "blur(8px)",
+    WebkitBackdropFilter: "blur(10px)",
+  },
+};
+
 const Register: React.FC = () => {
   const [formData, setFormData] = useState({
     email: "",
@@ -141,11 +210,15 @@ const Register: React.FC = () => {
       }
       await register(registerData);
       if (profileImage) {
-        const formDataUpload = new FormData();
-        formDataUpload.append("profileImage", profileImage);
-        await api.post("/users/upload-profile-image", formDataUpload, {
-          headers: { "Content-Type": "multipart/form-data" },
-        });
+        try {
+          const formDataUpload = new FormData();
+          formDataUpload.append("profileImage", profileImage);
+          await api.post("/users/upload-profile-image", formDataUpload, {
+            headers: { "Content-Type": "multipart/form-data" },
+          });
+        } catch (imgErr) {
+          console.error("Profile image upload failed:", imgErr);
+        }
       }
       showSuccess("Welcome! Your account has been created successfully.");
       navigate("/app/dashboard");
@@ -185,54 +258,34 @@ const Register: React.FC = () => {
     passwordValid.number;
 
   return (
-    /* ─── Full-screen background ─── */
-    <div
-      className="relative flex w-full items-start justify-center overflow-x-hidden overflow-y-auto"
-      style={{
-        minHeight: "100vh",
-      }}
-    >
-      {/* Fixed full-viewport background image — always covers the screen regardless of card height */}
-      <div
-        className="fixed inset-0 -z-10"
-        style={{
-          backgroundImage: "url('/register1.png')",
-          backgroundSize: "cover",
-          backgroundPosition: "center center",
-          backgroundRepeat: "no-repeat",
-        }}
-      />
+    <div style={styles.root}>
+      <div style={styles.bgImage} />
+      <div style={styles.bgOverlay} />
+      <div className="hidden lg:block" style={styles.geo1} />
+      <div className="hidden lg:block" style={styles.geo2} />
 
-      {/* Darkened overlay to reduce brightness */}
-      <div className="fixed inset-0 bg-black/35 -z-10" />
+      <div className="hidden lg:flex" style={styles.leftBrand}>
+        <img
+          src="/Logo__with_Name.png"
+          alt="Sam's College"
+          style={{ width: 350, maxWidth: "90%", display: "block" }}
+        />
+      </div>
 
-      {/* ─── Centered glass card (reduced brightness) ─── */}
       <div
-        className="relative z-10 my-8 w-[58%] min-w-[340px] max-w-2xl rounded-2xl px-8 py-8 shadow-2xl"
-        style={{
-          background: "rgba(255, 255, 255, 0.07)",
-          backdropFilter: "blur(24px)",
-          WebkitBackdropFilter: "blur(24px)",
-          border: "1.5px solid rgba(255, 255, 255, 0.25)",
-          boxShadow:
-            "0 0 14px rgba(74, 238, 255, 0.10), 0 8px 32px rgba(0,0,0,0.18), 0 25px 50px rgba(0,0,0,0.35)",
-        }}
+        className="register-login-style relative z-20 w-full min-h-screen px-5 sm:px-8 lg:px-11 py-8 sm:py-12 lg:w-[520px] lg:max-w-[520px] lg:fixed lg:top-0 lg:right-0 lg:bottom-0 lg:overflow-y-auto flex flex-col justify-start border-l-0 lg:border-l lg:border-white/15"
+        style={styles.card}
       >
         {/* ── Logo + heading ── */}
-        <div className="mb-7 flex flex-col items-center text-center">
-          <img
-            src="/LOGO.png"
-            alt="Sam's College"
-            className="mb-3 h-16 w-auto object-contain"
-          />
-          <h1 className="text-3xl font-black uppercase tracking-[0.25em] text-[#061D23]">
+        <div className="mb-7 flex flex-col items-start text-left">
+          <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-[0.2em] text-white">
             Create Account
           </h1>
-          <p className="mt-1.5 text-base font-black uppercase tracking-[0.18em] text-[#0d4a75]">
+          <p className="mt-1 text-xs sm:text-sm font-bold uppercase tracking-[0.18em] text-[#4AEEFF]">
             Join the tournament platform
           </p>
-          {/* Decorative accent line — single clean underline, no Gemini-style double diagonal */}
-          <div className="mt-3 h-[2px] w-20 rounded-full bg-[#4AEEFF]" />
+          {/* Decorative accent line */}
+          <div className="mt-2.5 h-[2px] w-20 rounded-full bg-[#4AEEFF]" />
         </div>
 
         {/* ── Form ── */}
@@ -322,12 +375,12 @@ const Register: React.FC = () => {
               </button>
             </div>
             {/* Password strength indicators */}
-            <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1">
+            <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1">
               <p
                 className={
                   passwordValid.length
-                    ? "text-sm font-bold text-[#061D23]"
-                    : "text-sm font-semibold text-[#0d4a75]"
+                    ? "text-xs sm:text-sm font-bold !text-[#4AEEFF]"
+                    : "text-xs sm:text-sm font-normal text-white/60"
                 }
               >
                 {passwordValid.length ? "✓" : "○"} At least 8 characters
@@ -335,8 +388,8 @@ const Register: React.FC = () => {
               <p
                 className={
                   passwordValid.uppercase
-                    ? "text-sm font-bold text-[#061D23]"
-                    : "text-sm font-semibold text-[#0d4a75]"
+                    ? "text-xs sm:text-sm font-bold !text-[#4AEEFF]"
+                    : "text-xs sm:text-sm font-normal text-white/60"
                 }
               >
                 {passwordValid.uppercase ? "✓" : "○"} One uppercase letter
@@ -344,8 +397,8 @@ const Register: React.FC = () => {
               <p
                 className={
                   passwordValid.lowercase
-                    ? "text-sm font-bold text-[#061D23]"
-                    : "text-sm font-semibold text-[#0d4a75]"
+                    ? "text-xs sm:text-sm font-bold !text-[#4AEEFF]"
+                    : "text-xs sm:text-sm font-normal text-white/60"
                 }
               >
                 {passwordValid.lowercase ? "✓" : "○"} One lowercase letter
@@ -353,8 +406,8 @@ const Register: React.FC = () => {
               <p
                 className={
                   passwordValid.number
-                    ? "text-sm font-bold text-[#061D23]"
-                    : "text-sm font-semibold text-[#0d4a75]"
+                    ? "text-xs sm:text-sm font-bold !text-[#4AEEFF]"
+                    : "text-xs sm:text-sm font-normal text-white/60"
                 }
               >
                 {passwordValid.number ? "✓" : "○"} One number (0-9)
@@ -401,7 +454,7 @@ const Register: React.FC = () => {
             >
               <option value="PLAYER">🏓 Player - Compete in tournaments</option>
               <option value="REFEREE">👨‍⚖️ Referee - Officiate matches</option>
-              <option value="ADMIN">👑 Admin - Manage tournaments</option>
+              <option value="ADMIN">🛡️ Admin - Request administrator privileges</option>
             </select>
             <p className="mt-1 text-sm font-semibold text-[#0d4a75]">
               {formData.role === "PLAYER" &&
@@ -409,7 +462,7 @@ const Register: React.FC = () => {
               {formData.role === "REFEREE" &&
                 "Officiate matches, record scores, and manage games."}
               {formData.role === "ADMIN" &&
-                "Create tournaments, manage players, and oversee everything."}
+                "Register as Admin. Your request will be sent to the Super Admin for approval."}
             </p>
           </div>
 
@@ -493,7 +546,6 @@ const Register: React.FC = () => {
                   className="w-full rounded-lg border border-white/60 bg-white/40 px-4 py-3 text-base text-[#061D23] placeholder:text-[#061D23]/40 focus:border-[#4AEEFF] focus:outline-none focus:ring-1 focus:ring-[#4AEEFF]"
                 />
               </div>
-
             </>
           )}
 
@@ -559,19 +611,29 @@ const Register: React.FC = () => {
         </form>
 
         {/* Sign in link */}
-        <p className="mt-6 text-center text-base text-[#061D23]">
+        <p className="mt-6 text-center text-sm sm:text-base text-white/80">
           Already have an account?{" "}
           <Link
             to="/login"
-            className="font-semibold text-[#0d4a75] hover:text-[#061D23]"
+            className="font-bold text-[#4AEEFF] hover:underline"
           >
             Sign in here
           </Link>
         </p>
 
+        {/* Back to Home matching Login */}
+        <Link to="/" style={{ textDecoration: "none" }} className="mt-3 block">
+          <button
+            type="button"
+            className="w-full py-2.5 sm:py-3 px-4 bg-[#061D23]/30 hover:bg-[#061D23]/50 text-white font-bold text-xs uppercase tracking-wider border border-white/30 rounded transition-all"
+          >
+            Back to Home
+          </button>
+        </Link>
+
         {/* Footer */}
-        <div className="mt-5 border-t border-[#061D23]/20 pt-4">
-          <p className="text-center text-sm font-semibold text-[#0d4a75]">
+        <div className="mt-5 border-t border-white/15 pt-4">
+          <p className="text-center text-xs font-normal text-white/70">
             By signing up, you agree to our Terms of Service and Privacy Policy.
           </p>
         </div>

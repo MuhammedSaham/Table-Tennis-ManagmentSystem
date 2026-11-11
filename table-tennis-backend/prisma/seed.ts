@@ -16,7 +16,8 @@ async function main() {
       email: 'admin@tabletennis.com',
     },
     update: {
-      role: 'ADMIN',
+      password: adminPassword,
+      role: 'SUPER_ADMIN',
       isSuperAdmin: true,
     },
     create: {
@@ -25,7 +26,7 @@ async function main() {
       firstName: 'Admin',
       lastName: 'User',
       phone: '+94771234567',
-      role: 'ADMIN',
+      role: 'SUPER_ADMIN',
       isSuperAdmin: true,
 
       adminProfile: {
@@ -63,6 +64,7 @@ async function main() {
       email: 'referee@tabletennis.com',
     },
     update: {
+      password: refereePassword,
       role: 'REFEREE',
     },
     create: {

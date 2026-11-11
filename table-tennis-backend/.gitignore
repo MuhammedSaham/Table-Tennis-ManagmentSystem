@@ -45,3 +45,6 @@ coverage/
 # Temporary files
 *.tmp
 *.temp
+
+# Ignore uploaded payment proofs
+uploads/payment-proofs/*

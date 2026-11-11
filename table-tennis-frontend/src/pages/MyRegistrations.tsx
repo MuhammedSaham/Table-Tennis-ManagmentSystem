@@ -2,6 +2,8 @@ import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import api from "../services/api";
 import toast from "react-hot-toast";
+import BackButton from "../components/BackButton";
+import ConfirmModal from "../components/ConfirmModal";
 
 interface Registration {
   id: string;
@@ -24,6 +26,8 @@ interface Registration {
 const MyRegistrations: React.FC = () => {
   const [registrations, setRegistrations] = useState<Registration[]>([]);
   const [loading, setLoading] = useState(true);
+  const [cancelModalRegistration, setCancelModalRegistration] = useState<Registration | null>(null);
+  const [isCancelling, setIsCancelling] = useState(false);
 
   useEffect(() => {
     fetchRegistrations();
@@ -40,15 +44,18 @@ const MyRegistrations: React.FC = () => {
     }
   };
 
-  const handleCancel = async (registrationId: string) => {
-    if (window.confirm("Are you sure you want to cancel this registration?")) {
-      try {
-        await api.delete(`/registrations/${registrationId}/cancel`);
-        toast.success("Registration cancelled successfully");
-        fetchRegistrations();
-      } catch (error) {
-        // Error handled by interceptor
-      }
+  const handleConfirmCancel = async () => {
+    if (!cancelModalRegistration) return;
+    try {
+      setIsCancelling(true);
+      await api.delete(`/registrations/${cancelModalRegistration.id}/cancel`);
+      toast.success("Registration cancelled successfully");
+      setCancelModalRegistration(null);
+      fetchRegistrations();
+    } catch (error) {
+      // Error handled by interceptor
+    } finally {
+      setIsCancelling(false);
     }
   };
 
@@ -91,10 +98,18 @@ const MyRegistrations: React.FC = () => {
   }
 
   return (
-    <div>
-      <h1 className="text-3xl font-bold text-gray-900 mb-8">
-        My Tournament Registrations
-      </h1>
+    <div className="space-y-6">
+      <header className="flex flex-col justify-between gap-4 rounded-2xl border border-white/20 bg-[#061D23]/20 p-5 sm:p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl sm:flex-row sm:items-center">
+        <div>
+          <BackButton to="/app/dashboard" label="Back to Dashboard" className="mb-3" />
+          <h1 className="text-2xl font-black uppercase tracking-[0.15em] text-white sm:text-3xl lg:text-4xl">
+            My Registrations
+          </h1>
+          <p className="mt-1 text-xs uppercase tracking-[0.2em] text-[#4AEEFF]">
+            Track your tournament entries and registration statuses
+          </p>
+        </div>
+      </header>
 
       {registrations.length === 0 ? (
         <div className="card text-center py-12">
@@ -155,8 +170,8 @@ const MyRegistrations: React.FC = () => {
                   </span>
                   {registration.status === "PENDING" && (
                     <button
-                      onClick={() => handleCancel(registration.id)}
-                      className="block mt-2 text-sm text-red-600 hover:text-red-700"
+                      onClick={() => setCancelModalRegistration(registration)}
+                      className="block mt-2 text-sm text-red-600 hover:text-red-700 font-semibold"
                     >
                       Cancel Registration
                     </button>
@@ -167,6 +182,24 @@ const MyRegistrations: React.FC = () => {
           ))}
         </div>
       )}
+
+      {/* Cancel Registration Confirmation Modal */}
+      <ConfirmModal
+        isOpen={Boolean(cancelModalRegistration)}
+        onClose={() => {
+          if (!isCancelling) setCancelModalRegistration(null);
+        }}
+        onConfirm={handleConfirmCancel}
+        title="Cancel Registration"
+        message="Are you sure you want to cancel your tournament registration?"
+        itemName={cancelModalRegistration?.tournament.name}
+        itemBadge="PENDING"
+        details="Your entry will be cancelled and your reserved slot will be released."
+        confirmText="Yes, Cancel Registration"
+        cancelText="Keep Registration"
+        variant="warning"
+        isLoading={isCancelling}
+      />
     </div>
   );
 };

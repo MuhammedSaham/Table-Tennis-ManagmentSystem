@@ -165,15 +165,6 @@ export class BracketService {
     const byeTeams = shuffled.slice(0, byes);
     const playingTeams = shuffled.slice(byes);
 
-    const getRoundName = (numMatches: number) => {
-      if (numMatches === 1) return 'Final';
-      if (numMatches === 2) return 'Semi-Finals';
-      if (numMatches === 4) return 'Quarter-Finals';
-      if (numMatches === 8) return 'Round of 16';
-      if (numMatches === 16) return 'Round of 32';
-      return `Round of ${numMatches * 2}`;
-    };
-
     // Delete existing matches for this category
     const existing = await prisma.match.findMany({
       where: { tournamentId, categoryId },
@@ -185,78 +176,91 @@ export class BracketService {
     }
 
     const firstRoundMatchCount = bracketSize / 2;
+    const matchOrder = this.getSeededMatchOrder(firstRoundMatchCount);
+    const firstRoundPairs = Array.from({ length: firstRoundMatchCount }, () => ({
+      t1: null as string | null,
+      t2: null as string | null,
+      isBye: false,
+    }));
+
+    // Seed BYEs into standard bracket positions (opposite halves of the draw)
+    for (let i = 0; i < byes; i++) {
+      const matchIndex = matchOrder[i];
+      firstRoundPairs[matchIndex].isBye = true;
+      firstRoundPairs[matchIndex].t1 = byeTeams[i].id;
+    }
+
+    // Fill remaining match slots with playing teams
+    let playingIndex = 0;
+    for (let i = 0; i < firstRoundMatchCount; i++) {
+      if (!firstRoundPairs[i].isBye) {
+        firstRoundPairs[i].t1 = playingTeams[playingIndex++]?.id || null;
+        firstRoundPairs[i].t2 = playingTeams[playingIndex++]?.id || null;
+      }
+    }
+
     const matchesToCreate: any[] = [];
     let matchNumber = 1;
+    let currentRoundMatches: any[] = [];
 
-    // Build first round — paired playing teams
-    for (let i = 0; i < playingTeams.length; i += 2) {
-      const t1 = playingTeams[i] ?? null;
-      const t2 = playingTeams[i + 1] ?? null;
-      matchesToCreate.push({
+    // Create Round 1
+    const round1Name = this.getRoundName(firstRoundMatchCount);
+    for (let i = 0; i < firstRoundMatchCount; i++) {
+      const pair = firstRoundPairs[i];
+      const matchObj = {
         tournamentId,
         categoryId,
         matchType,
-        team1Id: t1?.id ?? null,
-        team2Id: t2?.id ?? null,
-        round: getRoundName(firstRoundMatchCount),
+        team1Id: pair.t1,
+        team2Id: pair.t2,
+        round: round1Name,
         matchNumber: matchNumber++,
         scheduledTime: startDate,
-        status: 'SCHEDULED',
-      });
+        status: pair.isBye ? MatchStatus.COMPLETED : MatchStatus.SCHEDULED,
+        score: pair.isBye ? 'BYE' : null,
+        winnerTeamId: pair.isBye ? pair.t1 : null,
+        winnerId: null,
+      };
+      currentRoundMatches.push(matchObj);
+      matchesToCreate.push(matchObj);
     }
 
-    // BYE matches for seeded teams advancing directly
-    for (const byeTeam of byeTeams) {
-      matchesToCreate.push({
-        tournamentId,
-        categoryId,
-        matchType,
-        team1Id: byeTeam.id,
-        team2Id: null,
-        round: getRoundName(firstRoundMatchCount),
-        matchNumber: matchNumber++,
-        scheduledTime: startDate,
-        status: 'COMPLETED',
-        score: 'BYE',
-        winnerTeamId: byeTeam.id, // use captain as winner placeholder
-      });
-    }
+    // Build subsequent rounds (Semi-Finals, Finals) and automatically advance BYE teams
+    let matchesInNextRound = firstRoundMatchCount / 2;
+    while (matchesInNextRound >= 1) {
+      const nextRoundName = this.getRoundName(matchesInNextRound);
+      const nextRoundMatches: any[] = [];
 
-    // Build subsequent rounds (empty slots filled as matches complete)
-    let currentRoundCount = firstRoundMatchCount / 2;
-    while (currentRoundCount >= 1) {
-      const roundName = getRoundName(currentRoundCount);
-      for (let i = 0; i < currentRoundCount; i++) {
-        matchesToCreate.push({
+      for (let i = 0; i < matchesInNextRound; i++) {
+        const prev1 = currentRoundMatches[i * 2];
+        const prev2 = currentRoundMatches[i * 2 + 1];
+
+        const t1Id = prev1?.winnerTeamId || null;
+        const t2Id = prev2?.winnerTeamId || null;
+
+        const matchObj = {
           tournamentId,
           categoryId,
           matchType,
-          team1Id: null,
-          team2Id: null,
-          round: roundName,
+          team1Id: t1Id,
+          team2Id: t2Id,
+          round: nextRoundName,
           matchNumber: matchNumber++,
           scheduledTime: startDate,
-          status: 'SCHEDULED',
-        });
+          status: MatchStatus.SCHEDULED,
+          score: null,
+          winnerTeamId: null,
+          winnerId: null,
+        };
+        nextRoundMatches.push(matchObj);
+        matchesToCreate.push(matchObj);
       }
-      currentRoundCount = Math.floor(currentRoundCount / 2);
+      currentRoundMatches = nextRoundMatches;
+      matchesInNextRound = Math.floor(matchesInNextRound / 2);
     }
 
-    // 3rd Place Playoff (same as singles — requires bracketSize >= 4)
-    if (bracketSize >= 4) {
-      matchesToCreate.push({
-        tournamentId,
-        categoryId,
-        matchType,
-        team1Id: null,
-        team2Id: null,
-        round: '3rd Place Playoff',
-        matchNumber: matchNumber++,
-        scheduledTime: startDate,
-        status: 'SCHEDULED',
-      });
-    }
-
+    // 3rd Place Playoff (requires bracketSize >= 4)
+    
     await prisma.match.createMany({ data: matchesToCreate });
 
     const created = await prisma.match.findMany({
@@ -293,14 +297,15 @@ export class BracketService {
     const byes = bracketSize - totalPlayers;
     const firstRoundMatchCount = bracketSize / 2;
 
-    const byePlayers = seededPlayers.slice(0, byes);
-    const playingPlayers = seededPlayers.slice(byes);
-    
-    // We can shuffle playing players to randomize the unseeded matchups
-    for (let i = playingPlayers.length - 1; i > 0; i--) {
+    // Randomize all players so BYE distribution and matchups are completely fair and random
+    const randomizedPlayers = [...seededPlayers];
+    for (let i = randomizedPlayers.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
-      [playingPlayers[i], playingPlayers[j]] = [playingPlayers[j], playingPlayers[i]];
+      [randomizedPlayers[i], randomizedPlayers[j]] = [randomizedPlayers[j], randomizedPlayers[i]];
     }
+
+    const byePlayers = randomizedPlayers.slice(0, byes);
+    const playingPlayers = randomizedPlayers.slice(byes);
 
     const getRoundName = (numMatches: number) => {
       if (numMatches === 1) return 'Final';
@@ -405,23 +410,28 @@ export class BracketService {
     }
 
     // ── 3rd Place Playoff ──
-    if (bracketSize >= 4) {
-      matches.push({
-        tournamentId,
-        categoryId,
-        matchType,
-        round: '3rd Place Playoff',
-        matchNumber: matchNumber++,
-        scheduledTime: startDate,
-        player1Id: null,
-        player2Id: null,
-        status: MatchStatus.SCHEDULED,
-        winnerId: null,
-        score: null,
-      });
-    }
-
+    
     return matches;
+  }
+
+  // Helper method for standard seeded round names
+  private getRoundName(numMatches: number): string {
+    if (numMatches === 1) return 'Final';
+    if (numMatches === 2) return 'Semi-Finals';
+    if (numMatches === 4) return 'Quarter-Finals';
+    if (numMatches === 8) return 'Round of 16';
+    if (numMatches === 16) return 'Round of 32';
+    return `Round of ${numMatches * 2}`;
+  }
+
+  // Helper method for standard tournament seeded match order (places byes on opposite ends)
+  private getSeededMatchOrder(numMatches: number): number[] {
+    if (numMatches === 1) return [0];
+    if (numMatches === 2) return [0, 1];
+    if (numMatches === 4) return [0, 3, 1, 2];
+    if (numMatches === 8) return [0, 7, 3, 4, 1, 6, 2, 5];
+    if (numMatches === 16) return [0, 15, 7, 8, 3, 12, 4, 11, 1, 14, 6, 9, 2, 13, 5, 10];
+    return Array.from({ length: numMatches }, (_, i) => i);
   }
 
   // ==============================
@@ -521,6 +531,20 @@ export class BracketService {
             members: {
               include: {
                 player: { select: { id: true, firstName: true, lastName: true } },
+              },
+            },
+          },
+        },
+        referee: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                email: true,
+                phone: true,
+                profileImage: true,
               },
             },
           },

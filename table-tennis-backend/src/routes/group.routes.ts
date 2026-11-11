@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { authenticate } from '../middleware/auth.middleware';
-import { isAdmin } from '../middleware/role.middleware';
+import { isAdmin, isAdminOrReferee, hasPermission } from '../middleware/role.middleware';
 import {
   createGroups,
   generateGroupMatches,
@@ -8,33 +8,29 @@ import {
   getGroupStandings,
   generateKnockoutStage,
   assignRefereeToGroupMatch,
+  getGroupMatches,
+  updateGroupMembers,
 } from '../controllers/group.controller';
-import { getGroupMatches } from '../controllers/group.controller';
-import { updateGroupMembers } from '../controllers/group.controller';
-import { isAdminOrReferee } from '../middleware/role.middleware';
 
 const router = Router();
 
-//router.use(authenticate);
+// Admin match management routes
+router.post('/tournaments/:tournamentId/categories/:categoryId/groups', authenticate, hasPermission('MANAGE_MATCHES'), createGroups);
+router.post('/tournaments/:tournamentId/categories/:categoryId/group-matches', authenticate, hasPermission('MANAGE_MATCHES'), generateGroupMatches);
+router.post('/tournaments/:tournamentId/categories/:categoryId/knockout', authenticate, hasPermission('MANAGE_MATCHES'), generateKnockoutStage);
 
-// Admin only routes
-router.post('/tournaments/:tournamentId/categories/:categoryId/groups', authenticate, isAdmin, createGroups);
-router.post('/tournaments/:tournamentId/categories/:categoryId/group-matches', authenticate, isAdmin, generateGroupMatches);
-router.post('/tournaments/:tournamentId/categories/:categoryId/knockout', authenticate, isAdmin, generateKnockoutStage);
-
-// Match recording
+// Match recording & referee assignment
 router.patch('/group-matches/:matchId', authenticate, isAdminOrReferee, recordGroupScore);
-router.post('/group-matches/:matchId/assign-referee', authenticate, isAdmin, assignRefereeToGroupMatch);
+router.post('/group-matches/:matchId/assign-referee', authenticate, hasPermission('MANAGE_MATCHES', 'MANAGE_REFEREES'), assignRefereeToGroupMatch);
 
-// View standings
+// View standings & matches
 router.get('/tournaments/:tournamentId/categories/:categoryId/standings', getGroupStandings);
-
 router.get('/tournaments/:tournamentId/categories/:categoryId/matches', getGroupMatches);
 
 router.put(
   '/tournaments/:tournamentId/categories/:categoryId/group-members',
   authenticate,
-  isAdminOrReferee,
+  hasPermission('MANAGE_MATCHES'),
   updateGroupMembers
 );
 

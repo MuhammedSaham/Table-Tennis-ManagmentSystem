@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from "react";
 import api from "../services/api";
 import toast from "react-hot-toast";
+import BackButton from "../components/BackButton";
 import { UmpireSheet } from "../components/GroupStandings";
 import type { GroupMatch, GameScore } from "../components/GroupStandings";
 import { UmpireSheet as KnockoutUmpireSheet } from "../components/KnockoutBracket";
-import { TrophyIcon } from "@heroicons/react/24/outline";
 
 interface Player {
   id: string;
@@ -12,11 +12,46 @@ interface Player {
   lastName: string;
 }
 
+interface Team {
+  id: string;
+  name: string;
+  members?: {
+    player: Player;
+  }[];
+}
+
+const getParticipantName = (
+  player?: Player | null,
+  team?: Team | null,
+): string => {
+  if (team) {
+    const memberNames = team.members
+      ?.map((member) =>
+        `${member.player.firstName} ${member.player.lastName}`.trim(),
+      )
+      .filter(Boolean)
+      .join(" / ");
+
+    return memberNames || team.name || "TBD";
+  }
+
+  return player ? `${player.firstName} ${player.lastName}`.trim() : "TBD";
+};
+
+interface RefereeStatistics {
+  groupStageMinutes: number;
+  knockoutStageMinutes: number;
+  totalWorkingMinutes: number;
+  totalWorkingTime: string;
+}
+
 interface Match {
   id: string;
   round: string;
   matchNumber: number;
   scheduledTime: string;
+  startTime?: string | null;
+  endTime?: string | null;
   status: "SCHEDULED" | "ONGOING" | "COMPLETED" | "CANCELLED" | "WALKOVER";
   score: string | null;
   winnerId: string | null;
@@ -24,8 +59,8 @@ interface Match {
   player2: Player | null;
   player1Id: string | null;
   player2Id: string | null;
-  team1?: { id: string; name: string } | null;
-  team2?: { id: string; name: string } | null;
+  team1?: Team | null;
+  team2?: Team | null;
   tournament: {
     id: string;
     name: string;
@@ -45,11 +80,39 @@ interface Match {
   isGroupMatch?: boolean;
 }
 
+const getMatchDurationMinutes = (match: Match): number | null => {
+  if (!match.startTime || !match.endTime) return null;
+
+  const start = new Date(match.startTime).getTime();
+  const end = new Date(match.endTime).getTime();
+
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end < start) {
+    return null;
+  }
+
+  return Math.round((end - start) / 60000);
+};
+
+const formatDuration = (minutes: number): string => {
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+
+  if (hours === 0) return `${remainingMinutes} min`;
+  if (remainingMinutes === 0) return `${hours} hr`;
+
+  return `${hours} hr ${remainingMinutes} min`;
+};
+
 const RefereeMatches: React.FC = () => {
   const [matches, setMatches] = useState<Match[]>([]);
+  const [refereeStats, setRefereeStats] = useState<RefereeStatistics | null>(
+    null,
+  );
   const [loading, setLoading] = useState(true);
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
-  const [filter, setFilter] = useState<"all" | "pending" | "completed">("pending");
+  const [filter, setFilter] = useState<"all" | "pending" | "completed">(
+    "pending",
+  );
   const [matchType, setMatchType] = useState<"knockout" | "group">("knockout");
   const [showRulesModal, setShowRulesModal] = useState(false);
 
@@ -59,29 +122,91 @@ const RefereeMatches: React.FC = () => {
 
   const fetchAssignedMatches = async () => {
     try {
-      const response = await api.get("/matches/my-assigned-matches");
-      setMatches(response.data.data);
+      const [matchesResponse, dashboardResponse] = await Promise.all([
+        api.get("/matches/my-assigned-matches"),
+        api.get("/dashboard/referee"),
+      ]);
+
+      setMatches(matchesResponse.data.data || []);
+      setRefereeStats(dashboardResponse.data.data.statistics);
     } catch (error) {
-      toast.error("Failed to load assigned matches");
+      console.error("Failed to load referee dashboard", error);
+      toast.error("Failed to load referee dashboard");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleGroupMatchSave = async (matchId: string, games: GameScore[], bestOf: 3 | 5) => {
+  const handleGroupMatchSave = async (
+    matchId: string,
+    games: GameScore[],
+    bestOf: 3 | 5,
+    startTime?: string,
+    endTime?: string,
+  ) => {
     try {
-      await api.patch(`/groups/group-matches/${matchId}`, { games, bestOf });
+      const toDateTime = (time: string) => {
+        const [hours, minutes] = time.split(":").map(Number);
+
+        const date = new Date();
+        date.setHours(hours, minutes, 0, 0);
+
+        return date;
+      };
+
+      let startDate: Date | undefined;
+      let endDate: Date | undefined;
+
+      if (startTime && endTime) {
+        startDate = toDateTime(startTime);
+        endDate = toDateTime(endTime);
+
+        // Handle matches that finish after midnight
+        if (endDate <= startDate) {
+          endDate.setDate(endDate.getDate() + 1);
+        }
+      }
+      const gamesPayload = games.map((game) => ({
+        p1: game.p1 === "" || game.p1 == null ? null : Number(game.p1),
+        p2: game.p2 === "" || game.p2 == null ? null : Number(game.p2),
+      }));
+
+      console.log("Converted games:", gamesPayload);
+      console.log("Best of:", bestOf);
+
+      await api.patch(`/groups/group-matches/${matchId}`, {
+        games,
+        bestOf,
+        ...(startDate && {
+          startTime: startDate.toISOString(),
+        }),
+        ...(endDate && {
+          endTime: endDate.toISOString(),
+        }),
+      });
+
+      console.log("Games sent to backend:", games);
+      console.log("Best of:", bestOf);
+
       toast.success("Score recorded successfully");
-      fetchAssignedMatches();
+      await fetchAssignedMatches();
       setSelectedMatch(null);
     } catch (error: any) {
       toast.error(error.response?.data?.message || "Failed to record score");
     }
   };
 
-  const handleKnockoutMatchSave = async (matchId: string, games: GameScore[], bestOf: 3 | 5) => {
+  const handleKnockoutMatchSave = async (
+    matchId: string,
+    games: GameScore[],
+    bestOf: 3 | 5,
+    startTime?: string,
+    endTime?: string,
+  ) => {
     const match = matches.find((m) => m.id === matchId);
-    const isDoubles = match?.category?.type === "DOUBLES" || (!!match?.team1 && !match?.player1);
+    const isDoubles =
+      match?.category?.type === "DOUBLES" ||
+      (!!match?.team1 && !match?.player1);
 
     const slot1Filled = isDoubles ? !!match?.team1 : !!match?.player1?.id;
     const slot2Filled = isDoubles ? !!match?.team2 : !!match?.player2?.id;
@@ -91,11 +216,13 @@ const RefereeMatches: React.FC = () => {
     }
 
     const wn = Math.ceil(bestOf / 2);
-    let p1W = 0, p2W = 0;
+    let p1W = 0,
+      p2W = 0;
     const parts: string[] = [];
     for (const g of games) {
       if (!g.p1 || !g.p2) continue;
-      const a = parseInt(g.p1), b = parseInt(g.p2);
+      const a = parseInt(g.p1),
+        b = parseInt(g.p2);
       parts.push(`${a}-${b}`);
       if (a > b) p1W++;
       else p2W++;
@@ -117,15 +244,46 @@ const RefereeMatches: React.FC = () => {
         : match!.team2!.id
       : undefined;
 
+    const matchDate = match?.scheduledTime
+      ? new Date(match.scheduledTime)
+      : new Date();
+
+    const toDateTime = (time?: string) => {
+      if (!time) return undefined;
+
+      const [hours, minutes] = time.split(":").map(Number);
+      const date = new Date(matchDate);
+      date.setHours(hours, minutes, 0, 0);
+
+      return date;
+    };
+
+    const startDate = toDateTime(startTime);
+    const endDate = toDateTime(endTime);
+
+    if (startDate && endDate && endDate < startDate) {
+      endDate.setDate(endDate.getDate() + 1);
+    }
+
+    const durationMinutes =
+      startDate && endDate
+        ? Math.round((endDate.getTime() - startDate.getTime()) / 60000)
+        : null;
+
     try {
       await api.patch(`/matches/${matchId}`, {
         score: parts.join(", "),
         winnerId,
         winnerTeamId,
         status: "COMPLETED",
-        endTime: new Date().toISOString(),
-        resultDetails: { bestOf },
+        ...(startDate ? { startTime: startDate.toISOString() } : {}),
+        ...(endDate ? { endTime: endDate.toISOString() } : {}),
+        resultDetails: {
+          bestOf,
+          ...(durationMinutes !== null ? { durationMinutes } : {}),
+        },
       });
+
       toast.success("Score saved successfully!");
       fetchAssignedMatches();
       setSelectedMatch(null);
@@ -151,9 +309,14 @@ const RefereeMatches: React.FC = () => {
   };
 
   const filteredMatches = matches.filter((m) => {
-    if (filter === "pending" && (m.status !== "SCHEDULED" && m.status !== "ONGOING")) return false;
+    if (
+      filter === "pending" &&
+      m.status !== "SCHEDULED" &&
+      m.status !== "ONGOING"
+    )
+      return false;
     if (filter === "completed" && m.status !== "COMPLETED") return false;
-    
+
     if (matchType === "knockout" && m.isGroupMatch) return false;
     if (matchType === "group" && !m.isGroupMatch) return false;
 
@@ -171,7 +334,7 @@ const RefereeMatches: React.FC = () => {
       <div className="fixed inset-0 bg-[#061D23]/25" />
       <div className="fixed inset-0 bg-gradient-to-b from-[#061D23]/20 via-transparent to-[#061D23]/35" />
 
-      <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-7xl flex-col space-y-6">
+      <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-[1600px] flex-col space-y-6 px-4 sm:px-6 lg:px-10 xl:px-14 py-4 sm:py-6 lg:py-8">
         {children}
       </div>
     </div>
@@ -184,7 +347,7 @@ const RefereeMatches: React.FC = () => {
         <p className="mt-4 text-xs font-black uppercase tracking-[0.2em] text-[#4AEEFF]">
           Loading assigned matches...
         </p>
-      </div>
+      </div>,
     );
   }
 
@@ -202,82 +365,126 @@ const RefereeMatches: React.FC = () => {
   ).length;
   const completedCount = matches.filter((m) => m.status === "COMPLETED").length;
 
+  const totalOfficiatingMinutes = matches.reduce((total, match) => {
+    if (match.status !== "COMPLETED") return total;
+
+    const duration = getMatchDurationMinutes(match);
+
+    return total + (duration ?? 0);
+  }, 0);
+
   const nextPendingMatch =
     matches.find((m) => m.status === "ONGOING") ||
     matches.find((m) => m.status === "SCHEDULED");
 
-  const nextP1Name =
-    nextPendingMatch?.team1?.name ||
-    (nextPendingMatch?.player1
-      ? `${nextPendingMatch.player1.firstName} ${nextPendingMatch.player1.lastName || ""}`.trim()
-      : "TBD");
-  const nextP2Name =
-    nextPendingMatch?.team2?.name ||
-    (nextPendingMatch?.player2
-      ? `${nextPendingMatch.player2.firstName} ${nextPendingMatch.player2.lastName || ""}`.trim()
-      : "TBD");
+  const nextP1Name = getParticipantName(
+    nextPendingMatch?.player1,
+    nextPendingMatch?.team1,
+  );
+
+  const nextP2Name = getParticipantName(
+    nextPendingMatch?.player2,
+    nextPendingMatch?.team2,
+  );
 
   return wrapInBaseLayout(
     <>
       {/* HEADER MODULE */}
-      <header className="flex flex-col justify-between gap-5 rounded-[20px] border border-white/20 bg-[#061D23]/35 p-6 sm:p-7 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.6)] backdrop-blur-xl md:flex-row md:items-center">
-        <div>
-          <div className="flex items-center gap-2 mb-2 flex-wrap">
-            <span className="w-2 h-5 bg-[#4AEEFF] rounded-full shadow-[0_0_10px_#4AEEFF]"></span>
-            <span className="px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-md bg-[#4AEEFF]/15 text-[#4AEEFF] border border-[#4AEEFF]/30">
-              Official Match Portal
-            </span>
-            <span className="flex items-center gap-1 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-md bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-              On Duty
-            </span>
+      <div className="pt-6 sm:pt-8">
+        <header className="flex flex-col gap-3 rounded-[20px] border border-white/20 bg-[#061D23]/35 p-4 sm:p-5 lg:p-5 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.6)] backdrop-blur-xl">
+          <div>
+            <BackButton to="/" label="Back to Home" className="mb-3" />
+            <div className="flex items-center gap-2 mb-2 flex-wrap">
+              <span className="w-2 h-5 bg-[#4AEEFF] rounded-full shadow-[0_0_10px_#4AEEFF]"></span>
+              <span className="px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-md bg-[#4AEEFF]/15 text-[#4AEEFF] border border-[#4AEEFF]/30">
+                Official Match Portal
+              </span>
+              <span className="flex items-center gap-1 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-md bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                On Duty
+              </span>
+            </div>
+            <h1 className="text-xl sm:text-3xl lg:text-4xl font-black uppercase tracking-[0.08em] sm:tracking-[0.12em] text-white break-words">
+              Referee Dashboard
+            </h1>
+            <p className="mt-1.5 text-xs text-slate-300 max-w-xl">
+              Inspect your assigned matches, manage court schedules, and enter
+              official set scores.
+            </p>
           </div>
-          <h1 className="text-2xl sm:text-4xl font-black uppercase tracking-[0.15em] text-white">
-            Referee Dashboard
-          </h1>
-          <p className="mt-1.5 text-xs text-slate-300 max-w-xl">
-            Inspect your assigned matches, manage court schedules, and enter official set scores.
-          </p>
-        </div>
 
-        <div className="flex items-center gap-3 flex-wrap sm:flex-nowrap">
-          <button
-            onClick={() => setShowRulesModal(true)}
-            className="rounded-xl border border-white/20 bg-white/5 px-3.5 py-3 text-xs font-bold text-white hover:bg-white/10 hover:border-[#4AEEFF]/40 transition-all flex items-center gap-2 shadow-sm"
-            title="ITTF Official Rules Quick Reference"
-          >
-            <span>📖</span>
-            <span className="hidden sm:inline">ITTF Rules</span>
-          </button>
-          <button
-            onClick={fetchAssignedMatches}
-            className="rounded-xl border border-white/20 bg-white/5 p-3 text-xs font-bold text-slate-300 hover:text-white hover:bg-white/10 transition-all shadow-sm"
-            title="Refresh Assigned Matches"
-          >
-            🔄
-          </button>
-          <div className="flex gap-2.5">
-            <div className="rounded-xl border border-white/10 bg-black/30 px-3.5 py-2.5 text-center min-w-[70px]">
-              <p className="text-lg sm:text-xl font-black text-[#4AEEFF]">{matches.length}</p>
-              <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Total</p>
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setShowRulesModal(true)}
+                className="rounded-xl border border-white/20 bg-white/5 px-3.5 py-3 text-xs font-bold text-white hover:bg-white/10 hover:border-[#4AEEFF]/40 transition-all flex items-center gap-2 shadow-sm"
+                title="ITTF Official Rules Quick Reference"
+              >
+                <span>📖</span>
+                <span className="hidden sm:inline">ITTF Rules</span>
+              </button>
+              <button
+                onClick={fetchAssignedMatches}
+                className="rounded-xl border border-white/20 bg-white/5 p-3 text-xs font-bold text-slate-300 hover:text-white hover:bg-white/10 transition-all shadow-sm"
+                title="Refresh Assigned Matches"
+              >
+                🔄
+              </button>
             </div>
-            <div className="rounded-xl border border-amber-400/20 bg-amber-400/5 px-3.5 py-2.5 text-center min-w-[70px]">
-              <p className="text-lg sm:text-xl font-black text-amber-400">{pendingCount}</p>
-              <p className="text-[9px] font-bold uppercase tracking-wider text-amber-300/70">Pending</p>
-            </div>
-            <div className="rounded-xl border border-emerald-400/20 bg-emerald-400/5 px-3.5 py-2.5 text-center min-w-[70px]">
-              <p className="text-lg sm:text-xl font-black text-emerald-400">{completedCount}</p>
-              <p className="text-[9px] font-bold uppercase tracking-wider text-emerald-300/70">Completed</p>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 w-full">
+              <div className="rounded-xl border border-white/10 bg-black/30 px-3.5 py-2.5 text-center min-w-0">
+                <p className="text-lg sm:text-xl font-black text-[#4AEEFF]">
+                  {matches.length}
+                </p>
+                <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">
+                  Total
+                </p>
+              </div>
+              <div className="rounded-xl border border-amber-400/20 bg-amber-400/5 px-3.5 py-2.5 text-center min-w-0">
+                <p className="text-lg sm:text-xl font-black text-amber-400">
+                  {pendingCount}
+                </p>
+                <p className="text-[9px] font-bold uppercase tracking-wider text-amber-300/70">
+                  Pending
+                </p>
+              </div>
+              <div className="rounded-xl border border-emerald-400/20 bg-emerald-400/5 px-3.5 py-2.5 text-center min-w-0">
+                <p className="text-lg sm:text-xl font-black text-emerald-400">
+                  {completedCount}
+                </p>
+                <p className="text-[9px] font-bold uppercase tracking-wider text-emerald-300/70">
+                  Completed
+                </p>
+              </div>
+
+              <div className="rounded-xl border border-[#4AEEFF]/30 bg-[#4AEEFF]/10 px-3.5 py-2.5 text-center min-w-0">
+                <p className="text-lg sm:text-xl font-black text-[#4AEEFF]">
+                  {refereeStats
+                    ? formatDuration(refereeStats.totalWorkingMinutes)
+                    : formatDuration(totalOfficiatingMinutes)}
+                </p>
+                <p className="text-[9px] font-bold uppercase tracking-wider text-[#4AEEFF]/80">
+                  Officiating Time
+                </p>
+                {refereeStats && (
+                  <p className="mt-1 text-[9px] text-[#4AEEFF]/70">
+                    Group: {formatDuration(refereeStats.groupStageMinutes)}
+                    {" | "}
+                    Knockout:{" "}
+                    {formatDuration(refereeStats.knockoutStageMinutes)}
+                  </p>
+                )}
+              </div>
             </div>
           </div>
-        </div>
-      </header>
+        </header>
+      </div>
 
       {/* ─── NEXT MATCH ON COURT SPOTLIGHT HERO ─── */}
       {nextPendingMatch && (
         <section className="relative overflow-hidden rounded-[20px] border border-[#4AEEFF]/40 bg-gradient-to-r from-[#061D23]/95 via-[#0A2E36]/85 to-[#061D23]/95 p-6 shadow-[0_20px_50px_-10px_rgba(74,238,255,0.2)] backdrop-blur-xl">
           <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-[#4AEEFF] to-transparent shadow-[0_0_10px_#4AEEFF]" />
-          
+
           <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
             <div className="space-y-3 flex-1">
               <div className="flex items-center gap-2.5 flex-wrap">
@@ -286,7 +493,8 @@ const RefereeMatches: React.FC = () => {
                   Next To Officiate
                 </span>
                 <span className="px-2.5 py-0.5 rounded-md bg-white/10 text-white text-[10px] font-mono font-bold uppercase tracking-wider">
-                  Match #{nextPendingMatch.matchNumber} • {nextPendingMatch.round}
+                  Match #{nextPendingMatch.matchNumber} •{" "}
+                  {nextPendingMatch.round}
                 </span>
                 <span className="px-2.5 py-0.5 rounded-md bg-[#4AEEFF]/15 text-[#4AEEFF] text-[10px] font-black uppercase tracking-wider border border-[#4AEEFF]/30">
                   {nextPendingMatch.tournament?.name}
@@ -318,18 +526,26 @@ const RefereeMatches: React.FC = () => {
               </div>
 
               <div className="flex items-center gap-4 text-xs text-slate-300 font-mono flex-wrap">
-                <span>📍 {nextPendingMatch.tournament?.venue || "Main Court"}</span>
+                <span>
+                  📍 {nextPendingMatch.tournament?.venue || "Main Court"}
+                </span>
                 {nextPendingMatch.category && (
                   <>
                     <span>•</span>
-                    <span>{nextPendingMatch.category.name} ({nextPendingMatch.category.type})</span>
+                    <span>
+                      {nextPendingMatch.category.name} (
+                      {nextPendingMatch.category.type})
+                    </span>
                   </>
                 )}
                 {nextPendingMatch.scheduledTime && (
                   <>
                     <span>•</span>
                     <span>
-                      🕐 Scheduled: {new Date(nextPendingMatch.scheduledTime).toLocaleTimeString([], {
+                      🕐 Scheduled:{" "}
+                      {new Date(
+                        nextPendingMatch.scheduledTime,
+                      ).toLocaleTimeString([], {
                         hour: "2-digit",
                         minute: "2-digit",
                       })}
@@ -353,25 +569,25 @@ const RefereeMatches: React.FC = () => {
       )}
 
       {/* FILTER & STAGE CONTROLS */}
-      <section className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-[16px] border border-white/20 bg-[#061D23]/25 p-4 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl">
+      <section className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 rounded-[16px] border border-white/20 bg-[#061D23]/25 p-4 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl">
         {/* Stage selection */}
         <div className="flex gap-2">
           <button
             onClick={() => setMatchType("knockout")}
-            className={`rounded-xl border px-4 py-2 text-xs font-black uppercase tracking-wider transition-all ${
+            className={`rounded-xl px-4 py-2 text-xs font-bold uppercase tracking-wider transition-all duration-200 ${
               matchType === "knockout"
-                ? "border-[#4AEEFF] bg-[#4AEEFF] text-[#061D23] shadow-md shadow-[#4AEEFF]/20"
-                : "border-white/10 bg-[#061D23]/40 text-white/70 hover:border-[#4AEEFF]/40 hover:text-white"
+                ? "bg-[#4AEEFF]/15 text-[#4AEEFF] border border-[#4AEEFF]/45 shadow-[0_0_14px_rgba(74,238,255,0.18)] backdrop-blur-md"
+                : "border border-white/10 bg-white/5 text-white/70 hover:bg-white/10 hover:text-white"
             }`}
           >
             Knockout Stage
           </button>
           <button
             onClick={() => setMatchType("group")}
-            className={`rounded-xl border px-4 py-2 text-xs font-black uppercase tracking-wider transition-all ${
+            className={`rounded-xl px-4 py-2 text-xs font-bold uppercase tracking-wider transition-all duration-200 ${
               matchType === "group"
-                ? "border-[#4AEEFF] bg-[#4AEEFF] text-[#061D23] shadow-md shadow-[#4AEEFF]/20"
-                : "border-white/10 bg-[#061D23]/40 text-white/70 hover:border-[#4AEEFF]/40 hover:text-white"
+                ? "bg-[#4AEEFF]/15 text-[#4AEEFF] border border-[#4AEEFF]/45 shadow-[0_0_14px_rgba(74,238,255,0.18)] backdrop-blur-md"
+                : "border border-white/10 bg-white/5 text-white/70 hover:bg-white/10 hover:text-white"
             }`}
           >
             Group Stage
@@ -379,33 +595,33 @@ const RefereeMatches: React.FC = () => {
         </div>
 
         {/* Status filters */}
-        <div className="flex gap-2 border-t sm:border-t-0 sm:border-l border-white/10 pt-3 sm:pt-0 sm:pl-3 flex-wrap">
+        <div className="flex gap-2 border-t lg:border-t-0 lg:border-l border-white/10 pt-3 lg:pt-0 lg:pl-3 flex-wrap">
           <button
             onClick={() => setFilter("all")}
-            className={`rounded-xl border px-3.5 py-1.5 text-xs font-black uppercase tracking-wider transition-all ${
+            className={`rounded-xl px-3.5 py-1.5 text-xs font-bold uppercase tracking-wider transition-all duration-200 ${
               filter === "all"
-                ? "border-[#4AEEFF] bg-[#4AEEFF] text-[#061D23] shadow-md shadow-[#4AEEFF]/20"
-                : "border-white/10 bg-[#061D23]/40 text-white/70 hover:border-[#4AEEFF]/40 hover:text-white"
+                ? "bg-[#4AEEFF]/15 text-[#4AEEFF] border border-[#4AEEFF]/45 shadow-[0_0_14px_rgba(74,238,255,0.18)] backdrop-blur-md"
+                : "border border-white/10 bg-white/5 text-white/70 hover:bg-white/10 hover:text-white"
             }`}
           >
             All
           </button>
           <button
             onClick={() => setFilter("pending")}
-            className={`rounded-xl border px-3.5 py-1.5 text-xs font-black uppercase tracking-wider transition-all ${
+            className={`rounded-xl px-3.5 py-1.5 text-xs font-bold uppercase tracking-wider transition-all duration-200 ${
               filter === "pending"
-                ? "border-[#4AEEFF] bg-[#4AEEFF] text-[#061D23] shadow-md shadow-[#4AEEFF]/20"
-                : "border-white/10 bg-[#061D23]/40 text-white/70 hover:border-[#4AEEFF]/40 hover:text-white"
+                ? "bg-[#4AEEFF]/15 text-[#4AEEFF] border border-[#4AEEFF]/45 shadow-[0_0_14px_rgba(74,238,255,0.18)] backdrop-blur-md"
+                : "border border-white/10 bg-white/5 text-white/70 hover:bg-white/10 hover:text-white"
             }`}
           >
             Pending
           </button>
           <button
             onClick={() => setFilter("completed")}
-            className={`rounded-xl border px-3.5 py-1.5 text-xs font-black uppercase tracking-wider transition-all ${
+            className={`rounded-xl px-3.5 py-1.5 text-xs font-bold uppercase tracking-wider transition-all duration-200 ${
               filter === "completed"
-                ? "border-[#4AEEFF] bg-[#4AEEFF] text-[#061D23] shadow-md shadow-[#4AEEFF]/20"
-                : "border-white/10 bg-[#061D23]/40 text-white/70 hover:border-[#4AEEFF]/40 hover:text-white"
+                ? "bg-[#4AEEFF]/15 text-[#4AEEFF] border border-[#4AEEFF]/45 shadow-[0_0_14px_rgba(74,238,255,0.18)] backdrop-blur-md"
+                : "border border-white/10 bg-white/5 text-white/70 hover:bg-white/10 hover:text-white"
             }`}
           >
             Completed
@@ -416,7 +632,7 @@ const RefereeMatches: React.FC = () => {
       {/* MATCHES LIST */}
       <div className="space-y-4">
         {filteredMatches.length === 0 ? (
-          <section className="rounded-[20px] border border-white/15 bg-[#061D23]/30 p-10 sm:p-14 text-center shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl">
+          <section className="rounded-[20px] border border-white/15 bg-[#061D23]/30 p-6 sm:p-8 lg:p-10 text-center shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl">
             <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-2xl">
               🏓
             </div>
@@ -433,7 +649,7 @@ const RefereeMatches: React.FC = () => {
             </p>
 
             {matches.length > 0 && (
-              <div className="mt-5 flex justify-center gap-3">
+              <div className="mt-5 flex flex-wrap justify-center gap-3">
                 {filter !== "all" && (
                   <button
                     onClick={() => setFilter("all")}
@@ -443,35 +659,36 @@ const RefereeMatches: React.FC = () => {
                   </button>
                 )}
                 <button
-                  onClick={() => setMatchType(matchType === "knockout" ? "group" : "knockout")}
+                  onClick={() =>
+                    setMatchType(
+                      matchType === "knockout" ? "group" : "knockout",
+                    )
+                  }
                   className="rounded-xl border border-[#4AEEFF]/30 bg-[#4AEEFF]/15 px-4 py-2 text-xs font-bold text-[#4AEEFF] hover:bg-[#4AEEFF] hover:text-[#061D23] transition-all"
                 >
-                  Switch to {matchType === "knockout" ? "Group Stage" : "Knockout Stage"}
+                  Switch to{" "}
+                  {matchType === "knockout" ? "Group Stage" : "Knockout Stage"}
                 </button>
               </div>
             )}
           </section>
         ) : (
           filteredMatches.map((match) => {
-            const p1Name =
-              match.team1?.name ||
-              (match.player1
-                ? `${match.player1.firstName} ${match.player1.lastName || ""}`.trim()
-                : "TBD");
-            const p2Name =
-              match.team2?.name ||
-              (match.player2
-                ? `${match.player2.firstName} ${match.player2.lastName || ""}`.trim()
-                : "TBD");
+            const p1Name = getParticipantName(match.player1, match.team1);
+            const p2Name = getParticipantName(match.player2, match.team2);
 
             const isP1Winner =
               match.status === "COMPLETED" &&
-              (match.winnerId === match.player1?.id || match.winnerId === match.team1?.id);
+              (match.winnerId === match.player1?.id ||
+                match.winnerId === match.team1?.id);
             const isP2Winner =
               match.status === "COMPLETED" &&
-              (match.winnerId === match.player2?.id || match.winnerId === match.team2?.id);
+              (match.winnerId === match.player2?.id ||
+                match.winnerId === match.team2?.id);
 
-            const scoreParts = match.score ? match.score.split(",").map((s) => s.trim()) : [];
+            const scoreParts = match.score
+              ? match.score.split(",").map((s) => s.trim())
+              : [];
 
             return (
               <section
@@ -564,12 +781,32 @@ const RefereeMatches: React.FC = () => {
                     </div>
                   )}
 
+                  {match.status === "COMPLETED" &&
+                    (() => {
+                      const duration = getMatchDurationMinutes(match);
+
+                      return (
+                        <div className="flex items-center gap-2 flex-wrap text-xs font-mono">
+                          <span className="text-[#4AEEFF] font-bold">
+                            ⏱ Officiating Duration:
+                          </span>
+
+                          <span className="rounded-md border border-[#4AEEFF]/30 bg-[#4AEEFF]/10 px-2.5 py-1 text-[#4AEEFF] font-bold">
+                            {duration !== null
+                              ? formatDuration(duration)
+                              : "Not recorded"}
+                          </span>
+                        </div>
+                      );
+                    })()}
+
                   {match.scheduledTime && (
                     <div className="text-xs font-mono text-slate-400 flex items-center gap-2 flex-wrap">
                       <span>📍 {match.tournament?.venue || "Main Court"}</span>
                       <span>•</span>
                       <span>
-                        🕐 {new Date(match.scheduledTime).toLocaleTimeString([], {
+                        🕐{" "}
+                        {new Date(match.scheduledTime).toLocaleTimeString([], {
                           hour: "2-digit",
                           minute: "2-digit",
                         })}
@@ -587,7 +824,9 @@ const RefereeMatches: React.FC = () => {
                         : "bg-[#4AEEFF] hover:bg-white text-[#061D23] shadow-md shadow-[#4AEEFF]/20"
                     }`}
                   >
-                    {match.status === "COMPLETED" ? "Edit Score" : "Manage Score →"}
+                    {match.status === "COMPLETED"
+                      ? "View Score"
+                      : "Manage Score →"}
                   </button>
                 </div>
               </section>
@@ -621,7 +860,10 @@ const RefereeMatches: React.FC = () => {
                   1. The Service (ITTF Law 2.6)
                 </p>
                 <p>
-                  The ball must rest freely on the palm of the free hand (above table level and behind the end line). It must be thrown near vertically upwards at least 16 cm without adding spin, and struck as it descends.
+                  The ball must rest freely on the palm of the free hand (above
+                  table level and behind the end line). It must be thrown near
+                  vertically upwards at least 16 cm without adding spin, and
+                  struck as it descends.
                 </p>
               </div>
 
@@ -630,7 +872,10 @@ const RefereeMatches: React.FC = () => {
                   2. Scoring & Deuce (ITTF Law 2.11)
                 </p>
                 <p>
-                  A game is won by the first player scoring 11 points, unless both players score 10 points (deuce). At 10-10, the server alternates after every single point, and a player must achieve a 2-point lead to win.
+                  A game is won by the first player scoring 11 points, unless
+                  both players score 10 points (deuce). At 10-10, the server
+                  alternates after every single point, and a player must achieve
+                  a 2-point lead to win.
                 </p>
               </div>
 
@@ -639,7 +884,9 @@ const RefereeMatches: React.FC = () => {
                   3. Change of Ends (ITTF Law 2.13)
                 </p>
                 <p>
-                  Players swap sides after each game. In the deciding final game (Game 3 in best of 3, or Game 5 in best of 5), players must change ends immediately when either player reaches 5 points.
+                  Players swap sides after each game. In the deciding final game
+                  (Game 3 in best of 3, or Game 5 in best of 5), players must
+                  change ends immediately when either player reaches 5 points.
                 </p>
               </div>
 
@@ -648,7 +895,9 @@ const RefereeMatches: React.FC = () => {
                   4. Timeouts & Towelling
                 </p>
                 <p>
-                  Each player is entitled to ONE 1-minute timeout per match. Towelling is permitted only every 6 points from the start of each game, and at the change of ends in the final game.
+                  Each player is entitled to ONE 1-minute timeout per match.
+                  Towelling is permitted only every 6 points from the start of
+                  each game, and at the change of ends in the final game.
                 </p>
               </div>
             </div>
@@ -679,10 +928,10 @@ const RefereeMatches: React.FC = () => {
             match={selectedMatch as any}
             onClose={() => setSelectedMatch(null)}
             onSave={handleKnockoutMatchSave}
-            isAdminOrReferee={true}
+            isAdminOrReferee={selectedMatch.status !== "COMPLETED"}
           />
         ))}
-    </>
+    </>,
   );
 };
 

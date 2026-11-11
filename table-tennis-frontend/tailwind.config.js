@@ -52,9 +52,10 @@ export default {
         },
       },
       fontFamily: {
-        'sans': ['Ebrima'],
-        'heading': ['Bison Bold'],
-        'display': ['Lemon Milk'],
+        'sans': ['Ebrima', 'Inter', 'system-ui', 'sans-serif'],
+        'heading': ['Ebrima', 'Inter', 'system-ui', 'sans-serif'],
+        'display': ['Ebrima', 'Inter', 'system-ui', 'sans-serif'],
+        'script': ['Brush Creeping', 'cursive'],
       },
       animation: {
         'fade-in': 'fadeIn 0.6s ease-in-out',

@@ -3,6 +3,7 @@ import prisma from '../config/database';
 import { GroupService } from '../services/group.service';
 import { catchAsync } from '../utils/catchAsync';
 import { sendResponse } from '../utils/sendResponse';
+import { start } from 'repl';
 
 const groupService = new GroupService();
 
@@ -28,14 +29,16 @@ export const generateGroupMatches = catchAsync(async (req: Request, res: Respons
 
 export const recordGroupScore = catchAsync(async (req: Request, res: Response) => {
   const { matchId } = req.params;
-  const { games, bestOf } = req.body;
+  const { games, bestOf, startTime, endTime } = req.body;
   // games: [{ p1: number|null, p2: number|null }, ...]
   const match = await groupService.recordGroupScore(
     matchId,
     games,
     req.user!.id,
     bestOf ?? 5,
-    req.user?.role
+    req.user?.role,
+    startTime,
+    endTime
   );
   sendResponse(res, 200, 'Score recorded successfully', match);
 });
@@ -63,6 +66,20 @@ export const getGroupMatches = catchAsync(async (req: Request, res: Response) =>
         include: {
           player1: { select: { firstName: true, lastName: true, id: true } },
           player2: { select: { firstName: true, lastName: true, id: true } },
+          team1: {
+            include: {
+              members: {
+                include: { player: { select: { id: true, firstName: true, lastName: true } } },
+              },
+            },
+          },
+          team2: {
+            include: {
+              members: {
+                include: { player: { select: { id: true, firstName: true, lastName: true } } },
+              },
+            },
+          },
         },
       },
     },

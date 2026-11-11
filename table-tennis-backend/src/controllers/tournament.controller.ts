@@ -6,19 +6,7 @@ import { sendResponse } from '../utils/sendResponse';
 
 // Create tournament (Admin only)
 export const createTournament = catchAsync(async (req: Request, res: Response) => {
-  const adminId = req.user!.id;
-  
-  
-  // Verify admin
-  const admin = await prisma.adminProfile.findUnique({
-    where: { userId: adminId },
-  });
-
-  if (!admin) {
-    throw new AppError('Only admins can create tournaments', 403);
-  }
-
-  const { name, description, venue, startDate, endDate, registrationDeadline, maxPlayers,tournamentType } = req.body;
+  const { name, description, venue, startDate, endDate, registrationDeadline, maxPlayers,tournamentType,registrationFee,requirePaymentProofClub,requirePaymentProofGuest,paymentInstructions, } = req.body;
 
   // Validate dates
   if (new Date(startDate) >= new Date(endDate)) {
@@ -39,6 +27,10 @@ export const createTournament = catchAsync(async (req: Request, res: Response) =
       registrationDeadline: new Date(registrationDeadline),
       maxPlayers,
       tournamentType: tournamentType === 'GROUP_KNOCKOUT' ? 'GROUP_KNOCKOUT' : 'KNOCKOUT', // ← ADD THIS LINE
+      registrationFee: registrationFee !== undefined ? registrationFee : null,
+      requirePaymentProofClub: requirePaymentProofClub ?? false,
+      requirePaymentProofGuest: requirePaymentProofGuest ?? false,
+      paymentInstructions: paymentInstructions || null,
     },
   });
 
@@ -54,6 +46,7 @@ export const getAllTournaments = catchAsync(async (req: Request, res: Response) 
           id: true,
           name: true,
           type: true,
+          stageFormat: true,
           maxParticipants: true,
           currentParticipants: true,
         },
@@ -83,7 +76,6 @@ export const getTournamentById = catchAsync(async (req: Request, res: Response) 
         },
       },
       registrations: {
-        where: { status: 'APPROVED' },
         include: {
           player: {
             select: {
@@ -94,6 +86,22 @@ export const getTournamentById = catchAsync(async (req: Request, res: Response) 
             },
           },
           category: true,
+          team: {
+            include: {
+              members: {
+                include: {
+                  player: {
+                    select: {
+                      id: true,
+                      firstName: true,
+                      lastName: true,
+                      email: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
         },
       },
       matches: {
@@ -116,17 +124,7 @@ export const getTournamentById = catchAsync(async (req: Request, res: Response) 
 
 // Update tournament (Admin only)
 export const updateTournament = catchAsync(async (req: Request, res: Response) => {
-  const adminId = req.user!.id;
   const { id } = req.params;
-
-  // Verify admin
-  const admin = await prisma.adminProfile.findUnique({
-    where: { userId: adminId },
-  });
-
-  if (!admin) {
-    throw new AppError('Only admins can update tournaments', 403);
-  }
 
   const tournament = await prisma.tournament.findUnique({
     where: { id },
@@ -136,7 +134,7 @@ export const updateTournament = catchAsync(async (req: Request, res: Response) =
     throw new AppError('Tournament not found', 404);
   }
 
-  const { name, description, venue, startDate, endDate, registrationDeadline, status, maxPlayers } = req.body;
+  const { name, description, venue, startDate, endDate, registrationDeadline, status, maxPlayers,registrationFee,requirePaymentProofClub,requirePaymentProofGuest,paymentInstructions } = req.body;
 
   const updatedTournament = await prisma.tournament.update({
     where: { id },
@@ -149,6 +147,10 @@ export const updateTournament = catchAsync(async (req: Request, res: Response) =
       registrationDeadline: registrationDeadline ? new Date(registrationDeadline) : undefined,
       status: status || undefined,
       maxPlayers: maxPlayers !== undefined ? maxPlayers : undefined,
+      registrationFee: registrationFee !== undefined ? registrationFee : undefined,
+      requirePaymentProofClub: requirePaymentProofClub !== undefined ? requirePaymentProofClub : undefined,
+      requirePaymentProofGuest: requirePaymentProofGuest !== undefined ? requirePaymentProofGuest : undefined,
+      paymentInstructions: paymentInstructions !== undefined ? paymentInstructions : undefined,
     },
   });
 
@@ -157,17 +159,7 @@ export const updateTournament = catchAsync(async (req: Request, res: Response) =
 
 // Delete tournament (Admin only)
 export const deleteTournament = catchAsync(async (req: Request, res: Response) => {
-  const adminId = req.user!.id;
   const { id } = req.params;
-
-  // Verify admin
-  const admin = await prisma.adminProfile.findUnique({
-    where: { userId: adminId },
-  });
-
-  if (!admin) {
-    throw new AppError('Only admins can delete tournaments', 403);
-  }
 
   const tournament = await prisma.tournament.findUnique({
     where: { id },
@@ -187,17 +179,7 @@ export const deleteTournament = catchAsync(async (req: Request, res: Response) =
 
 // Add category to tournament (Admin only)
 export const addCategory = catchAsync(async (req: Request, res: Response) => {
-  const adminId = req.user!.id;
   const { tournamentId } = req.params;
-
-  // Verify admin
-  const admin = await prisma.adminProfile.findUnique({
-    where: { userId: adminId },
-  });
-
-  if (!admin) {
-    throw new AppError('Only admins can add categories', 403);
-  }
 
   const tournament = await prisma.tournament.findUnique({
     where: { id: tournamentId },
@@ -207,7 +189,7 @@ export const addCategory = catchAsync(async (req: Request, res: Response) => {
     throw new AppError('Tournament not found', 404);
   }
 
-  const { name, type, minAge, maxAge, gender, maxParticipants } = req.body;
+  const { name, type, minAge, maxAge, gender, maxParticipants, stageFormat } = req.body;
 
   const existingCategory = await prisma.category.findFirst({
   where: {
@@ -231,6 +213,7 @@ if (existingCategory) {
       tournamentId,
       name,
       type,
+      stageFormat: stageFormat === 'GROUP_KNOCKOUT' ? 'GROUP_KNOCKOUT' : 'KNOCKOUT',
       minAge,
       maxAge,
       gender,
@@ -259,17 +242,7 @@ export const getTournamentCategories = catchAsync(async (req: Request, res: Resp
 
 // Update category (Admin only)
 export const updateCategory = catchAsync(async (req: Request, res: Response) => {
-  const adminId = req.user!.id;
   const { categoryId } = req.params;
-
-  // Verify admin
-  const admin = await prisma.adminProfile.findUnique({
-    where: { userId: adminId },
-  });
-
-  if (!admin) {
-    throw new AppError('Only admins can update categories', 403);
-  }
 
   const category = await prisma.category.findUnique({
     where: { id: categoryId },
@@ -279,13 +252,14 @@ export const updateCategory = catchAsync(async (req: Request, res: Response) => 
     throw new AppError('Category not found', 404);
   }
 
-  const { name, type, minAge, maxAge, gender, maxParticipants } = req.body;
+  const { name, type, minAge, maxAge, gender, maxParticipants, stageFormat } = req.body;
 
   const updatedCategory = await prisma.category.update({
     where: { id: categoryId },
     data: {
       name: name || undefined,
       type: type || undefined,
+      stageFormat: stageFormat || undefined,
       minAge: minAge !== undefined ? (minAge !== null && minAge !== '' ? Number(minAge) : null) : undefined,
       maxAge: maxAge !== undefined ? (maxAge !== null && maxAge !== '' ? Number(maxAge) : null) : undefined,
       gender: gender !== undefined ? (gender ? gender : null) : undefined,
@@ -298,17 +272,7 @@ export const updateCategory = catchAsync(async (req: Request, res: Response) => 
 
 // Delete category (Admin only)
 export const deleteCategory = catchAsync(async (req: Request, res: Response) => {
-  const adminId = req.user!.id;
   const { categoryId } = req.params;
-
-  // Verify admin
-  const admin = await prisma.adminProfile.findUnique({
-    where: { userId: adminId },
-  });
-
-  if (!admin) {
-    throw new AppError('Only admins can delete categories', 403);
-  }
 
   const category = await prisma.category.findUnique({
     where: { id: categoryId },

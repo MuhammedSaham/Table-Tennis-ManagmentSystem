@@ -13,6 +13,7 @@ declare global {
                 firstName: string;
                 lastName: string;
                 role: string;
+                isSuperAdmin: boolean;
             };
         }
     }
@@ -42,4 +43,22 @@ export const authenticate = async (
     } catch (error) {
         next(error);
     }
+};
+
+export const optionalAuthenticate = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+) => {
+    try {
+        const authHeader = req.headers.authorization;
+        if (authHeader && authHeader.startsWith('Bearer ')) {
+            const token = authHeader.split(' ')[1];
+            const user = await authService.verifyToken(token);
+            req.user = user;
+        }
+    } catch {
+        // Continue silently as unauthenticated guest
+    }
+    next();
 };

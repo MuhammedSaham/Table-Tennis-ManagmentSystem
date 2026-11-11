@@ -13,6 +13,7 @@ import {
   declineInvite,
   cancelInvite,
   getMyInvites,
+  getMySentInvites,
 } from '../controllers/team.controller';
 import { createTeamSchema } from '../validations/team.validation';
 
@@ -31,9 +32,10 @@ router.post('/', validate(createTeamSchema), createTeam);
 // ─── DOUBLES INVITE ROUTES (Player only) ─────────────────────────────────────
 router.get('/invites/search', isPlayer, searchPartners);
 router.get('/invites/my-invites', isPlayer, getMyInvites);
+router.get('/invites/sent-invites', isPlayer, getMySentInvites);
 router.post('/invites/send', isPlayer, sendInvite);
 router.post('/invites/:inviteId/accept', isPlayer, acceptInvite);
 router.post('/invites/:inviteId/decline', isPlayer, declineInvite);
 router.delete('/invites/:inviteId/cancel', isPlayer, cancelInvite);
 
-export default router;
+export default router;

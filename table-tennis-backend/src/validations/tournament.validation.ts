@@ -31,6 +31,23 @@ export const createTournamentSchema = z.object({
       .optional(),
 
       tournamentType: z.enum(['KNOCKOUT', 'GROUP_KNOCKOUT']).default('KNOCKOUT'),
+
+      registrationFee: z.number()
+  .nonnegative('Registration fee cannot be negative')
+  .optional(),
+
+requirePaymentProofClub: z.boolean()
+  .optional()
+  .default(false),
+
+requirePaymentProofGuest: z.boolean()
+  .optional()
+  .default(false),
+
+paymentInstructions: z.string()
+  .max(1000, 'Payment instructions must not exceed 1000 characters')
+  .optional(),
+
   }).refine(data => new Date(data.startDate) < new Date(data.endDate), {
     message: 'End date must be after start date',
     path: ['endDate'],
@@ -46,7 +63,23 @@ export const createTournamentSchema = z.object({
   }, {
     message: 'Tournament duration cannot exceed 30 days',
     path: ['endDate'],
-  }),
+  })
+
+  .refine(data => {
+  if (
+    data.requirePaymentProofClub ||
+    data.requirePaymentProofGuest
+  ) {
+    return data.registrationFee !== undefined &&
+           data.registrationFee > 0;
+  }
+
+  return true;
+}, {
+  message: 'Registration fee is required when payment proof is required',
+  path: ['registrationFee'],
+}),
+
 });
 
 // Update tournament validation schema
@@ -89,7 +122,24 @@ export const updateTournamentSchema = z.object({
       .int('Max players must be a whole number')
       .positive('Max players must be positive')
       .max(1000, 'Max players cannot exceed 1000')
+      .nullable()
       .optional(),
+
+    registrationFee: z.number()
+  .nonnegative('Registration fee cannot be negative')
+  .nullable()
+  .optional(),
+
+requirePaymentProofClub: z.boolean()
+  .optional(),
+
+requirePaymentProofGuest: z.boolean()
+  .optional(),
+
+paymentInstructions: z.string()
+  .max(1000, 'Payment instructions must not exceed 1000 characters')
+  .nullable()
+  .optional(),
   }).refine(data => {
     // If both startDate and endDate are provided, validate they are in correct order
     if (data.startDate && data.endDate) {
@@ -121,9 +171,11 @@ export const addCategorySchema = z.object({
       .min(2, 'Category name must be at least 2 characters')
       .max(100, 'Category name must not exceed 100 characters'),
     
-    type: z.enum(['SINGLES', 'DOUBLES', 'TEAM'], {
-      errorMap: () => ({ message: 'Type must be SINGLES, DOUBLES, or TEAM' }),
+    type: z.enum(['SINGLES', 'DOUBLES','MIXED_DOUBLES', 'TEAM'], {
+      errorMap: () => ({ message: 'Type must be SINGLES, DOUBLES, MIXED_DOUBLES, or TEAM' }),
     }),
+
+    stageFormat: z.enum(['KNOCKOUT', 'GROUP_KNOCKOUT']).default('KNOCKOUT').optional(),
     
     minAge: z.number()
       .int('Minimum age must be a whole number')
@@ -177,9 +229,11 @@ export const updateCategorySchema = z.object({
       .max(100, 'Category name must not exceed 100 characters')
       .optional(),
     
-    type: z.enum(['SINGLES', 'DOUBLES', 'TEAM'], {
-      errorMap: () => ({ message: 'Type must be SINGLES, DOUBLES, or TEAM' }),
+    type: z.enum(['SINGLES', 'DOUBLES','MIXED_DOUBLES', 'TEAM'], {
+      errorMap: () => ({ message: 'Type must be SINGLES, DOUBLES, MIXED_DOUBLES, or TEAM' }),
     }).optional(),
+
+    stageFormat: z.enum(['KNOCKOUT', 'GROUP_KNOCKOUT']).optional(),
     
     minAge: z.number()
       .int('Minimum age must be a whole number')
