@@ -356,15 +356,6 @@ const styles: Record<string, React.CSSProperties> = {
   },
 };
 
-const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
-  e.currentTarget.style.borderColor = "#4AEEFF";
-  e.currentTarget.style.background = "rgba(6,29,35,0.55)";
-};
-const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
-  e.currentTarget.style.borderColor = "rgba(255,255,255,0.25)";
-  e.currentTarget.style.background = "rgba(6,29,35,0.45)";
-};
-
 const EyeIcon = ({ open }: { open: boolean }) =>
   open ? (
     <svg

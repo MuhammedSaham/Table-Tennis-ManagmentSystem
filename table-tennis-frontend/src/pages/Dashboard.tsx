@@ -12,7 +12,6 @@ import {
   InboxStackIcon,
   ChevronRightIcon,
   ShieldCheckIcon,
-  MapPinIcon,
 } from "@heroicons/react/24/outline";
 
 interface Tournament {
