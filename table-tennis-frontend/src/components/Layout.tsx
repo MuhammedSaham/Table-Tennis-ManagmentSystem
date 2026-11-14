@@ -139,7 +139,10 @@ const Layout: React.FC = () => {
         <div className="w-full px-4 sm:px-6 lg:px-10 xl:px-14 2xl:px-16">
           <div className="flex justify-between items-center h-16 sm:h-20">
             {/* Logo */}
-            <Link to="/" className="flex items-center gap-2 group shrink-0">
+            <Link
+              to={isReferee ? "/app/referee/matches" : "/app/dashboard"}
+              className="flex items-center gap-2 group shrink-0"
+            >
               <img
                 src={Logo}
                 alt="Sam's College"
