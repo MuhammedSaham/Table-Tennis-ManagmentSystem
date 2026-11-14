@@ -16,6 +16,10 @@ import ConfirmModal from "../components/ConfirmModal";
 import CreateKnockoutModal from "../components/CreateKnockoutModal";
 import DoublesPartnerModal from "../components/DoublesPartnerModal";
 import { getEffectiveTournamentStatus } from "../utils/tournamentStatus";
+import {
+  CalendarIcon,
+  MapPinIcon,
+} from "@heroicons/react/24/outline";
 
 const capitalizeWords = (str: string): string => {
   if (!str) return "";
@@ -29,6 +33,7 @@ const capitalizeWords = (str: string): string => {
 const formatDivisionName = (name?: string) => {
   if (!name) return "";
   const cleaned = name
+    .replace(/\bsiingle\b/gi, "Single")
     .replace(/\s+(double|doubles|single|singles)?\s*group\s*stages?/gi, "")
     .trim();
   const target = cleaned || name;
@@ -1825,22 +1830,46 @@ const TournamentDetails: React.FC<TournamentDetailsProps> = ({
               <div className="flex flex-col sm:items-end gap-3 shrink-0">
                 {/* Status & Admin Action Buttons */}
                 <div className="flex flex-wrap gap-2 items-center">
-                  {/* Player Registration Button */}
-                  {canRegister && tournament.categories.length > 0 && (
-                    <button
-                      type="button"
-                      onClick={() =>
-                        navigate(`/app/tournaments/${id}/register`)
-                      }
-                      className="rounded-xl bg-[#4AEEFF] px-5 py-2.5
-               text-xs font-black uppercase tracking-wider
-               text-[#061D23] shadow-lg
-               transition-all duration-300
-               hover:bg-white hover:-translate-y-0.5
-               active:scale-95"
-                    >
-                      Register Now →
-                    </button>
+                  {/* Player Registration Status & Action Button */}
+                  {isPlayer && tournament.categories.length > 0 && (
+                    <>
+                      {hasRegistration ? (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            navigate(`/app/tournaments/${id}/register`)
+                          }
+                          className="inline-flex items-center gap-2 rounded-xl bg-emerald-500/15 border border-emerald-400/40 px-4 py-2 text-xs font-black uppercase tracking-wider text-emerald-300 shadow-[0_0_15px_rgba(16,185,129,0.2)] hover:bg-emerald-500/25 transition-all active:scale-95 group"
+                        >
+                          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                          <span>
+                            {userRegistrations.some(
+                              (r) => r.status === "APPROVED",
+                            )
+                              ? "✓ Enrolled (Approved)"
+                              : userRegistrations.some(
+                                    (r) => r.status === "PENDING",
+                                  )
+                                ? "⏳ Entry Pending"
+                                : "✓ View Entry Pass"}
+                          </span>
+                        </button>
+                      ) : isRegistrationOpen ? (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            navigate(`/app/tournaments/${id}/register`)
+                          }
+                          className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-[#4AEEFF] to-[#00b4d8] px-5 py-2.5 text-xs font-black uppercase tracking-wider text-[#061D23] shadow-lg shadow-[#4AEEFF]/25 transition-all duration-300 hover:brightness-110 hover:-translate-y-0.5 active:scale-95"
+                        >
+                          <span>Register Now →</span>
+                        </button>
+                      ) : (
+                        <span className="inline-flex items-center px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-white/50 text-xs font-bold font-mono">
+                          Registration Closed
+                        </span>
+                      )}
+                    </>
                   )}
                   <span
                     className={`px-3 py-1.5 text-xs font-semibold uppercase tracking-wider rounded-lg border shadow-sm ${getStatusColor(effectiveStatus)}`}
@@ -1990,10 +2019,11 @@ const TournamentDetails: React.FC<TournamentDetailsProps> = ({
           )}
 
           {/* Edit Tournament Modal */}
-          {showEditModal && (
-            <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/70 p-4 pt-24 backdrop-blur-sm animate-fadeIn sm:pt-28">
-              <div className="w-full max-w-4xl rounded-2xl border border-white/20 bg-[#061D23]/90 p-6 text-white shadow-[0_25px_60px_-15px_rgba(0,0,0,0.8)] backdrop-blur-2xl sm:p-8">
-                <div className="mb-6 flex items-center justify-between border-b border-white/10 pb-4">
+          {showEditModal &&
+            createPortal(
+              <div className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-black/80 p-4 backdrop-blur-md animate-in fade-in duration-200">
+                <div className="w-full max-w-4xl max-h-[92vh] overflow-y-auto custom-scrollbar rounded-2xl border border-[#4AEEFF]/40 bg-[#061D23]/95 p-6 text-white shadow-[0_25px_60px_-15px_rgba(0,0,0,0.8)] backdrop-blur-2xl sm:p-8 my-auto">
+                  <div className="mb-6 flex items-center justify-between border-b border-white/10 pb-4">
                   <div className="flex items-center gap-3">
                     <span className="h-6 w-2.5 rounded-full bg-[#4AEEFF] shadow-[0_0_10px_#4AEEFF]" />
                     <h2 className="text-xl font-black uppercase tracking-widest text-white sm:text-2xl">
@@ -2485,7 +2515,8 @@ const TournamentDetails: React.FC<TournamentDetailsProps> = ({
                   </div>
                 </div>
               </div>
-            </div>
+            </div>,
+            document.body,
           )}
 
           {/* ─── TOURNAMENT COMPETITION SECTION (Bracket, Champions, Groups) ─── */}
@@ -2576,14 +2607,6 @@ const TournamentDetails: React.FC<TournamentDetailsProps> = ({
                         ? "Group + Knockout"
                         : "Knockout Draw"}
                     </span>
-                    <Link
-                      to={`/leaderboard?tournament=${id}&category=${activeCategoryId}`}
-                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[#4AEEFF]/15 hover:bg-[#4AEEFF]/25 border border-[#4AEEFF]/40 text-[#4AEEFF] hover:text-white font-bold text-xs tracking-wide transition-all shadow-[0_0_12px_rgba(74,238,255,0.15)] shrink-0"
-                      title="View leaderboard standings"
-                    >
-                      <span>📊 Leaderboard</span>
-                      <span className="text-xs">→</span>
-                    </Link>
                   </div>
                 </div>
               </section>
@@ -2704,9 +2727,14 @@ const TournamentDetails: React.FC<TournamentDetailsProps> = ({
                   <h2 className="text-2xl sm:text-3xl font-heading font-bold text-white tracking-tight">
                     Tournament Champions
                   </h2>
-                  <p className="mt-0.5 text-xs text-white/60">
-                    Official podium standings for {activeCategory?.name || "this category"}
-                  </p>
+                  <div className="mt-1.5 flex items-center justify-center">
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs font-medium text-slate-300">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#4AEEFF] animate-pulse" />
+                      {effectiveStatus === "COMPLETED"
+                        ? `Official Final Standings • ${formatDivisionName(activeCategory?.name)}`
+                        : `Podium in Contention • ${formatDivisionName(activeCategory?.name)}`}
+                    </span>
+                  </div>
                 </div>
 
                 {/* Show results only for the selected category */}
@@ -3134,26 +3162,50 @@ const TournamentDetails: React.FC<TournamentDetailsProps> = ({
       )}
 
       {registrationOnly && (
-        <div className="mb-6">
-          <button
-            type="button"
-            onClick={() => navigate(`/app/tournaments/${id}`)}
-            className="mb-5 text-sm font-semibold text-[#4AEEFF] hover:text-white"
-          >
-            ← Back to Tournament Details
-          </button>
+        <div className="rounded-2xl border border-white/20 bg-[#061D23]/25 p-5 sm:p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl mb-6">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            <div>
+              <button
+                type="button"
+                onClick={() => navigate(`/app/tournaments/${id}`)}
+                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-white/5 border border-white/10 text-xs font-bold text-[#4AEEFF] hover:bg-white/10 hover:text-white transition-all mb-3"
+              >
+                ← Back to Tournament Details
+              </button>
+              <h1 className="text-2xl sm:text-3xl font-heading font-bold text-white tracking-tight">
+                Tournament Registration
+              </h1>
+              <p className="mt-1 text-xs sm:text-sm text-cyan-200/80">
+                {tournament.name} · Official division enrollment & athlete check-in
+              </p>
+            </div>
 
-          <h1 className="text-2xl font-black text-white">
-            Tournament Registration
-          </h1>
-
-          <p className="mt-2 text-sm text-white/60">{tournament.name}</p>
-
-          <p className="mt-1 text-sm text-white/50">
-            Select your eligible divisions and complete registration.
-          </p>
+            {/* Meta chips */}
+            <div className="flex flex-wrap items-center gap-2 text-xs">
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-white/70">
+                <MapPinIcon className="w-3.5 h-3.5 text-[#4AEEFF]" />
+                <span>{tournament.venue}</span>
+              </div>
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-white/70">
+                <CalendarIcon className="w-3.5 h-3.5 text-[#4AEEFF]" />
+                <span>
+                  {formatTournamentDateRange(
+                    tournament.startDate,
+                    tournament.endDate,
+                  )}
+                </span>
+              </div>
+              <span
+                className={`px-2.5 py-1 text-[10px] font-black uppercase tracking-wider rounded-lg border ${getStatusColor(effectiveStatus)}`}
+              >
+                {effectiveStatus}
+              </span>
+            </div>
+          </div>
         </div>
       )}
+
+
 
       {/* Professional Tournament Division Entry Section */}
       {registrationOnly && canRegister && tournament.categories.length > 0 && (
@@ -3490,21 +3542,7 @@ const TournamentDetails: React.FC<TournamentDetailsProps> = ({
         </div>
       )}
 
-      {registrationOnly && hasRegistration && (
-        <div className="rounded-[16px] border border-white/20 bg-[#061D23]/25 p-5 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl mb-6 flex items-center flex-wrap gap-2">
-          <p className="text-xs uppercase tracking-wider font-bold text-[#4AEEFF]">
-            Your registration status:
-          </p>
-          {userRegistrations.map((reg) => (
-            <span
-              key={reg.id}
-              className={`px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-md border ${getRegistrationStatusColor(reg.status)}`}
-            >
-              {reg.status}
-            </span>
-          ))}
-        </div>
-      )}
+
       {/* Payment Proof Verification */}
       {registrationOnly &&
         isPlayer &&

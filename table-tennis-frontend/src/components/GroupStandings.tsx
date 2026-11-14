@@ -331,7 +331,7 @@ export const UmpireSheet: React.FC<UmpireSheetProps> = ({
           color: "#0f172a",
           borderRadius: 16,
           width: "100%",
-          maxWidth: 600,
+          maxWidth: 620,
           boxShadow: "0 24px 60px rgba(0,0,0,0.3)",
           overflow: "hidden",
           fontFamily: "'Segoe UI', system-ui, sans-serif",
@@ -342,28 +342,28 @@ export const UmpireSheet: React.FC<UmpireSheetProps> = ({
         <div
           style={{
             background: "#061D23",
-            padding: "16px 24px",
+            padding: "12px 20px",
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
             borderBottom: "1px solid rgba(255,255,255,0.1)",
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <img
               src={invertedLogo}
               alt="Sam's College"
               style={{
-                height: 42,
+                height: 38,
                 width: "auto",
-                maxWidth: 160,
+                maxWidth: 150,
                 objectFit: "contain",
                 display: "block",
               }}
             />
             <div
               style={{
-                height: 28,
+                height: 26,
                 width: 1,
                 background: "rgba(255, 255, 255, 0.2)",
               }}
@@ -403,8 +403,8 @@ export const UmpireSheet: React.FC<UmpireSheetProps> = ({
               background: "rgba(255,255,255,0.1)",
               border: "none",
               color: "#fff",
-              width: 32,
-              height: 32,
+              width: 30,
+              height: 30,
               borderRadius: "50%",
               cursor: "pointer",
               fontSize: 18,
@@ -418,14 +418,14 @@ export const UmpireSheet: React.FC<UmpireSheetProps> = ({
         </div>
 
         {/* Sheet body */}
-        <div style={{ padding: "24px 24px 20px" }}>
+        <div style={{ padding: "18px 22px 14px" }}>
           {/* Date + category + Best Of toggle */}
           <div
             style={{
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",
-              marginBottom: 20,
+              marginBottom: 12,
               flexWrap: "wrap",
               gap: 10,
             }}
@@ -539,48 +539,48 @@ export const UmpireSheet: React.FC<UmpireSheetProps> = ({
               flexWrap: "wrap",
               alignItems: "center",
               gap: 16,
-              marginBottom: 16,
-              padding: 12,
+              marginBottom: 12,
+              padding: "8px 14px",
               background: "#f8fafc",
               border: "1px solid #e2e8f0",
               borderRadius: 10,
             }}
           >
-            <label style={{ fontSize: 13, fontWeight: 600 }}>
-              Start Time
+            <label style={{ fontSize: 13, fontWeight: 600, display: "flex", alignItems: "center", gap: 6 }}>
+              Start Time:
               <input
                 type="time"
                 value={startTime}
                 onChange={(e) => setStartTime(e.target.value)}
                 disabled={isCompleted || !isAdminOrReferee}
                 style={{
-                  display: "block",
-                  marginTop: 5,
-                  padding: 7,
+                  padding: "4px 8px",
                   border: "1px solid #cbd5e1",
                   borderRadius: 6,
+                  fontSize: 13,
+                  outline: "none",
                 }}
               />
             </label>
 
-            <label style={{ fontSize: 13, fontWeight: 600 }}>
-              End Time
+            <label style={{ fontSize: 13, fontWeight: 600, display: "flex", alignItems: "center", gap: 6 }}>
+              End Time:
               <input
                 type="time"
                 value={endTime}
                 onChange={(e) => setEndTime(e.target.value)}
                 disabled={isCompleted || !isAdminOrReferee}
                 style={{
-                  display: "block",
-                  marginTop: 5,
-                  padding: 7,
+                  padding: "4px 8px",
                   border: "1px solid #cbd5e1",
                   borderRadius: 6,
+                  fontSize: 13,
+                  outline: "none",
                 }}
               />
             </label>
 
-            <div style={{ fontSize: 13 }}>
+            <div style={{ fontSize: 13, color: "#475569", marginLeft: "auto" }}>
               <strong>Duration:</strong>{" "}
               {matchDuration === null
                 ? "Not entered"
@@ -594,8 +594,8 @@ export const UmpireSheet: React.FC<UmpireSheetProps> = ({
           {!isCompleted && (
             <div
               style={{
-                marginBottom: 16,
-                padding: "10px 14px",
+                marginBottom: 12,
+                padding: "8px 14px",
                 background: "#f8fafc",
                 borderRadius: 10,
                 border: "1px solid #e2e8f0",
@@ -640,13 +640,13 @@ export const UmpireSheet: React.FC<UmpireSheetProps> = ({
                 <tr style={{ background: "#f8fafc" }}>
                   <th
                     style={{
-                      padding: "10px 14px",
+                      padding: "8px 12px",
                       textAlign: "left",
                       fontSize: 12,
                       fontWeight: 700,
                       color: "#64748b",
                       border: "1px solid #e2e8f0",
-                      minWidth: 130,
+                      minWidth: 120,
                     }}
                   />
                   {Array.from(
@@ -656,12 +656,12 @@ export const UmpireSheet: React.FC<UmpireSheetProps> = ({
                     <th
                       key={g}
                       style={{
-                        padding: "10px 14px",
+                        padding: "8px 12px",
                         textAlign: "center",
                         fontSize: 13,
                         fontWeight: 700,
                         border: "1px solid #e2e8f0",
-                        width: 54,
+                        width: 52,
                         color: gameIsNeeded(g - 1) ? "#0f172a" : "#cbd5e1",
                         background: gameIsNeeded(g - 1) ? "#fff" : "#f8fafc",
                       }}
@@ -671,7 +671,7 @@ export const UmpireSheet: React.FC<UmpireSheetProps> = ({
                   ))}
                   <th
                     style={{
-                      padding: "10px 14px",
+                      padding: "8px 12px",
                       textAlign: "center",
                       fontSize: 12,
                       fontWeight: 700,
@@ -702,7 +702,7 @@ export const UmpireSheet: React.FC<UmpireSheetProps> = ({
                   <tr key={side}>
                     <td
                       style={{
-                        padding: "10px 14px",
+                        padding: "8px 12px",
                         fontSize: 13,
                         fontWeight: 600,
                         color: "#1e293b",
@@ -775,10 +775,10 @@ export const UmpireSheet: React.FC<UmpireSheetProps> = ({
                     )}
                     <td
                       style={{
-                        padding: "10px 14px",
+                        padding: "8px 12px",
                         textAlign: "center",
                         border: "1px solid #e2e8f0",
-                        fontSize: 24,
+                        fontSize: 22,
                         fontWeight: 900,
                         color,
                       }}
@@ -791,73 +791,90 @@ export const UmpireSheet: React.FC<UmpireSheetProps> = ({
             </table>
           </div>
 
-          {/* Winner & Signature row */}
+          {/* Winner & Signature row - Gap-Free & Balanced */}
           <div
             style={{
-              marginTop: 20,
+              marginTop: 12,
               display: "flex",
               justifyContent: "space-between",
-              alignItems: "flex-end",
+              alignItems: "flex-start",
               flexWrap: "wrap",
-              gap: 12,
+              gap: 14,
             }}
           >
-            <div style={{ fontSize: 13, color: "#475569" }}>
-              <strong>Won by:</strong>{" "}
-              {p1Wins > p2Wins ? (
-                <span style={{ color: "#0369a1", fontWeight: 700 }}>
-                  {p1Name}
+            {/* Left: Won by, Umpire & Completed badge */}
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: 6,
+                minWidth: 200,
+                flex: 1,
+              }}
+            >
+              <div style={{ fontSize: 13, color: "#475569" }}>
+                <strong>Won by:</strong>{" "}
+                {p1Wins > p2Wins ? (
+                  <span style={{ color: "#0369a1", fontWeight: 700 }}>
+                    {p1Name}
+                  </span>
+                ) : p2Wins > p1Wins ? (
+                  <span style={{ color: "#b91c1c", fontWeight: 700 }}>
+                    {p2Name}
+                  </span>
+                ) : (
+                  <span style={{ color: "#94a3b8" }}>…………………………</span>
+                )}
+              </div>
+
+              <div style={{ fontSize: 13, color: "#475569" }}>
+                <strong>Umpire:</strong>{" "}
+                <span style={{ color: "#0f172a", fontWeight: 700 }}>
+                  {match.referee?.user
+                    ? `${match.referee.user.firstName} ${match.referee.user.lastName}`
+                    : user?.role === "SUPER_ADMIN" || user?.role === "ADMIN"
+                      ? `${user.firstName} ${user.lastName} (${user.role === "SUPER_ADMIN" ? "Super Admin" : "Admin"})`
+                      : isCompleted
+                        ? "Tournament Official"
+                        : "…………………………"}
                 </span>
-              ) : p2Wins > p1Wins ? (
-                <span style={{ color: "#b91c1c", fontWeight: 700 }}>
-                  {p2Name}
-                </span>
-              ) : (
-                <span style={{ color: "#94a3b8" }}>…………………………</span>
+              </div>
+
+              {isCompleted && (
+                <div
+                  style={{
+                    marginTop: 2,
+                    background: "#dcfce7",
+                    color: "#166534",
+                    fontSize: 12,
+                    fontWeight: 700,
+                    padding: "4px 12px",
+                    borderRadius: 20,
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 4,
+                    width: "fit-content",
+                  }}
+                >
+                  ✓ Match Completed
+                </div>
               )}
             </div>
-            <div>
-              <p className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-500">
+
+            {/* Right: Scoring Referee */}
+            <div style={{ flexShrink: 0 }}>
+              <p className="mb-1 text-xs font-bold uppercase tracking-wide text-slate-500">
                 Scoring Referee
               </p>
               <RefereeProfileCard referee={match.referee?.user} />
             </div>
-            <div style={{ fontSize: 13, color: "#475569" }}>
-              <strong>Umpire:</strong>{" "}
-              <span style={{ color: "#0f172a", fontWeight: 700 }}>
-                {match.referee?.user
-                  ? `${match.referee.user.firstName} ${match.referee.user.lastName}`
-                  : user?.role === "SUPER_ADMIN" || user?.role === "ADMIN"
-                    ? `${user.firstName} ${user.lastName} (${user.role === "SUPER_ADMIN" ? "Super Admin" : "Admin"})`
-                    : isCompleted
-                      ? "Tournament Official"
-                      : "…………………………"}
-              </span>
-            </div>
           </div>
-
-          {isCompleted && (
-            <div
-              style={{
-                marginTop: 14,
-                background: "#dcfce7",
-                color: "#166534",
-                fontSize: 12,
-                fontWeight: 700,
-                padding: "6px 14px",
-                borderRadius: 20,
-                display: "inline-block",
-              }}
-            >
-              ✓ Match Completed
-            </div>
-          )}
         </div>
 
         {/* Footer */}
         <div
           style={{
-            padding: "14px 24px",
+            padding: "10px 22px",
             borderTop: "1px solid #e2e8f0",
             display: "flex",
             justifyContent: "flex-end",
@@ -868,13 +885,13 @@ export const UmpireSheet: React.FC<UmpireSheetProps> = ({
           <button
             onClick={onClose}
             style={{
-              padding: "9px 20px",
+              padding: "8px 20px",
               border: "1.5px solid #e2e8f0",
               borderRadius: 10,
               background: "#fff",
               color: "#475569",
               fontWeight: 600,
-              fontSize: 14,
+              fontSize: 13,
               cursor: "pointer",
             }}
           >
