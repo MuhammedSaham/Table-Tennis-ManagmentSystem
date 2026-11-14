@@ -13,6 +13,9 @@ interface NormalizedMatch {
   status: string;
   score: string | null;
   winnerId: string | null;
+  winnerTeamId?: string | null;
+  team1?: any;
+  team2?: any;
   player1: { id: string; firstName: string; lastName: string } | null;
   player2: { id: string; firstName: string; lastName: string } | null;
   tournament: { id: string; name: string; venue: string };
@@ -348,21 +351,34 @@ export class MatchService {
 
     // ── Group stage matches ─────────────────────────────────────────────────────
     const groupMatches = await prisma.groupMatch.findMany({
-  where: {
-    OR: [{ player1Id: playerId }, { player2Id: playerId }, { team1: { members: { some: { playerId, isActive: true } } } }, { team2: { members: { some: { playerId, isActive: true } } } }],
-  },
-  include: {                                          // ← use include not select
-    player1: { select: { id: true, firstName: true, lastName: true } },
-    player2: { select: { id: true, firstName: true, lastName: true } },
-    group: {
-      include: {                                      // ← include inside group too
-        tournament: { select: { id: true, name: true, venue: true } },
-        category: { select: { name: true, type: true } },
+      where: {
+        OR: [{ player1Id: playerId }, { player2Id: playerId }, { team1: { members: { some: { playerId, isActive: true } } } }, { team2: { members: { some: { playerId, isActive: true } } } }],
       },
-    },
-  },
-
-});
+      include: {
+        player1: { select: { id: true, firstName: true, lastName: true } },
+        player2: { select: { id: true, firstName: true, lastName: true } },
+        team1: {
+          include: {
+            members: {
+              include: { player: { select: { id: true, firstName: true, lastName: true } } },
+            },
+          },
+        },
+        team2: {
+          include: {
+            members: {
+              include: { player: { select: { id: true, firstName: true, lastName: true } } },
+            },
+          },
+        },
+        group: {
+          include: {
+            tournament: { select: { id: true, name: true, venue: true } },
+            category: { select: { name: true, type: true } },
+          },
+        },
+      },
+    });
 
     // Show approved registrations before brackets or groups have been generated.
     const registrations = await prisma.tournamentRegistration.findMany({
@@ -408,6 +424,7 @@ export class MatchService {
       status: match.status,
       score: match.score ?? null,
       winnerId: match.winnerId ?? null,
+      winnerTeamId: (match as any).winnerTeamId ?? null,
       player1: match.player1
         ? { id: match.player1.id, firstName: match.player1.firstName, lastName: match.player1.lastName }
         : null,
@@ -421,26 +438,29 @@ export class MatchService {
     }));
 
     // ── Normalize group matches ─────────────────────────────────────────────────
-   const normalizedGroup: NormalizedMatch[] = groupMatches.map((match: any) => ({
-  id: match.id,
-  round: `Group Stage - ${match.group?.name ?? ''}`,
-  matchNumber: match.round ?? 1,
-  scheduledTime: match.scheduledTime,
-  status: match.status,
-  score:
-    match.player1Score !== null && match.player2Score !== null
-      ? `${match.player1Score} - ${match.player2Score}`
-      : null,
-  winnerId: match.winnerId ?? null,
-  player1: match.player1
-    ? { id: match.player1.id, firstName: match.player1.firstName, lastName: match.player1.lastName }
-    : null,
-  player2: match.player2
-    ? { id: match.player2.id, firstName: match.player2.firstName, lastName: match.player2.lastName }
-    : null,
-  tournament: match.group?.tournament ?? { id: '', name: '', venue: '' },
-  category: match.group?.category ?? { name: '', type: '' },
-  }));
+    const normalizedGroup: NormalizedMatch[] = groupMatches.map((match: any) => ({
+      id: match.id,
+      round: `Group Stage - ${match.group?.name ?? ''}`,
+      matchNumber: match.round ?? 1,
+      scheduledTime: match.scheduledTime,
+      status: match.status,
+      score:
+        match.player1Score !== null && match.player2Score !== null
+          ? `${match.player1Score} - ${match.player2Score}`
+          : null,
+      winnerId: match.winnerId ?? null,
+      winnerTeamId: match.winnerTeamId ?? null,
+      player1: match.player1
+        ? { id: match.player1.id, firstName: match.player1.firstName, lastName: match.player1.lastName }
+        : null,
+      player2: match.player2
+        ? { id: match.player2.id, firstName: match.player2.firstName, lastName: match.player2.lastName }
+        : null,
+      team1: match.team1,
+      team2: match.team2,
+      tournament: match.group?.tournament ?? { id: '', name: '', venue: '' },
+      category: match.group?.category ?? { name: '', type: '' },
+    }));
     // ── Combine and sort descending by date ─────────────────────────────────────
     const allMatches: NormalizedMatch[] = [
       ...normalizedKnockout,

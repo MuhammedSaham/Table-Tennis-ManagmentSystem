@@ -12,6 +12,8 @@ import {
   InboxStackIcon,
   ChevronRightIcon,
   ShieldCheckIcon,
+  ClockIcon,
+  MapPinIcon,
 } from "@heroicons/react/24/outline";
 
 interface Tournament {
@@ -63,6 +65,13 @@ const Dashboard: React.FC = () => {
     referees: number;
   } | null>(null);
 
+  // Player live activity states
+  const [playerRegistrationsCount, setPlayerRegistrationsCount] = useState<number>(0);
+  const [playerMatchesCount, setPlayerMatchesCount] = useState<number>(0);
+  const [playerUpcomingMatchesCount, setPlayerUpcomingMatchesCount] = useState<number>(0);
+  const [playerWinRate, setPlayerWinRate] = useState<string>("0%");
+  const [playerNextMatch, setPlayerNextMatch] = useState<any | null>(null);
+
   const isPlayer = user?.role === "PLAYER";
   const isSuperAdmin = user?.role === "SUPER_ADMIN" || user?.isSuperAdmin;
   const isAdmin = isSuperAdmin || user?.role === "ADMIN";
@@ -80,6 +89,7 @@ const Dashboard: React.FC = () => {
     fetchNewTournaments();
     if (isPlayer) {
       fetchDoublesInvites();
+      fetchPlayerDashboardData();
     }
     if (
       isSuperAdmin ||
@@ -206,6 +216,63 @@ const Dashboard: React.FC = () => {
       setDoublesInvites(res.data.data || []);
     } catch (err) {
       console.error("Failed to fetch doubles invites", err);
+    }
+  };
+
+  const fetchPlayerDashboardData = async () => {
+    if (!isPlayer) return;
+    try {
+      const [regRes, matchRes] = await Promise.allSettled([
+        api.get("/registrations/my-registrations"),
+        api.get("/matches/my-matches"),
+      ]);
+
+      if (regRes.status === "fulfilled") {
+        const regs = regRes.value.data?.data || [];
+        setPlayerRegistrationsCount(regs.length);
+      }
+
+      if (matchRes.status === "fulfilled") {
+        const matches: any[] = matchRes.value.data?.data || [];
+        setPlayerMatchesCount(matches.length);
+
+        const upcoming = matches.filter(
+          (m) => m.status === "SCHEDULED" || m.status === "ONGOING",
+        );
+        setPlayerUpcomingMatchesCount(upcoming.length);
+
+        if (upcoming.length > 0) {
+          const sortedUpcoming = [...upcoming].sort(
+            (a, b) =>
+              new Date(a.scheduledTime).getTime() -
+              new Date(b.scheduledTime).getTime(),
+          );
+          setPlayerNextMatch(sortedUpcoming[0]);
+        }
+
+        const completed = matches.filter((m) => m.status === "COMPLETED");
+        if (completed.length > 0 && user?.id) {
+          const wins = completed.filter((m) => {
+            if (m.winnerId === user.id) return true;
+            if (m.winnerTeamId) {
+              if (m.team1?.id === m.winnerTeamId) {
+                return m.team1.members?.some(
+                  (mem: any) => mem.player?.id === user.id,
+                );
+              }
+              if (m.team2?.id === m.winnerTeamId) {
+                return m.team2.members?.some(
+                  (mem: any) => mem.player?.id === user.id,
+                );
+              }
+            }
+            return false;
+          }).length;
+          setPlayerWinRate(`${((wins / completed.length) * 100).toFixed(1)}%`);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to fetch player stats", err);
     }
   };
 
@@ -597,56 +664,235 @@ const Dashboard: React.FC = () => {
         </section>
       )}
 
-      {/* PLAYER DASHBOARD QUICK ACCESS */}
+      {/* PLAYER LIVE PERFORMANCE & ACTIVITY STRIP */}
       {isPlayer && (
-        <section className="grid grid-cols-1 gap-5 md:grid-cols-3">
-          {/* TOURNAMENTS */}
-          <Link
-            to="/app/tournaments?view=upcoming3"
-            className="group rounded-2xl border border-white/20 bg-[#061D23]/20 p-6 backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:border-[#4AEEFF]/60 hover:bg-[#061D23]/40"
-          >
-            <TrophyIcon className="mb-4 h-9 w-9 text-[#4AEEFF]" />
+        <section className="space-y-5">
+          {/* Quick Metrics Bar (3 Core Stats) */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+            {/* Active Registrations */}
+            <Link
+              to="/app/my-registrations"
+              className="group p-4 sm:p-5 rounded-2xl border border-white/20 bg-[#061D23]/35 shadow-[0_20px_50px_-15px_rgba(6,29,35,0.6)] backdrop-blur-xl hover:border-[#4AEEFF]/60 hover:bg-[#061D23]/50 transition-all flex items-center justify-between"
+            >
+              <div>
+                <p className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-white/60">
+                  Registrations
+                </p>
+                <p className="mt-1 text-2xl sm:text-3xl font-black text-white group-hover:text-[#4AEEFF] transition-colors">
+                  {playerRegistrationsCount}
+                </p>
+                <p className="text-[10px] text-white/40 mt-0.5">
+                  Tournaments Entered
+                </p>
+              </div>
+              <div className="w-10 h-10 rounded-xl bg-[#4AEEFF]/10 border border-[#4AEEFF]/30 text-[#4AEEFF] flex items-center justify-center shrink-0">
+                <ClipboardDocumentCheckIcon className="w-5 h-5" />
+              </div>
+            </Link>
 
-            <h3 className="text-lg font-bold text-white group-hover:text-[#4AEEFF]">
-              Tournaments
-            </h3>
+            {/* Upcoming Matches */}
+            <Link
+              to="/app/my-matches"
+              className="group p-4 sm:p-5 rounded-2xl border border-white/20 bg-[#061D23]/35 shadow-[0_20px_50px_-15px_rgba(6,29,35,0.6)] backdrop-blur-xl hover:border-[#4AEEFF]/60 hover:bg-[#061D23]/50 transition-all flex items-center justify-between"
+            >
+              <div>
+                <p className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-white/60">
+                  Upcoming
+                </p>
+                <p className="mt-1 text-2xl sm:text-3xl font-black text-[#4AEEFF]">
+                  {playerUpcomingMatchesCount}
+                </p>
+                <p className="text-[10px] text-white/40 mt-0.5">
+                  Matches Scheduled
+                </p>
+              </div>
+              <div className="w-10 h-10 rounded-xl bg-[#4AEEFF]/10 border border-[#4AEEFF]/30 text-[#4AEEFF] flex items-center justify-center shrink-0">
+                <CalendarIcon className="w-5 h-5" />
+              </div>
+            </Link>
 
-            <p className="mt-2 text-sm text-white/65">
-              Browse available tournaments and register for upcoming events.
-            </p>
-          </Link>
+            {/* Win Rate */}
+            <Link
+              to="/app/my-matches"
+              className="group p-4 sm:p-5 rounded-2xl border border-white/20 bg-[#061D23]/35 shadow-[0_20px_50px_-15px_rgba(6,29,35,0.6)] backdrop-blur-xl hover:border-[#4AEEFF]/60 hover:bg-[#061D23]/50 transition-all flex items-center justify-between"
+            >
+              <div>
+                <p className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-white/60">
+                  Win Rate
+                </p>
+                <p className="mt-1 text-2xl sm:text-3xl font-black text-[#4AEEFF]">
+                  {playerWinRate}
+                </p>
+                <p className="text-[10px] text-white/40 mt-0.5">
+                  Across {playerMatchesCount} matches
+                </p>
+              </div>
+              <div className="w-10 h-10 rounded-xl bg-[#4AEEFF]/10 border border-[#4AEEFF]/30 text-[#4AEEFF] flex items-center justify-center shrink-0">
+                <TrophyIcon className="w-5 h-5" />
+              </div>
+            </Link>
+          </div>
 
-          {/* MY MATCHES */}
-          <Link
-            to="/app/my-matches"
-            className="group rounded-2xl border border-white/20 bg-[#061D23]/20 p-6 backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:border-[#4AEEFF]/60 hover:bg-[#061D23]/40"
-          >
-            <CalendarIcon className="mb-4 h-9 w-9 text-[#4AEEFF]" />
+          {/* NEXT MATCH SPOTLIGHT (If Player has upcoming match) */}
+          {playerNextMatch && (
+            <div className="rounded-2xl border border-[#4AEEFF]/40 bg-gradient-to-r from-[#072d36]/90 via-[#062027]/95 to-[#04151a] p-4 sm:p-6 shadow-[0_20px_50px_-10px_rgba(74,238,255,0.2)] backdrop-blur-xl">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="flex h-2.5 w-2.5 relative">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#4AEEFF] opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#4AEEFF]"></span>
+                    </span>
+                    <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-[0.2em] text-[#4AEEFF]">
+                      Next Scheduled Match
+                    </span>
+                  </div>
 
-            <h3 className="text-lg font-bold text-white group-hover:text-[#4AEEFF]">
-              My Matches
-            </h3>
+                  <h3 className="text-base sm:text-lg font-bold text-white">
+                    {playerNextMatch.tournament?.name}
+                  </h3>
 
-            <p className="mt-2 text-sm text-white/65">
-              View your upcoming matches, schedules and results.
-            </p>
-          </Link>
+                  <div className="flex items-center gap-3 mt-1.5 text-xs text-white/60 flex-wrap">
+                    <span className="px-2 py-0.5 rounded bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 text-[10px] font-bold uppercase">
+                      {playerNextMatch.category?.name} • {playerNextMatch.round}
+                    </span>
+                    <span className="inline-flex items-center gap-1 text-white/60">
+                      <MapPinIcon className="w-3.5 h-3.5 text-white/40" />
+                      {playerNextMatch.tournament?.venue}
+                    </span>
+                    <span className="inline-flex items-center gap-1 text-white/60 font-mono">
+                      <ClockIcon className="w-3.5 h-3.5 text-white/40" />
+                      {playerNextMatch.scheduledTime
+                        ? new Date(playerNextMatch.scheduledTime).toLocaleString([], {
+                            month: "short",
+                            day: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })
+                        : "Scheduled"}
+                    </span>
+                  </div>
+                </div>
 
-          {/* MY REGISTRATIONS */}
-          <Link
-            to="/app/my-registrations"
-            className="group rounded-2xl border border-white/20 bg-[#061D23]/20 p-6 backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:border-[#4AEEFF]/60 hover:bg-[#061D23]/40"
-          >
-            <ClipboardDocumentCheckIcon className="mb-4 h-9 w-9 text-[#4AEEFF]" />
+                <Link
+                  to="/app/my-matches"
+                  className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#12679E] to-[#4AEEFF] text-[#061D23] text-xs font-black uppercase tracking-wider shadow-lg shadow-[#4AEEFF]/20 hover:opacity-95 transition-all text-center shrink-0"
+                >
+                  View Match Arena →
+                </Link>
+              </div>
+            </div>
+          )}
 
-            <h3 className="text-lg font-bold text-white group-hover:text-[#4AEEFF]">
-              My Registrations
-            </h3>
+          {/* PLAYER DASHBOARD 3 ACTION CARDS */}
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
+            {/* TOURNAMENTS */}
+            <Link
+              to="/app/tournaments"
+              className="group rounded-2xl border border-white/20 bg-[#061D23]/35 p-5 sm:p-6 backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:border-[#4AEEFF]/60 hover:bg-[#061D23]/50 shadow-[0_20px_50px_-15px_rgba(6,29,35,0.5)] flex flex-col justify-between"
+            >
+              <div>
+                <div className="flex items-center justify-between gap-3 mb-3">
+                  <div className="w-11 h-11 rounded-xl bg-[#4AEEFF]/10 border border-[#4AEEFF]/30 flex items-center justify-center text-[#4AEEFF] group-hover:scale-105 transition-transform shrink-0">
+                    <TrophyIcon className="h-5 w-5" />
+                  </div>
+                  {newTournaments.length > 0 ? (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                      {newTournaments.length} Open for Entry
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-white/5 text-white/50 border border-white/10">
+                      Championships
+                    </span>
+                  )}
+                </div>
 
-            <p className="mt-2 text-sm text-white/65">
-              Track tournament registrations, approvals and pending requests.
-            </p>
-          </Link>
+                <h3 className="text-lg font-bold text-white group-hover:text-[#4AEEFF] transition-colors">
+                  Tournaments
+                </h3>
+                <p className="mt-1 text-xs text-white/60">
+                  Open Championships & College Cups
+                </p>
+              </div>
+
+              <div className="mt-5 pt-3.5 border-t border-white/10 flex items-center justify-between text-xs font-bold text-[#4AEEFF]">
+                <span>Browse Events</span>
+                <ChevronRightIcon className="h-4 w-4 transform group-hover:translate-x-1 transition-transform" />
+              </div>
+            </Link>
+
+            {/* MY MATCHES */}
+            <Link
+              to="/app/my-matches"
+              className="group rounded-2xl border border-white/20 bg-[#061D23]/35 p-5 sm:p-6 backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:border-[#4AEEFF]/60 hover:bg-[#061D23]/50 shadow-[0_20px_50px_-15px_rgba(6,29,35,0.5)] flex flex-col justify-between"
+            >
+              <div>
+                <div className="flex items-center justify-between gap-3 mb-3">
+                  <div className="w-11 h-11 rounded-xl bg-[#4AEEFF]/10 border border-[#4AEEFF]/30 flex items-center justify-center text-[#4AEEFF] group-hover:scale-105 transition-transform shrink-0">
+                    <CalendarIcon className="h-5 w-5" />
+                  </div>
+                  {playerUpcomingMatchesCount > 0 ? (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-[#4AEEFF]/15 text-[#4AEEFF] border border-[#4AEEFF]/30">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#4AEEFF] animate-pulse"></span>
+                      {playerUpcomingMatchesCount} Scheduled
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-white/5 text-white/50 border border-white/10">
+                      Court Log
+                    </span>
+                  )}
+                </div>
+
+                <h3 className="text-lg font-bold text-white group-hover:text-[#4AEEFF] transition-colors">
+                  My Matches
+                </h3>
+                <p className="mt-1 text-xs text-white/60">
+                  Court Schedule & Table Fixtures
+                </p>
+              </div>
+
+              <div className="mt-5 pt-3.5 border-t border-white/10 flex items-center justify-between text-xs font-bold text-[#4AEEFF]">
+                <span>View Fixtures</span>
+                <ChevronRightIcon className="h-4 w-4 transform group-hover:translate-x-1 transition-transform" />
+              </div>
+            </Link>
+
+            {/* MY REGISTRATIONS */}
+            <Link
+              to="/app/my-registrations"
+              className="group rounded-2xl border border-white/20 bg-[#061D23]/35 p-5 sm:p-6 backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:border-[#4AEEFF]/60 hover:bg-[#061D23]/50 shadow-[0_20px_50px_-15px_rgba(6,29,35,0.5)] flex flex-col justify-between"
+            >
+              <div>
+                <div className="flex items-center justify-between gap-3 mb-3">
+                  <div className="w-11 h-11 rounded-xl bg-[#4AEEFF]/10 border border-[#4AEEFF]/30 flex items-center justify-center text-[#4AEEFF] group-hover:scale-105 transition-transform shrink-0">
+                    <ClipboardDocumentCheckIcon className="h-5 w-5" />
+                  </div>
+                  {playerRegistrationsCount > 0 ? (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+                      ✓ {playerRegistrationsCount} Active
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-white/5 text-white/50 border border-white/10">
+                      Entry Passes
+                    </span>
+                  )}
+                </div>
+
+                <h3 className="text-lg font-bold text-white group-hover:text-[#4AEEFF] transition-colors">
+                  My Registrations
+                </h3>
+                <p className="mt-1 text-xs text-white/60">
+                  Verified Entries & Category Passes
+                </p>
+              </div>
+
+              <div className="mt-5 pt-3.5 border-t border-white/10 flex items-center justify-between text-xs font-bold text-[#4AEEFF]">
+                <span>Manage Entries</span>
+                <ChevronRightIcon className="h-4 w-4 transform group-hover:translate-x-1 transition-transform" />
+              </div>
+            </Link>
+          </div>
         </section>
       )}
 
@@ -679,19 +925,6 @@ const Dashboard: React.FC = () => {
           </div>
         </section>
       )}
-
-      {/* ACCOUNT STATUS MODULE */}
-      <section className="rounded-2xl border border-white/20 bg-[#061D23]/10 p-4 sm:p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl">
-        <p className="text-sm text-white/80">
-          You are logged in as{" "}
-          <span className="inline-block px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-md bg-[#4AEEFF]/20 text-[#4AEEFF] border border-[#4AEEFF]/40 align-middle">
-            {user?.role}
-          </span>
-        </p>
-        <p className="mt-2 text-xs text-white/70 font-mono break-all">
-          Email: {user?.email}
-        </p>
-      </section>
     </>,
   );
 };
