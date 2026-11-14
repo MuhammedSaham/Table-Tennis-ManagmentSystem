@@ -4,6 +4,7 @@ import BackButton from "../components/BackButton";
 import { useAuth } from "../context/AuthContext";
 import api, { getProfileImageUrl } from "../services/api";
 import toast from "react-hot-toast";
+import playerBackground from "../assets/player_background_img3.jpg";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -340,7 +341,7 @@ const PublicProfile: React.FC = () => {
           {/* Geometric curved teal circles background */}
           <div
             className="absolute inset-0 bg-cover bg-center bg-no-repeat pointer-events-none"
-            style={{ backgroundImage: "url('/player-card-bg.png')" }}
+            style={{ backgroundImage: `url(${playerBackground})` }}
           />
 
           {/* Identity Card Content */}
