@@ -127,21 +127,21 @@ const UserDetails: React.FC = () => {
     if (!doc) return;
 
     const completedMatches = assignedMatches.filter((m) => m.status === "COMPLETED");
-    const pendingCount = assignedMatches.filter((m) => m.status === "SCHEDULED" || m.status === "ONGOING").length;
     const refereeName = `${profile.firstName} ${profile.lastName || ""}`.trim();
+    const tourneyName = completedMatches[0]?.tournament?.name || completedMatches[0]?.group?.tournament?.name || assignedMatches[0]?.tournament?.name || "Official Championship";
     const dateStr = new Date().toLocaleDateString(undefined, { dateStyle: "long" });
     const timeStr = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
     const rowsHtml = completedMatches.length === 0
       ? `<tr><td colspan="4" style="padding: 12px; text-align: center; color: #64748b; font-style: italic;">No completed matches recorded for this referee yet.</td></tr>`
       : completedMatches.map((m, idx) => {
-          const tourneyName = m.tournament?.name || m.group?.tournament?.name || "Tournament";
-          const catRound = `${m.category?.name || m.group?.category?.name || "Category"} · ${m.round || "Fixture"}`;
+          const categoryName = m.category?.name || m.group?.category?.name || "Official Category";
+          const fixtureRound = m.round || "Fixture";
           return `
             <tr style="border-bottom: 1px solid #e2e8f0; page-break-inside: avoid; break-inside: avoid;">
               <td style="padding: 5px 8px; font-weight: bold; color: #0284c7; text-align: center;">#${idx + 1}</td>
-              <td style="padding: 5px 8px; font-weight: 700; color: #0f172a; font-size: 10.5px;">${tourneyName}</td>
-              <td style="padding: 5px 8px; color: #475569; font-size: 10px;">${catRound}</td>
+              <td style="padding: 5px 8px; font-weight: 700; color: #0f172a; font-size: 10.5px;">${categoryName}</td>
+              <td style="padding: 5px 8px; color: #475569; font-size: 10px;">${fixtureRound}</td>
               <td style="padding: 5px 8px; text-align: right; color: #047857; font-weight: 800; font-family: monospace; font-size: 10px;">VERIFIED</td>
             </tr>
           `;
@@ -377,16 +377,16 @@ const UserDetails: React.FC = () => {
 
             <div class="summary-strip">
               <div>
+                <div class="meta-label">Tournament</div>
+                <div class="summary-val" style="font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${tourneyName}</div>
+              </div>
+              <div>
+                <div class="meta-label">Completed Matches</div>
+                <div class="summary-val" style="color: #047857;">${completedMatches.length} Verified</div>
+              </div>
+              <div>
                 <div class="meta-label">Total Assigned</div>
                 <div class="summary-val">${assignedMatches.length} Fixtures</div>
-              </div>
-              <div>
-                <div class="meta-label">Pending / Live</div>
-                <div class="summary-val" style="color: #b45309;">${pendingCount} Fixtures</div>
-              </div>
-              <div>
-                <div class="meta-label">Completed</div>
-                <div class="summary-val" style="color: #047857;">${completedMatches.length} Verified</div>
               </div>
               <div>
                 <div class="meta-label">Duty Status</div>
@@ -403,8 +403,8 @@ const UserDetails: React.FC = () => {
               <thead>
                 <tr>
                   <th style="width: 30px; text-align: center;">#</th>
-                  <th style="text-align: left;">Tournament</th>
-                  <th style="text-align: left;">Category / Round</th>
+                  <th style="text-align: left;">Category</th>
+                  <th style="text-align: left;">Fixture / Round</th>
                   <th style="text-align: right; width: 85px;">Status</th>
                 </tr>
               </thead>
@@ -421,8 +421,8 @@ const UserDetails: React.FC = () => {
               </div>
               <div>
                 <div class="sig-title">Authorized Tournament Director</div>
-                <div class="sig-line">[ Club Seal & Authorized Signature ]</div>
-                <div class="sig-desc">Authorized Signature & Club Seal</div>
+                <div class="sig-line" style="border-bottom: 1.5px dotted #64748b; height: 16px;">&nbsp;</div>
+                <div class="sig-desc">Authorized Signature & Official Club Seal</div>
               </div>
             </div>
 
@@ -647,20 +647,20 @@ const UserDetails: React.FC = () => {
               {/* Activity Summary Strip */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 p-3 rounded-xl bg-white/5 border border-white/10 text-xs print:bg-slate-50 print:border-slate-300">
                 <div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-white/50 print:text-slate-600 block">Total Assigned</span>
-                  <span className="text-sm sm:text-base font-black text-white print:text-slate-900 mt-0.5 block">{assignedMatches.length} Fixtures</span>
-                </div>
-                <div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-amber-300/80 print:text-amber-700 block">Pending / Live</span>
-                  <span className="text-sm sm:text-base font-black text-amber-400 print:text-amber-800 mt-0.5 block">
-                    {assignedMatches.filter((m) => m.status === "SCHEDULED" || m.status === "ONGOING").length} Fixtures
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-white/50 print:text-slate-600 block">Tournament</span>
+                  <span className="text-xs sm:text-sm font-bold text-white print:text-slate-900 mt-0.5 block truncate">
+                    {assignedMatches.find((m) => m.status === "COMPLETED")?.tournament?.name || assignedMatches[0]?.tournament?.name || "Official Championship"}
                   </span>
                 </div>
                 <div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-300/80 print:text-emerald-700 block">Completed</span>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-300/80 print:text-emerald-700 block">Completed Matches</span>
                   <span className="text-sm sm:text-base font-black text-emerald-400 print:text-emerald-800 mt-0.5 block">
                     {assignedMatches.filter((m) => m.status === "COMPLETED").length} Verified
                   </span>
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-white/50 print:text-slate-600 block">Total Assigned</span>
+                  <span className="text-sm sm:text-base font-black text-white print:text-slate-900 mt-0.5 block">{assignedMatches.length} Fixtures</span>
                 </div>
                 <div>
                   <span className="text-[10px] font-bold uppercase tracking-wider text-[#4AEEFF] print:text-sky-800 block">Duty Status</span>
@@ -678,8 +678,8 @@ const UserDetails: React.FC = () => {
                     <thead>
                       <tr className="border-b border-white/10 bg-white/5 text-[10px] font-bold uppercase tracking-wider text-white/60 font-mono print:bg-slate-100 print:text-slate-800 print:border-slate-300">
                         <th className="px-3 py-2 text-center w-10">#</th>
-                        <th className="px-3 py-2">Tournament</th>
-                        <th className="px-3 py-2">Category / Round</th>
+                        <th className="px-3 py-2">Category</th>
+                        <th className="px-3 py-2">Fixture / Round</th>
                         <th className="px-3 py-2 text-right">Status</th>
                       </tr>
                     </thead>
@@ -696,8 +696,8 @@ const UserDetails: React.FC = () => {
                           .map((m, idx) => (
                             <tr key={m.id} className="hover:bg-white/5 print:hover:bg-transparent">
                               <td className="px-3 py-2 text-[#4AEEFF] print:text-slate-900 font-bold text-center">#{idx + 1}</td>
-                              <td className="px-3 py-2 text-white print:text-slate-900 font-sans font-bold">{m.tournament?.name || m.group?.tournament?.name || "Tournament"}</td>
-                              <td className="px-3 py-2 text-white/70 print:text-slate-700">{m.category?.name || m.group?.category?.name || "Category"} · {m.round || "Fixture"}</td>
+                              <td className="px-3 py-2 text-white print:text-slate-900 font-sans font-bold">{m.category?.name || m.group?.category?.name || "Official Category"}</td>
+                              <td className="px-3 py-2 text-white/70 print:text-slate-700">{m.round || "Fixture"}</td>
                               <td className="px-3 py-2 text-right text-emerald-400 print:text-emerald-800 font-bold font-mono">VERIFIED</td>
                             </tr>
                           ))
@@ -712,16 +712,16 @@ const UserDetails: React.FC = () => {
                 <div className="space-y-4">
                   <p className="text-[10px] font-bold uppercase tracking-wider text-white/50 print:text-slate-600">Officiating Referee</p>
                   <div className="border-b border-white/30 print:border-slate-400 pb-1">
-                    <span className="text-white/30 print:text-slate-800 italic text-[11px] font-semibold">{profile.firstName} {profile.lastName}</span>
+                    <span className="text-white/90 print:text-slate-800 italic text-[11px] font-semibold">{profile.firstName} {profile.lastName}</span>
                   </div>
                   <p className="text-[10px] text-white/60 print:text-slate-600">Signed & Submitted by Officiating Referee</p>
                 </div>
                 <div className="space-y-4">
                   <p className="text-[10px] font-bold uppercase tracking-wider text-white/50 print:text-slate-600">Authorized Tournament Director</p>
-                  <div className="border-b border-white/30 print:border-slate-400 pb-1">
-                    <span className="text-white/30 print:text-slate-800 italic text-[11px] font-semibold">[ Club Seal & Authorized Signature ]</span>
+                  <div className="border-b-2 border-dotted border-white/30 print:border-slate-500 pb-1 h-5">
+                    &nbsp;
                   </div>
-                  <p className="text-[10px] text-white/60 print:text-slate-600">Authorized Signature & Club Seal</p>
+                  <p className="text-[10px] text-white/60 print:text-slate-600">Authorized Signature & Official Club Seal</p>
                 </div>
               </div>
 
