@@ -611,12 +611,15 @@ const TournamentDetails: React.FC<TournamentDetailsProps> = ({
 
   const handleAcceptInvite = async (inviteId: string) => {
     setRespondingInviteId(inviteId);
+
     try {
       await api.post(`/teams/invites/${inviteId}/accept`);
-      toast.success(
-        "Doubles partner invite accepted! You are officially registered.",
-      );
+
+      toast.success("Doubles partner invite accepted! Registration updated.");
+
+      // Refresh registration and payment information
       await fetchTournamentDetails();
+      await fetchMyPaymentProof();
       await fetchInvites();
     } catch (err: any) {
       toast.error(err.response?.data?.message || "Failed to accept invite");
@@ -3789,7 +3792,7 @@ const TournamentDetails: React.FC<TournamentDetailsProps> = ({
         tournament.categories.length > 0 && (
           <div className="rounded-2xl border border-white/20 bg-[#061D23]/25 p-4 sm:p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl mb-6">
             <h2 className="text-xl font-black uppercase tracking-wider text-white mb-4">
-              Registrations ({tournament.registrations.length})
+              Registrations ({activeRegistrations.length})
             </h2>
             {/* Horizontal Registration Category Tabs */}
             <div className="mb-5 flex gap-2 overflow-x-auto border-b border-white/10 pb-3">

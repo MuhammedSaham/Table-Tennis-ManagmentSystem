@@ -531,10 +531,21 @@ export class TeamService {
       }
     }
     // Check whether payment proof is required for the inviter/captain
-const inviterProfile = await prisma.playerProfile.findUnique({
-  where: { userId: invite.inviterId },
-  select: { isClubMember: true },
-});
+// Check both doubles partners' Club/Guest membership
+const [inviterProfile, inviteeProfile] = await Promise.all([
+  prisma.playerProfile.findUnique({
+    where: { userId: invite.inviterId },
+    select: { isClubMember: true },
+  }),
+  prisma.playerProfile.findUnique({
+    where: { userId: invite.inviteeId },
+    select: { isClubMember: true },
+  }),
+]);
+
+if (!inviterProfile || !inviteeProfile) {
+  throw new AppError('Doubles partner profile not found', 404);
+}
 
 const tournamentPaymentSettings = await prisma.tournament.findUnique({
   where: { id: invite.tournamentId },
@@ -548,11 +559,19 @@ if (!tournamentPaymentSettings) {
   throw new AppError('Tournament not found', 404);
 }
 
-const isClubMember = inviterProfile?.isClubMember === true;
-
-const paymentProofRequired = isClubMember
+// Check inviter's payment requirement
+const inviterPaymentRequired = inviterProfile.isClubMember
   ? tournamentPaymentSettings.requirePaymentProofClub
   : tournamentPaymentSettings.requirePaymentProofGuest;
+
+// Check invitee's payment requirement
+const inviteePaymentRequired = inviteeProfile.isClubMember
+  ? tournamentPaymentSettings.requirePaymentProofClub
+  : tournamentPaymentSettings.requirePaymentProofGuest;
+
+// Team requires payment verification if either partner requires it
+const paymentProofRequired =
+  inviterPaymentRequired || inviteePaymentRequired;
 
 const initialRegistrationStatus = paymentProofRequired
   ? 'PENDING'
