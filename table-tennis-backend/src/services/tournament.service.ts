@@ -386,15 +386,16 @@ async registerForTournament(playerId: string, data: {
     throw new AppError('Tournament not found', 404);
   }
 
-  const isClubMember = player.isClubMember;
+ // Check payment requirement for the registering player
+const isClubMember = player.isClubMember;
 
-const paymentProofRequired = isClubMember
+let paymentProofRequired = isClubMember
   ? tournament.requirePaymentProofClub
   : tournament.requirePaymentProofGuest;
 
-const initialRegistrationStatus = paymentProofRequired
-  ? 'PENDING'
-  : 'APPROVED';
+// This will also include the partner's requirement for doubles
+let initialRegistrationStatus: 'PENDING' | 'APPROVED' =
+  paymentProofRequired ? 'PENDING' : 'APPROVED';
 
   // Check registration deadline
   if (new Date() > tournament.registrationDeadline) {
@@ -474,6 +475,20 @@ const initialRegistrationStatus = paymentProofRequired
       if (!partner) {
         throw new AppError('Partner profile not found', 404);
       }
+      // DOUBLES PAYMENT VERIFICATION
+// Check the payment requirement for both players.
+
+const partnerPaymentRequired = partner.isClubMember
+  ? tournament.requirePaymentProofClub
+  : tournament.requirePaymentProofGuest;
+
+// The team requires verification if either player must pay.
+paymentProofRequired =
+  paymentProofRequired || partnerPaymentRequired;
+
+initialRegistrationStatus = paymentProofRequired
+  ? 'PENDING'
+  : 'APPROVED';
 
       const nameLower = category.name.toLowerCase();
       const isMixed =
@@ -792,18 +807,25 @@ const initialRegistrationStatus = paymentProofRequired
     }
 
     const registration = await prisma.tournamentRegistration.findUnique({
-      where: { id: registrationId },
+  where: { id: registrationId },
+  include: {
+    tournament: true,
+    category: true,
+    player: {
       include: {
-        tournament: true,
-        category: true,
-        player: {
-          include: {
-            playerProfile: true,
-          },
+        playerProfile: true,
+      },
+    },
+    team: {
+      include: {
+        members: {
+          where: { isActive: true },
+          select: { playerId: true },
         },
       },
-    });
-
+    },
+  },
+});
     if (!registration) {
       throw new AppError('Registration not found', 404);
     }
@@ -811,37 +833,68 @@ const initialRegistrationStatus = paymentProofRequired
     if (registration.status !== 'PENDING') {
       throw new AppError('Registration has already been processed', 400);
     }
+if (action === 'APPROVE') {
+   // ============================================================
+// PAYMENT VERIFICATION: SINGLES AND DOUBLES
+// ============================================================
 
-    if (action === 'APPROVE') {
-      // Check whether this player requires payment proof
-const isClubMember =
-  registration.player.playerProfile?.isClubMember ?? false;
+// For doubles, check both active team members.
+// For singles, check the registering player only.
+const playerIds = registration.teamId
+  ? registration.team?.members.map((member) => member.playerId) ?? []
+  : [registration.playerId];
 
-const paymentProofRequired = isClubMember
-  ? registration.tournament.requirePaymentProofClub
-  : registration.tournament.requirePaymentProofGuest;
+if (
+  registration.teamId &&
+  playerIds.length !== 2
+) {
+  throw new AppError(
+    'A doubles team must have exactly two active members',
+    400
+  );
+}
 
-if (paymentProofRequired) {
-  const paymentProof =
-    await prisma.tournamentPaymentProof.findFirst({
+// Fetch player membership details
+const playerProfiles = await prisma.playerProfile.findMany({
+  where: {
+    userId: { in: playerIds },
+  },
+  select: {
+    userId: true,
+    isClubMember: true,
+  },
+});
+
+if (playerProfiles.length !== playerIds.length) {
+  throw new AppError(
+    'One or more player profiles were not found',
+    404
+  );
+}
+
+// Identify players who require payment verification
+const requiredPlayerIds = playerProfiles
+  .filter((profile) =>
+    profile.isClubMember
+      ? registration.tournament.requirePaymentProofClub
+      : registration.tournament.requirePaymentProofGuest
+  )
+  .map((profile) => profile.userId);
+
+// Every required player must have an approved verification
+if (requiredPlayerIds.length > 0) {
+  const approvedVerifications =
+    await prisma.registrationPaymentVerification.count({
       where: {
-        tournamentId: registration.tournamentId,
-        playerId: registration.playerId,
-        registrationId: null,
+        registrationId: registration.id,
+        playerId: { in: requiredPlayerIds },
         status: 'APPROVED',
       },
     });
 
-  if (!paymentProof) {
+  if (approvedVerifications !== requiredPlayerIds.length) {
     throw new AppError(
-      'Payment proof must be submitted before approving this registration',
-      400
-    );
-  }
-
-  if (paymentProof.status !== 'APPROVED') {
-    throw new AppError(
-      'Payment proof must be approved before approving this registration',
+      'All required players must have approved payment verification before registration approval',
       400
     );
   }

@@ -417,29 +417,72 @@ async processPaymentProof(
     if (action === 'APPROVE') {
       let allRequiredPlayersApproved = true;
 
-      if (registration.teamId) {
-        const memberIds =
-          registration.team?.members.map((m) => m.playerId) ?? [];
+if (registration.teamId) {
+  // Get active doubles team members
+  const memberIds =
+    registration.team?.members.map((m) => m.playerId) ?? [];
 
-        if (memberIds.length === 0) {
-          throw new AppError(
-            'No active members found for this team',
-            400
-          );
-        }
+  if (memberIds.length !== 2) {
+    throw new AppError(
+      'A doubles team must have exactly two active members',
+      400
+    );
+  }
 
-        const approvedCount =
-          await tx.registrationPaymentVerification.count({
-            where: {
-              registrationId: registration.id,
-              playerId: { in: memberIds },
-              status: 'APPROVED',
-            },
-          });
+  // Get tournament payment settings
+  const tournament = await tx.tournament.findUnique({
+    where: { id: registration.tournamentId },
+    select: {
+      requirePaymentProofClub: true,
+      requirePaymentProofGuest: true,
+    },
+  });
 
-        allRequiredPlayersApproved =
-          approvedCount === memberIds.length;
-      }
+  if (!tournament) {
+    throw new AppError('Tournament not found', 404);
+  }
+
+  // Get both players' membership information
+  const players = await tx.playerProfile.findMany({
+    where: {
+      userId: { in: memberIds },
+    },
+    select: {
+      userId: true,
+      isClubMember: true,
+    },
+  });
+
+  if (players.length !== memberIds.length) {
+    throw new AppError(
+      'One or more team member profiles were not found',
+      404
+    );
+  }
+
+  // Only include players who must submit payment proof
+  const requiredPlayerIds = players
+    .filter((player) =>
+      player.isClubMember
+        ? tournament.requirePaymentProofClub
+        : tournament.requirePaymentProofGuest
+    )
+    .map((player) => player.userId);
+
+  // Count approved payments for required players only
+  const approvedCount =
+    await tx.registrationPaymentVerification.count({
+      where: {
+        registrationId: registration.id,
+        playerId: { in: requiredPlayerIds },
+        status: 'APPROVED',
+      },
+    });
+
+  // Approve the team only when every required player is verified
+  allRequiredPlayersApproved =
+    approvedCount === requiredPlayerIds.length;
+}
 
       if (allRequiredPlayersApproved) {
         // Claim one remaining category slot atomically.
