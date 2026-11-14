@@ -349,7 +349,7 @@ const Dashboard: React.FC = () => {
               : "Administration · Tournament Operations"}
           </span>
         </div>
-        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-heading font-extrabold text-white tracking-tight">
+        <h1 className="text-xl sm:text-2xl font-black uppercase tracking-wider text-white">
           Welcome back, {user?.firstName}!
         </h1>
         <p className="text-xs sm:text-sm text-cyan-200/80 mt-1">
