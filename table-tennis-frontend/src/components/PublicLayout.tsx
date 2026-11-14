@@ -231,14 +231,18 @@ const PublicLayout: React.FC = () => {
         <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-10 xl:px-14 2xl:px-16 py-12" style={{ position: 'relative', zIndex: 2 }}>
           <div className="grid grid-cols-1 md:grid-cols-12 gap-6 lg:gap-8">
             <div className="md:col-span-3">
-              <div className="flex items-center gap-2 mb-4 slow-blink">
+              <Link
+                to="/"
+                aria-label="Go to home"
+                className="flex items-center gap-2 mb-4 slow-blink"
+              >
                 <img
                   src={Logo}
                   alt="Sam's College"
                   className="w-10 h-10 object-contain rounded-lg"
                 />
                 <span className="font-bold text-xl text-white">SAM'S COLLEGE</span>
-              </div>
+              </Link>
               <p className="font-script text-white text-lg tracking-wide">
                 Where education meets opportunities
               </p>
