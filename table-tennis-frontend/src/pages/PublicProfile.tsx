@@ -381,7 +381,7 @@ const PublicProfile: React.FC = () => {
               </div>
 
               {/* 2. Avatar: compact circle with cyan ring and fallback */}
-              <div className="relative w-[80px] h-[80px] sm:w-[86px] sm:h-[86px] xl:w-[92px] xl:h-[92px] rounded-full ring-4 ring-white/20 overflow-hidden flex items-center justify-center bg-gradient-to-br from-[#22B8C6] to-[#0E8A99] shrink-0 shadow-lg">
+              <div className="relative mt-[1cm] w-[80px] h-[80px] sm:w-[86px] sm:h-[86px] xl:w-[92px] xl:h-[92px] rounded-full ring-4 ring-white/20 overflow-hidden flex items-center justify-center bg-gradient-to-br from-[#22B8C6] to-[#0E8A99] shrink-0 shadow-lg">
                 {avatarUrl && !imageError ? (
                   <img
                     src={avatarUrl}
