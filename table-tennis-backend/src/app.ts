@@ -20,6 +20,7 @@ import notificationRoutes from './routes/notification.routes';
 import groupRoutes from './routes/group.routes';
 import clubMembershipRoutes from './routes/clubMembership.routes';
 import paymentProofRoutes from './routes/paymentProof.routes';
+import aboutRoutes from './routes/about.routes';
 
 
 const app: Application = express();
@@ -66,6 +67,7 @@ app.use(
   '/api/v1/payment-proofs',
   paymentProofRoutes
 );
+app.use('/api/v1/about', aboutRoutes);
 // 404 handler
 app.all('*', (req: Request, res: Response, next: NextFunction) => {
     next(new AppError(`Can't find ${req.originalUrl} on this server!`, 404));

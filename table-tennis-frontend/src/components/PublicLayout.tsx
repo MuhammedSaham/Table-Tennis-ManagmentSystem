@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Outlet, Link, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import Logo from "../assets/LOGO.png";
+import invertedLogo from "../assets/Logo  with Name inverted.png";
 import FooterImage from "../assets/footerimg.png";
 import UserNavProfile from "./UserNavProfile";
 import {
@@ -52,15 +52,16 @@ const PublicLayout: React.FC = () => {
         <div className="w-full px-4 sm:px-6 lg:px-10 xl:px-14 2xl:px-16">
           <div className="flex justify-between items-center h-16 sm:h-20">
             {/* Logo */}
-            <Link to="/" className="flex items-center gap-2 group shrink-0">
+            <Link
+              to="/"
+              className="flex items-center group shrink-0 transition-transform duration-200 active:scale-95"
+              aria-label="Sam's College Home"
+            >
               <img
-                src={Logo}
+                src={invertedLogo}
                 alt="Sam's College"
-                className="w-8 h-8 sm:w-10 sm:h-10 object-contain rounded-lg"
+                className="h-12 sm:h-16 lg:h-[70px] w-auto object-contain slow-blink py-0.5"
               />
-              <span className="font-extrabold text-base sm:text-xl text-white tracking-wide slow-blink whitespace-nowrap">
-                SAM'S COLLEGE
-              </span>
             </Link>
 
             {/* Desktop Navigation matching Figma reference */}
@@ -71,7 +72,7 @@ const PublicLayout: React.FC = () => {
                   <Link
                     key={item.name}
                     to={item.href}
-                    className={`text-sm transition-colors duration-200 ${
+                    className={`text-sm lg:text-[15px] transition-colors duration-200 ${
                       isActive
                         ? "text-white font-bold"
                         : "text-slate-300 hover:text-white font-medium"
@@ -230,14 +231,17 @@ const PublicLayout: React.FC = () => {
         <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-10 xl:px-14 2xl:px-16 py-12" style={{ position: 'relative', zIndex: 2 }}>
           <div className="grid grid-cols-1 md:grid-cols-12 gap-6 lg:gap-8">
             <div className="md:col-span-3">
-              <div className="flex items-center gap-2 mb-4 slow-blink">
+              <Link
+                to="/"
+                className="inline-block mb-4 slow-blink transition-transform duration-200 active:scale-95 group"
+                aria-label="Sam's College Home"
+              >
                 <img
-                  src={Logo}
+                  src={invertedLogo}
                   alt="Sam's College"
-                  className="w-10 h-10 object-contain rounded-lg"
+                  className="h-12 sm:h-14 lg:h-16 w-auto object-contain"
                 />
-                <span className="font-bold text-xl text-white">SAM'S COLLEGE</span>
-              </div>
+              </Link>
               <p className="font-script text-white text-lg tracking-wide">
                 Where education meets opportunities
               </p>

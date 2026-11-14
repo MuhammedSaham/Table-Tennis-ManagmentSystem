@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import api, { getProfileImageUrl } from "../services/api";
 import toast from "react-hot-toast";
-import BackButton from "../components/BackButton";
 import GlassSelect from "../components/GlassSelect";
 import {
   CheckCircleIcon,
@@ -675,8 +675,7 @@ const AdminRequests: React.FC = () => {
     <>
       {/* GLASS HEADER */}
       <header className="rounded-2xl border border-white/20 bg-[#061D23]/20 p-5 sm:p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl">
-        <BackButton to="/app/dashboard" label="Back to Dashboard" className="mb-4" />
-        <h1 className="mb-2 text-2xl font-black uppercase tracking-[0.15em] text-[#FFFFFF] sm:text-3xl lg:text-4xl">
+        <h1 className="mb-2 text-xl font-black uppercase tracking-wider text-white sm:text-2xl">
           Pending Requests
         </h1>
         <p className="text-xs uppercase tracking-[0.2em] text-[#4AEEFF]">
@@ -1358,351 +1357,361 @@ const AdminRequests: React.FC = () => {
         )}
 
       {/* BULK MEMBERSHIP REJECTION MODAL */}
-      {showBulkRejectModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-[16px] border border-white/20 bg-[#061D23] p-6 shadow-2xl">
-            <div className="mb-5">
-              <div className="mb-3 flex items-center gap-3">
-                <div className="rounded-lg bg-red-500/20 p-2 text-red-400">
-                  <XCircleIcon className="h-5 w-5" />
+      {showBulkRejectModal &&
+        createPortal(
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 backdrop-blur-sm">
+            <div className="w-full max-w-md rounded-[16px] border border-white/20 bg-[#061D23] p-6 shadow-2xl">
+              <div className="mb-5">
+                <div className="mb-3 flex items-center gap-3">
+                  <div className="rounded-lg bg-red-500/20 p-2 text-red-400">
+                    <XCircleIcon className="h-5 w-5" />
+                  </div>
+                  <h2 className="text-lg font-bold uppercase tracking-wider text-white">
+                    Reject Selected Requests
+                  </h2>
                 </div>
-                <h2 className="text-lg font-bold uppercase tracking-wider text-white">
-                  Reject Selected Requests
-                </h2>
+
+                <p className="text-sm text-white/60">
+                  You are rejecting {selectedMembershipIds.length} membership
+                  request(s). Please provide a reason.
+                </p>
               </div>
 
-              <p className="text-sm text-white/60">
-                You are rejecting {selectedMembershipIds.length} membership
-                request(s). Please provide a reason.
-              </p>
-            </div>
-
-            <textarea
-              value={bulkRejectionReason}
-              onChange={(e) => setBulkRejectionReason(e.target.value)}
-              placeholder="Enter rejection reason..."
-              rows={4}
-              disabled={bulkProcessing}
-              className="w-full resize-none rounded-lg border border-white/10 bg-[#0A2A32] p-3 text-sm text-white outline-none placeholder:text-white/30 focus:border-[#4AEEFF]/50"
-            />
-
-            <div className="mt-5 flex justify-end gap-3">
-              <button
-                type="button"
-                onClick={() => setShowBulkRejectModal(false)}
+              <textarea
+                value={bulkRejectionReason}
+                onChange={(e) => setBulkRejectionReason(e.target.value)}
+                placeholder="Enter rejection reason..."
+                rows={4}
                 disabled={bulkProcessing}
-                className="rounded-lg border border-white/20 px-5 py-2.5 text-xs font-black uppercase tracking-wider text-white/70 hover:bg-white/5 disabled:opacity-50"
-              >
-                Cancel
-              </button>
+                className="w-full resize-none rounded-lg border border-white/10 bg-[#0A2A32] p-3 text-sm text-white outline-none placeholder:text-white/30 focus:border-[#4AEEFF]/50"
+              />
 
-              <button
-                type="button"
-                onClick={handleBulkReject}
-                disabled={bulkProcessing}
-                className="rounded-lg bg-red-500 px-5 py-2.5 text-xs font-black uppercase tracking-wider text-white hover:bg-red-400 disabled:opacity-50"
-              >
-                {bulkProcessing ? "Rejecting..." : "Confirm Rejection"}
-              </button>
+              <div className="mt-5 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowBulkRejectModal(false)}
+                  disabled={bulkProcessing}
+                  className="rounded-lg border border-white/20 px-5 py-2.5 text-xs font-black uppercase tracking-wider text-white/70 hover:bg-white/5 disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleBulkReject}
+                  disabled={bulkProcessing}
+                  className="rounded-lg bg-red-500 px-5 py-2.5 text-xs font-black uppercase tracking-wider text-white hover:bg-red-400 disabled:opacity-50"
+                >
+                  {bulkProcessing ? "Rejecting..." : "Confirm Rejection"}
+                </button>
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body,
+        )}
 
       {/* SINGLE MEMBERSHIP REJECTION MODAL */}
-      {showMembershipRejectModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-[16px] border border-white/20 bg-[#061D23] p-6 shadow-2xl">
-            <div className="mb-5">
-              <div className="mb-3 flex items-center gap-3">
-                <div className="rounded-lg bg-red-500/20 p-2 text-red-400">
-                  <XCircleIcon className="h-5 w-5" />
+      {showMembershipRejectModal &&
+        createPortal(
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 backdrop-blur-sm">
+            <div className="w-full max-w-md rounded-[16px] border border-white/20 bg-[#061D23] p-6 shadow-2xl">
+              <div className="mb-5">
+                <div className="mb-3 flex items-center gap-3">
+                  <div className="rounded-lg bg-red-500/20 p-2 text-red-400">
+                    <XCircleIcon className="h-5 w-5" />
+                  </div>
+
+                  <h2 className="text-lg font-bold uppercase tracking-wider text-white">
+                    Reject Membership Request
+                  </h2>
                 </div>
 
-                <h2 className="text-lg font-bold uppercase tracking-wider text-white">
-                  Reject Membership Request
-                </h2>
+                <p className="text-sm text-white/60">
+                  Please provide a reason for rejecting this club membership
+                  request.
+                </p>
               </div>
 
-              <p className="text-sm text-white/60">
-                Please provide a reason for rejecting this club membership
-                request.
-              </p>
+              <textarea
+                value={membershipRejectionReason}
+                onChange={(e) => setMembershipRejectionReason(e.target.value)}
+                placeholder="Enter rejection reason..."
+                rows={4}
+                className="w-full resize-none rounded-lg border border-white/10 bg-[#0A2A32] p-3 text-sm text-white outline-none placeholder:text-white/30 focus:border-[#4AEEFF]/50"
+              />
+
+              <div className="mt-5 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowMembershipRejectModal(false);
+                    setMembershipRejectionReason("");
+                    setSelectedMembershipRequestId(null);
+                  }}
+                  disabled={membershipProcessingId !== null}
+                  className="rounded-lg border border-white/20 px-5 py-2.5 text-xs font-black uppercase tracking-wider text-white/70 transition-all hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleMembershipReject}
+                  disabled={membershipProcessingId !== null}
+                  className="rounded-lg bg-red-500 px-5 py-2.5 text-xs font-black uppercase tracking-wider text-white transition-all hover:bg-red-400 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {membershipProcessingId !== null
+                    ? "Rejecting..."
+                    : "Confirm Rejection"}
+                </button>
+              </div>
             </div>
-
-            <textarea
-              value={membershipRejectionReason}
-              onChange={(e) => setMembershipRejectionReason(e.target.value)}
-              placeholder="Enter rejection reason..."
-              rows={4}
-              className="w-full resize-none rounded-lg border border-white/10 bg-[#0A2A32] p-3 text-sm text-white outline-none placeholder:text-white/30 focus:border-[#4AEEFF]/50"
-            />
-
-            <div className="mt-5 flex justify-end gap-3">
-              <button
-                type="button"
-                onClick={() => {
-                  setShowMembershipRejectModal(false);
-                  setMembershipRejectionReason("");
-                  setSelectedMembershipRequestId(null);
-                }}
-                disabled={membershipProcessingId !== null}
-                className="rounded-lg border border-white/20 px-5 py-2.5 text-xs font-black uppercase tracking-wider text-white/70 transition-all hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                Cancel
-              </button>
-
-              <button
-                type="button"
-                onClick={handleMembershipReject}
-                disabled={membershipProcessingId !== null}
-                className="rounded-lg bg-red-500 px-5 py-2.5 text-xs font-black uppercase tracking-wider text-white transition-all hover:bg-red-400 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {membershipProcessingId !== null
-                  ? "Rejecting..."
-                  : "Confirm Rejection"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body,
+        )}
 
       {/* PAYMENT PROOF REJECTION MODAL */}
-      {showPaymentRejectModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-[16px] border border-white/20 bg-[#061D23] p-6 shadow-2xl">
-            <div className="mb-5">
-              <div className="mb-3 flex items-center gap-3">
-                <div className="rounded-lg bg-red-500/20 p-2 text-red-400">
-                  <XCircleIcon className="h-5 w-5" />
+      {showPaymentRejectModal &&
+        createPortal(
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 backdrop-blur-sm">
+            <div className="w-full max-w-md rounded-[16px] border border-white/20 bg-[#061D23] p-6 shadow-2xl">
+              <div className="mb-5">
+                <div className="mb-3 flex items-center gap-3">
+                  <div className="rounded-lg bg-red-500/20 p-2 text-red-400">
+                    <XCircleIcon className="h-5 w-5" />
+                  </div>
+
+                  <h2 className="text-lg font-bold uppercase tracking-wider text-white">
+                    Reject Payment Proof
+                  </h2>
                 </div>
 
-                <h2 className="text-lg font-bold uppercase tracking-wider text-white">
-                  Reject Payment Proof
-                </h2>
+                <p className="text-sm text-white/60">
+                  Please explain why this payment proof is being rejected. The
+                  player will see this reason and can upload a new proof.
+                </p>
               </div>
 
-              <p className="text-sm text-white/60">
-                Please explain why this payment proof is being rejected. The
-                player will see this reason and can upload a new proof.
-              </p>
-            </div>
-
-            <textarea
-              value={paymentRejectionReason}
-              onChange={(e) => setPaymentRejectionReason(e.target.value)}
-              placeholder="Example: Payment receipt is unclear. Please upload a clearer receipt."
-              rows={4}
-              disabled={paymentProcessingId !== null}
-              className="w-full resize-none rounded-lg border border-white/10 bg-[#0A2A32] p-3 text-sm text-white outline-none placeholder:text-white/30 focus:border-[#4AEEFF]/50"
-            />
-
-            <div className="mt-5 flex justify-end gap-3">
-              <button
-                type="button"
-                onClick={() => {
-                  setShowPaymentRejectModal(false);
-                  setSelectedPaymentProofId(null);
-                  setSelectedPaymentVerificationId(null);
-                  setPaymentRejectionReason("");
-                }}
+              <textarea
+                value={paymentRejectionReason}
+                onChange={(e) => setPaymentRejectionReason(e.target.value)}
+                placeholder="Example: Payment receipt is unclear. Please upload a clearer receipt."
+                rows={4}
                 disabled={paymentProcessingId !== null}
-                className="rounded-lg border border-white/20 px-5 py-2.5 text-xs font-black uppercase tracking-wider text-white/70 transition-all hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                Cancel
-              </button>
+                className="w-full resize-none rounded-lg border border-white/10 bg-[#0A2A32] p-3 text-sm text-white outline-none placeholder:text-white/30 focus:border-[#4AEEFF]/50"
+              />
 
-              <button
-                type="button"
-                onClick={handlePaymentReject}
-                disabled={
-                  paymentProcessingId !== null || !paymentRejectionReason.trim()
-                }
-                className="rounded-lg bg-red-500 px-5 py-2.5 text-xs font-black uppercase tracking-wider text-white transition-all hover:bg-red-400 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {paymentProcessingId !== null
-                  ? "Rejecting..."
-                  : "Confirm Rejection"}
-              </button>
+              <div className="mt-5 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowPaymentRejectModal(false);
+                    setSelectedPaymentProofId(null);
+                    setSelectedPaymentVerificationId(null);
+                    setPaymentRejectionReason("");
+                  }}
+                  disabled={paymentProcessingId !== null}
+                  className="rounded-lg border border-white/20 px-5 py-2.5 text-xs font-black uppercase tracking-wider text-white/70 transition-all hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handlePaymentReject}
+                  disabled={
+                    paymentProcessingId !== null || !paymentRejectionReason.trim()
+                  }
+                  className="rounded-lg bg-red-500 px-5 py-2.5 text-xs font-black uppercase tracking-wider text-white transition-all hover:bg-red-400 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {paymentProcessingId !== null
+                    ? "Rejecting..."
+                    : "Confirm Rejection"}
+                </button>
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body,
+        )}
 
       {/* ADMIN REQUEST REJECT MODAL */}
-      {showAdminRejectModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-md animate-fadeIn">
-          <div className="w-full max-w-md rounded-2xl border border-red-500/30 bg-[#061D23]/95 p-6 shadow-2xl space-y-4">
-            <h3 className="text-xl font-black uppercase tracking-wider text-white">
-              Reject Admin Request
-            </h3>
-            <p className="text-xs text-white/70">
-              Provide an optional reason explaining why this administrative
-              access request is being rejected.
-            </p>
-            <textarea
-              value={adminRejectionReason}
-              onChange={(e) => setAdminRejectionReason(e.target.value)}
-              placeholder="Enter rejection reason (optional)..."
-              rows={3}
-              className="w-full rounded-xl border border-white/20 bg-[#061D23] p-3 text-sm text-white placeholder-white/30 focus:border-red-400 focus:outline-none"
-            />
-            <div className="flex gap-3 pt-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setShowAdminRejectModal(false);
-                  setSelectedAdminId(null);
-                  setAdminRejectionReason("");
-                }}
-                disabled={adminProcessingId !== null}
-                className="flex-1 rounded-xl border border-white/20 py-2.5 text-xs font-black uppercase tracking-wider text-white/70 hover:bg-white/10"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleRejectAdmin}
-                disabled={adminProcessingId !== null}
-                className="flex-1 rounded-xl bg-red-500 py-2.5 text-xs font-black uppercase tracking-wider text-white hover:bg-red-600 shadow-lg shadow-red-500/20"
-              >
-                {adminProcessingId !== null ? "Rejecting..." : "Confirm Reject"}
-              </button>
+      {showAdminRejectModal &&
+        createPortal(
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-md animate-fadeIn">
+            <div className="w-full max-w-md rounded-2xl border border-red-500/30 bg-[#061D23]/95 p-6 shadow-2xl space-y-4">
+              <h3 className="text-xl font-black uppercase tracking-wider text-white">
+                Reject Admin Request
+              </h3>
+              <p className="text-xs text-white/70">
+                Provide an optional reason explaining why this administrative
+                access request is being rejected.
+              </p>
+              <textarea
+                value={adminRejectionReason}
+                onChange={(e) => setAdminRejectionReason(e.target.value)}
+                placeholder="Enter rejection reason (optional)..."
+                rows={3}
+                className="w-full rounded-xl border border-white/20 bg-[#061D23] p-3 text-sm text-white placeholder-white/30 focus:border-red-400 focus:outline-none"
+              />
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowAdminRejectModal(false);
+                    setSelectedAdminId(null);
+                    setAdminRejectionReason("");
+                  }}
+                  disabled={adminProcessingId !== null}
+                  className="flex-1 rounded-xl border border-white/20 py-2.5 text-xs font-black uppercase tracking-wider text-white/70 hover:bg-white/10"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleRejectAdmin}
+                  disabled={adminProcessingId !== null}
+                  className="flex-1 rounded-xl bg-red-500 py-2.5 text-xs font-black uppercase tracking-wider text-white hover:bg-red-600 shadow-lg shadow-red-500/20"
+                >
+                  {adminProcessingId !== null ? "Rejecting..." : "Confirm Reject"}
+                </button>
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body,
+        )}
 
       {/* APPROVE ADMIN WITH PERMISSIONS MODAL */}
-      {adminToApprove && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/70 p-4 pt-24 backdrop-blur-sm animate-fadeIn sm:pt-28">
-          <div className="w-full max-w-2xl rounded-2xl border border-white/20 bg-[#061D23]/90 p-6 text-white shadow-[0_25px_60px_-15px_rgba(0,0,0,0.8)] backdrop-blur-2xl sm:p-8">
-            <div className="mb-6 flex items-center justify-between border-b border-white/10 pb-4">
-              <div className="flex items-center gap-3">
-                <span className="h-6 w-2.5 rounded-full bg-[#4AEEFF] shadow-[0_0_10px_#4AEEFF]" />
-                <div>
-                  <h3 className="text-xl font-black uppercase tracking-widest text-white sm:text-2xl">
-                    Approve Admin Request
-                  </h3>
-                  <p className="text-xs text-emerald-300 font-mono mt-1">
-                    Granting access to:{" "}
-                    <span className="font-bold text-white">
-                      {adminToApprove.firstName} {adminToApprove.lastName}
-                    </span>{" "}
-                    ({adminToApprove.email})
+      {adminToApprove &&
+        createPortal(
+          <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/80 p-4 sm:p-6 backdrop-blur-md animate-fadeIn">
+            <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl border border-white/20 bg-[#061D23]/95 p-6 text-white shadow-[0_25px_60px_-15px_rgba(0,0,0,0.8)] backdrop-blur-2xl sm:p-8 my-auto custom-scrollbar">
+              <div className="mb-6 flex items-center justify-between border-b border-white/10 pb-4">
+                <div className="flex items-center gap-3">
+                  <span className="h-6 w-2.5 rounded-full bg-[#4AEEFF] shadow-[0_0_10px_#4AEEFF]" />
+                  <div>
+                    <h3 className="text-xl font-black uppercase tracking-widest text-white sm:text-2xl">
+                      Approve Admin Request
+                    </h3>
+                    <p className="text-xs text-emerald-300 font-mono mt-1">
+                      Granting access to:{" "}
+                      <span className="font-bold text-white">
+                        {adminToApprove.firstName} {adminToApprove.lastName}
+                      </span>{" "}
+                      ({adminToApprove.email})
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAdminToApprove(null);
+                    setSelectedPermissionsToGrant([]);
+                  }}
+                  disabled={adminProcessingId !== null}
+                  className="rounded-lg p-2 text-white/50 transition hover:bg-white/10 hover:text-white"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="space-y-5">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <p className="text-xs text-white/80 uppercase tracking-wider font-bold">
+                    Select module permissions to assign:
                   </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setAdminToApprove(null);
-                  setSelectedPermissionsToGrant([]);
-                }}
-                disabled={adminProcessingId !== null}
-                className="rounded-lg p-2 text-white/50 transition hover:bg-white/10 hover:text-white"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="space-y-5">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                <p className="text-xs text-white/80 uppercase tracking-wider font-bold">
-                  Select module permissions to assign:
-                </p>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={selectAllPermissions}
-                    className="text-[11px] font-bold uppercase tracking-wider text-[#4AEEFF] hover:underline"
-                  >
-                    Select All
-                  </button>
-                  <span className="text-white/30 text-xs">|</span>
-                  <button
-                    type="button"
-                    onClick={clearAllPermissions}
-                    className="text-[11px] font-bold uppercase tracking-wider text-amber-400 hover:underline"
-                  >
-                    Clear All
-                  </button>
-                  <span className="rounded-md bg-white/10 px-2 py-0.5 text-[11px] font-mono text-white/70 ml-1">
-                    {selectedPermissionsToGrant.length} of{" "}
-                    {AVAILABLE_ADMIN_PERMISSIONS.length}
-                  </span>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                {AVAILABLE_ADMIN_PERMISSIONS.map((perm) => {
-                  const isChecked = selectedPermissionsToGrant.includes(
-                    perm.id,
-                  );
-                  return (
-                    <div
-                      key={perm.id}
-                      onClick={() => togglePermissionToGrant(perm.id)}
-                      className={`flex cursor-pointer items-start gap-3 rounded-lg border p-4 transition-all ${
-                        isChecked
-                          ? "border-[#4AEEFF]/60 bg-[#4AEEFF]/10 text-white"
-                          : "border-white/10 bg-[#061D23]/60 text-white/60 hover:border-[#4AEEFF]/40"
-                      }`}
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={selectAllPermissions}
+                      className="text-[11px] font-bold uppercase tracking-wider text-[#4AEEFF] hover:underline"
                     >
-                      <input
-                        type="checkbox"
-                        checked={isChecked}
-                        onChange={() => {}}
-                        className="mt-0.5 h-4 w-4 cursor-pointer rounded border-white/20 bg-transparent accent-[#4AEEFF] focus:ring-0 focus:ring-offset-0"
-                      />
-                      <div>
-                        <span className="font-bold text-sm block leading-tight text-white">
-                          {perm.name}
-                        </span>
-                        <span className="text-xs text-white/50 block mt-0.5 font-mono">
-                          {perm.desc}
-                        </span>
+                      Select All
+                    </button>
+                    <span className="text-white/30 text-xs">|</span>
+                    <button
+                      type="button"
+                      onClick={clearAllPermissions}
+                      className="text-[11px] font-bold uppercase tracking-wider text-amber-400 hover:underline"
+                    >
+                      Clear All
+                    </button>
+                    <span className="rounded-md bg-white/10 px-2 py-0.5 text-[11px] font-mono text-white/70 ml-1">
+                      {selectedPermissionsToGrant.length} of{" "}
+                      {AVAILABLE_ADMIN_PERMISSIONS.length}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  {AVAILABLE_ADMIN_PERMISSIONS.map((perm) => {
+                    const isChecked = selectedPermissionsToGrant.includes(
+                      perm.id,
+                    );
+                    return (
+                      <div
+                        key={perm.id}
+                        onClick={() => togglePermissionToGrant(perm.id)}
+                        className={`flex cursor-pointer items-start gap-3 rounded-lg border p-4 transition-all ${
+                          isChecked
+                            ? "border-[#4AEEFF]/60 bg-[#4AEEFF]/10 text-white"
+                            : "border-white/10 bg-[#061D23]/60 text-white/60 hover:border-[#4AEEFF]/40"
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={() => {}}
+                          className="mt-0.5 h-4 w-4 cursor-pointer rounded border-white/20 bg-transparent accent-[#4AEEFF] focus:ring-0 focus:ring-offset-0"
+                        />
+                        <div>
+                          <span className="font-bold text-sm block leading-tight text-white">
+                            {perm.name}
+                          </span>
+                          <span className="text-xs text-white/50 block mt-0.5 font-mono">
+                            {perm.desc}
+                          </span>
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
+
+                {selectedPermissionsToGrant.length === 0 && (
+                  <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-200">
+                    ⚠️ Note: No permissions selected. The user will be approved as
+                    an ADMIN without module permissions until you grant
+                    permissions in User Management.
+                  </div>
+                )}
               </div>
 
-              {selectedPermissionsToGrant.length === 0 && (
-                <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-200">
-                  ⚠️ Note: No permissions selected. The user will be approved as
-                  an ADMIN without module permissions until you grant
-                  permissions in User Management.
-                </div>
-              )}
+              <div className="mt-6 flex gap-3 border-t border-white/10 pt-5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAdminToApprove(null);
+                    setSelectedPermissionsToGrant([]);
+                  }}
+                  disabled={adminProcessingId !== null}
+                  className="flex-1 rounded-xl border border-white/20 py-2.5 text-xs font-black uppercase tracking-wider text-white/70 transition-all hover:bg-white/10 disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmApproveAdmin}
+                  disabled={adminProcessingId !== null}
+                  className="flex-1 rounded-xl bg-[#4AEEFF] py-2.5 text-xs font-black uppercase tracking-wider text-[#061D23] shadow-md shadow-[#4AEEFF]/20 transition-all hover:bg-white disabled:opacity-50"
+                >
+                  {adminProcessingId !== null
+                    ? "Approving & Saving..."
+                    : "Confirm & Approve Admin"}
+                </button>
+              </div>
             </div>
-
-            <div className="mt-6 flex gap-3 border-t border-white/10 pt-5">
-              <button
-                type="button"
-                onClick={() => {
-                  setAdminToApprove(null);
-                  setSelectedPermissionsToGrant([]);
-                }}
-                disabled={adminProcessingId !== null}
-                className="flex-1 rounded-xl border border-white/20 py-2.5 text-xs font-black uppercase tracking-wider text-white/70 transition-all hover:bg-white/10 disabled:opacity-50"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleConfirmApproveAdmin}
-                disabled={adminProcessingId !== null}
-                className="flex-1 rounded-xl bg-[#4AEEFF] py-2.5 text-xs font-black uppercase tracking-wider text-[#061D23] shadow-md shadow-[#4AEEFF]/20 transition-all hover:bg-white disabled:opacity-50"
-              >
-                {adminProcessingId !== null
-                  ? "Approving & Saving..."
-                  : "Confirm & Approve Admin"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body,
+        )}
 
       {/* FOOTER */}
       <footer className="mt-auto rounded-[16px] border border-white/10 bg-[#061D23]/25 p-5 shadow-[0_15px_40px_rgba(0,0,0,0.3)] backdrop-blur-md">

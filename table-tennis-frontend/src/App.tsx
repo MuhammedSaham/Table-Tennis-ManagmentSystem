@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   BrowserRouter as Router,
   Routes,
@@ -23,6 +23,8 @@ import MyMatches from "./pages/MyMatches";
 import Leaderboard from "./pages/Leaderboard";
 import Profile from "./pages/Profile";
 import Users from "./pages/Users";
+import UserDetails from "./pages/UserDetails";
+import api from "./services/api";
 import ResetPassword from "./pages/ResetPassword";
 import AdminRequests from "./pages/AdminRequests";
 import PublicProfile from "./pages/PublicProfile";
@@ -30,6 +32,7 @@ import GlobalLeaderboard from "./pages/GlobalLeaderboard";
 import Players from "./pages/Players";
 import RefereeMatches from "./pages/RefereeMatches";
 import About from "./pages/About";
+import ManageAbout from "./pages/ManageAbout";
 import ErrorBoundary from "./components/ErrorBoundary";
 import ScrollToTop from "./components/ScrollToTop";
 import VerifyEmail from "./pages/VerifyEmail";
@@ -133,6 +136,56 @@ const AdminRequestsRoute: React.FC<{ children: React.ReactNode }> = ({
   return <Navigate to="/app/dashboard" replace />;
 };
 
+const AdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user } = useAuth();
+  if (
+    user?.role === "SUPER_ADMIN" ||
+    user?.isSuperAdmin ||
+    user?.role === "ADMIN"
+  ) {
+    return <>{children}</>;
+  }
+  return <Navigate to="/app/dashboard" replace />;
+};
+
+const UserDetailRouter: React.FC = () => {
+  const { userId } = useParams<{ userId: string }>();
+  const [role, setRole] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!userId) {
+      setLoading(false);
+      return;
+    }
+    api
+      .get(`/users/${userId}`)
+      .then((res) => {
+        setRole(res.data?.data?.role || "PLAYER");
+      })
+      .catch(() => {
+        setRole("PLAYER");
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  }, [userId]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <div className="w-8 h-8 border-2 border-[#4AEEFF] border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (role === "REFEREE" || role === "ADMIN" || role === "SUPER_ADMIN") {
+    return <UserDetails />;
+  }
+
+  return <Profile />;
+};
+
 const PlayerRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, isLoading } = useAuth();
 
@@ -214,6 +267,7 @@ function AppRoutes() {
         <Route path="my-registrations" element={<MyRegistrations />} />
         <Route path="my-matches" element={<MyMatches />} />
         <Route path="referee/matches" element={<RefereeMatches />} />
+        <Route path="players" element={<Players />} />
         <Route path="profile" element={<Profile />} />
         <Route
           path="users"
@@ -227,7 +281,7 @@ function AppRoutes() {
           path="users/:userId"
           element={
             <PermissionRoute permission="MANAGE_USERS">
-              <Profile />
+              <UserDetailRouter />
             </PermissionRoute>
           }
         />
@@ -237,6 +291,14 @@ function AppRoutes() {
             <AdminRequestsRoute>
               <AdminRequests />
             </AdminRequestsRoute>
+          }
+        />
+        <Route
+          path="admin/about"
+          element={
+            <AdminRoute>
+              <ManageAbout />
+            </AdminRoute>
           }
         />
       </Route>

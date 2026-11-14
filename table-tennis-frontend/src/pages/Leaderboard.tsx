@@ -1,14 +1,17 @@
 import React, { useEffect, useState } from "react";
 import api, { getProfileImageUrl } from "../services/api";
 import toast from "react-hot-toast";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import GlassSelect from "../components/GlassSelect";
 import { TrophyIcon, CalendarIcon } from "@heroicons/react/24/outline";
+import { getEffectiveTournamentStatus } from "../utils/tournamentStatus";
 
 interface Tournament {
   id: string;
   name: string;
   status: string;
+  startDate?: string;
+  endDate?: string;
 }
 
 interface Standing {
@@ -315,11 +318,17 @@ const ParticipantDisplay: React.FC<ParticipantDisplayProps> = ({
 };
 
 const Leaderboard: React.FC = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const urlTournamentId = searchParams.get("tournament");
+  const urlCategoryId = searchParams.get("category");
+
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [selectedTournament, setSelectedTournament] = useState<string>("");
   const [standings, setStandings] = useState<CategoryStanding[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>("");
   const [avatarMap, setAvatarMap] = useState<Map<string, string>>(new Map());
+  const [clubMemberIds, setClubMemberIds] = useState<Set<string>>(new Set());
+  const [competitorFilter, setCompetitorFilter] = useState<"ALL" | "MEMBERS">("ALL");
   const [loading, setLoading] = useState(true);
   const [loadingStandings, setLoadingStandings] = useState(false);
 
@@ -353,9 +362,13 @@ const Leaderboard: React.FC = () => {
   const fetchTournaments = async () => {
     try {
       const response = await api.get("/tournaments");
-      setTournaments(response.data.data);
-      if (response.data.data.length > 0) {
-        setSelectedTournament(response.data.data[0].id);
+      const list = response.data.data;
+      setTournaments(list);
+      if (list.length > 0) {
+        const matched = urlTournamentId
+          ? list.find((t: Tournament) => t.id === urlTournamentId)
+          : null;
+        setSelectedTournament(matched ? matched.id : list[0].id);
       }
     } catch (error) {
       toast.error("Failed to fetch tournaments");
@@ -373,42 +386,32 @@ const Leaderboard: React.FC = () => {
         api.get("/users/public/players"),
       ]);
 
-      // Identify all Club Players using their User IDs.
+      // Identify Club Players for affiliation badges and filtering.
       const clubPlayerIds = new Set<string>(
-        playersResponse.data.data
+        (playersResponse.data.data || [])
           .filter(
             (player: { id: string; isClubMember: boolean }) =>
               player.isClubMember === true,
           )
           .map((player: { id: string }) => player.id),
       );
+      setClubMemberIds(clubPlayerIds);
 
-      const filteredStandings: CategoryStanding[] =
-        standingsResponse.data.data.map((category: CategoryStanding) => {
-          const eligibleStandings = category.standings.filter((entry) => {
-            if (entry.participantType === "TEAM") {
-              return (
-                entry.members?.length === 2 &&
-                entry.members.every((member) =>
-                  clubPlayerIds.has(member.playerId),
-                )
-              );
-            }
-            return clubPlayerIds.has(entry.playerId);
-          });
+      // Include ALL tournament competitors (both Club Members and Guest players)
+      const allCategoryStandings: CategoryStanding[] =
+        (standingsResponse.data.data || []).map((category: CategoryStanding) => ({
+          ...category,
+          totalPlayers: category.standings.length,
+        }));
 
-          return {
-            ...category,
-            standings: eligibleStandings,
-            totalPlayers: eligibleStandings.length,
-          };
-        });
-
-      setStandings(filteredStandings);
-      if (filteredStandings.length > 0) {
+      setStandings(allCategoryStandings);
+      if (allCategoryStandings.length > 0) {
         setSelectedCategory((prev) => {
-          const exists = filteredStandings.some((cat) => cat.categoryId === prev);
-          return exists && prev ? prev : filteredStandings[0].categoryId;
+          if (urlCategoryId && allCategoryStandings.some((cat) => cat.categoryId === urlCategoryId)) {
+            return urlCategoryId;
+          }
+          const exists = allCategoryStandings.some((cat) => cat.categoryId === prev);
+          return exists && prev ? prev : allCategoryStandings[0].categoryId;
         });
       } else {
         setSelectedCategory("");
@@ -420,11 +423,48 @@ const Leaderboard: React.FC = () => {
     }
   };
 
+  const isStandingClubMember = (entry: Standing): boolean => {
+    if (entry.participantType === "TEAM" && entry.members && entry.members.length > 0) {
+      return entry.members.some((m) => clubMemberIds.has(m.playerId));
+    }
+    return clubMemberIds.has(entry.playerId);
+  };
+
   const selectedTourneyObj = tournaments.find((t) => t.id === selectedTournament);
-  const currentCategory =
+  const rawCurrentCategory =
     standings.find((cat) => cat.categoryId === selectedCategory) ||
     standings[0];
+
+  const currentCategory = rawCurrentCategory
+    ? {
+        ...rawCurrentCategory,
+        standings:
+          competitorFilter === "MEMBERS"
+            ? rawCurrentCategory.standings.filter(isStandingClubMember)
+            : rawCurrentCategory.standings,
+      }
+    : undefined;
   const displayedStandings = currentCategory ? [currentCategory] : [];
+
+  const renderAffiliationSubtext = (entry: Standing, defaultLabel?: string) => {
+    const isClub = isStandingClubMember(entry);
+    return (
+      <div className="flex items-center gap-1.5 mt-0.5">
+        <span
+          className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+            isClub ? "bg-[#4AEEFF]" : "bg-white/40"
+          }`}
+        />
+        <span
+          className={`text-[11px] truncate ${
+            isClub ? "text-[#4AEEFF] font-semibold" : "text-white/60"
+          }`}
+        >
+          {isClub ? "Sam's College Member" : defaultLabel || "Guest Competitor"}
+        </span>
+      </div>
+    );
+  };
 
   return (
     <div className="relative min-h-screen w-full overflow-hidden bg-[#061D23] text-white flex flex-col">
@@ -463,7 +503,11 @@ const Leaderboard: React.FC = () => {
               ) : (
                 <GlassSelect
                   value={selectedTournament}
-                  onChange={(e) => setSelectedTournament(e.target.value)}
+                  onChange={(e) => {
+                    const newTId = e.target.value;
+                    setSelectedTournament(newTId);
+                    setSearchParams({ tournament: newTId });
+                  }}
                   aria-label="Select tournament"
                 >
                   {tournaments.map((tournament) => (
@@ -472,7 +516,7 @@ const Leaderboard: React.FC = () => {
                       value={tournament.id}
                       className="bg-[#061D23] text-white"
                     >
-                      {tournament.name} ({tournament.status})
+                      {tournament.name} ({getEffectiveTournamentStatus(tournament)})
                     </option>
                   ))}
                 </GlassSelect>
@@ -487,7 +531,15 @@ const Leaderboard: React.FC = () => {
                 </span>
                 <GlassSelect
                   value={selectedCategory || standings[0]?.categoryId}
-                  onChange={(e) => setSelectedCategory(e.target.value)}
+                  onChange={(e) => {
+                    const newCId = e.target.value;
+                    setSelectedCategory(newCId);
+                    setSearchParams((prev) => {
+                      const next = new URLSearchParams(prev);
+                      next.set("category", newCId);
+                      return next;
+                    });
+                  }}
                   aria-label="Select category"
                 >
                   {standings.map((cat) => (
@@ -536,95 +588,137 @@ const Leaderboard: React.FC = () => {
                   className="space-y-4"
                 >
                   {category.standings.length > 0 && (
-                    /* ─── TOP 3 PODIUM HERO SHOWCASE (Frosted Glass Cards) ─── */
-                    <div
-                      key={`podium-${selectedTournament}-${category.categoryId}`}
-                      className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 pt-2 pb-4 items-end"
-                    >
-                      {/* #2 SILVER (Left) */}
-                      {top2 ? (
-                        <div className="order-2 md:order-1 rounded-2xl border border-white/20 bg-[#061D23]/30 p-5 shadow-[0_20px_50px_-15px_rgba(6,29,35,0.6)] backdrop-blur-xl hover:border-slate-300/50 transition-all duration-300 transform hover:-translate-y-1 animate-fade-up-1 relative overflow-hidden flex flex-col justify-between h-[195px]">
-                          <div className="flex items-center justify-between">
-                            <span className="inline-flex items-center justify-center px-3 py-1 rounded-full bg-slate-200/90 text-slate-900 font-extrabold text-xs shadow-sm ring-1 ring-white/40">
-                              #2 SILVER
+                    <>
+                      {/* Category Competitor Filter Capsule */}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs px-2.5 py-1 rounded-full bg-white/10 text-white/90 border border-white/15 font-semibold">
+                            {category.standings.length} {category.standings.length === 1 ? "Competitor" : "Competitors"}
+                          </span>
+                          {competitorFilter === "MEMBERS" && (
+                            <span className="text-xs px-2.5 py-1 rounded-full bg-[#4AEEFF]/15 text-[#4AEEFF] border border-[#4AEEFF]/30 font-bold">
+                              Showing: Club Members
                             </span>
-                            <span className="text-xs font-bold text-white/70">
-                              {top2.wins}W - {top2.losses}L
-                            </span>
-                          </div>
-                          <div className="my-auto">
-                            <ParticipantDisplay
-                              player={top2}
-                              avatarMap={avatarMap}
-                              variant="podium-2"
-                              subtext={<p className="text-xs text-white/60 truncate">Sam&apos;s College TT</p>}
-                            />
-                          </div>
-                          <div className="pt-2.5 border-t border-white/10 flex items-center justify-between">
-                            <span className="text-xs font-medium text-white/60">{top2.matchesPlayed} Matches</span>
-                            <span className="inline-flex items-center gap-1 px-3 py-1 rounded-lg bg-[#061D23] text-[#4AEEFF] font-black text-sm border border-[#4AEEFF]/30 shadow-sm">
-                              {top2.points} <span className="text-[10px] text-[#4AEEFF]/70 font-normal">pts</span>
-                            </span>
-                          </div>
+                          )}
                         </div>
-                      ) : <div className="order-2 md:order-1" />}
 
-                      {/* #1 GOLD CHAMPION (Center / Taller / Prominent) */}
-                      {top1 && (
-                        <div className="order-1 md:order-2 rounded-2xl border-2 border-amber-400/80 bg-gradient-to-b from-[#061D23]/60 via-[#061D23]/40 to-[#061D23]/50 p-6 shadow-[0_0_35px_rgba(251,191,36,0.2)] hover:shadow-[0_0_45px_rgba(251,191,36,0.3)] backdrop-blur-xl transition-all duration-300 transform hover:-translate-y-2 animate-fade-up-2 relative overflow-hidden flex flex-col justify-between h-[225px]">
-                          <div className="flex items-center justify-between">
-                            <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-amber-400 text-slate-950 font-black text-xs shadow-md ring-2 ring-amber-300">
-                              ★ #1 CHAMPION
-                            </span>
-                            <span className="text-xs font-bold text-emerald-400">
-                              {top1.wins}W - {top1.losses}L
-                            </span>
-                          </div>
-                          <div className="my-auto">
-                            <ParticipantDisplay
-                              player={top1}
-                              avatarMap={avatarMap}
-                              variant="podium-1"
-                              subtext={<p className="text-xs text-amber-300 font-bold truncate">Tournament Leader</p>}
-                            />
-                          </div>
-                          <div className="pt-2.5 border-t border-amber-400/20 flex items-center justify-between">
-                            <span className="text-xs font-medium text-white/70">{top1.matchesPlayed} Matches</span>
-                            <span className="inline-flex items-center gap-1 px-3.5 py-1 rounded-lg bg-[#061D23] text-[#4AEEFF] font-black text-base border border-[#4AEEFF]/40 shadow-md">
-                              {top1.points} <span className="text-xs text-[#4AEEFF]/70 font-normal">pts</span>
-                            </span>
-                          </div>
+                        {/* Filter Toggle */}
+                        <div className="flex items-center gap-1.5 bg-white/5 p-1 rounded-xl border border-white/10 backdrop-blur-md self-start sm:self-auto">
+                          <button
+                            type="button"
+                            onClick={() => setCompetitorFilter("ALL")}
+                            className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                              competitorFilter === "ALL"
+                                ? "bg-[#4AEEFF]/15 text-[#4AEEFF] border border-[#4AEEFF]/40 shadow-sm"
+                                : "text-white/60 hover:text-white"
+                            }`}
+                          >
+                            All Competitors ({rawCurrentCategory?.standings.length || 0})
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setCompetitorFilter("MEMBERS")}
+                            className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                              competitorFilter === "MEMBERS"
+                                ? "bg-[#4AEEFF]/15 text-[#4AEEFF] border border-[#4AEEFF]/40 shadow-sm"
+                                : "text-white/60 hover:text-white"
+                            }`}
+                          >
+                            Club Members Only ({rawCurrentCategory?.standings.filter(isStandingClubMember).length || 0})
+                          </button>
                         </div>
-                      )}
+                      </div>
 
-                      {/* #3 BRONZE (Right) */}
-                      {top3 ? (
-                        <div className="order-3 rounded-2xl border border-white/20 bg-[#061D23]/30 p-5 shadow-[0_20px_50px_-15px_rgba(6,29,35,0.6)] backdrop-blur-xl hover:border-amber-500/50 transition-all duration-300 transform hover:-translate-y-1 animate-fade-up-3 relative overflow-hidden flex flex-col justify-between h-[185px]">
-                          <div className="flex items-center justify-between">
-                            <span className="inline-flex items-center justify-center px-3 py-1 rounded-full bg-amber-700/90 text-amber-100 font-extrabold text-xs shadow-sm ring-1 ring-amber-400/40">
-                              #3 BRONZE
-                            </span>
-                            <span className="text-xs font-bold text-white/70">
-                              {top3.wins}W - {top3.losses}L
-                            </span>
+                      {/* ─── TOP 3 PODIUM HERO SHOWCASE (Frosted Glass Cards) ─── */}
+                      <div
+                        key={`podium-${selectedTournament}-${category.categoryId}-${competitorFilter}`}
+                        className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 pt-2 pb-4 items-end"
+                      >
+                        {/* #2 SILVER (Left) */}
+                        {top2 ? (
+                          <div className="order-2 md:order-1 rounded-2xl border border-white/20 bg-[#061D23]/30 p-5 shadow-[0_20px_50px_-15px_rgba(6,29,35,0.6)] backdrop-blur-xl hover:border-slate-300/50 transition-all duration-300 transform hover:-translate-y-1 animate-fade-up-1 relative overflow-hidden flex flex-col justify-between h-[195px]">
+                            <div className="flex items-center justify-between">
+                              <span className="inline-flex items-center justify-center px-3 py-1 rounded-full bg-slate-200/90 text-slate-900 font-extrabold text-xs shadow-sm ring-1 ring-white/40">
+                                #2 SILVER
+                              </span>
+                              <span className="text-xs font-bold text-white/70">
+                                {top2.wins}W - {top2.losses}L
+                              </span>
+                            </div>
+                            <div className="my-auto">
+                              <ParticipantDisplay
+                                player={top2}
+                                avatarMap={avatarMap}
+                                variant="podium-2"
+                                subtext={renderAffiliationSubtext(top2)}
+                              />
+                            </div>
+                            <div className="pt-2.5 border-t border-white/10 flex items-center justify-between">
+                              <span className="text-xs font-medium text-white/60">{top2.matchesPlayed} Matches</span>
+                              <span className="inline-flex items-center gap-1 px-3 py-1 rounded-lg bg-[#061D23] text-[#4AEEFF] font-black text-sm border border-[#4AEEFF]/30 shadow-sm">
+                                {top2.points} <span className="text-[10px] text-[#4AEEFF]/70 font-normal">pts</span>
+                              </span>
+                            </div>
                           </div>
-                          <div className="my-auto">
-                            <ParticipantDisplay
-                              player={top3}
-                              avatarMap={avatarMap}
-                              variant="podium-3"
-                              subtext={<p className="text-xs text-white/60 truncate">Sam&apos;s College TT</p>}
-                            />
+                        ) : <div className="order-2 md:order-1" />}
+
+                        {/* #1 GOLD CHAMPION (Center / Taller / Prominent) */}
+                        {top1 && (
+                          <div className="order-1 md:order-2 rounded-2xl border-2 border-amber-400/80 bg-gradient-to-b from-[#061D23]/60 via-[#061D23]/40 to-[#061D23]/50 p-6 shadow-[0_0_35px_rgba(251,191,36,0.2)] hover:shadow-[0_0_45px_rgba(251,191,36,0.3)] backdrop-blur-xl transition-all duration-300 transform hover:-translate-y-2 animate-fade-up-2 relative overflow-hidden flex flex-col justify-between h-[225px]">
+                            <div className="flex items-center justify-between">
+                              <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-amber-400 text-slate-950 font-black text-xs shadow-md ring-2 ring-amber-300">
+                                ★ #1 CHAMPION
+                              </span>
+                              <span className="text-xs font-bold text-emerald-400">
+                                {top1.wins}W - {top1.losses}L
+                              </span>
+                            </div>
+                            <div className="my-auto">
+                              <ParticipantDisplay
+                                player={top1}
+                                avatarMap={avatarMap}
+                                variant="podium-1"
+                                subtext={renderAffiliationSubtext(top1, "Tournament Leader")}
+                              />
+                            </div>
+                            <div className="pt-2.5 border-t border-amber-400/20 flex items-center justify-between">
+                              <span className="text-xs font-medium text-white/70">{top1.matchesPlayed} Matches</span>
+                              <span className="inline-flex items-center gap-1 px-3.5 py-1 rounded-lg bg-[#061D23] text-[#4AEEFF] font-black text-base border border-[#4AEEFF]/40 shadow-md">
+                                {top1.points} <span className="text-xs text-[#4AEEFF]/70 font-normal">pts</span>
+                              </span>
+                            </div>
                           </div>
-                          <div className="pt-2.5 border-t border-white/10 flex items-center justify-between">
-                            <span className="text-xs font-medium text-white/60">{top3.matchesPlayed} Matches</span>
-                            <span className="inline-flex items-center gap-1 px-3 py-1 rounded-lg bg-[#061D23] text-[#4AEEFF] font-black text-sm border border-[#4AEEFF]/30 shadow-sm">
-                              {top3.points} <span className="text-[10px] text-[#4AEEFF]/70 font-normal">pts</span>
-                            </span>
+                        )}
+
+                        {/* #3 BRONZE (Right) */}
+                        {top3 ? (
+                          <div className="order-3 rounded-2xl border border-white/20 bg-[#061D23]/30 p-5 shadow-[0_20px_50px_-15px_rgba(6,29,35,0.6)] backdrop-blur-xl hover:border-amber-500/50 transition-all duration-300 transform hover:-translate-y-1 animate-fade-up-3 relative overflow-hidden flex flex-col justify-between h-[185px]">
+                            <div className="flex items-center justify-between">
+                              <span className="inline-flex items-center justify-center px-3 py-1 rounded-full bg-amber-700/90 text-amber-100 font-extrabold text-xs shadow-sm ring-1 ring-amber-400/40">
+                                #3 BRONZE
+                              </span>
+                              <span className="text-xs font-bold text-white/70">
+                                {top3.wins}W - {top3.losses}L
+                              </span>
+                            </div>
+                            <div className="my-auto">
+                              <ParticipantDisplay
+                                player={top3}
+                                avatarMap={avatarMap}
+                                variant="podium-3"
+                                subtext={renderAffiliationSubtext(top3)}
+                              />
+                            </div>
+                            <div className="pt-2.5 border-t border-white/10 flex items-center justify-between">
+                              <span className="text-xs font-medium text-white/60">{top3.matchesPlayed} Matches</span>
+                              <span className="inline-flex items-center gap-1 px-3 py-1 rounded-lg bg-[#061D23] text-[#4AEEFF] font-black text-sm border border-[#4AEEFF]/30 shadow-sm">
+                                {top3.points} <span className="text-[10px] text-[#4AEEFF]/70 font-normal">pts</span>
+                              </span>
+                            </div>
                           </div>
-                        </div>
-                      ) : <div className="order-3" />}
-                    </div>
+                        ) : <div className="order-3" />}
+                      </div>
+                    </>
                   )}
 
                   {category.standings.length === 0 ? (
@@ -691,11 +785,7 @@ const Leaderboard: React.FC = () => {
                                       player={player}
                                       avatarMap={avatarMap}
                                       variant="table"
-                                      subtext={
-                                        <div className="text-[11px] text-white/50 truncate">
-                                          Sam&apos;s College TT Club
-                                        </div>
-                                      }
+                                      subtext={renderAffiliationSubtext(player)}
                                     />
                                   </td>
 
@@ -760,9 +850,12 @@ const Leaderboard: React.FC = () => {
                                     avatarMap={avatarMap}
                                     variant="mobile"
                                     subtext={
-                                      <span className="text-[10px] text-white/50 block truncate">
-                                        {player.matchesPlayed} played · {player.wins}W - {player.losses}L
-                                      </span>
+                                      <div>
+                                        {renderAffiliationSubtext(player)}
+                                        <span className="text-[10px] text-white/50 block truncate mt-0.5">
+                                          {player.matchesPlayed} played · {player.wins}W - {player.losses}L
+                                        </span>
+                                      </div>
                                     }
                                   />
                                 </div>

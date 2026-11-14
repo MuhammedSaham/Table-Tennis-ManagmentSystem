@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useSearchParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import api from "../services/api";
@@ -12,6 +12,11 @@ import {
   MagnifyingGlassIcon,
   XMarkIcon,
 } from "@heroicons/react/24/outline";
+import {
+  getEffectiveTournamentStatus,
+  getTournamentStatusBadgeClass,
+  type TournamentEffectiveStatus,
+} from "../utils/tournamentStatus";
 
 interface Tournament {
   id: string;
@@ -31,7 +36,23 @@ const Tournaments: React.FC = () => {
   const [pendingTournamentIds, setPendingTournamentIds] = useState<Set<string>>(
     new Set(),
   );
-  const [statusFilter, setStatusFilter] = useState<string>("ALL");
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Support ?status=UPCOMING, ?status=ONGOING, ?status=COMPLETED, ?view=upcoming3
+  const [statusFilter, setStatusFilter] = useState<string>(() => {
+    const s = searchParams.get("status") || searchParams.get("view");
+    if (s) {
+      const upper = s.toUpperCase();
+      if (
+        ["UPCOMING", "ONGOING", "COMPLETED"].includes(upper) ||
+        upper === "UPCOMING3"
+      ) {
+        return "UPCOMING";
+      }
+    }
+    return "ALL";
+  });
+
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const { user, hasPermission } = useAuth();
@@ -39,10 +60,6 @@ const Tournaments: React.FC = () => {
     user?.role === "SUPER_ADMIN" || hasPermission("MANAGE_TOURNAMENTS");
   const location = useLocation();
   const isAppScope = location.pathname.startsWith("/app") || !!user;
-  const [searchParams] = useSearchParams();
-
-  const showUpcomingThree =
-    user?.role === "PLAYER" && searchParams.get("view") === "upcoming3";
 
   useEffect(() => {
     const fetchTournaments = async () => {
@@ -72,6 +89,19 @@ const Tournaments: React.FC = () => {
 
     fetchTournaments();
   }, [user]);
+
+  const handleTabChange = (key: string) => {
+    setStatusFilter(key);
+    const updated = new URLSearchParams(searchParams);
+    if (key === "ALL") {
+      updated.delete("status");
+      updated.delete("view");
+    } else {
+      updated.set("status", key);
+      updated.delete("view");
+    }
+    setSearchParams(updated, { replace: true });
+  };
 
   const formatTitle = (title: string) => {
     if (!title) return "";
@@ -116,71 +146,85 @@ const Tournaments: React.FC = () => {
     return `${startDay} ${startMonth} – ${endDay} ${endMonth} ${year}`;
   };
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "UPCOMING":
-        return "bg-sky-500/20 text-sky-300 border border-sky-400/30";
-      case "ONGOING":
-        return "bg-amber-500/20 text-amber-300 border border-amber-400/30 animate-pulse";
-      case "COMPLETED":
-        return "bg-emerald-500/20 text-emerald-300 border border-emerald-400/30";
-      case "CANCELLED":
-        return "bg-rose-500/20 text-rose-300 border border-rose-400/30";
-      default:
-        return "bg-white/10 text-white/80 border border-white/20";
-    }
-  };
+  // Compute dynamic date-aware effective status for each tournament
+  const tournamentsWithEffectiveStatus = useMemo(() => {
+    return tournaments.map((t) => ({
+      ...t,
+      effectiveStatus: getEffectiveTournamentStatus(t),
+    }));
+  }, [tournaments]);
 
-  const filteredTournaments = tournaments.filter((t) => {
-    const matchesStatus = statusFilter === "ALL" || t.status === statusFilter;
+  // Tab counts based on real-world effective status
+  const upcomingCount = useMemo(
+    () =>
+      tournamentsWithEffectiveStatus.filter(
+        (t) => t.effectiveStatus === "UPCOMING",
+      ).length,
+    [tournamentsWithEffectiveStatus],
+  );
+
+  const ongoingCount = useMemo(
+    () =>
+      tournamentsWithEffectiveStatus.filter(
+        (t) => t.effectiveStatus === "ONGOING",
+      ).length,
+    [tournamentsWithEffectiveStatus],
+  );
+
+  const completedCount = useMemo(
+    () =>
+      tournamentsWithEffectiveStatus.filter(
+        (t) => t.effectiveStatus === "COMPLETED",
+      ).length,
+    [tournamentsWithEffectiveStatus],
+  );
+
+  // Filter & sort tournaments
+  const filteredTournaments = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
-    const matchesSearch =
-      !q ||
-      t.name.toLowerCase().includes(q) ||
-      (t.venue && t.venue.toLowerCase().includes(q));
-    return matchesStatus && matchesSearch;
-  });
 
-  // Show the 3 nearest upcoming tournaments for Player Dashboard
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  const upcomingThreeTournaments = tournaments
-    .filter((t) => {
-      const startDate = new Date(t.startDate);
-
-      return (
-        t.status === "UPCOMING" &&
-        !Number.isNaN(startDate.getTime()) &&
-        startDate >= today
-      );
-    })
-    .sort(
-      (a, b) =>
-        new Date(a.startDate).getTime() - new Date(b.startDate).getTime(),
-    )
-    .slice(0, 3);
-
-  // Apply search within the selected 3 tournaments
-  const displayedTournaments = showUpcomingThree
-    ? upcomingThreeTournaments.filter((t) => {
-        const q = searchQuery.trim().toLowerCase();
-
-        return (
+    return tournamentsWithEffectiveStatus
+      .filter((t) => {
+        const matchesStatus =
+          statusFilter === "ALL" || t.effectiveStatus === statusFilter;
+        const matchesSearch =
           !q ||
           t.name.toLowerCase().includes(q) ||
-          (t.venue || "").toLowerCase().includes(q)
-        );
+          (t.venue && t.venue.toLowerCase().includes(q));
+        return matchesStatus && matchesSearch;
       })
-    : filteredTournaments;
+      .sort((a, b) => {
+        if (statusFilter === "UPCOMING" || statusFilter === "ONGOING") {
+          return (
+            new Date(a.startDate).getTime() - new Date(b.startDate).getTime()
+          );
+        }
+        if (statusFilter === "COMPLETED") {
+          return (
+            new Date(b.endDate).getTime() - new Date(a.endDate).getTime()
+          );
+        }
+        // ALL tab: prioritize ONGOING -> UPCOMING -> COMPLETED -> CANCELLED
+        const priorityMap: Record<TournamentEffectiveStatus, number> = {
+          ONGOING: 1,
+          UPCOMING: 2,
+          COMPLETED: 3,
+          CANCELLED: 4,
+        };
+        const prioA = priorityMap[a.effectiveStatus] || 5;
+        const prioB = priorityMap[b.effectiveStatus] || 5;
+        if (prioA !== prioB) return prioA - prioB;
 
-  const upcomingCount = tournaments.filter(
-    (t) => t.status === "UPCOMING",
-  ).length;
-  const ongoingCount = tournaments.filter((t) => t.status === "ONGOING").length;
-  const completedCount = tournaments.filter(
-    (t) => t.status === "COMPLETED",
-  ).length;
+        if (a.effectiveStatus === "COMPLETED") {
+          return (
+            new Date(b.endDate).getTime() - new Date(a.endDate).getTime()
+          );
+        }
+        return (
+          new Date(a.startDate).getTime() - new Date(b.startDate).getTime()
+        );
+      });
+  }, [tournamentsWithEffectiveStatus, statusFilter, searchQuery]);
 
   const wrapInBaseLayout = (children: React.ReactNode) => (
     <div className="relative min-h-screen w-full overflow-hidden bg-[#061D23] text-white">
@@ -218,51 +262,49 @@ const Tournaments: React.FC = () => {
         <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-6 min-w-0">
           <div className="flex items-center gap-3">
             <h1 className="text-2xl sm:text-3xl font-heading font-bold text-white tracking-tight leading-none">
-              {showUpcomingThree ? "Upcoming Tournaments" : "Tournaments"}
+              Tournaments
             </h1>
             <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-white/10 text-white/80 border border-white/15">
-              {showUpcomingThree
-                ? upcomingThreeTournaments.length
-                : tournaments.length}
+              {statusFilter === "ALL"
+                ? tournaments.length
+                : filteredTournaments.length}
             </span>
           </div>
 
           {/* Status Filter Tabs (Segmented Capsule) */}
-          {!showUpcomingThree && (
-            <div className="flex items-center gap-1 bg-white/5 p-1 rounded-xl border border-white/10 backdrop-blur-md overflow-x-auto scrollbar-none">
-              {[
-                { key: "ALL", label: "All", count: tournaments.length },
-                { key: "UPCOMING", label: "Upcoming", count: upcomingCount },
-                { key: "ONGOING", label: "Ongoing", count: ongoingCount },
-                { key: "COMPLETED", label: "Completed", count: completedCount },
-              ].map((tab) => {
-                const isActive = statusFilter === tab.key;
-                return (
-                  <button
-                    key={tab.key}
-                    type="button"
-                    onClick={() => setStatusFilter(tab.key)}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all duration-200 ${
+          <div className="flex items-center gap-1 bg-white/5 p-1 rounded-xl border border-white/10 backdrop-blur-md overflow-x-auto scrollbar-none">
+            {[
+              { key: "ALL", label: "All", count: tournaments.length },
+              { key: "UPCOMING", label: "Upcoming", count: upcomingCount },
+              { key: "ONGOING", label: "Ongoing", count: ongoingCount },
+              { key: "COMPLETED", label: "Completed", count: completedCount },
+            ].map((tab) => {
+              const isActive = statusFilter === tab.key;
+              return (
+                <button
+                  key={tab.key}
+                  type="button"
+                  onClick={() => handleTabChange(tab.key)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all duration-200 ${
+                    isActive
+                      ? "bg-[#4AEEFF]/15 text-[#4AEEFF] border border-[#4AEEFF]/45 shadow-[0_0_14px_rgba(74,238,255,0.18)] backdrop-blur-md"
+                      : "text-white/70 hover:text-white hover:bg-white/5 border border-transparent"
+                  }`}
+                >
+                  <span>{tab.label}</span>
+                  <span
+                    className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
                       isActive
-                        ? "bg-[#4AEEFF]/15 text-[#4AEEFF] border border-[#4AEEFF]/45 shadow-[0_0_14px_rgba(74,238,255,0.18)] backdrop-blur-md"
-                        : "text-white/70 hover:text-white hover:bg-white/5 border border-transparent"
+                        ? "bg-[#4AEEFF]/25 text-[#4AEEFF]"
+                        : "bg-white/10 text-white/60"
                     }`}
                   >
-                    <span>{tab.label}</span>
-                    <span
-                      className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
-                        isActive
-                          ? "bg-[#4AEEFF]/25 text-[#4AEEFF]"
-                          : "bg-white/10 text-white/60"
-                      }`}
-                    >
-                      {tab.count}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          )}
+                    {tab.count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {/* Right: Search Bar + Create Tournament Button */}
@@ -301,25 +343,10 @@ const Tournaments: React.FC = () => {
         </div>
       </header>
 
-      {showUpcomingThree && (
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <p className="text-sm text-white/70">
-            Showing your next 3 upcoming tournaments based on today's date.
-          </p>
-
-          <Link
-            to="/app/tournaments"
-            className="rounded-xl border border-[#4AEEFF]/40 bg-[#4AEEFF]/10 px-4 py-2 text-xs font-bold text-[#4AEEFF] transition-all hover:bg-[#4AEEFF] hover:text-[#061D23]"
-          >
-            View All Tournaments →
-          </Link>
-        </div>
-      )}
-
       {/* TOURNAMENTS GRID */}
-      {displayedTournaments.length > 0 ? (
+      {filteredTournaments.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-          {displayedTournaments.map((tournament) => (
+          {filteredTournaments.map((tournament) => (
             <div key={tournament.id} className="h-full">
               <Link
                 to={
@@ -336,11 +363,11 @@ const Tournaments: React.FC = () => {
                     </h3>
                     <div className="flex flex-col items-end gap-1.5 shrink-0">
                       <span
-                        className={`px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-md border ${getStatusBadge(
-                          tournament.status,
+                        className={`px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-md border ${getTournamentStatusBadgeClass(
+                          tournament.effectiveStatus,
                         )}`}
                       >
-                        {tournament.status}
+                        {tournament.effectiveStatus}
                       </span>
                       {pendingTournamentIds.has(tournament.id) && (
                         <span className="px-2 py-0.5 text-[9px] font-black uppercase tracking-wider rounded-md bg-cyan-400/20 text-[#4AEEFF] border border-cyan-400/40 shadow-[0_0_10px_rgba(74,238,255,0.3)] animate-pulse flex items-center gap-1">
@@ -388,13 +415,11 @@ const Tournaments: React.FC = () => {
         <div className="text-center py-16 rounded-xl border border-dashed border-white/15 bg-white/5 p-8">
           <TrophyIcon className="mx-auto mb-3 h-10 w-10 text-white/30" />
           <h3 className="text-lg font-semibold text-white">
-            {showUpcomingThree && !searchQuery
-              ? "No Upcoming Tournaments"
-              : searchQuery
-                ? `No tournaments matching "${searchQuery}"`
-                : statusFilter === "ALL"
-                  ? "No Tournaments Found"
-                  : `No ${statusFilter.toLowerCase()} tournaments`}
+            {searchQuery
+              ? `No tournaments matching "${searchQuery}"`
+              : statusFilter === "ALL"
+                ? "No Tournaments Found"
+                : `No ${statusFilter.toLowerCase()} tournaments`}
           </h3>
           <p className="mt-1 text-xs text-white/60">
             {searchQuery
@@ -408,7 +433,7 @@ const Tournaments: React.FC = () => {
               type="button"
               onClick={() => {
                 setSearchQuery("");
-                setStatusFilter("ALL");
+                handleTabChange("ALL");
               }}
               className="mt-4 px-4 py-1.5 text-xs font-semibold rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors"
             >

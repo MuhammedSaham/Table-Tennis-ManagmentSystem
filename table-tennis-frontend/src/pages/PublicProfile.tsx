@@ -4,6 +4,7 @@ import BackButton from "../components/BackButton";
 import { useAuth } from "../context/AuthContext";
 import api, { getProfileImageUrl } from "../services/api";
 import toast from "react-hot-toast";
+import playerBackground from "../assets/player_background_img3.jpg";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -284,7 +285,9 @@ const PublicProfile: React.FC = () => {
   // ─── Data Derivations ────────────────────────────────────────────────────────
 
   const firstNameCapitalized = capitalizeWords(profile.firstName);
+  const lastNameCapitalized = capitalizeWords(profile.lastName);
   const fullName = capitalizeWords(`${profile.firstName} ${profile.lastName}`);
+  const shouldStackName = fullName.length > 17;
   const initials = `${profile.firstName?.charAt(0) || ""}${profile.lastName?.charAt(0) || ""}`.toUpperCase() || "TT";
   const avatarUrl = profile.profileImage ? getProfileImageUrl(profile.profileImage) : null;
 
@@ -340,7 +343,7 @@ const PublicProfile: React.FC = () => {
           {/* Geometric curved teal circles background */}
           <div
             className="absolute inset-0 bg-cover bg-center bg-no-repeat pointer-events-none"
-            style={{ backgroundImage: "url('/player-card-bg.png')" }}
+            style={{ backgroundImage: `url(${playerBackground})` }}
           />
 
           {/* Identity Card Content */}
@@ -380,7 +383,7 @@ const PublicProfile: React.FC = () => {
               </div>
 
               {/* 2. Avatar: compact circle with cyan ring and fallback */}
-              <div className="relative w-[80px] h-[80px] sm:w-[86px] sm:h-[86px] xl:w-[92px] xl:h-[92px] rounded-full ring-4 ring-white/20 overflow-hidden flex items-center justify-center bg-gradient-to-br from-[#22B8C6] to-[#0E8A99] shrink-0 shadow-lg">
+              <div className="relative mt-[1cm] w-[80px] h-[80px] sm:w-[86px] sm:h-[86px] xl:w-[92px] xl:h-[92px] rounded-full ring-4 ring-white/20 overflow-hidden flex items-center justify-center bg-gradient-to-br from-[#22B8C6] to-[#0E8A99] shrink-0 shadow-lg">
                 {avatarUrl && !imageError ? (
                   <img
                     src={avatarUrl}
@@ -397,8 +400,15 @@ const PublicProfile: React.FC = () => {
 
               {/* 3. Player name */}
               <div>
-                <h1 className="text-[22px] sm:text-[26px] xl:text-[28px] font-heading font-bold text-white tracking-tight leading-tight truncate">
-                  {fullName}
+                <h1 className="text-[22px] sm:text-[26px] xl:text-[28px] font-heading font-bold text-white tracking-tight leading-tight">
+                  {shouldStackName ? (
+                    <>
+                      <span className="block">{firstNameCapitalized}</span>
+                      <span className="block">{lastNameCapitalized}</span>
+                    </>
+                  ) : (
+                    fullName
+                  )}
                 </h1>
               </div>
 
