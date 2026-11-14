@@ -17,6 +17,9 @@ import {
   UserGroupIcon,
   EyeIcon,
   EyeSlashIcon,
+  ShareIcon,
+  ClipboardDocumentIcon,
+  CheckIcon,
 } from "@heroicons/react/24/outline";
 
 interface PlayerStats {
@@ -43,7 +46,72 @@ interface PlayerStats {
     score: string;
     date: string;
   }>;
+  allMatches?: Array<any>;
 }
+
+interface TournamentHonor {
+  id: string;
+  tournamentName: string;
+  categoryName: string;
+  type: "GOLD" | "SILVER" | "BRONZE";
+  title: string;
+  date?: string;
+}
+
+const getPlayerHonors = (matches: any[] | undefined, playerId: string): TournamentHonor[] => {
+  if (!matches || !Array.isArray(matches)) return [];
+  const honors: TournamentHonor[] = [];
+  const processedTournamentCategories = new Set<string>();
+
+  for (const match of matches) {
+    if (match.status !== "COMPLETED") continue;
+    const tourneyName = match.tournament?.name || "Official Championship";
+    const catName = match.category?.name || "Singles";
+    const key = `${match.tournament?.id || tourneyName}-${catName}`;
+
+    const roundName = (match.round || "").toLowerCase();
+    const isWinner = match.winnerId === playerId;
+
+    if (roundName.includes("final") && !roundName.includes("semi") && !roundName.includes("quarter")) {
+      if (!processedTournamentCategories.has(key)) {
+        processedTournamentCategories.add(key);
+        if (isWinner) {
+          honors.push({
+            id: match.id,
+            tournamentName: tourneyName,
+            categoryName: catName,
+            type: "GOLD",
+            title: "Champion",
+            date: match.endTime,
+          });
+        } else {
+          honors.push({
+            id: match.id,
+            tournamentName: tourneyName,
+            categoryName: catName,
+            type: "SILVER",
+            title: "Runner-Up",
+            date: match.endTime,
+          });
+        }
+      }
+    } else if (roundName.includes("semi")) {
+      if (!processedTournamentCategories.has(key)) {
+        processedTournamentCategories.add(key);
+        honors.push({
+          id: match.id,
+          tournamentName: tourneyName,
+          categoryName: catName,
+          type: "BRONZE",
+          title: "Semi-Finalist",
+          date: match.endTime,
+        });
+      }
+    }
+  }
+
+  return honors;
+};
 
 interface UserProfile {
   id: string;
@@ -104,6 +172,8 @@ const Profile: React.FC = () => {
   });
 
   const [changingPassword, setChangingPassword] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -112,6 +182,7 @@ const Profile: React.FC = () => {
       skillLevel: "Intermediate",
       clubAffiliation: "",
       gender: "",
+      dateOfBirth: "",
     },
   });
   const [profileImage, setProfileImage] = useState<File | null>(null);
@@ -119,9 +190,9 @@ const Profile: React.FC = () => {
   const [uploading, setUploading] = useState(false);
   const [playerStats, setPlayerStats] = useState<PlayerStats | null>(null);
   const [_statsLoading, setStatsLoading] = useState(false);
-  const [isFavorited, setIsFavorited] = useState(false);
-  const [totalFavorites, setTotalFavorites] = useState(0);
-  const [favoriteLoading, _setFavoriteLoading] = useState(false);
+  const [_isFavorited, setIsFavorited] = useState(false);
+  const [_totalFavorites, setTotalFavorites] = useState(0);
+  const [_favoriteLoading, _setFavoriteLoading] = useState(false);
 
   const [membershipStatus, setMembershipStatus] = useState<any>(null);
   const [membershipLoading, setMembershipLoading] = useState(false);
@@ -281,6 +352,9 @@ const Profile: React.FC = () => {
           skillLevel: profileData.playerProfile?.skillLevel || "Intermediate",
           clubAffiliation: profileData.playerProfile?.clubAffiliation || "",
           gender: profileData.playerProfile?.gender || "",
+          dateOfBirth: profileData.playerProfile?.dateOfBirth
+            ? new Date(profileData.playerProfile.dateOfBirth).toISOString().split("T")[0]
+            : "",
         },
       });
     } catch (error) {
@@ -343,6 +417,9 @@ const Profile: React.FC = () => {
           ...(formData.playerProfile.gender
             ? { gender: formData.playerProfile.gender }
             : {}),
+          ...(formData.playerProfile.dateOfBirth
+            ? { dateOfBirth: new Date(formData.playerProfile.dateOfBirth).toISOString() }
+            : {}),
         };
       }
 
@@ -365,7 +442,8 @@ const Profile: React.FC = () => {
     if (
       name === "skillLevel" ||
       name === "clubAffiliation" ||
-      name === "gender"
+      name === "gender" ||
+      name === "dateOfBirth"
     ) {
       setFormData((prev) => ({
         ...prev,
@@ -493,21 +571,32 @@ const Profile: React.FC = () => {
       {/* ─── COMPACT PROFILE HEADER ─── */}
       <header className="rounded-2xl border border-white/15 bg-[#061D23]/25 p-4 shadow-lg backdrop-blur-xl sm:p-5">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <BackButton
-            to={isViewingOtherProfile ? "/app/users" : "/app/dashboard"}
-            label={
-              isViewingOtherProfile ? "Back to Users" : "Back to Dashboard"
-            }
-          />
-
-          {!editing && !isViewingOtherProfile && (
-            <button
-              onClick={() => setEditing(true)}
-              className="rounded-lg bg-[#4AEEFF] px-4 py-2 text-xs font-bold uppercase text-[#061D23] transition-colors hover:bg-white"
-            >
-              Edit Profile
-            </button>
+          {isViewingOtherProfile && (
+            <BackButton to="/app/users" label="Back to Users" />
           )}
+
+          <div className="flex items-center gap-2">
+            {profile.role === "PLAYER" && (
+              <button
+                type="button"
+                onClick={() => setShowShareModal(true)}
+                className="rounded-lg border border-[#4AEEFF]/40 bg-[#4AEEFF]/15 px-3.5 py-2 text-xs font-bold uppercase tracking-wider text-[#4AEEFF] transition-all hover:bg-[#4AEEFF] hover:text-[#061D23] flex items-center gap-1.5 shadow-sm active:scale-95"
+                title="Share Public Profile Link & QR Code"
+              >
+                <ShareIcon className="h-4 w-4" />
+                <span>Share Profile</span>
+              </button>
+            )}
+
+            {!editing && !isViewingOtherProfile && (
+              <button
+                onClick={() => setEditing(true)}
+                className="rounded-lg bg-[#4AEEFF] px-4 py-2 text-xs font-bold uppercase text-[#061D23] transition-colors hover:bg-white active:scale-95"
+              >
+                Edit Profile
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
@@ -832,6 +921,59 @@ const Profile: React.FC = () => {
                         : "Not provided"}
                     </p>
                   </div>
+                </div>
+
+                {/* ─── TROPHY CABINET & TOURNAMENT HONORS ─── */}
+                <div className="border-t border-white/10 pt-4 mt-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <TrophyIcon className="h-4 w-4 text-amber-400" />
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-white">
+                        Trophy Cabinet & Tournament Honors
+                      </h3>
+                    </div>
+                    <span className="text-[10px] text-white/50 font-mono">
+                      {getPlayerHonors(playerStats?.allMatches, profile.id).length} Accolade{getPlayerHonors(playerStats?.allMatches, profile.id).length === 1 ? "" : "s"}
+                    </span>
+                  </div>
+
+                  {getPlayerHonors(playerStats?.allMatches, profile.id).length === 0 ? (
+                    <div className="rounded-xl border border-dashed border-white/15 bg-white/[0.02] p-4 text-center">
+                      <p className="text-xs text-white/50 italic">
+                        No tournament honors recorded yet. Reach the semi-finals or finals of an official championship to earn official medal badges!
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                      {getPlayerHonors(playerStats?.allMatches, profile.id).map((honor) => (
+                        <div
+                          key={honor.id}
+                          className={`p-3 rounded-xl border flex items-center gap-3 backdrop-blur-md transition-all hover:scale-[1.01] ${
+                            honor.type === "GOLD"
+                              ? "bg-amber-500/10 border-amber-400/40 text-amber-200 shadow-sm shadow-amber-500/10"
+                              : honor.type === "SILVER"
+                              ? "bg-slate-300/10 border-slate-300/40 text-slate-200 shadow-sm shadow-slate-300/10"
+                              : "bg-amber-700/10 border-amber-600/40 text-amber-300 shadow-sm shadow-amber-700/10"
+                          }`}
+                        >
+                          <span className="text-2xl shrink-0">
+                            {honor.type === "GOLD" ? "🏆" : honor.type === "SILVER" ? "🥈" : "🥉"}
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <span className="text-[10px] font-black uppercase tracking-wider block font-mono">
+                              {honor.title} · {honor.type === "GOLD" ? "Gold Medal" : honor.type === "SILVER" ? "Silver Medal" : "Bronze Medal"}
+                            </span>
+                            <p className="text-xs font-bold text-white truncate mt-0.5">
+                              {honor.tournamentName}
+                            </p>
+                            <span className="text-[10px] text-white/60 block truncate">
+                              {honor.categoryName}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </section>
             )}
@@ -1704,6 +1846,18 @@ const Profile: React.FC = () => {
               </div>
               <div>
                 <label className="block text-xs font-black uppercase tracking-widest text-[#4AEEFF] mb-2">
+                  Date of Birth
+                </label>
+                <input
+                  type="date"
+                  name="dateOfBirth"
+                  value={formData.playerProfile.dateOfBirth}
+                  onChange={handleChange}
+                  className="w-full rounded-lg border border-white/10 bg-[#061D23]/60 px-4 py-3 text-sm text-white placeholder-white/30 focus:border-[#4AEEFF] focus:outline-none focus:ring-1 focus:ring-[#4AEEFF]"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-black uppercase tracking-widest text-[#4AEEFF] mb-2">
                   League / Club Name
                 </label>
                 <input
@@ -1736,6 +1890,96 @@ const Profile: React.FC = () => {
             </button>
           </div>
         </form>
+      )}
+
+      {/* ─── PUBLIC PROFILE SHARE & QR CODE MODAL ─── */}
+      {showShareModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="bg-[#061D23]/95 border border-[#4AEEFF]/40 rounded-2xl max-w-md w-full p-6 text-white shadow-2xl space-y-5">
+            <div className="flex items-center justify-between pb-3 border-b border-white/10">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-[#4AEEFF]/15 border border-[#4AEEFF]/30 text-[#4AEEFF]">
+                  <ShareIcon className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black uppercase tracking-wider text-white">
+                    Share Player Profile
+                  </h3>
+                  <p className="text-[11px] text-[#4AEEFF] font-mono">
+                    Public Match Stats & Performance Record
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowShareModal(false)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-white/10 transition"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* QR Code Container */}
+            <div className="flex flex-col items-center justify-center p-5 bg-white rounded-xl shadow-inner">
+              <img
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(
+                  `${window.location.origin}/profile/${profile.id}`
+                )}`}
+                alt="Player Profile QR Code"
+                className="w-44 h-44 object-contain"
+              />
+              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-600 mt-2 font-mono">
+                Scan with phone camera to view stats
+              </p>
+            </div>
+
+            {/* Direct Link Copy */}
+            <div className="space-y-2">
+              <label className="text-[11px] font-bold uppercase tracking-wider text-white/70 block">
+                Public Profile Link
+              </label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  readOnly
+                  value={`${window.location.origin}/profile/${profile.id}`}
+                  className="w-full rounded-lg border border-white/20 bg-black/40 px-3 py-2 text-xs font-mono text-cyan-200 select-all focus:outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(`${window.location.origin}/profile/${profile.id}`);
+                    setCopiedLink(true);
+                    toast.success("Profile link copied to clipboard!");
+                    setTimeout(() => setCopiedLink(false), 2500);
+                  }}
+                  className="rounded-lg bg-[#4AEEFF] hover:bg-white text-[#061D23] px-3.5 py-2 text-xs font-black uppercase tracking-wider shrink-0 transition-all active:scale-95 flex items-center gap-1.5"
+                >
+                  {copiedLink ? (
+                    <>
+                      <CheckIcon className="w-4 h-4 text-emerald-900" />
+                      <span>Copied!</span>
+                    </>
+                  ) : (
+                    <>
+                      <ClipboardDocumentIcon className="w-4 h-4" />
+                      <span>Copy</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            <div className="pt-2 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setShowShareModal(false)}
+                className="rounded-xl border border-white/20 bg-white/5 hover:bg-white/10 px-4 py-2 text-xs font-bold text-white transition-all"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* ─── FOOTER MATCHED ONE-TO-ONE WITH DASHBOARD ─── */}

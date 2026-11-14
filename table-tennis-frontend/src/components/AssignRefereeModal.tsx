@@ -21,7 +21,9 @@ export const AssignRefereeModal: React.FC<AssignRefereeModalProps> = ({
   isGroupMatch,
 }) => {
   const [referees, setReferees] = useState<any[]>([]);
-  const [selectedReferee, setSelectedReferee] = useState(currentRefereeId || "");
+  const [selectedReferee, setSelectedReferee] = useState(
+    currentRefereeId || "",
+  );
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -36,10 +38,10 @@ export const AssignRefereeModal: React.FC<AssignRefereeModalProps> = ({
       const response = await api.get("/users?role=REFEREE");
       const allUsers = response.data.data.users || response.data.data;
       const filteredReferees = allUsers.filter(
-        (u: any) => u.role === "REFEREE"
+        (u: any) => u.role === "REFEREE",
       );
       setReferees(filteredReferees);
-    } catch (error) {
+    } catch {
       toast.error("Failed to load referees");
     }
   };
@@ -70,23 +72,25 @@ export const AssignRefereeModal: React.FC<AssignRefereeModalProps> = ({
   if (!isOpen) return null;
 
   return createPortal(
-    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[100000] p-4 animate-in fade-in duration-200">
-      <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden border border-slate-200">
+    <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200">
+      <div className="w-full max-w-md rounded-2xl border border-[#4AEEFF]/40 bg-[#061D23]/95 text-white shadow-[0_25px_60px_-15px_rgba(0,0,0,0.8)] backdrop-blur-2xl overflow-hidden">
         {/* Header */}
-        <div className="bg-[#061D23] px-6 py-4 flex items-center justify-between border-b border-white/10">
-          <div className="flex items-center gap-2.5">
-            <span className="w-2 h-5 bg-[#4AEEFF] rounded-full shadow-[0_0_8px_#4AEEFF]"></span>
+        <div className="p-6 border-b border-white/10 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <span className="w-2.5 h-6 bg-[#4AEEFF] rounded-full shadow-[0_0_10px_#4AEEFF]" />
             <div>
-              <h2 className="text-base font-black uppercase tracking-wider text-white flex items-center gap-2">
-                👨‍⚖️ Assign Match Referee
+              <h2 className="text-base font-black uppercase tracking-wider text-white">
+                Assign Match Referee
               </h2>
-              <p className="text-[11px] text-slate-400 font-medium">Select an official umpire for this match</p>
+              <p className="text-[11px] text-[#4AEEFF]/80 font-mono mt-0.5">
+                Select an official certified umpire for this fixture
+              </p>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors text-lg"
+            className="text-white/50 hover:text-white p-1.5 rounded-lg hover:bg-white/10 transition-colors"
           >
             ✕
           </button>
@@ -95,40 +99,39 @@ export const AssignRefereeModal: React.FC<AssignRefereeModalProps> = ({
         {/* Form Body */}
         <div className="p-6 space-y-4">
           <div>
-            <label className="block text-xs font-black uppercase tracking-wider text-slate-800 mb-2">
+            <label className="block text-xs font-black uppercase tracking-wider text-white/70 mb-2">
               Select Match Official
             </label>
             <select
               value={selectedReferee}
               onChange={(e) => setSelectedReferee(e.target.value)}
-              className="w-full border-2 border-slate-300 rounded-xl px-4 py-3 text-slate-900 bg-white font-bold text-sm focus:border-[#0284c7] focus:ring-4 focus:ring-sky-500/20 outline-none transition-all shadow-sm cursor-pointer"
-              style={{ color: "#0f172a", backgroundColor: "#ffffff" }}
+              className="w-full rounded-xl border border-white/15 bg-white/5 px-4 py-3 text-sm font-semibold text-white focus:border-[#4AEEFF] focus:outline-none focus:ring-2 focus:ring-[#4AEEFF]/30 transition-all cursor-pointer"
             >
-              <option value="" style={{ color: "#64748b", backgroundColor: "#ffffff" }}>
+              <option value="" className="bg-[#061D23] text-white/50">
                 -- Choose Referee --
               </option>
               {referees.map((ref: any) => (
                 <option
                   key={ref.id}
                   value={ref.id}
-                  style={{ color: "#0f172a", backgroundColor: "#ffffff", fontWeight: 600 }}
+                  className="bg-[#061D23] text-white"
                 >
                   {ref.firstName} {ref.lastName} ({ref.role})
                 </option>
               ))}
             </select>
             {referees.length === 0 && (
-              <p className="text-xs text-amber-600 mt-2 font-medium">
-                No referees found in the system.
+              <p className="text-xs text-amber-300 mt-2 font-medium bg-amber-500/10 border border-amber-500/20 p-2.5 rounded-lg">
+                No active referees found in the system.
               </p>
             )}
           </div>
 
-          <div className="pt-4 border-t border-slate-100 flex justify-end gap-3">
+          <div className="pt-4 border-t border-white/10 flex justify-end gap-3">
             <button
               type="button"
               onClick={onClose}
-              className="px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
+              className="px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider text-white/70 hover:bg-white/10 hover:text-white transition-colors border border-white/10"
             >
               Cancel
             </button>
@@ -136,7 +139,7 @@ export const AssignRefereeModal: React.FC<AssignRefereeModalProps> = ({
               type="button"
               onClick={handleAssign}
               disabled={loading || !selectedReferee}
-              className="px-6 py-2.5 rounded-xl font-black text-xs uppercase tracking-wider text-black bg-gradient-to-r from-[#4AEEFF] to-[#00b4d8] hover:brightness-110 shadow-md shadow-[#4AEEFF]/25 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+              className="px-6 py-2.5 rounded-xl font-black text-xs uppercase tracking-wider text-[#061D23] bg-gradient-to-r from-[#4AEEFF] to-[#00b4d8] hover:brightness-110 shadow-md shadow-[#4AEEFF]/25 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
             >
               {loading ? "Assigning..." : "Assign Referee"}
             </button>
@@ -144,6 +147,6 @@ export const AssignRefereeModal: React.FC<AssignRefereeModalProps> = ({
         </div>
       </div>
     </div>,
-    document.body
+    document.body,
   );
 };
