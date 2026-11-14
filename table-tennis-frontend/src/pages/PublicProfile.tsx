@@ -285,7 +285,9 @@ const PublicProfile: React.FC = () => {
   // ─── Data Derivations ────────────────────────────────────────────────────────
 
   const firstNameCapitalized = capitalizeWords(profile.firstName);
+  const lastNameCapitalized = capitalizeWords(profile.lastName);
   const fullName = capitalizeWords(`${profile.firstName} ${profile.lastName}`);
+  const shouldStackName = fullName.length > 17;
   const initials = `${profile.firstName?.charAt(0) || ""}${profile.lastName?.charAt(0) || ""}`.toUpperCase() || "TT";
   const avatarUrl = profile.profileImage ? getProfileImageUrl(profile.profileImage) : null;
 
@@ -398,8 +400,15 @@ const PublicProfile: React.FC = () => {
 
               {/* 3. Player name */}
               <div>
-                <h1 className="text-[22px] sm:text-[26px] xl:text-[28px] font-heading font-bold text-white tracking-tight leading-tight truncate">
-                  {fullName}
+                <h1 className="text-[22px] sm:text-[26px] xl:text-[28px] font-heading font-bold text-white tracking-tight leading-tight">
+                  {shouldStackName ? (
+                    <>
+                      <span className="block">{firstNameCapitalized}</span>
+                      <span className="block">{lastNameCapitalized}</span>
+                    </>
+                  ) : (
+                    fullName
+                  )}
                 </h1>
               </div>
 
