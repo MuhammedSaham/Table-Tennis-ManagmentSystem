@@ -391,7 +391,7 @@ const RefereeMatches: React.FC = () => {
   return wrapInBaseLayout(
     <>
       {/* HEADER MODULE */}
-      <div className="pt-6 sm:pt-8">
+      <div className="pt-6 sm:pt-8 -mb-3">
         <header className="flex flex-col gap-3 rounded-[20px] border border-white/20 bg-[#061D23]/35 p-4 sm:p-5 lg:p-5 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.6)] backdrop-blur-xl">
           <div>
             <div className="flex items-center gap-2 mb-2 flex-wrap">
@@ -482,7 +482,7 @@ const RefereeMatches: React.FC = () => {
 
       {/* ─── NEXT MATCH ON COURT SPOTLIGHT HERO ─── */}
       {nextPendingMatch && (
-        <section className="relative overflow-hidden rounded-[20px] border border-[#4AEEFF]/40 bg-gradient-to-r from-[#061D23]/95 via-[#0A2E36]/85 to-[#061D23]/95 p-6 shadow-[0_20px_50px_-10px_rgba(74,238,255,0.2)] backdrop-blur-xl">
+        <section className="relative -mt-3 overflow-hidden rounded-[20px] border border-[#4AEEFF]/40 bg-gradient-to-r from-[#061D23]/95 via-[#0A2E36]/85 to-[#061D23]/95 p-6 shadow-[0_20px_50px_-10px_rgba(74,238,255,0.2)] backdrop-blur-xl">
           <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-[#4AEEFF] to-transparent shadow-[0_0_10px_#4AEEFF]" />
 
           <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
