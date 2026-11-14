@@ -865,8 +865,18 @@ const RefereeMatches: React.FC = () => {
         {/* ─── REFEREE HEADER MODULE ─── */}
         <header className="rounded-2xl border border-white/20 bg-[#061D23]/25 p-5 sm:p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-heading font-extrabold text-white tracking-tight">
-              Referee Dashboard
+            <div className="flex items-center gap-2 mb-2 flex-wrap">
+              <span className="w-2 h-5 bg-[#4AEEFF] rounded-full shadow-[0_0_10px_#4AEEFF]"></span>
+              <span className="px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-md bg-[#4AEEFF]/15 text-[#4AEEFF] border border-[#4AEEFF]/30">
+                Official Match Portal
+              </span>
+              <span className="flex items-center gap-1 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-md bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                On Duty
+              </span>
+            </div>
+            <h1 className="text-xl sm:text-2xl font-black uppercase tracking-wider text-white break-words">
+              Welcome back, {user?.firstName}!
             </h1>
             <p className="mt-1 text-xs sm:text-sm text-cyan-200/80 max-w-xl">
               Inspect your assigned fixtures, record official set scores, and track your officiating duty.
@@ -974,7 +984,7 @@ const RefereeMatches: React.FC = () => {
 
       {/* ─── NEXT MATCH ON COURT SPOTLIGHT HERO ─── */}
       {nextPendingMatch && (
-        <section className="relative overflow-hidden rounded-[20px] border border-[#4AEEFF]/40 bg-gradient-to-r from-[#061D23]/95 via-[#0A2E36]/85 to-[#061D23]/95 p-6 shadow-[0_20px_50px_-10px_rgba(74,238,255,0.2)] backdrop-blur-xl">
+        <section className="relative -mt-3 overflow-hidden rounded-[20px] border border-[#4AEEFF]/40 bg-gradient-to-r from-[#061D23]/95 via-[#0A2E36]/85 to-[#061D23]/95 p-6 shadow-[0_20px_50px_-10px_rgba(74,238,255,0.2)] backdrop-blur-xl">
           <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-[#4AEEFF] to-transparent shadow-[0_0_10px_#4AEEFF]" />
 
           <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">

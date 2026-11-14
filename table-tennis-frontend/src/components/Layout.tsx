@@ -70,7 +70,7 @@ const Layout: React.FC = () => {
   }
 
   if (isSuperAdmin || hasPermission("MANAGE_CLUB_MEMBERSHIPS") || hasPermission("MANAGE_REGISTRATIONS")) {
-    desktopNavigation.push({ name: "Admin Requests", href: "/app/admin-requests", icon: UserGroupIcon });
+    desktopNavigation.push({ name: "Requests", href: "/app/admin-requests", icon: UserGroupIcon });
   }
 
   // Mobile navigation items (Explicitly includes Profile for quick access)
@@ -106,7 +106,7 @@ const Layout: React.FC = () => {
   }
 
   if (isSuperAdmin || hasPermission("MANAGE_CLUB_MEMBERSHIPS") || hasPermission("MANAGE_REGISTRATIONS")) {
-    mobileNavigation.push({ name: "Admin Requests", href: "/app/admin-requests", icon: UserGroupIcon });
+    mobileNavigation.push({ name: "Requests", href: "/app/admin-requests", icon: UserGroupIcon });
   }
 
   if (isSuperAdmin || user?.role === "ADMIN") {
@@ -149,9 +149,8 @@ const Layout: React.FC = () => {
           <div className="flex justify-between items-center h-16 sm:h-20">
             {/* Logo */}
             <Link
-              to="/"
-              className="flex items-center group shrink-0 transition-transform duration-200 active:scale-95"
-              aria-label="Sam's College Home"
+              to={isReferee ? "/app/referee/matches" : "/app/dashboard"}
+              className="flex items-center gap-2 group shrink-0"
             >
               <img
                 src={invertedLogo}

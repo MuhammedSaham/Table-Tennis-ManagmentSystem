@@ -2,7 +2,6 @@ import React, { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import api, { getProfileImageUrl } from "../services/api";
 import toast from "react-hot-toast";
-import BackButton from "../components/BackButton";
 import GlassSelect from "../components/GlassSelect";
 import {
   CheckCircleIcon,
@@ -676,8 +675,7 @@ const AdminRequests: React.FC = () => {
     <>
       {/* GLASS HEADER */}
       <header className="rounded-2xl border border-white/20 bg-[#061D23]/20 p-5 sm:p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl">
-        <BackButton to="/app/dashboard" label="Back to Dashboard" className="mb-4" />
-        <h1 className="mb-2 text-2xl font-black uppercase tracking-[0.15em] text-[#FFFFFF] sm:text-3xl lg:text-4xl">
+        <h1 className="mb-2 text-xl font-black uppercase tracking-wider text-white sm:text-2xl">
           Pending Requests
         </h1>
         <p className="text-xs uppercase tracking-[0.2em] text-[#4AEEFF]">
