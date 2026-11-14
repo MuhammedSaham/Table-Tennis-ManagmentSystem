@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { Outlet, Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import NotificationBell from "./NotificationBell";
@@ -18,7 +18,6 @@ import {
   XMarkIcon,
   ShieldCheckIcon,
   ChevronRightIcon,
-  ClockIcon,
   BookOpenIcon,
 } from "@heroicons/react/24/outline";
 
@@ -37,22 +36,6 @@ const Layout: React.FC = () => {
 
   const isReferee = user?.role === "REFEREE";
   const isSuperAdmin = user?.role === "SUPER_ADMIN" || user?.isSuperAdmin;
-
-  const [currentTime, setCurrentTime] = useState(() =>
-    new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-  );
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentTime(
-        new Date().toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
-      );
-    }, 1000);
-    return () => clearInterval(timer);
-  }, []);
 
   // Desktop navigation items (Profile accessed via top-right pill)
   const desktopNavigation = isReferee
@@ -198,10 +181,6 @@ const Layout: React.FC = () => {
                 <>
                   {isReferee && (
                     <div className="hidden md:flex items-center gap-2">
-                      <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-black/40 border border-white/10 text-xs font-mono text-cyan-200">
-                        <ClockIcon className="w-3.5 h-3.5 text-[#4AEEFF]" />
-                        <span>{currentTime}</span>
-                      </div>
                       <span className="flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider rounded-lg bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
                         On Duty

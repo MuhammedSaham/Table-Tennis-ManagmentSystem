@@ -20,6 +20,8 @@ interface AssignedMatch {
   status: string;
   score?: string | null;
   scheduledTime: string;
+  startTime?: string | null;
+  endTime?: string | null;
   tournament?: { id: string; name: string };
   category?: { id: string; name: string };
   group?: {
@@ -27,6 +29,25 @@ interface AssignedMatch {
     category: { id: string; name: string };
   };
 }
+
+const getMatchDurationMinutes = (match: {
+  startTime?: string | null;
+  endTime?: string | null;
+}): number | null => {
+  if (!match.startTime || !match.endTime) return null;
+  const start = new Date(match.startTime).getTime();
+  const end = new Date(match.endTime).getTime();
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end < start) return null;
+  return Math.round((end - start) / 60000);
+};
+
+const formatDuration = (minutes: number): string => {
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+  if (hours === 0) return `${remainingMinutes} min`;
+  if (remainingMinutes === 0) return `${hours} hr`;
+  return `${hours} hr ${remainingMinutes} min`;
+};
 
 interface UserDetailsData {
   id: string;
@@ -53,6 +74,7 @@ const UserDetails: React.FC = () => {
   const [profile, setProfile] = useState<UserDetailsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [showPaymentVoucher, setShowPaymentVoucher] = useState(false);
+  const [voucherTournamentId, setVoucherTournamentId] = useState<string>("ALL");
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -110,6 +132,26 @@ const UserDetails: React.FC = () => {
     ...(profile.refereeProfile?.groupMatches || []),
   ];
 
+  const uniqueTournaments = Array.from(
+    new Map(
+      assignedMatches
+        .filter((m) => m.tournament?.id || m.group?.tournament?.id)
+        .map((m) => {
+          const t = (m.tournament || m.group?.tournament)!;
+          return [t.id, t];
+        }),
+    ).values(),
+  );
+
+  const handleOpenDutyLogAdmin = () => {
+    if (uniqueTournaments.length > 0) {
+      setVoucherTournamentId(uniqueTournaments[0].id);
+    } else {
+      setVoucherTournamentId("ALL");
+    }
+    setShowPaymentVoucher(true);
+  };
+
   const handlePrintDutyLogAdmin = () => {
     if (!profile) return;
     const iframe = document.createElement("iframe");
@@ -126,22 +168,40 @@ const UserDetails: React.FC = () => {
     const doc = iframe.contentWindow?.document;
     if (!doc) return;
 
-    const completedMatches = assignedMatches.filter((m) => m.status === "COMPLETED");
+    const targetMatches = assignedMatches.filter((m) => {
+      if (m.status !== "COMPLETED") return false;
+      if (voucherTournamentId !== "ALL") {
+        const tId = m.tournament?.id || m.group?.tournament?.id;
+        if (tId !== voucherTournamentId) return false;
+      }
+      return true;
+    });
+
     const refereeName = `${profile.firstName} ${profile.lastName || ""}`.trim();
-    const tourneyName = completedMatches[0]?.tournament?.name || completedMatches[0]?.group?.tournament?.name || assignedMatches[0]?.tournament?.name || "Official Championship";
+    const selectedTourney = uniqueTournaments.find((t) => t.id === voucherTournamentId);
+    const tourneyName = selectedTourney?.name || targetMatches[0]?.tournament?.name || targetMatches[0]?.group?.tournament?.name || assignedMatches[0]?.tournament?.name || "Official Championship";
     const dateStr = new Date().toLocaleDateString(undefined, { dateStyle: "long" });
     const timeStr = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
-    const rowsHtml = completedMatches.length === 0
-      ? `<tr><td colspan="4" style="padding: 12px; text-align: center; color: #64748b; font-style: italic;">No completed matches recorded for this referee yet.</td></tr>`
-      : completedMatches.map((m, idx) => {
+    const targetMinutes = targetMatches.reduce((acc, m) => {
+      const dur = getMatchDurationMinutes(m);
+      return acc + (dur || 0);
+    }, 0);
+    const durationStr = formatDuration(targetMinutes);
+
+    const rowsHtml = targetMatches.length === 0
+      ? `<tr><td colspan="4" style="padding: 12px; text-align: center; color: #64748b; font-style: italic;">No completed matches recorded for this tournament duty period yet.</td></tr>`
+      : targetMatches.map((m, idx) => {
           const categoryName = m.category?.name || m.group?.category?.name || "Official Category";
-          const fixtureRound = m.round || "Fixture";
+          const fixtureRound = `${m.round || "Fixture"}${m.matchNumber ? ` · Match #${m.matchNumber}` : ""}`;
           return `
             <tr style="border-bottom: 1px solid #e2e8f0; page-break-inside: avoid; break-inside: avoid;">
               <td style="padding: 5px 8px; font-weight: bold; color: #0284c7; text-align: center;">#${idx + 1}</td>
-              <td style="padding: 5px 8px; font-weight: 700; color: #0f172a; font-size: 10.5px;">${categoryName}</td>
-              <td style="padding: 5px 8px; color: #475569; font-size: 10px;">${fixtureRound}</td>
+              <td style="padding: 5px 8px;">
+                <div style="font-weight: 700; color: #0f172a; font-size: 10.5px;">${categoryName}</div>
+                <div style="color: #64748b; font-size: 9px;">${fixtureRound}</div>
+              </td>
+              <td style="padding: 5px 8px; text-align: center; font-weight: 800; color: #0f172a; font-family: monospace; font-size: 10.5px;">${m.score || "—"}</td>
               <td style="padding: 5px 8px; text-align: right; color: #047857; font-weight: 800; font-family: monospace; font-size: 10px;">VERIFIED</td>
             </tr>
           `;
@@ -382,11 +442,11 @@ const UserDetails: React.FC = () => {
               </div>
               <div>
                 <div class="meta-label">Completed Matches</div>
-                <div class="summary-val" style="color: #047857;">${completedMatches.length} Verified</div>
+                <div class="summary-val" style="color: #047857;">${targetMatches.length} Verified</div>
               </div>
               <div>
-                <div class="meta-label">Total Assigned</div>
-                <div class="summary-val">${assignedMatches.length} Fixtures</div>
+                <div class="meta-label">Officiating Court Time</div>
+                <div class="summary-val" style="color: #0284c7;">${durationStr}</div>
               </div>
               <div>
                 <div class="meta-label">Duty Status</div>
@@ -395,7 +455,7 @@ const UserDetails: React.FC = () => {
             </div>
 
             <div class="section-title">
-              <span>Verified Officiated Matches (${completedMatches.length})</span>
+              <span>Verified Officiated Matches (${targetMatches.length})</span>
               <span style="font-size: 8.5px; font-weight: normal; color: #64748b; font-family: monospace;">All Records Certified</span>
             </div>
 
@@ -403,8 +463,8 @@ const UserDetails: React.FC = () => {
               <thead>
                 <tr>
                   <th style="width: 30px; text-align: center;">#</th>
-                  <th style="text-align: left;">Category</th>
-                  <th style="text-align: left;">Fixture / Round</th>
+                  <th style="text-align: left;">Category & Fixture</th>
+                  <th style="text-align: center; width: 90px;">Score</th>
                   <th style="text-align: right; width: 85px;">Status</th>
                 </tr>
               </thead>
@@ -452,6 +512,24 @@ const UserDetails: React.FC = () => {
       .split("_")
       .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
       .join(" ");
+
+  const voucherTargetMatches = assignedMatches.filter((m) => {
+    if (m.status !== "COMPLETED") return false;
+    if (voucherTournamentId !== "ALL") {
+      const tId = m.tournament?.id || m.group?.tournament?.id;
+      if (tId !== voucherTournamentId) return false;
+    }
+    return true;
+  });
+
+  const voucherSelectedTourney = uniqueTournaments.find((t) => t.id === voucherTournamentId);
+  const voucherTourneyName = voucherSelectedTourney?.name || voucherTargetMatches[0]?.tournament?.name || voucherTargetMatches[0]?.group?.tournament?.name || assignedMatches[0]?.tournament?.name || "Official Championship";
+
+  const voucherDurationMinutes = voucherTargetMatches.reduce((acc, m) => {
+    const dur = getMatchDurationMinutes(m);
+    return acc + (dur || 0);
+  }, 0);
+  const voucherDurationStr = formatDuration(voucherDurationMinutes);
 
   return wrapInProfileLayout(
     <>
@@ -533,7 +611,7 @@ const UserDetails: React.FC = () => {
                 </h2>
               </div>
               <button
-                onClick={() => setShowPaymentVoucher(true)}
+                onClick={handleOpenDutyLogAdmin}
                 className="rounded-xl bg-[#4AEEFF] hover:bg-white text-[#061D23] px-4 py-2.5 text-xs font-black uppercase tracking-wider transition-all duration-200 shadow-md shadow-[#4AEEFF]/20 active:scale-95 flex items-center gap-2 self-start sm:self-auto shrink-0"
               >
                 <DocumentTextIcon className="w-4 h-4" />
@@ -624,23 +702,55 @@ const UserDetails: React.FC = () => {
                 </button>
               </div>
 
+              {/* Tournament Selector Dropdown (Interactive UI only, hidden on paper print) */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-xl bg-white/5 border border-[#4AEEFF]/30 no-print print:hidden">
+                <div className="flex items-center gap-2.5">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-white/70">
+                    Tournament Duty:
+                  </span>
+                  <select
+                    value={voucherTournamentId}
+                    onChange={(e) => setVoucherTournamentId(e.target.value)}
+                    className="rounded-lg border border-white/20 bg-[#061D23] px-3 py-1.5 text-xs font-semibold text-white focus:outline-none focus:ring-2 focus:ring-[#4AEEFF]"
+                  >
+                    {uniqueTournaments.map((t) => (
+                      <option key={t.id} value={t.id} className="bg-[#061D23] text-white">
+                        {t.name}
+                      </option>
+                    ))}
+                    <option value="ALL" className="bg-[#061D23] text-white">
+                      All Tournaments (Combined)
+                    </option>
+                  </select>
+                </div>
+                <span className="text-[11px] text-[#4AEEFF] font-mono">
+                  Showing duty records for selected tournament
+                </span>
+              </div>
+
               {/* Referee Details */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3.5 rounded-xl bg-white/5 border border-white/10 text-xs print:bg-slate-50 print:border-slate-300">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-3.5 rounded-xl bg-white/5 border border-white/10 text-xs print:bg-slate-50 print:border-slate-300">
                 <div>
                   <p className="text-white/50 print:text-slate-600 text-[10px] font-bold uppercase tracking-wider">Referee Name</p>
-                  <p className="text-white print:text-slate-900 font-bold mt-0.5">{profile.firstName} {profile.lastName}</p>
-                  <p className="text-white/40 print:text-slate-500 text-[10px]">{profile.email}</p>
+                  <p className="text-white print:text-slate-900 font-bold mt-0.5 truncate">{profile.firstName} {profile.lastName}</p>
+                  <p className="text-white/40 print:text-slate-500 text-[10px] truncate">{profile.email}</p>
                 </div>
                 <div>
                   <p className="text-white/50 print:text-slate-600 text-[10px] font-bold uppercase tracking-wider">Certification / Role</p>
-                  <p className="text-[#4AEEFF] print:text-sky-800 font-bold mt-0.5">
+                  <p className="text-[#4AEEFF] print:text-sky-800 font-bold mt-0.5 truncate">
                     {profile.refereeProfile?.certification || "Official Club Referee"}
                   </p>
-                  <p className="text-white/40 print:text-slate-500 text-[10px]">{profile.refereeProfile?.experienceYears ? `${profile.refereeProfile.experienceYears} Years Experience` : "Active Official"}</p>
+                  <p className="text-white/40 print:text-slate-500 text-[10px] truncate">{profile.refereeProfile?.experienceYears ? `${profile.refereeProfile.experienceYears} Years Exp` : "Active Official"}</p>
                 </div>
                 <div>
                   <p className="text-white/50 print:text-slate-600 text-[10px] font-bold uppercase tracking-wider">Date of Log</p>
                   <p className="text-white print:text-slate-900 font-mono font-bold mt-0.5">{new Date().toLocaleDateString(undefined, { dateStyle: "long" })}</p>
+                  <p className="text-white/40 print:text-slate-500 text-[10px]">{new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</p>
+                </div>
+                <div>
+                  <p className="text-white/50 print:text-slate-600 text-[10px] font-bold uppercase tracking-wider">Officiating Time</p>
+                  <p className="text-[#4AEEFF] print:text-sky-800 font-mono font-black mt-0.5">{voucherDurationStr}</p>
+                  <p className="text-white/40 print:text-slate-500 text-[10px]">Total Court Time</p>
                 </div>
               </div>
 
@@ -649,58 +759,66 @@ const UserDetails: React.FC = () => {
                 <div>
                   <span className="text-[10px] font-bold uppercase tracking-wider text-white/50 print:text-slate-600 block">Tournament</span>
                   <span className="text-xs sm:text-sm font-bold text-white print:text-slate-900 mt-0.5 block truncate">
-                    {assignedMatches.find((m) => m.status === "COMPLETED")?.tournament?.name || assignedMatches[0]?.tournament?.name || "Official Championship"}
+                    {voucherTourneyName}
                   </span>
                 </div>
                 <div>
                   <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-300/80 print:text-emerald-700 block">Completed Matches</span>
                   <span className="text-sm sm:text-base font-black text-emerald-400 print:text-emerald-800 mt-0.5 block">
-                    {assignedMatches.filter((m) => m.status === "COMPLETED").length} Verified
+                    {voucherTargetMatches.length} Verified
                   </span>
                 </div>
                 <div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-white/50 print:text-slate-600 block">Total Assigned</span>
-                  <span className="text-sm sm:text-base font-black text-white print:text-slate-900 mt-0.5 block">{assignedMatches.length} Fixtures</span>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-[#4AEEFF] print:text-sky-800 block">Officiating Time</span>
+                  <span className="text-sm sm:text-base font-black text-[#4AEEFF] print:text-sky-800 mt-0.5 block font-mono">{voucherDurationStr}</span>
                 </div>
                 <div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-[#4AEEFF] print:text-sky-800 block">Duty Status</span>
-                  <span className="text-sm sm:text-base font-black text-[#4AEEFF] print:text-emerald-700 mt-0.5 block">● Active</span>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-300/80 print:text-emerald-700 block">Duty Status</span>
+                  <span className="text-[11px] font-mono text-emerald-400 print:text-emerald-800 mt-1 block font-bold">● Active</span>
                 </div>
               </div>
 
               {/* Table of Completed Matches */}
               <div>
                 <h4 className="text-xs font-black uppercase tracking-wider text-white print:text-slate-900 mb-2">
-                  Verified Officiated Matches ({assignedMatches.filter((m) => m.status === "COMPLETED").length})
+                  Verified Officiated Matches ({voucherTargetMatches.length})
                 </h4>
                 <div className="rounded-xl border border-white/10 print:border-slate-300 overflow-hidden max-h-52 overflow-y-auto printable-table-scroll">
                   <table className="w-full text-left border-collapse text-xs print:text-[10px]">
                     <thead>
                       <tr className="border-b border-white/10 bg-white/5 text-[10px] font-bold uppercase tracking-wider text-white/60 font-mono print:bg-slate-100 print:text-slate-800 print:border-slate-300">
                         <th className="px-3 py-2 text-center w-10">#</th>
-                        <th className="px-3 py-2">Category</th>
-                        <th className="px-3 py-2">Fixture / Round</th>
+                        <th className="px-3 py-2">Category & Fixture</th>
+                        <th className="px-3 py-2 text-center">Score</th>
+                        <th className="px-3 py-2 text-right">Duration</th>
                         <th className="px-3 py-2 text-right">Status</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-white/5 font-mono text-[11px] print:divide-slate-200 print:text-[10px]">
-                      {assignedMatches.filter((m) => m.status === "COMPLETED").length === 0 ? (
+                      {voucherTargetMatches.length === 0 ? (
                         <tr>
-                          <td colSpan={4} className="px-3.5 py-4 text-center text-white/40 print:text-slate-500 italic">
-                            No completed matches for this referee yet.
+                          <td colSpan={5} className="px-3.5 py-4 text-center text-white/40 print:text-slate-500 italic">
+                            No completed matches recorded for this tournament duty period yet.
                           </td>
                         </tr>
                       ) : (
-                        assignedMatches
-                          .filter((m) => m.status === "COMPLETED")
-                          .map((m, idx) => (
+                        voucherTargetMatches.map((m, idx) => {
+                          const dur = getMatchDurationMinutes(m);
+                          const categoryName = m.category?.name || m.group?.category?.name || "Official Category";
+                          const fixtureRound = `${m.round || "Fixture"}${m.matchNumber ? ` · Match #${m.matchNumber}` : ""}`;
+                          return (
                             <tr key={m.id} className="hover:bg-white/5 print:hover:bg-transparent">
                               <td className="px-3 py-2 text-[#4AEEFF] print:text-slate-900 font-bold text-center">#{idx + 1}</td>
-                              <td className="px-3 py-2 text-white print:text-slate-900 font-sans font-bold">{m.category?.name || m.group?.category?.name || "Official Category"}</td>
-                              <td className="px-3 py-2 text-white/70 print:text-slate-700">{m.round || "Fixture"}</td>
+                              <td className="px-3 py-2">
+                                <span className="text-white print:text-slate-900 font-sans font-bold block">{categoryName}</span>
+                                <span className="text-white/50 print:text-slate-600 text-[10px]">{fixtureRound}</span>
+                              </td>
+                              <td className="px-3 py-2 text-center text-[#4AEEFF] print:text-slate-900 font-bold font-mono">{m.score || "—"}</td>
+                              <td className="px-3 py-2 text-right text-white/70 print:text-slate-700 font-mono">{dur !== null ? `${dur} min` : "—"}</td>
                               <td className="px-3 py-2 text-right text-emerald-400 print:text-emerald-800 font-bold font-mono">VERIFIED</td>
                             </tr>
-                          ))
+                          );
+                        })
                       )}
                     </tbody>
                   </table>

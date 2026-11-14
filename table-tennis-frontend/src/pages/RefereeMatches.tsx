@@ -134,6 +134,29 @@ const RefereeMatches: React.FC = () => {
   const [selectedCategoryName, setSelectedCategoryName] = useState("ALL");
   const [viewMode, setViewMode] = useState<"cards" | "table">("cards");
   const [showPaymentVoucherModal, setShowPaymentVoucherModal] = useState(false);
+  const [voucherTournamentId, setVoucherTournamentId] = useState<string>("ALL");
+
+  const uniqueTournaments = Array.from(
+    new Map(
+      matches
+        .filter((m) => m.tournament?.id || (m as any).group?.tournament?.id)
+        .map((m) => {
+          const t = m.tournament || (m as any).group?.tournament;
+          return [t.id, t];
+        }),
+    ).values(),
+  );
+
+  const handleOpenDutyLog = () => {
+    if (selectedTournamentId !== "ALL") {
+      setVoucherTournamentId(selectedTournamentId);
+    } else if (uniqueTournaments.length > 0) {
+      setVoucherTournamentId(uniqueTournaments[0].id);
+    } else {
+      setVoucherTournamentId("ALL");
+    }
+    setShowPaymentVoucherModal(true);
+  };
 
   const handlePrintDutyLog = () => {
     const iframe = document.createElement("iframe");
@@ -150,19 +173,31 @@ const RefereeMatches: React.FC = () => {
     const doc = iframe.contentWindow?.document;
     if (!doc) return;
 
-    const completedMatches = matches.filter((m) => m.status === "COMPLETED");
+    const targetMatches = matches.filter((m) => {
+      if (m.status !== "COMPLETED") return false;
+      if (voucherTournamentId !== "ALL") {
+        const tId = m.tournament?.id || (m as any).group?.tournament?.id;
+        if (tId !== voucherTournamentId) return false;
+      }
+      return true;
+    });
+
     const refereeName = user ? `${user.firstName} ${user.lastName || ""}`.trim() : "Official Match Referee";
     const refereeEmail = user?.email || "referee@samscollege.com";
-    const tourneyName = completedMatches[0]?.tournament?.name || (matches[0]?.tournament?.name) || "Sam's College Official Championship";
+    const selectedTourney = uniqueTournaments.find((t) => t.id === voucherTournamentId);
+    const tourneyName = selectedTourney?.name || targetMatches[0]?.tournament?.name || (matches[0]?.tournament?.name) || "Sam's College Official Championship";
     const dateStr = new Date().toLocaleDateString(undefined, { dateStyle: "long" });
     const timeStr = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-    const durationStr = refereeStats
-      ? formatDuration(refereeStats.totalWorkingMinutes)
-      : formatDuration(totalOfficiatingMinutes);
 
-    const rowsHtml = completedMatches.length === 0
-      ? `<tr><td colspan="5" style="padding: 12px; text-align: center; color: #64748b; font-style: italic;">No completed matches recorded for this duty period yet.</td></tr>`
-      : completedMatches.map((m, idx) => {
+    const targetMinutes = targetMatches.reduce((acc, m) => {
+      const dur = getMatchDurationMinutes(m);
+      return acc + (dur || 0);
+    }, 0);
+    const durationStr = formatDuration(targetMinutes);
+
+    const rowsHtml = targetMatches.length === 0
+      ? `<tr><td colspan="5" style="padding: 12px; text-align: center; color: #64748b; font-style: italic;">No completed matches recorded for this tournament duty period yet.</td></tr>`
+      : targetMatches.map((m, idx) => {
           const p1 = getParticipantName(m.player1, m.team1);
           const p2 = getParticipantName(m.player2, m.team2);
           const dur = getMatchDurationMinutes(m);
@@ -427,10 +462,10 @@ const RefereeMatches: React.FC = () => {
               </div>
               <div>
                 <div class="meta-label">Completed Matches</div>
-                <div class="summary-val" style="color: #047857;">${completedMatches.length} Verified</div>
+                <div class="summary-val" style="color: #047857;">${targetMatches.length} Verified</div>
               </div>
               <div>
-                <div class="meta-label">Officiating Time</div>
+                <div class="meta-label">Officiating Court Time</div>
                 <div class="summary-val" style="color: #0284c7;">${durationStr}</div>
               </div>
               <div>
@@ -440,7 +475,7 @@ const RefereeMatches: React.FC = () => {
             </div>
 
             <div class="section-title">
-              <span>Itemized Completed Matches (${completedMatches.length})</span>
+              <span>Itemized Completed Matches (${targetMatches.length})</span>
               <span style="font-size: 8.5px; font-weight: normal; color: #64748b; font-family: monospace;">All Scores Official & Verified</span>
             </div>
 
@@ -686,14 +721,6 @@ const RefereeMatches: React.FC = () => {
     }
   };
 
-  const uniqueTournaments = Array.from(
-    new Map(
-      matches
-        .filter((m) => m.tournament?.id)
-        .map((m) => [m.tournament.id, m.tournament]),
-    ).values(),
-  );
-
   const uniqueCategories = Array.from(
     new Set(matches.map((m) => m.category?.name).filter(Boolean)),
   ) as string[];
@@ -712,7 +739,7 @@ const RefereeMatches: React.FC = () => {
 
     if (
       selectedTournamentId !== "ALL" &&
-      m.tournament?.id !== selectedTournamentId
+      (m.tournament?.id || (m as any).group?.tournament?.id) !== selectedTournamentId
     ) {
       return false;
     }
@@ -813,6 +840,24 @@ const RefereeMatches: React.FC = () => {
     nextPendingMatch?.team2,
   );
 
+  const voucherTargetMatches = matches.filter((m) => {
+    if (m.status !== "COMPLETED") return false;
+    if (voucherTournamentId !== "ALL") {
+      const tId = m.tournament?.id || (m as any).group?.tournament?.id;
+      if (tId !== voucherTournamentId) return false;
+    }
+    return true;
+  });
+
+  const voucherSelectedTourney = uniqueTournaments.find((t) => t.id === voucherTournamentId);
+  const voucherTourneyName = voucherSelectedTourney?.name || voucherTargetMatches[0]?.tournament?.name || (matches[0]?.tournament?.name) || "Official Championship";
+
+  const voucherDurationMinutes = voucherTargetMatches.reduce((acc, m) => {
+    const dur = getMatchDurationMinutes(m);
+    return acc + (dur || 0);
+  }, 0);
+  const voucherDurationStr = formatDuration(voucherDurationMinutes);
+
   return wrapInBaseLayout(
     <>
       <div className="no-print space-y-5">
@@ -829,7 +874,7 @@ const RefereeMatches: React.FC = () => {
 
           <div className="flex items-center gap-2.5 self-start md:self-center shrink-0">
             <button
-              onClick={() => setShowPaymentVoucherModal(true)}
+              onClick={handleOpenDutyLog}
               className="rounded-xl border border-[#4AEEFF]/40 bg-[#4AEEFF]/15 hover:bg-[#4AEEFF] hover:text-[#061D23] px-4 py-2.5 text-xs font-black uppercase tracking-wider text-[#4AEEFF] transition-all flex items-center gap-2 shadow-sm active:scale-95"
               title="Official Referee Duty Log & Match Officiating Timesheet"
             >
@@ -1521,6 +1566,32 @@ const RefereeMatches: React.FC = () => {
               </button>
             </div>
 
+            {/* Tournament Selector Dropdown (Interactive UI only, hidden on paper print) */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-xl bg-white/5 border border-[#4AEEFF]/30 no-print print:hidden">
+              <div className="flex items-center gap-2.5">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-white/70">
+                  Tournament Duty:
+                </span>
+                <select
+                  value={voucherTournamentId}
+                  onChange={(e) => setVoucherTournamentId(e.target.value)}
+                  className="rounded-lg border border-white/20 bg-[#061D23] px-3 py-1.5 text-xs font-semibold text-white focus:outline-none focus:ring-2 focus:ring-[#4AEEFF]"
+                >
+                  {uniqueTournaments.map((t) => (
+                    <option key={t.id} value={t.id} className="bg-[#061D23] text-white">
+                      {t.name}
+                    </option>
+                  ))}
+                  <option value="ALL" className="bg-[#061D23] text-white">
+                    All Tournaments (Combined)
+                  </option>
+                </select>
+              </div>
+              <span className="text-[11px] text-[#4AEEFF] font-mono">
+                Showing duty records for selected tournament
+              </span>
+            </div>
+
             {/* Referee & Officiating Meta Summary */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-3.5 rounded-xl bg-white/5 border border-white/10 text-xs print:bg-slate-50 print:border-slate-300">
               <div>
@@ -1543,11 +1614,9 @@ const RefereeMatches: React.FC = () => {
               <div>
                 <p className="text-white/50 print:text-slate-600 text-[10px] font-bold uppercase tracking-wider">Officiating Time</p>
                 <p className="text-[#4AEEFF] print:text-sky-800 font-mono font-black mt-0.5">
-                  {refereeStats
-                    ? formatDuration(refereeStats.totalWorkingMinutes)
-                    : formatDuration(totalOfficiatingMinutes)}
+                  {voucherDurationStr}
                 </p>
-                <p className="text-white/40 print:text-slate-500 text-[10px]">Total Active Officiating</p>
+                <p className="text-white/40 print:text-slate-500 text-[10px]">Total Court Time</p>
               </div>
             </div>
 
@@ -1556,19 +1625,17 @@ const RefereeMatches: React.FC = () => {
               <div>
                 <span className="text-[10px] font-bold uppercase tracking-wider text-white/50 print:text-slate-600 block">Tournament</span>
                 <span className="text-xs sm:text-sm font-bold text-white print:text-slate-900 mt-0.5 block truncate">
-                  {matches.find((m) => m.status === "COMPLETED")?.tournament?.name || (matches[0]?.tournament?.name) || "Tournament"}
+                  {voucherTourneyName}
                 </span>
               </div>
               <div>
                 <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-300/80 print:text-emerald-700 block">Completed Matches</span>
-                <span className="text-sm sm:text-base font-black text-emerald-400 print:text-emerald-800 mt-0.5 block">{completedCount} Verified</span>
+                <span className="text-sm sm:text-base font-black text-emerald-400 print:text-emerald-800 mt-0.5 block">{voucherTargetMatches.length} Verified</span>
               </div>
               <div>
                 <span className="text-[10px] font-bold uppercase tracking-wider text-[#4AEEFF] print:text-sky-800 block">Officiating Time</span>
                 <span className="text-sm sm:text-base font-black text-[#4AEEFF] print:text-sky-800 mt-0.5 block font-mono">
-                  {refereeStats
-                    ? formatDuration(refereeStats.totalWorkingMinutes)
-                    : formatDuration(totalOfficiatingMinutes)}
+                  {voucherDurationStr}
                 </span>
               </div>
               <div>
@@ -1583,7 +1650,7 @@ const RefereeMatches: React.FC = () => {
             <div>
               <div className="flex items-center justify-between mb-2">
                 <h4 className="text-xs font-black uppercase tracking-wider text-white print:text-slate-900">
-                  Itemized Completed Matches ({matches.filter((m) => m.status === "COMPLETED").length})
+                  Itemized Completed Matches ({voucherTargetMatches.length})
                 </h4>
                 <span className="text-[10px] text-white/50 print:text-slate-500 font-mono">
                   All Scores Official & ITTF Verified
@@ -1602,37 +1669,35 @@ const RefereeMatches: React.FC = () => {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-white/5 font-mono text-[11px] print:divide-slate-200 print:text-[10px]">
-                      {matches.filter((m) => m.status === "COMPLETED").length === 0 ? (
+                      {voucherTargetMatches.length === 0 ? (
                         <tr>
                           <td colSpan={5} className="px-3.5 py-6 text-center text-white/40 print:text-slate-500 italic">
-                            No completed matches recorded for this duty period yet.
+                            No completed matches recorded for this tournament duty period yet.
                           </td>
                         </tr>
                       ) : (
-                        matches
-                          .filter((m) => m.status === "COMPLETED")
-                          .map((m, idx) => {
-                            const p1 = getParticipantName(m.player1, m.team1);
-                            const p2 = getParticipantName(m.player2, m.team2);
-                            const dur = getMatchDurationMinutes(m);
+                        voucherTargetMatches.map((m, idx) => {
+                          const p1 = getParticipantName(m.player1, m.team1);
+                          const p2 = getParticipantName(m.player2, m.team2);
+                          const dur = getMatchDurationMinutes(m);
 
-                            return (
-                              <tr key={m.id} className="hover:bg-white/5 print:hover:bg-transparent">
-                                <td className="px-3 py-2 text-[#4AEEFF] print:text-slate-900 font-bold text-center">#{idx + 1}</td>
-                                <td className="px-3 py-2">
-                                  <span className="text-white print:text-slate-900 font-sans font-bold block">{m.category?.name || "Official Category"}</span>
-                                  <span className="text-white/50 print:text-slate-600 text-[10px]">{m.round || "Fixture"} · Match #{m.matchNumber}</span>
-                                </td>
-                                <td className="px-3 py-2 text-white/90 print:text-slate-900 font-sans font-semibold">
-                                  {p1} <span className="text-[#4AEEFF] print:text-sky-700 font-bold">vs</span> {p2}
-                                </td>
-                                <td className="px-3 py-2 text-center text-[#4AEEFF] print:text-slate-900 font-bold font-mono">{m.score || "—"}</td>
-                                <td className="px-3 py-2 text-right text-white/70 print:text-slate-700 font-mono">
-                                  {dur !== null ? `${dur} min` : "—"}
-                                </td>
-                              </tr>
-                            );
-                          })
+                          return (
+                            <tr key={m.id} className="hover:bg-white/5 print:hover:bg-transparent">
+                              <td className="px-3 py-2 text-[#4AEEFF] print:text-slate-900 font-bold text-center">#{idx + 1}</td>
+                              <td className="px-3 py-2">
+                                <span className="text-white print:text-slate-900 font-sans font-bold block">{m.category?.name || "Official Category"}</span>
+                                <span className="text-white/50 print:text-slate-600 text-[10px]">{m.round || "Fixture"} · Match #{m.matchNumber}</span>
+                              </td>
+                              <td className="px-3 py-2 text-white/90 print:text-slate-900 font-sans font-semibold">
+                                {p1} <span className="text-[#4AEEFF] print:text-sky-700 font-bold">vs</span> {p2}
+                              </td>
+                              <td className="px-3 py-2 text-center text-[#4AEEFF] print:text-slate-900 font-bold font-mono">{m.score || "—"}</td>
+                              <td className="px-3 py-2 text-right text-white/70 print:text-slate-700 font-mono">
+                                {dur !== null ? `${dur} min` : "—"}
+                              </td>
+                            </tr>
+                          );
+                        })
                       )}
                     </tbody>
                   </table>
