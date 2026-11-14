@@ -70,15 +70,17 @@ const Users: React.FC = () => {
   const [activeTab, setActiveTab] = useState<
     "CLUB" | "GUEST" | "REFEREE" | "ADMIN"
   >("CLUB");
-  const [clubGenderTab, setClubGenderTab] = useState<
-    "ALL" | "MALE" | "FEMALE"
-  >("ALL");
+  const [clubGenderTab, setClubGenderTab] = useState<"ALL" | "MALE" | "FEMALE">(
+    "ALL",
+  );
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
   const [deleting, setDeleting] = useState(false);
 
   const [memberToRemove, setMemberToRemove] = useState<User | null>(null);
   const [removingMembership, setRemovingMembership] = useState(false);
-  const [userForPermissions, setUserForPermissions] = useState<User | null>(null);
+  const [userForPermissions, setUserForPermissions] = useState<User | null>(
+    null,
+  );
 
   const isSuperAdmin = user?.role === "SUPER_ADMIN" || user?.isSuperAdmin;
 
@@ -105,7 +107,9 @@ const Users: React.FC = () => {
     (u) => u.role === "PLAYER" && !u.isClubMember,
   );
   const referees = users.filter((u) => u.role === "REFEREE");
-  const admins = users.filter((u) => u.role === "ADMIN" || u.role === "SUPER_ADMIN");
+  const admins = users.filter(
+    (u) => u.role === "ADMIN" || u.role === "SUPER_ADMIN",
+  );
 
   useEffect(() => {
     if (activeTab === "REFEREE" && referees.length === 0) {
@@ -131,8 +135,7 @@ const Users: React.FC = () => {
   });
 
   const usersForDisplay =
-    (activeTab === "CLUB" || activeTab === "GUEST") &&
-    clubGenderTab !== "ALL"
+    (activeTab === "CLUB" || activeTab === "GUEST") && clubGenderTab !== "ALL"
       ? displayedUsers.filter((userItem) => userItem.gender === clubGenderTab)
       : displayedUsers;
 
@@ -261,17 +264,22 @@ const Users: React.FC = () => {
         lastName: newPlayer.lastName,
         phone: newPlayer.phone,
         role: newPlayer.role,
-        ...(newPlayer.role === "PLAYER" && { playerProfile: {
-          gender: newPlayer.gender,
-          skillLevel: newPlayer.skillLevel,
-          clubAffiliation: newPlayer.clubAffiliation,
-          dateOfBirth: newPlayer.dateOfBirth
-            ? new Date(newPlayer.dateOfBirth)
-            : undefined,
-          isClubMember: newPlayer.isClubMember,
-        }}),
+        ...(newPlayer.role === "PLAYER" && {
+          playerProfile: {
+            gender: newPlayer.gender,
+            skillLevel: newPlayer.skillLevel,
+            clubAffiliation: newPlayer.clubAffiliation,
+            dateOfBirth: newPlayer.dateOfBirth
+              ? new Date(newPlayer.dateOfBirth)
+              : undefined,
+            isClubMember: newPlayer.isClubMember,
+          },
+        }),
         ...(newPlayer.role === "REFEREE" && {
-          refereeProfile: { certification: "National Level", experienceYears: 0 },
+          refereeProfile: {
+            certification: "National Level",
+            experienceYears: 0,
+          },
         }),
         ...(newPlayer.role === "ADMIN" && {
           adminProfile: { department: "Tournament Management" },
@@ -358,7 +366,11 @@ const Users: React.FC = () => {
       {/* COLLEGIATE HEADER CONTROLS */}
       <header className="rounded-2xl border border-white/20 bg-[#061D23]/20 p-5 sm:p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <BackButton to="/app/dashboard" label="Back to Dashboard" className="mb-3" />
+          <BackButton
+            to="/app/dashboard"
+            label="Back to Dashboard"
+            className="mb-3"
+          />
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#4AEEFF]/10 border border-[#4AEEFF]/30 text-[#4AEEFF] text-[11px] font-bold uppercase tracking-wider mb-2.5">
             <UserGroupIcon className="w-3.5 h-3.5" />
             <span>Administration · User Directory</span>
@@ -367,7 +379,8 @@ const Users: React.FC = () => {
             User Directory
           </h1>
           <p className="text-xs sm:text-sm text-cyan-200/80 mt-1">
-            Manage athlete profiles, club memberships, tournament rankings, and system roles.
+            Manage athlete profiles, club memberships, tournament rankings, and
+            system roles.
           </p>
         </div>
         <button
@@ -380,10 +393,12 @@ const Users: React.FC = () => {
       </header>
 
       {/* SEARCH AND TABS CONTROL BAR */}
-      <div className="space-y-3">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+      {/* SEARCH AND TABS CONTROL BAR */}
+      <div className="w-full rounded-2xl border border-white/20 bg-[#061D23]/20 px-4 py-4 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl">
+        <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:gap-3">
           {/* ROLE TABS */}
-          <div className="flex flex-wrap items-center gap-2">
+          {/* ROLE TABS */}
+          <div className="flex flex-wrap items-center gap-2 xl:shrink-0">
             <button
               id="tab-club-members-admin"
               onClick={() => {
@@ -481,8 +496,58 @@ const Users: React.FC = () => {
             )}
           </div>
 
+          {/* GENDER SUB-FILTERS FOR PLAYERS */}
+          {(activeTab === "CLUB" || activeTab === "GUEST") && (
+            <div className="flex items-center gap-2 xl:ml-3 xl:shrink-0">
+              <span className="text-[11px] font-semibold text-white/50 uppercase tracking-wider mr-1">
+                Filter:
+              </span>
+              <div className="flex items-center gap-1 bg-white/5 p-1 rounded-xl border border-white/10 backdrop-blur-md">
+                <button
+                  onClick={() => setClubGenderTab("ALL")}
+                  className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                    clubGenderTab === "ALL"
+                      ? "bg-[#4AEEFF]/15 text-[#4AEEFF] border border-[#4AEEFF]/45 shadow-[0_0_14px_rgba(74,238,255,0.18)] backdrop-blur-md"
+                      : "text-white/70 hover:text-white hover:bg-white/5 border border-transparent"
+                  }`}
+                >
+                  All ({displayedUsers.length})
+                </button>
+                {(["MALE", "FEMALE"] as const).map((gender) => {
+                  const genderCount = displayedUsers.filter(
+                    (userItem) => userItem.gender === gender,
+                  ).length;
+                  const isActive = clubGenderTab === gender;
+
+                  return (
+                    <button
+                      key={gender}
+                      onClick={() => setClubGenderTab(gender)}
+                      className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                        isActive
+                          ? "bg-[#4AEEFF]/15 text-[#4AEEFF] border border-[#4AEEFF]/45 shadow-[0_0_14px_rgba(74,238,255,0.18)] backdrop-blur-md"
+                          : "text-white/70 hover:text-white hover:bg-white/5 border border-transparent"
+                      }`}
+                    >
+                      <span>{gender === "MALE" ? "Men" : "Women"}</span>
+                      <span
+                        className={`rounded-full px-1.5 py-0.2 text-[10px] font-bold ${
+                          isActive
+                            ? "bg-[#4AEEFF]/25 text-[#4AEEFF]"
+                            : "bg-white/10 text-white/50"
+                        }`}
+                      >
+                        {genderCount}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* SEARCH INPUT */}
-          <div className="relative w-full lg:w-80">
+          <div className="relative w-full min-w-0 xl:ml-auto xl:flex-1 xl:max-w-[340px]">
             <MagnifyingGlassIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#4AEEFF]/80" />
             <input
               type="text"
@@ -502,54 +567,6 @@ const Users: React.FC = () => {
             )}
           </div>
         </div>
-
-        {/* GENDER SUB-FILTERS FOR PLAYERS */}
-        {(activeTab === "CLUB" || activeTab === "GUEST") && (
-          <div className="flex items-center gap-2 pt-1">
-            <span className="text-[11px] font-semibold text-white/50 uppercase tracking-wider mr-1">Filter:</span>
-            <div className="flex items-center gap-1 bg-white/5 p-1 rounded-xl border border-white/10 backdrop-blur-md">
-              <button
-                onClick={() => setClubGenderTab("ALL")}
-                className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
-                  clubGenderTab === "ALL"
-                    ? "bg-[#4AEEFF]/15 text-[#4AEEFF] border border-[#4AEEFF]/45 shadow-[0_0_14px_rgba(74,238,255,0.18)] backdrop-blur-md"
-                    : "text-white/70 hover:text-white hover:bg-white/5 border border-transparent"
-                }`}
-              >
-                All ({displayedUsers.length})
-              </button>
-              {(["MALE", "FEMALE"] as const).map((gender) => {
-                const genderCount = displayedUsers.filter(
-                  (userItem) => userItem.gender === gender,
-                ).length;
-                const isActive = clubGenderTab === gender;
-
-                return (
-                  <button
-                    key={gender}
-                    onClick={() => setClubGenderTab(gender)}
-                    className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold transition-all ${
-                      isActive
-                        ? "bg-[#4AEEFF]/15 text-[#4AEEFF] border border-[#4AEEFF]/45 shadow-[0_0_14px_rgba(74,238,255,0.18)] backdrop-blur-md"
-                        : "text-white/70 hover:text-white hover:bg-white/5 border border-transparent"
-                    }`}
-                  >
-                    <span>{gender === "MALE" ? "Men" : "Women"}</span>
-                    <span
-                      className={`rounded-full px-1.5 py-0.2 text-[10px] font-bold ${
-                        isActive
-                          ? "bg-[#4AEEFF]/25 text-[#4AEEFF]"
-                          : "bg-white/10 text-white/50"
-                      }`}
-                    >
-                      {genderCount}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
       </div>
 
       {/* DATA LAYER */}
@@ -599,224 +616,246 @@ const Users: React.FC = () => {
               ) : (
                 usersForDisplay.map((userItem) => (
                   <React.Fragment key={userItem.id}>
-                    <tr
-                      className="group hover:bg-[#12679E]/10 transition-colors duration-200"
-                    >
-                    <td className="px-6 py-4">
-                      <Link
-                        to={getUserDetailsPath(userItem)}
-                        className="flex items-center gap-3 group/player cursor-pointer"
-                        title={
-                          userItem.role === "PLAYER"
-                            ? "Click to view player profile"
-                            : "Click to view user profile"
-                        }
-                      >
-                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-[#061D23]/60 font-bold text-[#4AEEFF] group-hover/player:border-[#4AEEFF] transition-colors tracking-tighter">
-                          {userItem.firstName[0].toUpperCase()}
-                          {userItem.lastName[0].toUpperCase()}
-                        </div>
-                        <div>
-                          <p className="font-bold text-white group-hover/player:text-[#4AEEFF] transition-colors text-base flex items-center gap-1">
-                            <span>
-                              {userItem.firstName} {userItem.lastName}
-                            </span>
-                            <span className="text-xs text-[#4AEEFF] opacity-0 group-hover/player:opacity-100 transition-opacity">
-                              ↗
-                            </span>
-                          </p>
-                          {userItem.phone && (
-                            <p className="text-sm text-white/50 font-mono mt-0.5">
-                              {userItem.phone}
-                            </p>
-                          )}
-                        </div>
-                      </Link>
-                    </td>
-                    <td className="px-6 py-4 text-white/80 font-mono text-sm break-all">
-                      {userItem.email}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span
-                        className={`inline-block px-2.5 py-0.5 text-xs font-black uppercase tracking-wider rounded-md ${getRoleBadgeStyles(userItem.role)}`}
-                      >
-                        {userItem.role}
-                      </span>
-                    </td>
-                    {activeTab === "CLUB" && (
+                    <tr className="group hover:bg-[#12679E]/10 transition-colors duration-200">
                       <td className="px-6 py-4">
-                        <div className="flex items-center gap-2">
-                          {userItem.ranking ? (
-                            <>
-                              <span className="font-black text-[#4AEEFF] text-lg">
-                                #{userItem.ranking}
+                        <Link
+                          to={getUserDetailsPath(userItem)}
+                          className="flex items-center gap-3 group/player cursor-pointer"
+                          title={
+                            userItem.role === "PLAYER"
+                              ? "Click to view player profile"
+                              : "Click to view user profile"
+                          }
+                        >
+                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-[#061D23]/60 font-bold text-[#4AEEFF] group-hover/player:border-[#4AEEFF] transition-colors tracking-tighter">
+                            {userItem.firstName[0].toUpperCase()}
+                            {userItem.lastName[0].toUpperCase()}
+                          </div>
+                          <div>
+                            <p className="font-bold text-white group-hover/player:text-[#4AEEFF] transition-colors text-base flex items-center gap-1">
+                              <span>
+                                {userItem.firstName} {userItem.lastName}
                               </span>
-                              {userItem.rankingNote && (
-                                <span className="text-sm text-white/60 bg-white/5 px-1.5 py-0.5 rounded border border-white/10">
-                                  {userItem.rankingNote}
-                                </span>
-                              )}
-                            </>
-                          ) : (
-                            <span className="text-sm italic text-white/40">
-                              Unranked
-                            </span>
-                          )}
-                        </div>
+                              <span className="text-xs text-[#4AEEFF] opacity-0 group-hover/player:opacity-100 transition-opacity">
+                                ↗
+                              </span>
+                            </p>
+                            {userItem.phone && (
+                              <p className="text-sm text-white/50 font-mono mt-0.5">
+                                {userItem.phone}
+                              </p>
+                            )}
+                          </div>
+                        </Link>
                       </td>
-                    )}
-                    <td className="px-6 py-4 text-sm text-white/70 font-mono">
-                      {new Date(userItem.createdAt).toLocaleDateString(
-                        undefined,
-                        {
-                          year: "numeric",
-                          month: "short",
-                          day: "numeric",
-                        },
+                      <td className="px-6 py-4 text-white/80 font-mono text-sm break-all">
+                        {userItem.email}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span
+                          className={`inline-block px-2.5 py-0.5 text-xs font-black uppercase tracking-wider rounded-md ${getRoleBadgeStyles(userItem.role)}`}
+                        >
+                          {userItem.role}
+                        </span>
+                      </td>
+                      {activeTab === "CLUB" && (
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-2">
+                            {userItem.ranking ? (
+                              <>
+                                <span className="font-black text-[#4AEEFF] text-lg">
+                                  #{userItem.ranking}
+                                </span>
+                                {userItem.rankingNote && (
+                                  <span className="text-sm text-white/60 bg-white/5 px-1.5 py-0.5 rounded border border-white/10">
+                                    {userItem.rankingNote}
+                                  </span>
+                                )}
+                              </>
+                            ) : (
+                              <span className="text-sm italic text-white/40">
+                                Unranked
+                              </span>
+                            )}
+                          </div>
+                        </td>
                       )}
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center justify-end gap-2">
-                        {/* Inline Ranking Control Config - Strictly for Club Members */}
-                        {userItem.role === "PLAYER" &&
-                          userItem.isClubMember &&
-                          (editingRankId === userItem.id ? (
-                            <div className="flex items-center gap-1.5 bg-[#061D23]/90 border border-[#4AEEFF]/40 rounded-lg p-1 animate-fadeIn">
-                              <input
-                                type="number"
-                                min="1"
-                                max="999"
-                                placeholder="Rank"
-                                value={rankingInput}
-                                onChange={(e) =>
-                                  setRankingInput(e.target.value)
-                                }
-                                className="w-16 px-2 py-1 text-xs border border-white/10 rounded bg-[#061D23] text-white focus:outline-none focus:border-[#4AEEFF]"
-                                autoFocus
-                              />
-                              <input
-                                type="text"
-                                placeholder="Note"
-                                value={rankingNote}
-                                onChange={(e) => setRankingNote(e.target.value)}
-                                className="w-20 px-2 py-1 text-xs border border-white/10 rounded bg-[#061D23] text-white focus:outline-none focus:border-[#4AEEFF]"
-                              />
-                              <button
-                                onClick={() => handleUpdateRanking(userItem.id)}
-                                className="px-1 text-emerald-400 text-xs font-black hover:text-emerald-300"
-                                title="Save"
-                              >
-                                ✓
-                              </button>
+                      <td className="px-6 py-4 text-sm text-white/70 font-mono">
+                        {new Date(userItem.createdAt).toLocaleDateString(
+                          undefined,
+                          {
+                            year: "numeric",
+                            month: "short",
+                            day: "numeric",
+                          },
+                        )}
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center justify-end gap-2">
+                          {/* Inline Ranking Control Config - Strictly for Club Members */}
+                          {userItem.role === "PLAYER" &&
+                            userItem.isClubMember &&
+                            (editingRankId === userItem.id ? (
+                              <div className="flex items-center gap-1.5 bg-[#061D23]/90 border border-[#4AEEFF]/40 rounded-lg p-1 animate-fadeIn">
+                                <input
+                                  type="number"
+                                  min="1"
+                                  max="999"
+                                  placeholder="Rank"
+                                  value={rankingInput}
+                                  onChange={(e) =>
+                                    setRankingInput(e.target.value)
+                                  }
+                                  className="w-16 px-2 py-1 text-xs border border-white/10 rounded bg-[#061D23] text-white focus:outline-none focus:border-[#4AEEFF]"
+                                  autoFocus
+                                />
+                                <input
+                                  type="text"
+                                  placeholder="Note"
+                                  value={rankingNote}
+                                  onChange={(e) =>
+                                    setRankingNote(e.target.value)
+                                  }
+                                  className="w-20 px-2 py-1 text-xs border border-white/10 rounded bg-[#061D23] text-white focus:outline-none focus:border-[#4AEEFF]"
+                                />
+                                <button
+                                  onClick={() =>
+                                    handleUpdateRanking(userItem.id)
+                                  }
+                                  className="px-1 text-emerald-400 text-xs font-black hover:text-emerald-300"
+                                  title="Save"
+                                >
+                                  ✓
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    setEditingRankId(null);
+                                    setRankingInput("");
+                                    setRankingNote("");
+                                  }}
+                                  className="px-1 text-white/40 text-xs font-black hover:text-white"
+                                  title="Cancel"
+                                >
+                                  ✕
+                                </button>
+                              </div>
+                            ) : (
                               <button
                                 onClick={() => {
-                                  setEditingRankId(null);
-                                  setRankingInput("");
-                                  setRankingNote("");
+                                  setEditingRankId(userItem.id);
+                                  setRankingInput(
+                                    userItem.ranking?.toString() || "",
+                                  );
+                                  setRankingNote(userItem.rankingNote || "");
                                 }}
-                                className="px-1 text-white/40 text-xs font-black hover:text-white"
-                                title="Cancel"
-                              >
-                                ✕
-                              </button>
-                            </div>
-                          ) : (
-                            <button
-                              onClick={() => {
-                                setEditingRankId(userItem.id);
-                                setRankingInput(
-                                  userItem.ranking?.toString() || "",
-                                );
-                                setRankingNote(userItem.rankingNote || "");
-                              }}
-                              className="rounded-lg p-2 text-white/70 border border-white/10 bg-[#061D23]/40 hover:border-[#4AEEFF] hover:text-[#4AEEFF] transition-all text-xs"
-                              title={
-                                userItem.ranking
-                                  ? "Edit Ranking"
-                                  : "Set Ranking"
-                              }
-                            >
-                              <TrophyIcon className="w-3.5 h-3.5" />
-                            </button>
-                          ))}
-
-                        {/* Interactive Role Selector Dropdown */}
-                        {userItem.id !== user?.id &&
-                          !userItem.isSuperAdmin &&
-                          (() => {
-                            const currentIsSuperAdmin =
-                              (user as any)?.isSuperAdmin ?? false;
-                            const canChangeRole =
-                              currentIsSuperAdmin || hasPermission("MANAGE_USERS");
-
-                            return canChangeRole ? (
-                              <GlassSelect
-                                value={userItem.role}
-                                onChange={(e) =>
-                                  handleRoleChange(userItem.id, e.target.value)
+                                className="rounded-lg p-2 text-white/70 border border-white/10 bg-[#061D23]/40 hover:border-[#4AEEFF] hover:text-[#4AEEFF] transition-all text-xs"
+                                title={
+                                  userItem.ranking
+                                    ? "Edit Ranking"
+                                    : "Set Ranking"
                                 }
-                                className="!py-1 !px-2.5 !text-xs !pr-7"
                               >
-                                <option value="PLAYER" className="bg-[#061D23] text-white">Player</option>
-                                <option value="REFEREE" className="bg-[#061D23] text-white">Referee</option>
-                                {currentIsSuperAdmin && (
-                                  <option value="ADMIN" className="bg-[#061D23] text-white">Admin</option>
-                                )}
-                              </GlassSelect>
-                            ) : null;
-                          })()}
+                                <TrophyIcon className="w-3.5 h-3.5" />
+                              </button>
+                            ))}
 
-                        {/* Badges Stack */}
-                        {userItem.isSuperAdmin && (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider rounded-md bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                            <ShieldCheckIcon className="w-3 h-3 text-amber-400" />
-                            <span>Main Admin</span>
-                          </span>
-                        )}
+                          {/* Interactive Role Selector Dropdown */}
+                          {userItem.id !== user?.id &&
+                            !userItem.isSuperAdmin &&
+                            (() => {
+                              const currentIsSuperAdmin =
+                                (user as any)?.isSuperAdmin ?? false;
+                              const canChangeRole =
+                                currentIsSuperAdmin ||
+                                hasPermission("MANAGE_USERS");
 
-                        {userItem.id === user?.id && (
-                          <span className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider rounded-md bg-white/10 text-white/60 border border-white/10">
-                            You
-                          </span>
-                        )}
+                              return canChangeRole ? (
+                                <GlassSelect
+                                  value={userItem.role}
+                                  onChange={(e) =>
+                                    handleRoleChange(
+                                      userItem.id,
+                                      e.target.value,
+                                    )
+                                  }
+                                  className="!py-1 !px-2.5 !text-xs !pr-7"
+                                >
+                                  <option
+                                    value="PLAYER"
+                                    className="bg-[#061D23] text-white"
+                                  >
+                                    Player
+                                  </option>
+                                  <option
+                                    value="REFEREE"
+                                    className="bg-[#061D23] text-white"
+                                  >
+                                    Referee
+                                  </option>
+                                  {currentIsSuperAdmin && (
+                                    <option
+                                      value="ADMIN"
+                                      className="bg-[#061D23] text-white"
+                                    >
+                                      Admin
+                                    </option>
+                                  )}
+                                </GlassSelect>
+                              ) : null;
+                            })()}
 
-                        {/* Manage Permissions for Admin Users */}
-                        {isSuperAdmin && userItem.role === "ADMIN" && (
-                          <button
-                            onClick={() => setUserForPermissions(userItem)}
-                            className="rounded-lg px-2.5 py-1.5 text-xs font-semibold text-[#4AEEFF] border border-[#4AEEFF]/30 bg-[#4AEEFF]/10 hover:bg-[#4AEEFF]/20 transition-all flex items-center gap-1.5"
-                            title="Manage Permissions"
-                          >
-                            <KeyIcon className="w-3.5 h-3.5" />
-                            <span>Permissions</span>
-                          </button>
-                        )}
+                          {/* Badges Stack */}
+                          {userItem.isSuperAdmin && (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider rounded-md bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                              <ShieldCheckIcon className="w-3 h-3 text-amber-400" />
+                              <span>Main Admin</span>
+                            </span>
+                          )}
 
-                        {/* Remove Club Membership */}
-                        {activeTab === "CLUB" &&
-                          userItem.role === "PLAYER" &&
-                          userItem.isClubMember && (
+                          {userItem.id === user?.id && (
+                            <span className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider rounded-md bg-white/10 text-white/60 border border-white/10">
+                              You
+                            </span>
+                          )}
+
+                          {/* Manage Permissions for Admin Users */}
+                          {isSuperAdmin && userItem.role === "ADMIN" && (
                             <button
-                              onClick={() => setMemberToRemove(userItem)}
-                              className="rounded-lg px-2.5 py-1.5 text-xs font-semibold text-amber-300 border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 transition-all"
-                              title="Remove Club Membership"
+                              onClick={() => setUserForPermissions(userItem)}
+                              className="rounded-lg px-2.5 py-1.5 text-xs font-semibold text-[#4AEEFF] border border-[#4AEEFF]/30 bg-[#4AEEFF]/10 hover:bg-[#4AEEFF]/20 transition-all flex items-center gap-1.5"
+                              title="Manage Permissions"
                             >
-                              Remove Membership
+                              <KeyIcon className="w-3.5 h-3.5" />
+                              <span>Permissions</span>
                             </button>
                           )}
 
-                        {/* Row Delete Option */}
-                        {userItem.id !== user?.id && !userItem.isSuperAdmin && (
-                          <button
-                            onClick={() => setUserToDelete(userItem)}
-                            className="rounded-lg p-2 text-red-400 border border-red-500/10 bg-[#061D23]/40 hover:border-red-500 hover:bg-red-500/10 transition-all"
-                            title="Delete User"
-                          >
-                            <TrashIcon className="w-4 h-4" />
-                          </button>
-                        )}
-                      </div>
-                    </td>
+                          {/* Remove Club Membership */}
+                          {activeTab === "CLUB" &&
+                            userItem.role === "PLAYER" &&
+                            userItem.isClubMember && (
+                              <button
+                                onClick={() => setMemberToRemove(userItem)}
+                                className="rounded-lg px-2.5 py-1.5 text-xs font-semibold text-amber-300 border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 transition-all"
+                                title="Remove Club Membership"
+                              >
+                                Remove Membership
+                              </button>
+                            )}
+
+                          {/* Row Delete Option */}
+                          {userItem.id !== user?.id &&
+                            !userItem.isSuperAdmin && (
+                              <button
+                                onClick={() => setUserToDelete(userItem)}
+                                className="rounded-lg p-2 text-red-400 border border-red-500/10 bg-[#061D23]/40 hover:border-red-500 hover:bg-red-500/10 transition-all"
+                                title="Delete User"
+                              >
+                                <TrashIcon className="w-4 h-4" />
+                              </button>
+                            )}
+                        </div>
+                      </td>
                     </tr>
                   </React.Fragment>
                 ))
@@ -829,233 +868,247 @@ const Users: React.FC = () => {
         <div className="block md:hidden divide-y divide-white/10">
           {usersForDisplay.map((userItem) => (
             <React.Fragment key={userItem.id}>
-              <div
-                className="p-4 bg-[#061D23]/30 hover:bg-[#12679E]/10 transition-colors space-y-3"
-              >
-              {/* Top: Avatar, Name & Role Badge */}
-              <div className="flex items-start justify-between gap-3">
-                <Link
-                  to={getUserDetailsPath(userItem)}
-                  className="flex items-center gap-3 min-w-0"
-                  title={
-                    userItem.role === "PLAYER"
-                      ? "Click to view player profile"
-                      : "Click to view user profile"
-                  }
-                >
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#4AEEFF]/30 bg-[#061D23] font-bold text-white shadow-sm text-sm">
-                    {userItem.firstName[0].toUpperCase()}
-                    {userItem.lastName[0].toUpperCase()}
-                  </div>
-                  <div className="min-w-0">
-                    <p className="font-bold text-white text-base leading-tight truncate">
-                      {userItem.firstName} {userItem.lastName}
-                    </p>
-                    {userItem.phone && (
-                      <p className="text-xs text-gray-400 font-mono mt-0.5 flex items-center gap-1">
-                        <PhoneIcon className="w-3 h-3 text-[#4AEEFF] shrink-0" />
-                        <span>{userItem.phone}</span>
+              <div className="p-4 bg-[#061D23]/30 hover:bg-[#12679E]/10 transition-colors space-y-3">
+                {/* Top: Avatar, Name & Role Badge */}
+                <div className="flex items-start justify-between gap-3">
+                  <Link
+                    to={getUserDetailsPath(userItem)}
+                    className="flex items-center gap-3 min-w-0"
+                    title={
+                      userItem.role === "PLAYER"
+                        ? "Click to view player profile"
+                        : "Click to view user profile"
+                    }
+                  >
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#4AEEFF]/30 bg-[#061D23] font-bold text-white shadow-sm text-sm">
+                      {userItem.firstName[0].toUpperCase()}
+                      {userItem.lastName[0].toUpperCase()}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="font-bold text-white text-base leading-tight truncate">
+                        {userItem.firstName} {userItem.lastName}
                       </p>
+                      {userItem.phone && (
+                        <p className="text-xs text-gray-400 font-mono mt-0.5 flex items-center gap-1">
+                          <PhoneIcon className="w-3 h-3 text-[#4AEEFF] shrink-0" />
+                          <span>{userItem.phone}</span>
+                        </p>
+                      )}
+                    </div>
+                  </Link>
+
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <span
+                      className={`inline-block px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-md ${getRoleBadgeStyles(
+                        userItem.role,
+                      )}`}
+                    >
+                      {userItem.role}
+                    </span>
+                    {userItem.isSuperAdmin && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider rounded-md bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                        <ShieldCheckIcon className="w-2.5 h-2.5 text-amber-400" />
+                        <span>Main</span>
+                      </span>
+                    )}
+                    {userItem.id === user?.id && (
+                      <span className="px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider rounded-md bg-white/10 text-white/60 border border-white/10">
+                        You
+                      </span>
                     )}
                   </div>
-                </Link>
-
-                <div className="flex items-center gap-1.5 shrink-0">
-                  <span
-                    className={`inline-block px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-md ${getRoleBadgeStyles(
-                      userItem.role,
-                    )}`}
-                  >
-                    {userItem.role}
-                  </span>
-                  {userItem.isSuperAdmin && (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider rounded-md bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                      <ShieldCheckIcon className="w-2.5 h-2.5 text-amber-400" />
-                      <span>Main</span>
-                    </span>
-                  )}
-                  {userItem.id === user?.id && (
-                    <span className="px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider rounded-md bg-white/10 text-white/60 border border-white/10">
-                      You
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              {/* Info Details Box */}
-              <div className="rounded-xl bg-[#061D23]/60 border border-white/5 p-3 space-y-2 text-xs">
-                <div className="flex items-center gap-2 text-gray-300">
-                  <EnvelopeIcon className="w-3.5 h-3.5 text-[#4AEEFF] shrink-0" />
-                  <span className="font-mono text-gray-200 truncate select-all">
-                    {userItem.email}
-                  </span>
                 </div>
 
-                {userItem.role === "PLAYER" && (
-                  <div className="flex items-center justify-between pt-2 border-t border-white/5">
-                    <span className="text-gray-400 font-medium">Rank:</span>
-                    {userItem.ranking ? (
-                      <div className="flex items-center gap-1.5">
-                        <span className="font-black text-[#4AEEFF]">
-                          #{userItem.ranking}
-                        </span>
-                        {userItem.rankingNote && (
-                          <span className="text-[10px] text-white/60 bg-white/5 px-1.5 py-0.5 rounded border border-white/10">
-                            {userItem.rankingNote}
+                {/* Info Details Box */}
+                <div className="rounded-xl bg-[#061D23]/60 border border-white/5 p-3 space-y-2 text-xs">
+                  <div className="flex items-center gap-2 text-gray-300">
+                    <EnvelopeIcon className="w-3.5 h-3.5 text-[#4AEEFF] shrink-0" />
+                    <span className="font-mono text-gray-200 truncate select-all">
+                      {userItem.email}
+                    </span>
+                  </div>
+
+                  {userItem.role === "PLAYER" && (
+                    <div className="flex items-center justify-between pt-2 border-t border-white/5">
+                      <span className="text-gray-400 font-medium">Rank:</span>
+                      {userItem.ranking ? (
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-black text-[#4AEEFF]">
+                            #{userItem.ranking}
                           </span>
-                        )}
-                      </div>
-                    ) : (
-                      <span className="text-gray-500 italic">Unranked</span>
-                    )}
+                          {userItem.rankingNote && (
+                            <span className="text-[10px] text-white/60 bg-white/5 px-1.5 py-0.5 rounded border border-white/10">
+                              {userItem.rankingNote}
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-gray-500 italic">Unranked</span>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-between pt-1 border-t border-white/5 text-[11px] text-gray-400">
+                    <span>Joined Date:</span>
+                    <span className="font-mono text-gray-300">
+                      {new Date(userItem.createdAt).toLocaleDateString(
+                        undefined,
+                        {
+                          year: "numeric",
+                          month: "short",
+                          day: "numeric",
+                        },
+                      )}
+                    </span>
                   </div>
-                )}
-
-                <div className="flex items-center justify-between pt-1 border-t border-white/5 text-[11px] text-gray-400">
-                  <span>Joined Date:</span>
-                  <span className="font-mono text-gray-300">
-                    {new Date(userItem.createdAt).toLocaleDateString(
-                      undefined,
-                      {
-                        year: "numeric",
-                        month: "short",
-                        day: "numeric",
-                      },
-                    )}
-                  </span>
                 </div>
-              </div>
 
-              {/* Inline Rank Edit Form on Mobile (if currently editing) */}
-              {userItem.role === "PLAYER" && editingRankId === userItem.id && (
-                <div className="flex items-center gap-2 bg-[#061D23] border border-[#4AEEFF]/40 rounded-xl p-2 animate-fadeIn">
-                  <input
-                    type="number"
-                    min="1"
-                    max="999"
-                    placeholder="Rank"
-                    value={rankingInput}
-                    onChange={(e) => setRankingInput(e.target.value)}
-                    className="w-20 px-2 py-1.5 text-xs border border-white/10 rounded-lg bg-[#082229] text-white focus:outline-none focus:border-[#4AEEFF]"
-                    autoFocus
-                  />
-                  <input
-                    type="text"
-                    placeholder="Note"
-                    value={rankingNote}
-                    onChange={(e) => setRankingNote(e.target.value)}
-                    className="flex-1 px-2 py-1.5 text-xs border border-white/10 rounded-lg bg-[#082229] text-white focus:outline-none focus:border-[#4AEEFF]"
-                  />
-                  <button
-                    onClick={() => handleUpdateRanking(userItem.id)}
-                    className="px-2.5 py-1.5 rounded-lg bg-emerald-500/20 text-emerald-300 text-xs font-black border border-emerald-500/30"
-                  >
-                    Save
-                  </button>
-                  <button
-                    onClick={() => {
-                      setEditingRankId(null);
-                      setRankingInput("");
-                      setRankingNote("");
-                    }}
-                    className="px-2 py-1.5 text-white/50 text-xs font-black"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              )}
-
-              {/* Mobile Actions Toolbar */}
-              <div className="flex items-center justify-between gap-2 pt-1">
-                <Link
-                  to={getUserDetailsPath(userItem)}
-                  className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-white/80 border border-white/10 bg-[#061D23]/60 hover:border-[#4AEEFF] hover:text-[#4AEEFF]"
-                >
-                  <EyeIcon className="w-3.5 h-3.5" />
-                  <span>Profile</span>
-                </Link>
-
-                <div className="flex items-center gap-2">
-                  {/* Rank Edit Toggle for Players */}
-                  {userItem.role === "PLAYER" &&
-                    editingRankId !== userItem.id && (
+                {/* Inline Rank Edit Form on Mobile (if currently editing) */}
+                {userItem.role === "PLAYER" &&
+                  editingRankId === userItem.id && (
+                    <div className="flex items-center gap-2 bg-[#061D23] border border-[#4AEEFF]/40 rounded-xl p-2 animate-fadeIn">
+                      <input
+                        type="number"
+                        min="1"
+                        max="999"
+                        placeholder="Rank"
+                        value={rankingInput}
+                        onChange={(e) => setRankingInput(e.target.value)}
+                        className="w-20 px-2 py-1.5 text-xs border border-white/10 rounded-lg bg-[#082229] text-white focus:outline-none focus:border-[#4AEEFF]"
+                        autoFocus
+                      />
+                      <input
+                        type="text"
+                        placeholder="Note"
+                        value={rankingNote}
+                        onChange={(e) => setRankingNote(e.target.value)}
+                        className="flex-1 px-2 py-1.5 text-xs border border-white/10 rounded-lg bg-[#082229] text-white focus:outline-none focus:border-[#4AEEFF]"
+                      />
+                      <button
+                        onClick={() => handleUpdateRanking(userItem.id)}
+                        className="px-2.5 py-1.5 rounded-lg bg-emerald-500/20 text-emerald-300 text-xs font-black border border-emerald-500/30"
+                      >
+                        Save
+                      </button>
                       <button
                         onClick={() => {
-                          setEditingRankId(userItem.id);
-                          setRankingInput(userItem.ranking?.toString() || "");
-                          setRankingNote(userItem.rankingNote || "");
+                          setEditingRankId(null);
+                          setRankingInput("");
+                          setRankingNote("");
                         }}
-                        className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-white/80 border border-white/10 bg-[#061D23]/60 hover:border-[#4AEEFF] hover:text-[#4AEEFF]"
-                        title="Set / Edit Rank"
+                        className="px-2 py-1.5 text-white/50 text-xs font-black"
                       >
-                        <TrophyIcon className="w-3.5 h-3.5" />
-                        <span>Rank</span>
+                        Cancel
                       </button>
-                    )}
+                    </div>
+                  )}
 
-                  {/* Role Change Dropdown */}
-                  {userItem.id !== user?.id &&
-                    !userItem.isSuperAdmin &&
-                    (() => {
-                      const currentIsSuperAdmin =
-                        (user as any)?.isSuperAdmin ?? false;
-                      const canChangeRole =
-                        currentIsSuperAdmin || hasPermission("MANAGE_USERS");
+                {/* Mobile Actions Toolbar */}
+                <div className="flex items-center justify-between gap-2 pt-1">
+                  <Link
+                    to={getUserDetailsPath(userItem)}
+                    className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-white/80 border border-white/10 bg-[#061D23]/60 hover:border-[#4AEEFF] hover:text-[#4AEEFF]"
+                  >
+                    <EyeIcon className="w-3.5 h-3.5" />
+                    <span>Profile</span>
+                  </Link>
 
-                      return canChangeRole ? (
-                        <GlassSelect
-                          value={userItem.role}
-                          onChange={(e) =>
-                            handleRoleChange(userItem.id, e.target.value)
-                          }
-                          className="!py-1 !px-2.5 !text-xs !pr-7"
+                  <div className="flex items-center gap-2">
+                    {/* Rank Edit Toggle for Players */}
+                    {userItem.role === "PLAYER" &&
+                      editingRankId !== userItem.id && (
+                        <button
+                          onClick={() => {
+                            setEditingRankId(userItem.id);
+                            setRankingInput(userItem.ranking?.toString() || "");
+                            setRankingNote(userItem.rankingNote || "");
+                          }}
+                          className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-white/80 border border-white/10 bg-[#061D23]/60 hover:border-[#4AEEFF] hover:text-[#4AEEFF]"
+                          title="Set / Edit Rank"
                         >
-                          <option value="PLAYER" className="bg-[#061D23] text-white">Player</option>
-                          <option value="REFEREE" className="bg-[#061D23] text-white">Referee</option>
-                          {currentIsSuperAdmin && (
-                            <option value="ADMIN" className="bg-[#061D23] text-white">Admin</option>
-                          )}
-                        </GlassSelect>
-                      ) : null;
-                    })()}
+                          <TrophyIcon className="w-3.5 h-3.5" />
+                          <span>Rank</span>
+                        </button>
+                      )}
 
-                  {/* Manage Permissions for Admin Users (Mobile) */}
-                  {isSuperAdmin && userItem.role === "ADMIN" && (
-                    <button
-                      onClick={() => setUserForPermissions(userItem)}
-                      className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-[#4AEEFF] border border-[#4AEEFF]/30 bg-[#4AEEFF]/10 hover:bg-[#4AEEFF]/20"
-                      title="Manage Permissions"
-                    >
-                      <KeyIcon className="w-3.5 h-3.5" />
-                      <span>Permissions</span>
-                    </button>
-                  )}
+                    {/* Role Change Dropdown */}
+                    {userItem.id !== user?.id &&
+                      !userItem.isSuperAdmin &&
+                      (() => {
+                        const currentIsSuperAdmin =
+                          (user as any)?.isSuperAdmin ?? false;
+                        const canChangeRole =
+                          currentIsSuperAdmin || hasPermission("MANAGE_USERS");
 
-                  {/* Remove Club Membership */}
-                  {activeTab === "CLUB" &&
-                    userItem.role === "PLAYER" &&
-                    userItem.isClubMember && (
+                        return canChangeRole ? (
+                          <GlassSelect
+                            value={userItem.role}
+                            onChange={(e) =>
+                              handleRoleChange(userItem.id, e.target.value)
+                            }
+                            className="!py-1 !px-2.5 !text-xs !pr-7"
+                          >
+                            <option
+                              value="PLAYER"
+                              className="bg-[#061D23] text-white"
+                            >
+                              Player
+                            </option>
+                            <option
+                              value="REFEREE"
+                              className="bg-[#061D23] text-white"
+                            >
+                              Referee
+                            </option>
+                            {currentIsSuperAdmin && (
+                              <option
+                                value="ADMIN"
+                                className="bg-[#061D23] text-white"
+                              >
+                                Admin
+                              </option>
+                            )}
+                          </GlassSelect>
+                        ) : null;
+                      })()}
+
+                    {/* Manage Permissions for Admin Users (Mobile) */}
+                    {isSuperAdmin && userItem.role === "ADMIN" && (
                       <button
-                        onClick={() => setMemberToRemove(userItem)}
-                        className="rounded-lg px-2.5 py-1.5 text-xs font-semibold text-amber-300 border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20"
-                        title="Remove Club Membership"
+                        onClick={() => setUserForPermissions(userItem)}
+                        className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-[#4AEEFF] border border-[#4AEEFF]/30 bg-[#4AEEFF]/10 hover:bg-[#4AEEFF]/20"
+                        title="Manage Permissions"
                       >
-                        Remove Membership
+                        <KeyIcon className="w-3.5 h-3.5" />
+                        <span>Permissions</span>
                       </button>
                     )}
 
-                  {/* Delete Button */}
-                  {userItem.id !== user?.id && !userItem.isSuperAdmin && (
-                    <button
-                      onClick={() => setUserToDelete(userItem)}
-                      className="rounded-lg p-1.5 text-red-400 border border-red-500/20 bg-[#061D23]/60 hover:bg-red-500/20"
-                      title="Delete User"
-                    >
-                      <TrashIcon className="w-4 h-4" />
-                    </button>
-                  )}
+                    {/* Remove Club Membership */}
+                    {activeTab === "CLUB" &&
+                      userItem.role === "PLAYER" &&
+                      userItem.isClubMember && (
+                        <button
+                          onClick={() => setMemberToRemove(userItem)}
+                          className="rounded-lg px-2.5 py-1.5 text-xs font-semibold text-amber-300 border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20"
+                          title="Remove Club Membership"
+                        >
+                          Remove Membership
+                        </button>
+                      )}
+
+                    {/* Delete Button */}
+                    {userItem.id !== user?.id && !userItem.isSuperAdmin && (
+                      <button
+                        onClick={() => setUserToDelete(userItem)}
+                        className="rounded-lg p-1.5 text-red-400 border border-red-500/20 bg-[#061D23]/60 hover:bg-red-500/20"
+                        title="Delete User"
+                      >
+                        <TrashIcon className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
                 </div>
-              </div>
               </div>
             </React.Fragment>
           ))}
@@ -1182,10 +1235,30 @@ const Users: React.FC = () => {
                         }
                         className="w-full"
                       >
-                        <option value="CLUB_PLAYER" className="bg-[#061D23] text-white">Club Player</option>
-                        <option value="GUEST_PLAYER" className="bg-[#061D23] text-white">Guest Player</option>
-                        <option value="REFEREE" className="bg-[#061D23] text-white">Referee</option>
-                        <option value="ADMIN" className="bg-[#061D23] text-white">Admin</option>
+                        <option
+                          value="CLUB_PLAYER"
+                          className="bg-[#061D23] text-white"
+                        >
+                          Club Player
+                        </option>
+                        <option
+                          value="GUEST_PLAYER"
+                          className="bg-[#061D23] text-white"
+                        >
+                          Guest Player
+                        </option>
+                        <option
+                          value="REFEREE"
+                          className="bg-[#061D23] text-white"
+                        >
+                          Referee
+                        </option>
+                        <option
+                          value="ADMIN"
+                          className="bg-[#061D23] text-white"
+                        >
+                          Admin
+                        </option>
                       </GlassSelect>
                     </div>
 
@@ -1271,7 +1344,10 @@ const Users: React.FC = () => {
                     </div>
                     <p className="text-xs font-semibold text-amber-300 mt-1.5 flex items-center gap-1.5">
                       <ExclamationTriangleIcon className="w-4 h-4 text-amber-400 shrink-0" />
-                      <span>Save this password now. It will not be displayed again after creation.</span>
+                      <span>
+                        Save this password now. It will not be displayed again
+                        after creation.
+                      </span>
                     </p>
                   </div>
 
@@ -1292,83 +1368,117 @@ const Users: React.FC = () => {
                     </div>
                   </div>
 
-                  {newPlayer.role === "PLAYER" && <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                    <div>
-                      <label className="block text-xs font-black uppercase tracking-wider text-white/70 mb-1.5">
-                        Gender *
-                      </label>
+                  {newPlayer.role === "PLAYER" && (
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                      <div>
+                        <label className="block text-xs font-black uppercase tracking-wider text-white/70 mb-1.5">
+                          Gender *
+                        </label>
 
-                      <GlassSelect
-                        value={newPlayer.gender}
-                        onChange={(e) =>
-                          setNewPlayer({ ...newPlayer, gender: e.target.value })
-                        }
-                        required={newPlayer.role === "PLAYER"}
-                        className="w-full"
-                      >
-                        <option value="" className="bg-[#061D23] text-white">Select Gender</option>
-                        <option value="MALE" className="bg-[#061D23] text-white">Male</option>
-                        <option value="FEMALE" className="bg-[#061D23] text-white">Female</option>
-                      </GlassSelect>
-                    </div>
+                        <GlassSelect
+                          value={newPlayer.gender}
+                          onChange={(e) =>
+                            setNewPlayer({
+                              ...newPlayer,
+                              gender: e.target.value,
+                            })
+                          }
+                          required={newPlayer.role === "PLAYER"}
+                          className="w-full"
+                        >
+                          <option value="" className="bg-[#061D23] text-white">
+                            Select Gender
+                          </option>
+                          <option
+                            value="MALE"
+                            className="bg-[#061D23] text-white"
+                          >
+                            Male
+                          </option>
+                          <option
+                            value="FEMALE"
+                            className="bg-[#061D23] text-white"
+                          >
+                            Female
+                          </option>
+                        </GlassSelect>
+                      </div>
 
-                    <div>
-                      <label className="block text-xs font-black uppercase tracking-wider text-white/70 mb-1.5">
-                        Date of Birth
-                      </label>
-                      <input
-                        type="date"
-                        value={newPlayer.dateOfBirth}
-                        onChange={(e) =>
-                          setNewPlayer({
-                            ...newPlayer,
-                            dateOfBirth: e.target.value,
-                          })
-                        }
-                        className="w-full rounded-lg border border-white/10 bg-[#061D23]/60 p-2.5 text-sm text-white focus:border-[#4AEEFF] focus:outline-none [color-scheme:dark]"
-                      />
+                      <div>
+                        <label className="block text-xs font-black uppercase tracking-wider text-white/70 mb-1.5">
+                          Date of Birth
+                        </label>
+                        <input
+                          type="date"
+                          value={newPlayer.dateOfBirth}
+                          onChange={(e) =>
+                            setNewPlayer({
+                              ...newPlayer,
+                              dateOfBirth: e.target.value,
+                            })
+                          }
+                          className="w-full rounded-lg border border-white/10 bg-[#061D23]/60 p-2.5 text-sm text-white focus:border-[#4AEEFF] focus:outline-none [color-scheme:dark]"
+                        />
+                      </div>
                     </div>
-                  </div>}
+                  )}
 
-                  {newPlayer.role === "PLAYER" && <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                    <div>
-                      <label className="block text-xs font-black uppercase tracking-wider text-white/70 mb-1.5">
-                        Skill Classification
-                      </label>
-                      <GlassSelect
-                        value={newPlayer.skillLevel}
-                        onChange={(e) =>
-                          setNewPlayer({
-                            ...newPlayer,
-                            skillLevel: e.target.value,
-                          })
-                        }
-                        className="w-full"
-                      >
-                        <option value="Beginner" className="bg-[#061D23] text-white">Beginner</option>
-                        <option value="Intermediate" className="bg-[#061D23] text-white">Intermediate</option>
-                        <option value="Advanced" className="bg-[#061D23] text-white">Advanced</option>
-                      </GlassSelect>
-                    </div>
+                  {newPlayer.role === "PLAYER" && (
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                      <div>
+                        <label className="block text-xs font-black uppercase tracking-wider text-white/70 mb-1.5">
+                          Skill Classification
+                        </label>
+                        <GlassSelect
+                          value={newPlayer.skillLevel}
+                          onChange={(e) =>
+                            setNewPlayer({
+                              ...newPlayer,
+                              skillLevel: e.target.value,
+                            })
+                          }
+                          className="w-full"
+                        >
+                          <option
+                            value="Beginner"
+                            className="bg-[#061D23] text-white"
+                          >
+                            Beginner
+                          </option>
+                          <option
+                            value="Intermediate"
+                            className="bg-[#061D23] text-white"
+                          >
+                            Intermediate
+                          </option>
+                          <option
+                            value="Advanced"
+                            className="bg-[#061D23] text-white"
+                          >
+                            Advanced
+                          </option>
+                        </GlassSelect>
+                      </div>
 
-                    <div>
-                      <label className="block text-xs font-black uppercase tracking-wider text-white/70 mb-1.5">
-                        Club / Academy Branch
-                      </label>
-                      <input
-                        type="text"
-                        value={newPlayer.clubAffiliation}
-                        onChange={(e) =>
-                          setNewPlayer({
-                            ...newPlayer,
-                            clubAffiliation: e.target.value,
-                          })
-                        }
-                        className="w-full rounded-lg border border-white/10 bg-[#061D23]/60 p-2.5 text-sm text-white placeholder-white/20 focus:border-[#4AEEFF] focus:outline-none"
-                        placeholder="e.g., City Table Tennis Club"
-                      />
+                      <div>
+                        <label className="block text-xs font-black uppercase tracking-wider text-white/70 mb-1.5">
+                          Club / Academy Branch
+                        </label>
+                        <input
+                          type="text"
+                          value={newPlayer.clubAffiliation}
+                          onChange={(e) =>
+                            setNewPlayer({
+                              ...newPlayer,
+                              clubAffiliation: e.target.value,
+                            })
+                          }
+                          className="w-full rounded-lg border border-white/10 bg-[#061D23]/60 p-2.5 text-sm text-white placeholder-white/20 focus:border-[#4AEEFF] focus:outline-none"
+                          placeholder="e.g., City Table Tennis Club"
+                        />
+                      </div>
                     </div>
-                  </div>}
+                  )}
 
                   <div className="flex gap-3 pt-4">
                     <button
@@ -1518,15 +1628,51 @@ const Users: React.FC = () => {
 };
 
 const ALL_PERMISSIONS = [
-  { id: "MANAGE_USERS", name: "Manage Users", desc: "View, update user accounts, roles & permissions" },
-  { id: "MANAGE_PLAYERS", name: "Manage Players", desc: "Create, edit, rank, and manage player profiles" },
-  { id: "MANAGE_REFEREES", name: "Manage Referees", desc: "Manage referee assignments and information" },
-  { id: "MANAGE_TOURNAMENTS", name: "Manage Tournaments", desc: "Create, edit, and manage tournaments" },
-  { id: "MANAGE_REGISTRATIONS", name: "Manage Registrations", desc: "Approve, reject, or modify tournament registrations" },
-  { id: "MANAGE_MATCHES", name: "Manage Matches", desc: "Schedule matches, assign referees, and update scores" },
-  { id: "MANAGE_RESULTS", name: "Manage Results", desc: "Record, verify, and publish tournament results" },
-  { id: "MANAGE_RANKINGS", name: "Manage Rankings", desc: "Update official player rankings and points" },
-  { id: "MANAGE_CLUB_MEMBERSHIPS", name: "Manage Club Memberships", desc: "Grant or revoke player club memberships" },
+  {
+    id: "MANAGE_USERS",
+    name: "Manage Users",
+    desc: "View, update user accounts, roles & permissions",
+  },
+  {
+    id: "MANAGE_PLAYERS",
+    name: "Manage Players",
+    desc: "Create, edit, rank, and manage player profiles",
+  },
+  {
+    id: "MANAGE_REFEREES",
+    name: "Manage Referees",
+    desc: "Manage referee assignments and information",
+  },
+  {
+    id: "MANAGE_TOURNAMENTS",
+    name: "Manage Tournaments",
+    desc: "Create, edit, and manage tournaments",
+  },
+  {
+    id: "MANAGE_REGISTRATIONS",
+    name: "Manage Registrations",
+    desc: "Approve, reject, or modify tournament registrations",
+  },
+  {
+    id: "MANAGE_MATCHES",
+    name: "Manage Matches",
+    desc: "Schedule matches, assign referees, and update scores",
+  },
+  {
+    id: "MANAGE_RESULTS",
+    name: "Manage Results",
+    desc: "Record, verify, and publish tournament results",
+  },
+  {
+    id: "MANAGE_RANKINGS",
+    name: "Manage Rankings",
+    desc: "Update official player rankings and points",
+  },
+  {
+    id: "MANAGE_CLUB_MEMBERSHIPS",
+    name: "Manage Club Memberships",
+    desc: "Grant or revoke player club memberships",
+  },
 ];
 
 interface ManagePermissionsModalProps {
@@ -1574,11 +1720,15 @@ const ManagePermissionsModal: React.FC<ManagePermissionsModalProps> = ({
       await api.put(`/users/${targetUser.id}/permissions`, {
         permissions: selectedPermissions,
       });
-      toast.success(`Permissions updated for ${targetUser.firstName} ${targetUser.lastName}`);
+      toast.success(
+        `Permissions updated for ${targetUser.firstName} ${targetUser.lastName}`,
+      );
       onUpdated();
       onClose();
     } catch (err: any) {
-      toast.error(err.response?.data?.message || "Failed to update permissions");
+      toast.error(
+        err.response?.data?.message || "Failed to update permissions",
+      );
     } finally {
       setSaving(false);
     }
@@ -1596,7 +1746,11 @@ const ManagePermissionsModal: React.FC<ManagePermissionsModalProps> = ({
               </h3>
             </div>
             <p className="mt-1 text-xs font-mono text-[#4AEEFF]">
-              Configure access scope for: <span className="font-bold text-white">{targetUser.firstName} {targetUser.lastName}</span> ({targetUser.email})
+              Configure access scope for:{" "}
+              <span className="font-bold text-white">
+                {targetUser.firstName} {targetUser.lastName}
+              </span>{" "}
+              ({targetUser.email})
             </p>
           </div>
           <button
@@ -1610,7 +1764,9 @@ const ManagePermissionsModal: React.FC<ManagePermissionsModalProps> = ({
         {loading ? (
           <div className="py-8 text-center">
             <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-[#4AEEFF] mx-auto"></div>
-            <p className="text-xs font-mono text-[#4AEEFF] mt-3">Loading permissions...</p>
+            <p className="text-xs font-mono text-[#4AEEFF] mt-3">
+              Loading permissions...
+            </p>
           </div>
         ) : (
           <div className="space-y-5">
