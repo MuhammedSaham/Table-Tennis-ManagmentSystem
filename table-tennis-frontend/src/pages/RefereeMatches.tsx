@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import api from "../services/api";
 import toast from "react-hot-toast";
-import BackButton from "../components/BackButton";
 import GlassSelect from "../components/GlassSelect";
 import { UmpireSheet } from "../components/GroupStandings";
 import type { GroupMatch, GameScore } from "../components/GroupStandings";
@@ -14,7 +13,6 @@ import {
   MagnifyingGlassIcon,
   Squares2X2Icon,
   ListBulletIcon,
-  ArrowPathIcon,
   DocumentTextIcon,
   PrinterIcon,
 } from "@heroicons/react/24/outline";
@@ -496,6 +494,8 @@ const RefereeMatches: React.FC = () => {
 
   useEffect(() => {
     fetchAssignedMatches();
+    const interval = setInterval(fetchAssignedMatches, 30000);
+    return () => clearInterval(interval);
   }, []);
 
   const fetchAssignedMatches = async () => {
@@ -816,40 +816,28 @@ const RefereeMatches: React.FC = () => {
   return wrapInBaseLayout(
     <>
       <div className="no-print space-y-5">
-        {/* ─── ADMIN HEADER MODULE ─── */}
-      <header className="rounded-2xl border border-white/20 bg-[#061D23]/25 p-5 sm:p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <BackButton to="/" label="Back to Home" className="mb-3" />
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#4AEEFF]/10 border border-[#4AEEFF]/30 text-[#4AEEFF] text-[11px] font-bold uppercase tracking-wider mb-2.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#4AEEFF] animate-pulse"></span>
-            <span>Administration · Match Officiating Hub</span>
+        {/* ─── REFEREE HEADER MODULE ─── */}
+        <header className="rounded-2xl border border-white/20 bg-[#061D23]/25 p-5 sm:p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-heading font-extrabold text-white tracking-tight">
+              Referee Dashboard
+            </h1>
+            <p className="mt-1 text-xs sm:text-sm text-cyan-200/80 max-w-xl">
+              Inspect your assigned fixtures, record official set scores, and track your officiating duty.
+            </p>
           </div>
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-heading font-extrabold text-white tracking-tight">
-            Referee Dashboard
-          </h1>
-          <p className="mt-1 text-xs sm:text-sm text-cyan-200/80 max-w-xl">
-            Inspect your assigned fixtures, record official set scores, and track your officiating duty.
-          </p>
-        </div>
 
-        <div className="flex items-center gap-2.5 self-start md:self-center shrink-0">
-          <button
-            onClick={() => setShowPaymentVoucherModal(true)}
-            className="rounded-xl border border-[#4AEEFF]/40 bg-[#4AEEFF]/15 hover:bg-[#4AEEFF] hover:text-[#061D23] px-4 py-2.5 text-xs font-black uppercase tracking-wider text-[#4AEEFF] transition-all flex items-center gap-2 shadow-sm active:scale-95"
-            title="Official Referee Duty Log & Match Officiating Timesheet"
-          >
-            <DocumentTextIcon className="w-4 h-4" />
-            <span>My Duty Log</span>
-          </button>
-          <button
-            onClick={fetchAssignedMatches}
-            className="rounded-xl border border-white/20 bg-white/5 hover:bg-white/10 hover:border-white/40 p-2.5 text-xs font-bold text-slate-300 hover:text-white transition-all shadow-sm active:scale-95"
-            title="Refresh Assigned Matches"
-          >
-            <ArrowPathIcon className="w-4 h-4" />
-          </button>
-        </div>
-      </header>
+          <div className="flex items-center gap-2.5 self-start md:self-center shrink-0">
+            <button
+              onClick={() => setShowPaymentVoucherModal(true)}
+              className="rounded-xl border border-[#4AEEFF]/40 bg-[#4AEEFF]/15 hover:bg-[#4AEEFF] hover:text-[#061D23] px-4 py-2.5 text-xs font-black uppercase tracking-wider text-[#4AEEFF] transition-all flex items-center gap-2 shadow-sm active:scale-95"
+              title="Official Referee Duty Log & Match Officiating Timesheet"
+            >
+              <DocumentTextIcon className="w-4 h-4" />
+              <span>My Duty Log</span>
+            </button>
+          </div>
+        </header>
 
       {/* ─── METRIC STATS CARDS (Admin Standard Grid) ─── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
