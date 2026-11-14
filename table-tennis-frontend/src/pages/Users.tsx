@@ -99,10 +99,15 @@ const Users: React.FC = () => {
     }
   };
 
-  // Split players and roles for tabs
-  const clubMembers = users.filter(
-    (u) => u.role === "PLAYER" && u.isClubMember === true,
-  );
+  // Split players and roles for tabs (sort club members by rank: #1, #2... with unranked at bottom)
+  const clubMembers = users
+    .filter((u) => u.role === "PLAYER" && u.isClubMember === true)
+    .sort((a, b) => {
+      if (a.ranking && b.ranking) return a.ranking - b.ranking;
+      if (a.ranking && !b.ranking) return -1;
+      if (!a.ranking && b.ranking) return 1;
+      return (a.firstName || "").localeCompare(b.firstName || "");
+    });
   const guestPlayers = users.filter(
     (u) => u.role === "PLAYER" && !u.isClubMember,
   );
@@ -560,7 +565,7 @@ const Users: React.FC = () => {
                 <th className="px-6 py-4">Email</th>
                 <th className="px-6 py-4">Role</th>
                 {activeTab === "CLUB" && (
-                  <th className="px-6 py-4">Leaderboard Rank</th>
+                  <th className="px-6 py-4">Club Rank</th>
                 )}
                 <th className="px-6 py-4">Joined Date</th>
                 <th className="px-6 py-4 text-right">Actions</th>
@@ -933,7 +938,7 @@ const Users: React.FC = () => {
 
                   {userItem.role === "PLAYER" && (
                     <div className="flex items-center justify-between pt-2 border-t border-white/5">
-                      <span className="text-gray-400 font-medium">Rank:</span>
+                      <span className="text-gray-400 font-medium">Club Rank:</span>
                       {userItem.ranking ? (
                         <div className="flex items-center gap-1.5">
                           <span className="font-black text-[#4AEEFF]">
