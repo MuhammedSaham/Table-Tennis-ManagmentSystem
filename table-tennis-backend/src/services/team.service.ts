@@ -221,7 +221,7 @@ export class TeamService {
     if (
       category.type === 'MIXED_DOUBLES' ||
       category.gender === 'MIXED' ||
-      nameLower.includes('mix')
+      /\b(mix|mixed)\b/i.test(nameLower)
     ) {
       return 'MIXED';
     }
@@ -229,17 +229,16 @@ export class TeamService {
     // Women's doubles check
     if (
       category.gender === 'FEMALE' ||
-      nameLower.includes('women') ||
-      nameLower.includes('girl') ||
-      nameLower.includes('female')
+      /\b(women|womens|woman|female|females|girl|girls|ladies|lady)\b/i.test(nameLower)
     ) {
       return 'WOMEN';
     }
 
-    // Men's doubles check
+    // Men's doubles check - match standalone words only, avoid false matches like "tournament"
     if (
       category.gender === 'MALE' ||
-      ((nameLower.includes('men') || nameLower.includes('boy') || nameLower.includes('male')) && !nameLower.includes('women'))
+      (/\b(men|mens|man|male|males|boy|boys)\b/i.test(nameLower) &&
+        !/\b(women|womens|woman|female|females|girl|girls|ladies|lady)\b/i.test(nameLower))
     ) {
       return 'MEN';
     }
@@ -306,6 +305,12 @@ export class TeamService {
           genderFilter = 'FEMALE';
         } else if (category.gender && category.gender !== 'MIXED') {
           genderFilter = category.gender;
+        } else {
+          // In open or unclassified doubles, restrict partner search to the inviter's own gender
+          // A female player only sees female partners; a male player only sees male partners
+          if (inviterProfile?.gender) {
+            genderFilter = inviterProfile.gender;
+          }
         }
       }
     }
@@ -398,6 +403,11 @@ export class TeamService {
       }
       if (inviteeGender !== 'FEMALE') {
         throw new AppError("Women's doubles partner must be a female player", 400);
+      }
+    } else {
+      // General doubles categories: partners must be of the same gender
+      if (inviterGender && inviteeGender && inviterGender !== inviteeGender) {
+        throw new AppError('Doubles partners must be of the same gender for this division', 400);
       }
     }
 
@@ -509,6 +519,13 @@ export class TeamService {
       if (inviterGender !== 'FEMALE' || inviteeGender !== 'FEMALE') {
         throw new AppError(
           "Women's doubles only allows female players",
+          400
+        );
+      }
+    } else {
+      if (inviterGender && inviteeGender && inviterGender !== inviteeGender) {
+        throw new AppError(
+          'Doubles partners must be of the same gender for this division',
           400
         );
       }

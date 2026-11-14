@@ -415,11 +415,21 @@ const TournamentDetails: React.FC<TournamentDetailsProps> = ({
     gender: string | null,
   ): { eligible: boolean; reason?: string } => {
     // Gender restriction check
-    if (category.gender && category.gender !== "MIXED") {
-      if (gender && gender !== category.gender) {
+    const effectiveGender =
+      category.gender && category.gender !== "MIXED"
+        ? category.gender
+        : /\b(women|womens|woman|female|females|girl|girls|ladies|lady)\b/i.test(category.name)
+          ? "FEMALE"
+          : /\b(men|mens|man|male|males|boy|boys)\b/i.test(category.name) &&
+            !/\b(women|womens|woman|female|females|girl|girls|ladies|lady)\b/i.test(category.name)
+            ? "MALE"
+            : null;
+
+    if (effectiveGender) {
+      if (gender && gender !== effectiveGender) {
         return {
           eligible: false,
-          reason: category.gender === "MALE" ? "Men's only" : "Women's only",
+          reason: effectiveGender === "MALE" ? "Men's only" : "Women's only",
         };
       }
     }
