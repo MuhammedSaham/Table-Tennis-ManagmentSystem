@@ -14,15 +14,37 @@ import api, { getProfileImageUrl } from "../services/api";
 import invertedLogo from "../assets/Logo  with Name inverted.png";
 import darkLogo from "../assets/Logo  with Name.png";
 
+interface ParticipantLike {
+  id: string;
+  firstName?: string;
+  lastName?: string;
+  name?: string;
+}
+
+const getParticipantName = (player?: ParticipantLike | null, team?: ParticipantLike | null): string => {
+  if (team?.name) return team.name;
+  if (player?.name) return player.name;
+  if (player?.firstName || player?.lastName) {
+    return `${player.firstName || ""} ${player.lastName || ""}`.trim();
+  }
+  return "TBD";
+};
+
 interface AssignedMatch {
   id: string;
   round?: string;
   matchNumber?: number;
   status: string;
   score?: string | null;
+  player1Score?: number | null;
+  player2Score?: number | null;
   scheduledTime: string;
   startTime?: string | null;
   endTime?: string | null;
+  player1?: ParticipantLike | null;
+  player2?: ParticipantLike | null;
+  team1?: ParticipantLike | null;
+  team2?: ParticipantLike | null;
   tournament?: { id: string; name: string };
   category?: { id: string; name: string };
   group?: {
@@ -191,10 +213,14 @@ const UserDetails: React.FC = () => {
     const durationStr = formatDuration(targetMinutes);
 
     const rowsHtml = targetMatches.length === 0
-      ? `<tr><td colspan="4" style="padding: 12px; text-align: center; color: #64748b; font-style: italic;">No completed matches recorded for this tournament duty period yet.</td></tr>`
+      ? `<tr><td colspan="5" style="padding: 12px; text-align: center; color: #64748b; font-style: italic;">No completed matches recorded for this tournament duty period yet.</td></tr>`
       : targetMatches.map((m, idx) => {
           const categoryName = m.category?.name || m.group?.category?.name || "Official Category";
           const fixtureRound = `${m.round || "Fixture"}${m.matchNumber ? ` · Match #${m.matchNumber}` : ""}`;
+          const p1 = getParticipantName(m.player1, m.team1);
+          const p2 = getParticipantName(m.player2, m.team2);
+          const dur = getMatchDurationMinutes(m);
+          const scoreText = m.score || (m.player1Score !== undefined && m.player2Score !== undefined ? `${m.player1Score} - ${m.player2Score}` : "—");
           return `
             <tr style="border-bottom: 1px solid #e2e8f0; page-break-inside: avoid; break-inside: avoid;">
               <td style="padding: 5px 8px; font-weight: bold; color: #0284c7; text-align: center;">#${idx + 1}</td>
@@ -202,8 +228,11 @@ const UserDetails: React.FC = () => {
                 <div style="font-weight: 700; color: #0f172a; font-size: 10.5px;">${categoryName}</div>
                 <div style="color: #64748b; font-size: 9px;">${fixtureRound}</div>
               </td>
-              <td style="padding: 5px 8px; text-align: center; font-weight: 800; color: #0f172a; font-family: monospace; font-size: 10.5px;">${m.score || "—"}</td>
-              <td style="padding: 5px 8px; text-align: right; color: #047857; font-weight: 800; font-family: monospace; font-size: 10px;">VERIFIED</td>
+              <td style="padding: 5px 8px; font-weight: 600; color: #0f172a; font-size: 10px;">
+                ${p1} <span style="color: #0284c7; font-weight: bold;">vs</span> ${p2}
+              </td>
+              <td style="padding: 5px 8px; text-align: center; font-weight: 800; color: #0f172a; font-family: monospace; font-size: 10.5px;">${scoreText}</td>
+              <td style="padding: 5px 8px; text-align: right; color: #334155; font-weight: 700; font-family: monospace; font-size: 10px;">${dur !== null ? `${dur} min` : "—"}</td>
             </tr>
           `;
         }).join("");
@@ -465,8 +494,9 @@ const UserDetails: React.FC = () => {
                 <tr>
                   <th style="width: 30px; text-align: center;">#</th>
                   <th style="text-align: left;">Category & Fixture</th>
+                  <th style="text-align: left;">Competitors</th>
                   <th style="text-align: center; width: 90px;">Score</th>
-                  <th style="text-align: right; width: 85px;">Status</th>
+                  <th style="text-align: right; width: 85px;">Duration</th>
                 </tr>
               </thead>
               <tbody>
@@ -771,9 +801,9 @@ const UserDetails: React.FC = () => {
                       <tr className="border-b border-white/10 bg-white/5 text-[10px] font-bold uppercase tracking-wider text-white/60 font-mono print:bg-slate-100 print:text-slate-800 print:border-slate-300">
                         <th className="px-3 py-2 text-center w-10">#</th>
                         <th className="px-3 py-2">Category & Fixture</th>
+                        <th className="px-3 py-2">Competitors</th>
                         <th className="px-3 py-2 text-center">Score</th>
                         <th className="px-3 py-2 text-right">Duration</th>
-                        <th className="px-3 py-2 text-right">Status</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-white/5 font-mono text-[11px] print:divide-slate-200 print:text-[10px]">
@@ -788,6 +818,9 @@ const UserDetails: React.FC = () => {
                           const dur = getMatchDurationMinutes(m);
                           const categoryName = m.category?.name || m.group?.category?.name || "Official Category";
                           const fixtureRound = `${m.round || "Fixture"}${m.matchNumber ? ` · Match #${m.matchNumber}` : ""}`;
+                          const p1 = getParticipantName(m.player1, m.team1);
+                          const p2 = getParticipantName(m.player2, m.team2);
+                          const scoreText = m.score || (m.player1Score !== undefined && m.player2Score !== undefined ? `${m.player1Score} - ${m.player2Score}` : "—");
                           return (
                             <tr key={m.id} className="hover:bg-white/5 print:hover:bg-transparent">
                               <td className="px-3 py-2 text-[#4AEEFF] print:text-slate-900 font-bold text-center">#{idx + 1}</td>
@@ -795,9 +828,11 @@ const UserDetails: React.FC = () => {
                                 <span className="text-white print:text-slate-900 font-sans font-bold block">{categoryName}</span>
                                 <span className="text-white/50 print:text-slate-600 text-[10px]">{fixtureRound}</span>
                               </td>
-                              <td className="px-3 py-2 text-center text-[#4AEEFF] print:text-slate-900 font-bold font-mono">{m.score || "—"}</td>
+                              <td className="px-3 py-2 text-white/90 print:text-slate-900 font-sans font-semibold">
+                                {p1} <span className="text-[#4AEEFF] print:text-sky-700 font-bold">vs</span> {p2}
+                              </td>
+                              <td className="px-3 py-2 text-center text-[#4AEEFF] print:text-slate-900 font-bold font-mono">{scoreText}</td>
                               <td className="px-3 py-2 text-right text-white/70 print:text-slate-700 font-mono">{dur !== null ? `${dur} min` : "—"}</td>
-                              <td className="px-3 py-2 text-right text-emerald-400 print:text-emerald-800 font-bold font-mono">VERIFIED</td>
                             </tr>
                           );
                         })

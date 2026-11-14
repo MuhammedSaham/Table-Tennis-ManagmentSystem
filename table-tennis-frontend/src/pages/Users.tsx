@@ -23,6 +23,7 @@ import {
   ExclamationTriangleIcon,
   UserGroupIcon,
   ShieldCheckIcon,
+  DocumentTextIcon,
 } from "@heroicons/react/24/outline";
 
 interface User {
@@ -781,6 +782,18 @@ const Users: React.FC = () => {
                           </span>
                         )}
 
+                        {/* Referee Officiating Duty Log Quick Link */}
+                        {userItem.role === "REFEREE" && (
+                          <Link
+                            to={getUserDetailsPath(userItem)}
+                            className="rounded-lg px-2.5 py-1.5 text-xs font-semibold text-[#4AEEFF] border border-[#4AEEFF]/30 bg-[#4AEEFF]/10 hover:bg-[#4AEEFF]/20 hover:border-[#4AEEFF] transition-all flex items-center gap-1.5"
+                            title="View Referee Officiating Log"
+                          >
+                            <DocumentTextIcon className="w-3.5 h-3.5" />
+                            <span>Officiating Log</span>
+                          </Link>
+                        )}
+
                         {/* Manage Permissions for Admin Users */}
                         {isSuperAdmin && userItem.role === "ADMIN" && (
                           <button
@@ -993,6 +1006,18 @@ const Users: React.FC = () => {
                         <span>Rank</span>
                       </button>
                     )}
+
+                  {/* Referee Officiating Log Quick Link on Mobile */}
+                  {userItem.role === "REFEREE" && (
+                    <Link
+                      to={getUserDetailsPath(userItem)}
+                      className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-[#4AEEFF] border border-[#4AEEFF]/30 bg-[#4AEEFF]/10 hover:bg-[#4AEEFF]/20"
+                      title="View Referee Officiating Log"
+                    >
+                      <DocumentTextIcon className="w-3.5 h-3.5" />
+                      <span>Duty Log</span>
+                    </Link>
+                  )}
 
                   {/* Role Change Dropdown */}
                   {userItem.id !== user?.id &&
