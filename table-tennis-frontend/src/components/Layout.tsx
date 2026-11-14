@@ -4,7 +4,7 @@ import { Outlet, Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import NotificationBell from "./NotificationBell";
 import Hero from "./Hero";
-import Logo from "../assets/LOGO.png";
+import invertedLogo from "../assets/Logo  with Name inverted.png";
 import LogoutModal from "./LogoutModal";
 import UserNavProfile from "./UserNavProfile";
 import { getProfileImageUrl } from "../services/api";
@@ -143,15 +143,16 @@ const Layout: React.FC = () => {
         <div className="w-full px-4 sm:px-6 lg:px-10 xl:px-14 2xl:px-16">
           <div className="flex justify-between items-center h-16 sm:h-20">
             {/* Logo */}
-            <Link to="/" className="flex items-center gap-2 group shrink-0">
+            <Link
+              to="/"
+              className="flex items-center group shrink-0 transition-transform duration-200 active:scale-95"
+              aria-label="Sam's College Home"
+            >
               <img
-                src={Logo}
+                src={invertedLogo}
                 alt="Sam's College"
-                className="w-8 h-8 sm:w-10 sm:h-10 object-contain rounded-lg shadow-sm"
+                className="h-12 sm:h-16 lg:h-[70px] w-auto object-contain slow-blink py-0.5"
               />
-              <span className="font-extrabold text-base sm:text-xl text-white tracking-wide whitespace-nowrap slow-blink">
-                SAM'S COLLEGE
-              </span>
             </Link>
 
             {/* Desktop Navigation */}
@@ -163,7 +164,7 @@ const Layout: React.FC = () => {
                     <Link
                       key={item.name}
                       to={item.href}
-                      className={`text-sm whitespace-nowrap transition-colors duration-200 ${
+                      className={`text-sm lg:text-[15px] whitespace-nowrap transition-colors duration-200 ${
                         isActive
                           ? "text-white font-bold"
                           : "text-slate-300 hover:text-white font-medium"
