@@ -20,7 +20,6 @@ import {
   ClipboardDocumentIcon,
   CheckCircleIcon,
   ExclamationTriangleIcon,
-  UserGroupIcon,
   ShieldCheckIcon,
   DocumentTextIcon,
 } from "@heroicons/react/24/outline";
@@ -367,10 +366,6 @@ const Users: React.FC = () => {
       {/* COLLEGIATE HEADER CONTROLS */}
       <header className="rounded-2xl border border-white/20 bg-[#061D23]/20 p-5 sm:p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#4AEEFF]/10 border border-[#4AEEFF]/30 text-[#4AEEFF] text-[11px] font-bold uppercase tracking-wider mb-2.5">
-            <UserGroupIcon className="w-3.5 h-3.5" />
-            <span>Administration · User Directory</span>
-          </div>
           <h1 className="text-xl sm:text-2xl font-black uppercase tracking-wider text-white">
             User Directory
           </h1>
