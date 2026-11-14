@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { createPortal } from "react-dom";
 import { Outlet, Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import NotificationBell from "./NotificationBell";
@@ -138,7 +139,7 @@ const Layout: React.FC = () => {
   return (
     <div className="min-h-screen bg-[#061D23] text-white flex flex-col w-full overflow-x-hidden max-w-full print:bg-white print:min-h-0 print:p-0 print:m-0 print:overflow-visible">
       {/* Modern Responsive Navbar */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-[#0D3843] border-b border-white/10 shadow-md transition-all duration-300 w-full no-print print:hidden">
+      <nav className="fixed top-0 left-0 right-0 z-40 bg-[#0D3843] border-b border-white/10 shadow-md transition-all duration-300 w-full no-print print:hidden">
         <div className="w-full px-4 sm:px-6 lg:px-10 xl:px-14 2xl:px-16">
           <div className="flex justify-between items-center h-16 sm:h-20">
             {/* Logo */}
@@ -235,7 +236,7 @@ const Layout: React.FC = () => {
 
           {/* Modern Mobile Navigation Drawer Panel */}
           <div
-            className={`fixed top-16 sm:top-20 left-0 right-0 z-50 bg-[#061D23]/98 backdrop-blur-2xl border-b border-white/15 shadow-2xl transition-all duration-300 ease-in-out lg:hidden origin-top overflow-hidden ${
+            className={`fixed top-16 sm:top-20 left-0 right-0 z-40 bg-[#061D23]/98 backdrop-blur-2xl border-b border-white/15 shadow-2xl transition-all duration-300 ease-in-out lg:hidden origin-top overflow-hidden ${
               mobileMenuOpen
                 ? "max-h-[85vh] opacity-100 translate-y-0"
                 : "max-h-0 opacity-0 -translate-y-3 pointer-events-none"
@@ -388,83 +389,85 @@ const Layout: React.FC = () => {
       )}
 
       {/* ITTF Official Rules Quick Modal (Global for Referees) */}
-      {showRulesModal && (
-        <div className="fixed inset-0 z-50 overflow-y-auto p-4 sm:p-6 flex justify-center items-start pt-20 sm:pt-24 pb-8 bg-black/80 backdrop-blur-md animate-in fade-in duration-200 no-print print:hidden">
-          <div className="bg-[#061D23]/95 border border-[#4AEEFF]/40 rounded-2xl max-w-2xl w-full p-6 text-white shadow-2xl space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-white/10">
-              <div className="flex items-center gap-2">
-                <BookOpenIcon className="w-5 h-5 text-[#4AEEFF]" />
-                <h3 className="text-base font-black uppercase tracking-wider text-white">
-                  ITTF Quick Officiating Reference
-                </h3>
+      {showRulesModal &&
+        createPortal(
+          <div className="fixed inset-0 z-50 overflow-y-auto p-4 sm:p-6 flex justify-center items-center bg-black/80 backdrop-blur-md animate-in fade-in duration-200 no-print print:hidden">
+            <div className="bg-[#061D23]/95 border border-[#4AEEFF]/40 rounded-2xl max-w-2xl w-full p-6 text-white shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+              <div className="flex items-center justify-between pb-3 border-b border-white/10">
+                <div className="flex items-center gap-2">
+                  <BookOpenIcon className="w-5 h-5 text-[#4AEEFF]" />
+                  <h3 className="text-base font-black uppercase tracking-wider text-white">
+                    ITTF Quick Officiating Reference
+                  </h3>
+                </div>
+                <button
+                  onClick={() => setShowRulesModal(false)}
+                  className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-white/10 transition"
+                >
+                  ✕
+                </button>
               </div>
-              <button
-                onClick={() => setShowRulesModal(false)}
-                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-white/10 transition"
-              >
-                ✕
-              </button>
+
+              <div className="space-y-3.5 text-xs leading-relaxed text-slate-300">
+                <div className="p-3.5 rounded-xl border border-white/10 bg-white/5 space-y-1">
+                  <p className="font-bold uppercase text-[11px] text-[#4AEEFF]">
+                    1. The Service (ITTF Law 2.6)
+                  </p>
+                  <p>
+                    The ball must rest freely on the palm of the free hand (above
+                    table level and behind the end line). It must be thrown near
+                    vertically upwards at least 16 cm without adding spin, and
+                    struck as it descends.
+                  </p>
+                </div>
+
+                <div className="p-3.5 rounded-xl border border-white/10 bg-white/5 space-y-1">
+                  <p className="font-bold uppercase text-[11px] text-[#4AEEFF]">
+                    2. Scoring & Deuce (ITTF Law 2.11)
+                  </p>
+                  <p>
+                    A game is won by the first player scoring 11 points, unless
+                    both players score 10 points (deuce). At 10-10, the server
+                    alternates after every single point, and a player must achieve
+                    a 2-point lead to win.
+                  </p>
+                </div>
+
+                <div className="p-3.5 rounded-xl border border-white/10 bg-white/5 space-y-1">
+                  <p className="font-bold uppercase text-[11px] text-[#4AEEFF]">
+                    3. Change of Ends (ITTF Law 2.13)
+                  </p>
+                  <p>
+                    Players swap sides after each game. In the deciding final game
+                    (Game 3 in best of 3, or Game 5 in best of 5), players must
+                    change ends immediately when either player reaches 5 points.
+                  </p>
+                </div>
+
+                <div className="p-3.5 rounded-xl border border-white/10 bg-white/5 space-y-1">
+                  <p className="font-bold uppercase text-[11px] text-[#4AEEFF]">
+                    4. Timeouts & Towelling
+                  </p>
+                  <p>
+                    Each player is entitled to ONE 1-minute timeout per match.
+                    Towelling is permitted only every 6 points from the start of
+                    each game, and at the change of ends in the final game.
+                  </p>
+                </div>
+              </div>
+
+              <div className="pt-2 flex justify-end">
+                <button
+                  onClick={() => setShowRulesModal(false)}
+                  className="rounded-xl bg-[#4AEEFF] px-5 py-2 text-xs font-black uppercase tracking-wider text-[#061D23] hover:bg-white transition-all shadow-md active:scale-95"
+                >
+                  Close Reference
+                </button>
+              </div>
             </div>
-
-            <div className="space-y-3.5 text-xs leading-relaxed text-slate-300">
-              <div className="p-3.5 rounded-xl border border-white/10 bg-white/5 space-y-1">
-                <p className="font-bold uppercase text-[11px] text-[#4AEEFF]">
-                  1. The Service (ITTF Law 2.6)
-                </p>
-                <p>
-                  The ball must rest freely on the palm of the free hand (above
-                  table level and behind the end line). It must be thrown near
-                  vertically upwards at least 16 cm without adding spin, and
-                  struck as it descends.
-                </p>
-              </div>
-
-              <div className="p-3.5 rounded-xl border border-white/10 bg-white/5 space-y-1">
-                <p className="font-bold uppercase text-[11px] text-[#4AEEFF]">
-                  2. Scoring & Deuce (ITTF Law 2.11)
-                </p>
-                <p>
-                  A game is won by the first player scoring 11 points, unless
-                  both players score 10 points (deuce). At 10-10, the server
-                  alternates after every single point, and a player must achieve
-                  a 2-point lead to win.
-                </p>
-              </div>
-
-              <div className="p-3.5 rounded-xl border border-white/10 bg-white/5 space-y-1">
-                <p className="font-bold uppercase text-[11px] text-[#4AEEFF]">
-                  3. Change of Ends (ITTF Law 2.13)
-                </p>
-                <p>
-                  Players swap sides after each game. In the deciding final game
-                  (Game 3 in best of 3, or Game 5 in best of 5), players must
-                  change ends immediately when either player reaches 5 points.
-                </p>
-              </div>
-
-              <div className="p-3.5 rounded-xl border border-white/10 bg-white/5 space-y-1">
-                <p className="font-bold uppercase text-[11px] text-[#4AEEFF]">
-                  4. Timeouts & Towelling
-                </p>
-                <p>
-                  Each player is entitled to ONE 1-minute timeout per match.
-                  Towelling is permitted only every 6 points from the start of
-                  each game, and at the change of ends in the final game.
-                </p>
-              </div>
-            </div>
-
-            <div className="pt-2 flex justify-end">
-              <button
-                onClick={() => setShowRulesModal(false)}
-                className="rounded-xl bg-[#4AEEFF] px-5 py-2 text-xs font-black uppercase tracking-wider text-[#061D23] hover:bg-white transition-all shadow-md active:scale-95"
-              >
-                Close Reference
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body,
+        )}
     </div>
   );
 };

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { useNavigate, useParams } from "react-router-dom";
 import BackButton from "../components/BackButton";
 import {
@@ -676,107 +677,88 @@ const UserDetails: React.FC = () => {
         </div>
 
         {/* Admin Officiating Log Modal (PRINT-OPTIMIZED) */}
-        {showPaymentVoucher && (
-          <div className="printable-document-wrapper fixed inset-0 z-50 overflow-y-auto p-4 sm:p-6 flex justify-center items-start pt-16 sm:pt-20 pb-8 bg-black/80 backdrop-blur-md animate-in fade-in duration-200 print:bg-white print:p-0 print:m-0 print:static print:w-full print:max-w-full">
-            <div className="printable-document-card bg-[#061D23]/95 border border-[#4AEEFF]/40 rounded-2xl max-w-3xl w-full p-6 sm:p-8 text-white shadow-2xl space-y-4 my-auto custom-scrollbar print:bg-white print:text-slate-900 print:border-slate-800 print:shadow-none print:p-4 print:space-y-3 print:max-w-full print:w-full">
-              {/* Header */}
-              <div className="flex items-center justify-between gap-4 pb-4 border-b border-white/15 print:border-slate-300">
-                <div className="flex items-center gap-3">
-                  <img src={invertedLogo} alt="Sam's College" className="h-10 w-auto object-contain block shrink-0 print:hidden" />
-                  <img src={darkLogo} alt="Sam's College" className="h-10 w-auto object-contain hidden print:block shrink-0" />
-                  <div className="h-7 w-[1px] bg-white/20 print:bg-slate-300" />
+        {showPaymentVoucher &&
+          createPortal(
+            <div className="printable-document-wrapper fixed inset-0 z-50 overflow-y-auto p-4 sm:p-6 flex justify-center items-center py-6 sm:py-8 bg-black/80 backdrop-blur-md animate-in fade-in duration-200 print:bg-white print:p-0 print:m-0 print:static print:w-full print:max-w-full">
+              <div className="printable-document-card bg-[#061D23]/95 border border-[#4AEEFF]/40 rounded-2xl max-w-3xl w-full p-6 sm:p-8 text-white shadow-2xl space-y-4 my-auto max-h-[92vh] overflow-y-auto custom-scrollbar print:bg-white print:text-slate-900 print:border-slate-800 print:shadow-none print:p-4 print:space-y-3 print:max-w-full print:w-full">
+                {/* Header */}
+                <div className="flex items-center justify-between gap-4 pb-4 border-b border-white/15 print:border-slate-300">
+                  <div className="flex items-center gap-3">
+                    <img src={invertedLogo} alt="Sam's College" className="h-10 w-auto object-contain block shrink-0 print:hidden" />
+                    <img src={darkLogo} alt="Sam's College" className="h-10 w-auto object-contain hidden print:block shrink-0" />
+                    <div className="h-7 w-[1px] bg-white/20 print:bg-slate-300" />
+                    <div>
+                      <h3 className="text-base sm:text-lg font-black uppercase tracking-wider text-white print:text-slate-900">
+                        Official Referee Officiating Log
+                      </h3>
+                      <p className="text-[11px] text-[#4AEEFF] print:text-sky-800 font-medium font-mono">
+                        Admin Match Officiating Review & Activity Log
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setShowPaymentVoucher(false)}
+                    className="no-print print:hidden text-slate-400 hover:text-white p-1.5 rounded-lg hover:bg-white/10 transition"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                {/* Tournament Selector Dropdown (Interactive UI only, hidden on paper print) */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-xl bg-white/5 border border-[#4AEEFF]/30 no-print print:hidden">
+                  <div className="flex items-center gap-2.5">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-white/70">
+                      Tournament Duty:
+                    </span>
+                    <select
+                      value={voucherTournamentId}
+                      onChange={(e) => setVoucherTournamentId(e.target.value)}
+                      className="rounded-lg border border-white/20 bg-[#061D23] px-3 py-1.5 text-xs font-semibold text-white focus:outline-none focus:ring-2 focus:ring-[#4AEEFF]"
+                    >
+                      {uniqueTournaments.map((t) => (
+                        <option key={t.id} value={t.id} className="bg-[#061D23] text-white">
+                          {t.name}
+                        </option>
+                      ))}
+                      <option value="ALL" className="bg-[#061D23] text-white">
+                        All Tournaments (Combined)
+                      </option>
+                    </select>
+                  </div>
+                  <span className="text-[11px] text-[#4AEEFF] font-mono">
+                    Showing duty records for selected tournament
+                  </span>
+                </div>
+
+                {/* Unified Officiating Summary Strip */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-3.5 rounded-xl bg-white/5 border border-white/10 text-xs print:bg-slate-50 print:border-slate-300">
                   <div>
-                    <h3 className="text-base sm:text-lg font-black uppercase tracking-wider text-white print:text-slate-900">
-                      Official Referee Officiating Log
-                    </h3>
-                    <p className="text-[11px] text-[#4AEEFF] print:text-sky-800 font-medium font-mono">
-                      Admin Match Officiating Review & Activity Log
+                    <p className="text-white/50 print:text-slate-600 text-[10px] font-bold uppercase tracking-wider">Referee Name</p>
+                    <p className="text-white print:text-slate-900 font-bold mt-0.5 truncate">{profile.firstName} {profile.lastName}</p>
+                    <p className="text-white/40 print:text-slate-500 text-[10px] truncate">{profile.email}</p>
+                  </div>
+                  <div>
+                    <p className="text-white/50 print:text-slate-600 text-[10px] font-bold uppercase tracking-wider">Tournament Record</p>
+                    <p className="text-white print:text-slate-900 font-bold mt-0.5 truncate">
+                      {voucherTourneyName}
+                    </p>
+                    <p className="text-emerald-400 print:text-emerald-700 font-mono text-[10px] font-bold">
+                      {voucherTargetMatches.length} Matches Verified
                     </p>
                   </div>
+                  <div>
+                    <p className="text-white/50 print:text-slate-600 text-[10px] font-bold uppercase tracking-wider">Officiating Time</p>
+                    <p className="text-[#4AEEFF] print:text-sky-800 font-mono font-black mt-0.5">{voucherDurationStr}</p>
+                    <p className="text-white/40 print:text-slate-500 text-[10px]">Total Court Time</p>
+                  </div>
+                  <div>
+                    <p className="text-white/50 print:text-slate-600 text-[10px] font-bold uppercase tracking-wider">Duty Status</p>
+                    <p className="text-emerald-400 print:text-emerald-700 font-bold mt-0.5 font-mono">
+                      ● Certified Active
+                    </p>
+                    <p className="text-white/40 print:text-slate-500 text-[10px]">Official Record Verified</p>
+                  </div>
                 </div>
-                <button
-                  onClick={() => setShowPaymentVoucher(false)}
-                  className="no-print print:hidden text-slate-400 hover:text-white p-1.5 rounded-lg hover:bg-white/10 transition"
-                >
-                  ✕
-                </button>
-              </div>
-
-              {/* Tournament Selector Dropdown (Interactive UI only, hidden on paper print) */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-xl bg-white/5 border border-[#4AEEFF]/30 no-print print:hidden">
-                <div className="flex items-center gap-2.5">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-white/70">
-                    Tournament Duty:
-                  </span>
-                  <select
-                    value={voucherTournamentId}
-                    onChange={(e) => setVoucherTournamentId(e.target.value)}
-                    className="rounded-lg border border-white/20 bg-[#061D23] px-3 py-1.5 text-xs font-semibold text-white focus:outline-none focus:ring-2 focus:ring-[#4AEEFF]"
-                  >
-                    {uniqueTournaments.map((t) => (
-                      <option key={t.id} value={t.id} className="bg-[#061D23] text-white">
-                        {t.name}
-                      </option>
-                    ))}
-                    <option value="ALL" className="bg-[#061D23] text-white">
-                      All Tournaments (Combined)
-                    </option>
-                  </select>
-                </div>
-                <span className="text-[11px] text-[#4AEEFF] font-mono">
-                  Showing duty records for selected tournament
-                </span>
-              </div>
-
-              {/* Referee Details */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-3.5 rounded-xl bg-white/5 border border-white/10 text-xs print:bg-slate-50 print:border-slate-300">
-                <div>
-                  <p className="text-white/50 print:text-slate-600 text-[10px] font-bold uppercase tracking-wider">Referee Name</p>
-                  <p className="text-white print:text-slate-900 font-bold mt-0.5 truncate">{profile.firstName} {profile.lastName}</p>
-                  <p className="text-white/40 print:text-slate-500 text-[10px] truncate">{profile.email}</p>
-                </div>
-                <div>
-                  <p className="text-white/50 print:text-slate-600 text-[10px] font-bold uppercase tracking-wider">Certification / Role</p>
-                  <p className="text-[#4AEEFF] print:text-sky-800 font-bold mt-0.5 truncate">
-                    {profile.refereeProfile?.certification || "Official Club Referee"}
-                  </p>
-                  <p className="text-white/40 print:text-slate-500 text-[10px] truncate">{profile.refereeProfile?.experienceYears ? `${profile.refereeProfile.experienceYears} Years Exp` : "Active Official"}</p>
-                </div>
-                <div>
-                  <p className="text-white/50 print:text-slate-600 text-[10px] font-bold uppercase tracking-wider">Date of Log</p>
-                  <p className="text-white print:text-slate-900 font-mono font-bold mt-0.5">{new Date().toLocaleDateString(undefined, { dateStyle: "long" })}</p>
-                  <p className="text-white/40 print:text-slate-500 text-[10px]">{new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</p>
-                </div>
-                <div>
-                  <p className="text-white/50 print:text-slate-600 text-[10px] font-bold uppercase tracking-wider">Officiating Time</p>
-                  <p className="text-[#4AEEFF] print:text-sky-800 font-mono font-black mt-0.5">{voucherDurationStr}</p>
-                  <p className="text-white/40 print:text-slate-500 text-[10px]">Total Court Time</p>
-                </div>
-              </div>
-
-              {/* Activity Summary Strip */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 p-3 rounded-xl bg-white/5 border border-white/10 text-xs print:bg-slate-50 print:border-slate-300">
-                <div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-white/50 print:text-slate-600 block">Tournament</span>
-                  <span className="text-xs sm:text-sm font-bold text-white print:text-slate-900 mt-0.5 block truncate">
-                    {voucherTourneyName}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-300/80 print:text-emerald-700 block">Completed Matches</span>
-                  <span className="text-sm sm:text-base font-black text-emerald-400 print:text-emerald-800 mt-0.5 block">
-                    {voucherTargetMatches.length} Verified
-                  </span>
-                </div>
-                <div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-[#4AEEFF] print:text-sky-800 block">Officiating Time</span>
-                  <span className="text-sm sm:text-base font-black text-[#4AEEFF] print:text-sky-800 mt-0.5 block font-mono">{voucherDurationStr}</span>
-                </div>
-                <div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-300/80 print:text-emerald-700 block">Duty Status</span>
-                  <span className="text-[11px] font-mono text-emerald-400 print:text-emerald-800 mt-1 block font-bold">● Active</span>
-                </div>
-              </div>
 
               {/* Table of Completed Matches */}
               <div>
@@ -865,7 +847,8 @@ const UserDetails: React.FC = () => {
                 </div>
               </div>
             </div>
-          </div>
+          </div>,
+          document.body,
         )}
         </>
       )}

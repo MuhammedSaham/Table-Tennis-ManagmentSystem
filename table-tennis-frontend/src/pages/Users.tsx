@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { Link } from "react-router-dom";
 import BackButton from "../components/BackButton";
 import GlassSelect from "../components/GlassSelect";
@@ -1063,9 +1064,10 @@ const Users: React.FC = () => {
       </main>
 
       {/* PLAYER REGISTRATION DIALOG MODAL */}
-      {showAddPlayerModal && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/70 p-4 pt-24 backdrop-blur-sm animate-fadeIn sm:pt-28">
-          <div className="w-full max-w-4xl rounded-2xl border border-white/20 bg-[#061D23]/90 p-6 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.8)] backdrop-blur-2xl sm:p-8">
+      {showAddPlayerModal &&
+        createPortal(
+          <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/80 p-4 sm:p-6 backdrop-blur-md animate-fadeIn">
+          <div className="w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-2xl border border-white/20 bg-[#061D23]/95 p-6 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.8)] backdrop-blur-2xl sm:p-8 my-auto custom-scrollbar">
             {createdPlayerData ? (
               <div className="text-center py-2 space-y-6">
                 <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[#4AEEFF]/15 border border-[#4AEEFF]/40 text-[#4AEEFF]">
@@ -1390,101 +1392,106 @@ const Users: React.FC = () => {
               </>
             )}
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
 
       {/* DELETE CONFIRMATION MODAL */}
-      {userToDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-md animate-fadeIn">
-          <div className="w-full max-w-md rounded-2xl border border-red-500/30 bg-[#061D23]/95 p-6 sm:p-8 shadow-[0_25px_60px_-15px_rgba(239,68,68,0.3)] backdrop-blur-2xl text-center space-y-5">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-red-500/20 border border-red-500/40 text-red-400">
-              <TrashIcon className="h-8 w-8 stroke-[2]" />
-            </div>
+      {userToDelete &&
+        createPortal(
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-md animate-fadeIn">
+            <div className="w-full max-w-md rounded-2xl border border-red-500/30 bg-[#061D23]/95 p-6 sm:p-8 shadow-[0_25px_60px_-15px_rgba(239,68,68,0.3)] backdrop-blur-2xl text-center space-y-5">
+              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-red-500/20 border border-red-500/40 text-red-400">
+                <TrashIcon className="h-8 w-8 stroke-[2]" />
+              </div>
 
-            <div>
-              <h3 className="text-xl font-black uppercase tracking-widest text-white">
-                Delete Player
-              </h3>
-              <p className="text-sm text-white/70 mt-2 leading-relaxed">
-                Are you sure you want to delete{" "}
-                <span className="font-bold text-[#4AEEFF]">
-                  {userToDelete.firstName} {userToDelete.lastName}
-                </span>
-                ?
-              </p>
-              <p className="text-xs text-red-300 font-medium mt-1 flex items-center justify-center gap-1.5">
-                <ExclamationTriangleIcon className="w-3.5 h-3.5 text-red-400 shrink-0" />
-                <span>This operation is permanent and cannot be undone.</span>
-              </p>
-            </div>
+              <div>
+                <h3 className="text-xl font-black uppercase tracking-widest text-white">
+                  Delete Player
+                </h3>
+                <p className="text-sm text-white/70 mt-2 leading-relaxed">
+                  Are you sure you want to delete{" "}
+                  <span className="font-bold text-[#4AEEFF]">
+                    {userToDelete.firstName} {userToDelete.lastName}
+                  </span>
+                  ?
+                </p>
+                <p className="text-xs text-red-300 font-medium mt-1 flex items-center justify-center gap-1.5">
+                  <ExclamationTriangleIcon className="w-3.5 h-3.5 text-red-400 shrink-0" />
+                  <span>This operation is permanent and cannot be undone.</span>
+                </p>
+              </div>
 
-            <div className="flex gap-3 pt-2">
-              <button
-                type="button"
-                onClick={() => setUserToDelete(null)}
-                disabled={deleting}
-                className="flex-1 rounded-xl border border-white/20 bg-white/5 py-3 text-xs font-black uppercase tracking-wider text-white transition-all hover:bg-white/10 disabled:opacity-50"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={confirmDeleteUser}
-                disabled={deleting}
-                className="flex-1 rounded-xl bg-red-500 py-3 text-xs font-black uppercase tracking-wider text-white transition-all hover:bg-red-600 disabled:opacity-50 shadow-lg shadow-red-500/20"
-              >
-                {deleting ? "Deleting..." : "Yes, Delete"}
-              </button>
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setUserToDelete(null)}
+                  disabled={deleting}
+                  className="flex-1 rounded-xl border border-white/20 bg-white/5 py-3 text-xs font-black uppercase tracking-wider text-white transition-all hover:bg-white/10 disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmDeleteUser}
+                  disabled={deleting}
+                  className="flex-1 rounded-xl bg-red-500 py-3 text-xs font-black uppercase tracking-wider text-white transition-all hover:bg-red-600 disabled:opacity-50 shadow-lg shadow-red-500/20"
+                >
+                  {deleting ? "Deleting..." : "Yes, Delete"}
+                </button>
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body,
+        )}
 
       {/* REMOVE CLUB MEMBERSHIP CONFIRMATION */}
-      {memberToRemove && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-2xl border border-amber-500/30 bg-[#061D23] p-6 shadow-2xl">
-            <div className="mb-4">
-              <h2 className="text-xl font-black uppercase tracking-wider text-white">
-                Remove Club Membership?
-              </h2>
+      {memberToRemove &&
+        createPortal(
+          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
+            <div className="w-full max-w-md rounded-2xl border border-amber-500/30 bg-[#061D23] p-6 shadow-2xl">
+              <div className="mb-4">
+                <h2 className="text-xl font-black uppercase tracking-wider text-white">
+                  Remove Club Membership?
+                </h2>
 
-              <p className="mt-3 text-sm leading-relaxed text-white/70">
-                Are you sure you want to remove{" "}
-                <span className="font-bold text-white">
-                  {memberToRemove.firstName} {memberToRemove.lastName}
-                </span>{" "}
-                from the club?
-              </p>
+                <p className="mt-3 text-sm leading-relaxed text-white/70">
+                  Are you sure you want to remove{" "}
+                  <span className="font-bold text-white">
+                    {memberToRemove.firstName} {memberToRemove.lastName}
+                  </span>{" "}
+                  from the club?
+                </p>
 
-              <p className="mt-3 text-xs leading-relaxed text-amber-300">
-                The player will become a guest player. Their account, rankings,
-                tournament records and match history will not be deleted.
-              </p>
+                <p className="mt-3 text-xs leading-relaxed text-amber-300">
+                  The player will become a guest player. Their account, rankings,
+                  tournament records and match history will not be deleted.
+                </p>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setMemberToRemove(null)}
+                  disabled={removingMembership}
+                  className="flex-1 rounded-lg border border-white/20 px-4 py-3 text-xs font-black uppercase tracking-wider text-white hover:bg-white/10 disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="button"
+                  onClick={confirmRemoveMembership}
+                  disabled={removingMembership}
+                  className="flex-1 rounded-lg bg-amber-500 px-4 py-3 text-xs font-black uppercase tracking-wider text-[#061D23] hover:bg-amber-400 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {removingMembership ? "Removing..." : "Remove Membership"}
+                </button>
+              </div>
             </div>
-
-            <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={() => setMemberToRemove(null)}
-                disabled={removingMembership}
-                className="flex-1 rounded-lg border border-white/20 px-4 py-3 text-xs font-black uppercase tracking-wider text-white hover:bg-white/10 disabled:opacity-50"
-              >
-                Cancel
-              </button>
-
-              <button
-                type="button"
-                onClick={confirmRemoveMembership}
-                disabled={removingMembership}
-                className="flex-1 rounded-lg bg-amber-500 px-4 py-3 text-xs font-black uppercase tracking-wider text-[#061D23] hover:bg-amber-400 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {removingMembership ? "Removing..." : "Remove Membership"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body,
+        )}
 
       {/* ADMIN PERMISSIONS MODAL */}
       {userForPermissions && (
@@ -1584,9 +1591,9 @@ const ManagePermissionsModal: React.FC<ManagePermissionsModalProps> = ({
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/70 p-4 pt-24 backdrop-blur-sm animate-fadeIn sm:pt-28">
-      <div className="w-full max-w-4xl rounded-2xl border border-white/20 bg-[#061D23]/90 p-6 text-white shadow-[0_25px_60px_-15px_rgba(0,0,0,0.8)] backdrop-blur-2xl sm:p-8">
+  return createPortal(
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/80 p-4 sm:p-6 backdrop-blur-md animate-fadeIn">
+      <div className="w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-2xl border border-white/20 bg-[#061D23]/95 p-6 text-white shadow-[0_25px_60px_-15px_rgba(0,0,0,0.8)] backdrop-blur-2xl sm:p-8 my-auto custom-scrollbar">
         <div className="mb-6 flex items-center justify-between border-b border-white/10 pb-4">
           <div>
             <div className="mb-2 flex items-center gap-3">
@@ -1676,7 +1683,8 @@ const ManagePermissionsModal: React.FC<ManagePermissionsModalProps> = ({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 };
 
