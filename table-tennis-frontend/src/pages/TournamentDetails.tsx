@@ -15,6 +15,7 @@ import GlassSelect from "../components/GlassSelect";
 import ConfirmModal from "../components/ConfirmModal";
 import CreateKnockoutModal from "../components/CreateKnockoutModal";
 import DoublesPartnerModal from "../components/DoublesPartnerModal";
+import { getEffectiveTournamentStatus } from "../utils/tournamentStatus";
 
 const capitalizeWords = (str: string): string => {
   if (!str) return "";
@@ -1581,8 +1582,9 @@ const TournamentDetails: React.FC<TournamentDetailsProps> = ({
     );
   }
 
+  const effectiveStatus = getEffectiveTournamentStatus(tournament);
   const isRegistrationOpen =
-    tournament.status === "UPCOMING" &&
+    effectiveStatus === "UPCOMING" &&
     new Date() < new Date(tournament.registrationDeadline);
   const isSuperAdmin = user?.role === "SUPER_ADMIN" || user?.isSuperAdmin;
   const canManageTournaments =
@@ -1841,9 +1843,9 @@ const TournamentDetails: React.FC<TournamentDetailsProps> = ({
                     </button>
                   )}
                   <span
-                    className={`px-3 py-1.5 text-xs font-semibold uppercase tracking-wider rounded-lg border shadow-sm ${getStatusColor(tournament.status)}`}
+                    className={`px-3 py-1.5 text-xs font-semibold uppercase tracking-wider rounded-lg border shadow-sm ${getStatusColor(effectiveStatus)}`}
                   >
-                    {tournament.status}
+                    {effectiveStatus}
                   </span>
                   {canManageTournaments && (
                     <>

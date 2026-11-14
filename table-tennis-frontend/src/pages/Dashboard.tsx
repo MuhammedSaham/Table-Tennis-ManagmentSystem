@@ -15,12 +15,14 @@ import {
   ClockIcon,
   MapPinIcon,
 } from "@heroicons/react/24/outline";
+import { getEffectiveTournamentStatus } from "../utils/tournamentStatus";
 
 interface Tournament {
   id: string;
   name: string;
   venue: string;
   startDate: string;
+  endDate?: string;
   registrationDeadline: string;
   status: string;
 }
@@ -305,12 +307,15 @@ const Dashboard: React.FC = () => {
   const fetchNewTournaments = async () => {
     try {
       const response = await api.get("/tournaments");
-      // Get upcoming tournaments
-      const upcoming = response.data.data.filter(
-        (t: Tournament) => t.status === "UPCOMING",
-      );
-      // Show only first 3
-      setNewTournaments(upcoming.slice(0, 3));
+      const list: Tournament[] = response.data?.data || [];
+      // Only real upcoming tournaments based on effective status, sorted by closest start date
+      const upcoming = list
+        .filter((t) => getEffectiveTournamentStatus(t) === "UPCOMING")
+        .sort(
+          (a, b) =>
+            new Date(a.startDate).getTime() - new Date(b.startDate).getTime(),
+        );
+      setNewTournaments(upcoming);
     } catch (error) {
       console.error("Failed to fetch tournaments");
     }
@@ -788,7 +793,7 @@ const Dashboard: React.FC = () => {
           <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
             {/* TOURNAMENTS */}
             <Link
-              to="/app/tournaments"
+              to="/app/tournaments?status=UPCOMING"
               className="group rounded-2xl border border-white/20 bg-[#061D23]/35 p-5 sm:p-6 backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:border-[#4AEEFF]/60 hover:bg-[#061D23]/50 shadow-[0_20px_50px_-15px_rgba(6,29,35,0.5)] flex flex-col justify-between"
             >
               <div>
@@ -907,7 +912,7 @@ const Dashboard: React.FC = () => {
           </div>
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {newTournaments.map((tournament) => (
+            {newTournaments.slice(0, 3).map((tournament) => (
               <Link
                 key={tournament.id}
                 to={`/app/tournaments/${tournament.id}`}

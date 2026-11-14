@@ -4,11 +4,14 @@ import toast from "react-hot-toast";
 import { Link, useSearchParams } from "react-router-dom";
 import GlassSelect from "../components/GlassSelect";
 import { TrophyIcon, CalendarIcon } from "@heroicons/react/24/outline";
+import { getEffectiveTournamentStatus } from "../utils/tournamentStatus";
 
 interface Tournament {
   id: string;
   name: string;
   status: string;
+  startDate?: string;
+  endDate?: string;
 }
 
 interface Standing {
@@ -513,7 +516,7 @@ const Leaderboard: React.FC = () => {
                       value={tournament.id}
                       className="bg-[#061D23] text-white"
                     >
-                      {tournament.name} ({tournament.status})
+                      {tournament.name} ({getEffectiveTournamentStatus(tournament)})
                     </option>
                   ))}
                 </GlassSelect>
