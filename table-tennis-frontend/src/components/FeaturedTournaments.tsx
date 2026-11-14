@@ -8,12 +8,15 @@ import {
   ArrowRightIcon,
   TrophyIcon,
 } from "@heroicons/react/24/outline";
+import { getEffectiveTournamentStatus } from "../utils/tournamentStatus";
 
 interface Tournament {
   id: string;
   name: string;
   venue: string;
   startDate: string;
+  endDate?: string;
+  status?: string;
   maxPlayers?: number | null;
   _count: {
     registrations: number;
@@ -59,8 +62,13 @@ const FeaturedTournaments: React.FC = () => {
   const fetchUpcomingTournaments = async () => {
     try {
       const response = await api.get("/tournaments");
-      const upcoming = response.data.data
-        .filter((t: any) => t.status === "UPCOMING")
+      const list = response.data?.data || [];
+      const upcoming = list
+        .filter((t: any) => getEffectiveTournamentStatus(t) === "UPCOMING")
+        .sort(
+          (a: any, b: any) =>
+            new Date(a.startDate).getTime() - new Date(b.startDate).getTime(),
+        )
         .slice(0, 3);
       setTournaments(upcoming);
     } catch (error) {

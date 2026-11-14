@@ -3,21 +3,23 @@ import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { getProfileImageUrl } from "../services/api";
 import LogoutModal from "./LogoutModal";
+import ChangePasswordModal from "./ChangePasswordModal";
 import {
   UserCircleIcon,
-  HomeIcon,
+  KeyIcon,
   ArrowRightOnRectangleIcon,
   ChevronDownIcon,
-  UserGroupIcon,
   ShieldCheckIcon,
+  PencilSquareIcon,
 } from "@heroicons/react/24/outline";
 
 export const UserNavProfile: React.FC = () => {
-  const { user, logout, hasPermission, refetchUser } = useAuth();
+  const { user, logout, refetchUser } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [imageError, setImageError] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -50,7 +52,6 @@ export const UserNavProfile: React.FC = () => {
   };
 
   const isSuperAdmin = user.role === "SUPER_ADMIN" || user.isSuperAdmin;
-  const isReferee = user.role === "REFEREE";
   const userInitials = user.firstName ? user.firstName[0].toUpperCase() : "U";
 
   // Avatar rendering helper
@@ -180,39 +181,42 @@ export const UserNavProfile: React.FC = () => {
                 </div>
               </Link>
 
-              <Link
-                to={isReferee ? "/app/referee/matches" : "/app/dashboard"}
-                onClick={() => setMenuOpen(false)}
-                className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold text-white/80 hover:bg-white/10 hover:text-white transition-all group"
+              <button
+                type="button"
+                onClick={() => {
+                  setMenuOpen(false);
+                  setShowPasswordModal(true);
+                }}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold text-white/80 hover:bg-white/10 hover:text-white transition-all group text-left"
               >
                 <div className="w-7 h-7 rounded-lg bg-[#4AEEFF]/15 group-hover:bg-[#4AEEFF]/25 flex items-center justify-center text-[#4AEEFF] transition-colors">
-                  <HomeIcon className="w-4 h-4" />
+                  <KeyIcon className="w-4 h-4" />
                 </div>
                 <div className="flex flex-col">
                   <span className="font-bold text-white group-hover:text-[#4AEEFF] transition-colors">
-                    Dashboard
+                    Change Password
                   </span>
                   <span className="text-[10px] text-white/40 font-normal">
-                    Tournaments & matches overview
+                    Update your account credentials
                   </span>
                 </div>
-              </Link>
+              </button>
 
-              {(isSuperAdmin || hasPermission("MANAGE_USERS")) && (
+              {(isSuperAdmin || user.role === "ADMIN") && (
                 <Link
-                  to="/app/users"
+                  to="/app/admin/about"
                   onClick={() => setMenuOpen(false)}
                   className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold text-white/80 hover:bg-white/10 hover:text-white transition-all group"
                 >
                   <div className="w-7 h-7 rounded-lg bg-[#4AEEFF]/15 group-hover:bg-[#4AEEFF]/25 flex items-center justify-center text-[#4AEEFF] transition-colors">
-                    <UserGroupIcon className="w-4 h-4" />
+                    <PencilSquareIcon className="w-4 h-4" />
                   </div>
                   <div className="flex flex-col">
                     <span className="font-bold text-white group-hover:text-[#4AEEFF] transition-colors">
-                      Users Directory
+                      Manage About Page
                     </span>
                     <span className="text-[10px] text-white/40 font-normal">
-                      Manage permissions & accounts
+                      Update poster, story & hubs
                     </span>
                   </div>
                 </Link>
@@ -238,6 +242,13 @@ export const UserNavProfile: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Change Password Modal */}
+      <ChangePasswordModal
+        isOpen={showPasswordModal}
+        onClose={() => setShowPasswordModal(false)}
+        userEmail={user.email}
+      />
 
       {/* Confirmation Modal */}
       <LogoutModal

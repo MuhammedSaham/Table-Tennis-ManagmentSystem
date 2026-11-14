@@ -25,6 +25,8 @@ export interface User {
   permissions?: Permission[];
   isEmailVerified?: boolean;
   profileImage?: string;
+  isClubMember?: boolean;
+  playerProfile?: any;
 }
 
 interface AuthContextType {

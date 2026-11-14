@@ -751,8 +751,8 @@ async getGlobalCategoryStandings(
     }
 
     
-    // Only Club Players are eligible for the Global Leaderboard.
-    // Match statistics still include results against Guest Players.
+    // Identify which players are registered Club Members for affiliation badges/filters.
+    // All tournament competitors (Club & Guest) are eligible for the Global Leaderboard.
     const clubPlayers = await prisma.playerProfile.findMany({
       where: {
         isClubMember: true,
@@ -770,7 +770,10 @@ async getGlobalCategoryStandings(
     );
 
     const sortedStats = Array.from(playerStats.values())
-      .filter((player) => clubPlayerIds.has(player.playerId))
+      .map((player) => ({
+        ...player,
+        isClubMember: clubPlayerIds.has(player.playerId),
+      }))
       .sort((a, b) => {
         if (a.points !== b.points) return b.points - a.points;
         if (a.wins !== b.wins) return b.wins - a.wins;
@@ -800,7 +803,8 @@ async getGlobalCategoryStandings(
 
     return {
       categoryName,
-      totalPlayers: clubPlayerIds.size,
+      totalPlayers: playerStats.size,
+      clubPlayersCount: clubPlayerIds.size,
       standings: sortedStats,
       lastUpdated: new Date(),
     };
@@ -899,7 +903,7 @@ async getGlobalCategoryStandings(
 };
 
   const initializeTeam = (team: any) => {
-  if (!isClubTeam(team)) return;
+  if (!team || !team.members || team.members.length < 2) return;
 
   const partnershipKey = getPartnershipKey(team);
 
@@ -924,6 +928,7 @@ async getGlobalCategoryStandings(
       .map((member: any) => member.playerName)
       .join(' & '),
     participantType: 'TEAM',
+    isClubMember: isClubTeam(team),
     members,
     matchesPlayed: 0,
     wins: 0,
@@ -1032,24 +1037,7 @@ if (!first || !second) return;
   }
 
   
-  const eligiblePartnershipKeys = new Set<string>();
-
-  for (const match of [...knockoutMatches, ...groupMatches]) {
-    for (const team of [match.team1, match.team2]) {
-      if (isClubTeam(team)) {
-        const key = getPartnershipKey(team);
-
-        if (key) {
-          eligiblePartnershipKeys.add(key);
-        }
-      }
-    }
-  }
-
   const sortedStats = Array.from(teamStats.values())
-    .filter((team) =>
-      eligiblePartnershipKeys.has(team.playerId)
-    )
     .sort((a, b) => {
       if (a.points !== b.points) return b.points - a.points;
       if (a.wins !== b.wins) return b.wins - a.wins;
@@ -1061,10 +1049,9 @@ if (!first || !second) return;
     })
     .slice(0, limit);
 
-
   return {
     categoryName,
-    totalPlayers: eligiblePartnershipKeys.size,
+    totalPlayers: teamStats.size,
     standings: sortedStats,
     lastUpdated: new Date(),
   };

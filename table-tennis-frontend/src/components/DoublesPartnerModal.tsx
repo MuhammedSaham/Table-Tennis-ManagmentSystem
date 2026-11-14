@@ -192,13 +192,13 @@ const DoublesPartnerModal: React.FC<Props> = ({
                         </span>
                         {gender && (
                           <span
-                            className={`px-1.5 py-0.2 rounded text-[10px] font-semibold uppercase tracking-wider ${
+                            className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
                               gender === "MALE"
                                 ? "bg-sky-500/15 text-sky-300 border border-sky-500/30"
                                 : "bg-rose-500/15 text-rose-300 border border-rose-500/30"
                             }`}
                           >
-                            {gender}
+                            {gender === "MALE" ? "♂ Male" : "♀ Female"}
                           </span>
                         )}
                       </div>

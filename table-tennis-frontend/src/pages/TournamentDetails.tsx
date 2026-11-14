@@ -15,6 +15,11 @@ import GlassSelect from "../components/GlassSelect";
 import ConfirmModal from "../components/ConfirmModal";
 import CreateKnockoutModal from "../components/CreateKnockoutModal";
 import DoublesPartnerModal from "../components/DoublesPartnerModal";
+import { getEffectiveTournamentStatus } from "../utils/tournamentStatus";
+import {
+  CalendarIcon,
+  MapPinIcon,
+} from "@heroicons/react/24/outline";
 
 const capitalizeWords = (str: string): string => {
   if (!str) return "";
@@ -28,6 +33,7 @@ const capitalizeWords = (str: string): string => {
 const formatDivisionName = (name?: string) => {
   if (!name) return "";
   const cleaned = name
+    .replace(/\bsiingle\b/gi, "Single")
     .replace(/\s+(double|doubles|single|singles)?\s*group\s*stages?/gi, "")
     .trim();
   const target = cleaned || name;
@@ -365,12 +371,7 @@ const TournamentDetails: React.FC<TournamentDetailsProps> = ({
   }, [tournament?.categories, activeCategoryId]);
 
   useEffect(() => {
-    if (
-      activeCategoryId &&
-      (divisionStageTab === "CHAMPIONS" ||
-        showWinners ||
-        tournament?.status === "COMPLETED")
-    ) {
+    if (activeCategoryId) {
       fetchWinners(activeCategoryId);
     } else {
       winnersRequestId.current++;
@@ -414,11 +415,21 @@ const TournamentDetails: React.FC<TournamentDetailsProps> = ({
     gender: string | null,
   ): { eligible: boolean; reason?: string } => {
     // Gender restriction check
-    if (category.gender && category.gender !== "MIXED") {
-      if (gender && gender !== category.gender) {
+    const effectiveGender =
+      category.gender && category.gender !== "MIXED"
+        ? category.gender
+        : /\b(women|womens|woman|female|females|girl|girls|ladies|lady)\b/i.test(category.name)
+          ? "FEMALE"
+          : /\b(men|mens|man|male|males|boy|boys)\b/i.test(category.name) &&
+            !/\b(women|womens|woman|female|females|girl|girls|ladies|lady)\b/i.test(category.name)
+            ? "MALE"
+            : null;
+
+    if (effectiveGender) {
+      if (gender && gender !== effectiveGender) {
         return {
           eligible: false,
-          reason: category.gender === "MALE" ? "Men's only" : "Women's only",
+          reason: effectiveGender === "MALE" ? "Men's only" : "Women's only",
         };
       }
     }
@@ -1586,8 +1597,9 @@ const TournamentDetails: React.FC<TournamentDetailsProps> = ({
     );
   }
 
+  const effectiveStatus = getEffectiveTournamentStatus(tournament);
   const isRegistrationOpen =
-    tournament.status === "UPCOMING" &&
+    effectiveStatus === "UPCOMING" &&
     new Date() < new Date(tournament.registrationDeadline);
   const isSuperAdmin = user?.role === "SUPER_ADMIN" || user?.isSuperAdmin;
   const canManageTournaments =
@@ -1828,27 +1840,51 @@ const TournamentDetails: React.FC<TournamentDetailsProps> = ({
               <div className="flex flex-col sm:items-end gap-3 shrink-0">
                 {/* Status & Admin Action Buttons */}
                 <div className="flex flex-wrap gap-2 items-center">
-                  {/* Player Registration Button */}
-                  {canRegister && tournament.categories.length > 0 && (
-                    <button
-                      type="button"
-                      onClick={() =>
-                        navigate(`/app/tournaments/${id}/register`)
-                      }
-                      className="rounded-xl bg-[#4AEEFF] px-5 py-2.5
-               text-xs font-black uppercase tracking-wider
-               text-[#061D23] shadow-lg
-               transition-all duration-300
-               hover:bg-white hover:-translate-y-0.5
-               active:scale-95"
-                    >
-                      Register Now →
-                    </button>
+                  {/* Player Registration Status & Action Button */}
+                  {isPlayer && tournament.categories.length > 0 && (
+                    <>
+                      {hasRegistration ? (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            navigate(`/app/tournaments/${id}/register`)
+                          }
+                          className="inline-flex items-center gap-2 rounded-xl bg-emerald-500/15 border border-emerald-400/40 px-4 py-2 text-xs font-black uppercase tracking-wider text-emerald-300 shadow-[0_0_15px_rgba(16,185,129,0.2)] hover:bg-emerald-500/25 transition-all active:scale-95 group"
+                        >
+                          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                          <span>
+                            {userRegistrations.some(
+                              (r) => r.status === "APPROVED",
+                            )
+                              ? "✓ Enrolled (Approved)"
+                              : userRegistrations.some(
+                                    (r) => r.status === "PENDING",
+                                  )
+                                ? "⏳ Entry Pending"
+                                : "✓ View Entry Pass"}
+                          </span>
+                        </button>
+                      ) : isRegistrationOpen ? (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            navigate(`/app/tournaments/${id}/register`)
+                          }
+                          className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-[#4AEEFF] to-[#00b4d8] px-5 py-2.5 text-xs font-black uppercase tracking-wider text-[#061D23] shadow-lg shadow-[#4AEEFF]/25 transition-all duration-300 hover:brightness-110 hover:-translate-y-0.5 active:scale-95"
+                        >
+                          <span>Register Now →</span>
+                        </button>
+                      ) : (
+                        <span className="inline-flex items-center px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-white/50 text-xs font-bold font-mono">
+                          Registration Closed
+                        </span>
+                      )}
+                    </>
                   )}
                   <span
-                    className={`px-3 py-1.5 text-xs font-semibold uppercase tracking-wider rounded-lg border shadow-sm ${getStatusColor(tournament.status)}`}
+                    className={`px-3 py-1.5 text-xs font-semibold uppercase tracking-wider rounded-lg border shadow-sm ${getStatusColor(effectiveStatus)}`}
                   >
-                    {tournament.status}
+                    {effectiveStatus}
                   </span>
                   {canManageTournaments && (
                     <>
@@ -1993,10 +2029,11 @@ const TournamentDetails: React.FC<TournamentDetailsProps> = ({
           )}
 
           {/* Edit Tournament Modal */}
-          {showEditModal && (
-            <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/70 p-4 pt-24 backdrop-blur-sm animate-fadeIn sm:pt-28">
-              <div className="w-full max-w-4xl rounded-2xl border border-white/20 bg-[#061D23]/90 p-6 text-white shadow-[0_25px_60px_-15px_rgba(0,0,0,0.8)] backdrop-blur-2xl sm:p-8">
-                <div className="mb-6 flex items-center justify-between border-b border-white/10 pb-4">
+          {showEditModal &&
+            createPortal(
+              <div className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-black/80 p-4 backdrop-blur-md animate-in fade-in duration-200">
+                <div className="w-full max-w-4xl max-h-[92vh] overflow-y-auto custom-scrollbar rounded-2xl border border-[#4AEEFF]/40 bg-[#061D23]/95 p-6 text-white shadow-[0_25px_60px_-15px_rgba(0,0,0,0.8)] backdrop-blur-2xl sm:p-8 my-auto">
+                  <div className="mb-6 flex items-center justify-between border-b border-white/10 pb-4">
                   <div className="flex items-center gap-3">
                     <span className="h-6 w-2.5 rounded-full bg-[#4AEEFF] shadow-[0_0_10px_#4AEEFF]" />
                     <h2 className="text-xl font-black uppercase tracking-widest text-white sm:text-2xl">
@@ -2488,7 +2525,8 @@ const TournamentDetails: React.FC<TournamentDetailsProps> = ({
                   </div>
                 </div>
               </div>
-            </div>
+            </div>,
+            document.body,
           )}
 
           {/* ─── TOURNAMENT COMPETITION SECTION (Bracket, Champions, Groups) ─── */}
@@ -2545,6 +2583,14 @@ const TournamentDetails: React.FC<TournamentDetailsProps> = ({
                     >
                       Champions
                     </button>
+                    <Link
+                      to={`/leaderboard?tournament=${id}&category=${activeCategoryId}`}
+                      className="px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all text-white/70 hover:text-[#4AEEFF] hover:bg-white/5 border border-transparent flex items-center gap-1.5"
+                      title="View tournament & category standings"
+                    >
+                      <span>Leaderboard</span>
+                      <span className="text-[10px] text-[#4AEEFF]">↗</span>
+                    </Link>
                   </div>
 
                   {/* Category Info / Stats */}
@@ -2686,11 +2732,19 @@ const TournamentDetails: React.FC<TournamentDetailsProps> = ({
             activeCategoryId &&
             divisionStageTab === "CHAMPIONS" && (
               <div id="winners-section" className="mb-6">
-                {/* Centered Heading: "The winners" */}
-                <div className="text-center pt-0.5 pb-9 md:pb-10">
-                  <h2 className="text-4xl sm:text-5xl font-heading font-bold text-white tracking-tight">
-                    The winners
+                {/* Centered Heading - Compact */}
+                <div className="text-center pt-0 pb-3 sm:pb-4">
+                  <h2 className="text-2xl sm:text-3xl font-heading font-bold text-white tracking-tight">
+                    Tournament Champions
                   </h2>
+                  <div className="mt-1.5 flex items-center justify-center">
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs font-medium text-slate-300">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#4AEEFF] animate-pulse" />
+                      {effectiveStatus === "COMPLETED"
+                        ? `Official Final Standings • ${formatDivisionName(activeCategory?.name)}`
+                        : `Podium in Contention • ${formatDivisionName(activeCategory?.name)}`}
+                    </span>
+                  </div>
                 </div>
 
                 {/* Show results only for the selected category */}
@@ -2746,46 +2800,49 @@ const TournamentDetails: React.FC<TournamentDetailsProps> = ({
                       !animatedCategoriesRef.current.has(activeCategoryId);
 
                     return (
-                      <div className="w-full max-w-5xl mx-auto px-2 sm:px-4">
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
+                      <div className="w-full max-w-4xl mx-auto px-2 sm:px-4">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 sm:gap-4 items-end">
                           {/* Left Card: RUNNER-UP (order-2 on mobile, order-1 on desktop) */}
                           <div className="order-2 md:order-1 flex flex-col h-full">
                             <div
-                              className={`w-full flex-1 flex flex-col justify-between bg-white rounded-2xl p-6 sm:p-7 shadow-sm border border-slate-100 min-h-[380px] ${
+                              className={`w-full flex-1 flex flex-col justify-between bg-[#061D23]/70 backdrop-blur-xl rounded-2xl p-4 sm:p-4.5 border border-slate-400/30 shadow-[0_15px_35px_-10px_rgba(0,0,0,0.5)] min-h-[220px] sm:min-h-[240px] relative overflow-hidden ${
                                 shouldAnimate ? "animate-showcase-runnerup" : ""
                               }`}
                             >
+                              {/* Silver accent along top */}
+                              <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-slate-500 via-slate-200 to-slate-500 shadow-[0_0_8px_rgba(203,213,225,0.4)]" />
+
                               {/* Top: Silver Medal Icon + Label */}
                               <div className="flex flex-col items-center">
-                                <SilverMedalIcon className="w-8 h-8 sm:w-9 sm:h-9" />
-                                <span className="text-xs font-bold tracking-wider text-slate-500 uppercase mt-2.5">
+                                <SilverMedalIcon className="w-6 h-6 sm:w-7 sm:h-7 drop-shadow-[0_0_6px_rgba(203,213,225,0.4)]" />
+                                <span className="text-[10px] sm:text-[11px] font-bold tracking-wider text-slate-300 uppercase mt-1">
                                   {isDoubles ? "RUNNERS-UP" : "RUNNER-UP"}
                                 </span>
                               </div>
 
                               {/* Middle: Avatars & Names */}
                               {isRunnerUpTBD ? (
-                                <div className="my-auto py-8 flex flex-col items-center">
-                                  <div className="w-16 h-16 rounded-full border-2 border-dashed border-slate-200 bg-slate-50 flex items-center justify-center text-slate-400 font-bold text-xs">
+                                <div className="my-auto py-3 flex flex-col items-center">
+                                  <div className="w-12 h-12 rounded-full border-2 border-dashed border-slate-500/40 bg-slate-800/40 flex items-center justify-center text-slate-300 font-bold text-xs">
                                     2ND
                                   </div>
-                                  <p className="mt-3 text-sm font-semibold text-slate-400">
+                                  <p className="mt-2 text-xs font-semibold text-slate-400">
                                     Final match pending
                                   </p>
                                 </div>
                               ) : (
-                                <div className="my-auto py-6 w-full flex items-center justify-center gap-4 sm:gap-6">
+                                <div className="my-auto py-2.5 w-full flex items-center justify-center gap-3 sm:gap-4">
                                   {runnerUpPlayers.map((player, idx) => (
                                     <React.Fragment key={player.id || idx}>
                                       {idx > 0 && (
-                                        <span className="text-slate-400 font-bold text-sm self-center select-none pb-5">
+                                        <span className="text-slate-400 font-bold text-xs self-center select-none pb-3">
                                           &amp;
                                         </span>
                                       )}
                                       {player.id ? (
                                         <Link
                                           to={`/profile/${player.id}`}
-                                          className="group flex flex-col items-center gap-2.5 min-w-0 max-w-[120px]"
+                                          className="group flex flex-col items-center gap-1.5 min-w-0 max-w-[110px]"
                                           title={player.name}
                                         >
                                           <div className="transition-transform group-hover:scale-105">
@@ -2793,28 +2850,28 @@ const TournamentDetails: React.FC<TournamentDetailsProps> = ({
                                               image={player.image}
                                               name={player.name}
                                               initials={player.initials}
-                                              sizeClass="w-16 h-16 sm:w-20 sm:h-20"
-                                              bgClass="bg-[#EBF3FB]"
-                                              textClass="text-[#1E3A5F] text-lg sm:text-xl"
-                                              borderClass="border-[#D5E2EE]"
+                                              sizeClass="w-12 h-12 sm:w-14 sm:h-14"
+                                              bgClass="bg-slate-800/80"
+                                              textClass="text-slate-200 text-sm sm:text-base font-bold"
+                                              borderClass="border-slate-300/60 ring-2 ring-slate-400/20 shadow-[0_0_12px_rgba(203,213,225,0.25)]"
                                             />
                                           </div>
-                                          <p className="text-xs sm:text-sm font-bold text-slate-900 group-hover:text-sky-600 group-hover:underline transition-colors leading-tight text-center break-words">
+                                          <p className="text-xs sm:text-sm font-bold text-white group-hover:text-[#4AEEFF] group-hover:underline transition-colors leading-tight text-center break-words line-clamp-1">
                                             {player.name}
                                           </p>
                                         </Link>
                                       ) : (
-                                        <div className="flex flex-col items-center gap-2.5 min-w-0 max-w-[120px]">
+                                        <div className="flex flex-col items-center gap-1.5 min-w-0 max-w-[110px]">
                                           <WinnerAvatar
                                             image={player.image}
                                             name={player.name}
                                             initials={player.initials}
-                                            sizeClass="w-16 h-16 sm:w-20 sm:h-20"
-                                            bgClass="bg-[#EBF3FB]"
-                                            textClass="text-[#1E3A5F] text-lg sm:text-xl"
-                                            borderClass="border-[#D5E2EE]"
+                                            sizeClass="w-12 h-12 sm:w-14 sm:h-14"
+                                            bgClass="bg-slate-800/80"
+                                            textClass="text-slate-200 text-sm sm:text-base font-bold"
+                                            borderClass="border-slate-300/60 ring-2 ring-slate-400/20 shadow-[0_0_12px_rgba(203,213,225,0.25)]"
                                           />
-                                          <p className="text-xs sm:text-sm font-bold text-slate-900 leading-tight text-center break-words">
+                                          <p className="text-xs sm:text-sm font-bold text-white leading-tight text-center break-words line-clamp-1">
                                             {player.name}
                                           </p>
                                         </div>
@@ -2824,56 +2881,60 @@ const TournamentDetails: React.FC<TournamentDetailsProps> = ({
                                 </div>
                               )}
 
-                              {/* Bottom: Subtle Divider + 2nd place label */}
-                              <div className="w-full border-t border-slate-100 pt-3 text-center">
-                                <span className="text-xs text-slate-400 font-medium">
+                              {/* Bottom: Divider + 2nd place label */}
+                              <div className="w-full border-t border-white/10 pt-2 flex items-center justify-between">
+                                <span className="text-[11px] text-slate-400 font-semibold uppercase tracking-wider">
                                   2nd place
+                                </span>
+                                <span className="px-2 py-0.5 rounded-full bg-slate-400/15 border border-slate-400/30 text-slate-300 font-black text-[9px] tracking-wider">
+                                  SILVER
                                 </span>
                               </div>
                             </div>
                           </div>
 
-                          {/* Centre Card: CHAMPION (order-1 on mobile, order-2 on desktop, elevated -translate-y-7 on desktop) */}
-                          <div className="order-1 md:order-2 md:-translate-y-7 flex flex-col h-full">
+                          {/* Centre Card: CHAMPION (order-1 on mobile, order-2 on desktop, elevated -translate-y-4 on desktop) */}
+                          <div className="order-1 md:order-2 md:-translate-y-4 flex flex-col h-full">
                             <div
-                              className={`w-full flex-1 flex flex-col justify-between bg-white rounded-2xl p-6 sm:p-7 shadow-sm border border-slate-100 min-h-[400px] relative overflow-hidden ${
+                              className={`w-full flex-1 flex flex-col justify-between bg-gradient-to-b from-amber-500/15 via-[#061D23]/85 to-[#061D23]/95 backdrop-blur-xl rounded-2xl p-4 sm:p-5 border-2 border-amber-400/50 shadow-[0_15px_40px_-10px_rgba(245,158,11,0.35)] min-h-[250px] sm:min-h-[270px] relative overflow-hidden ${
                                 shouldAnimate ? "animate-showcase-champion" : ""
                               }`}
                             >
-                              {/* Thin restrained gold accent along the top */}
-                              <div className="absolute top-0 inset-x-0 h-1 bg-[#F59E0B]" />
+                              {/* Ambient Gold Aura */}
+                              <div className="absolute -top-20 left-1/2 -translate-x-1/2 w-36 h-36 bg-amber-400/20 blur-2xl pointer-events-none rounded-full" />
+                              <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-amber-400 via-amber-200 to-amber-500 shadow-[0_0_12px_rgba(245,158,11,0.6)]" />
 
                               {/* Top: Gold Trophy Icon + Label */}
                               <div className="flex flex-col items-center">
-                                <TrophyOutlineIcon className="w-9 h-9 sm:w-10 sm:h-10 text-amber-500" />
-                                <span className="text-xs font-bold tracking-wider text-[#D97706] uppercase mt-2.5">
+                                <TrophyOutlineIcon className="w-8 h-8 sm:w-9 sm:h-9 text-amber-400 drop-shadow-[0_0_12px_rgba(245,158,11,0.5)]" />
+                                <span className="text-[11px] sm:text-xs font-black tracking-widest text-amber-400 uppercase mt-1">
                                   {isDoubles ? "CHAMPIONS" : "CHAMPION"}
                                 </span>
                               </div>
 
                               {/* Middle: Avatars & Names */}
                               {isChampionTBD ? (
-                                <div className="my-auto py-8 flex flex-col items-center">
-                                  <div className="w-20 h-20 rounded-full border-2 border-dashed border-amber-200 bg-amber-50/60 flex items-center justify-center text-amber-500 font-bold text-sm">
+                                <div className="my-auto py-3 flex flex-col items-center">
+                                  <div className="w-14 h-14 rounded-full border-2 border-dashed border-amber-400/40 bg-amber-400/10 flex items-center justify-center text-amber-400 font-bold text-xs">
                                     1ST
                                   </div>
-                                  <p className="mt-3 text-sm font-semibold text-slate-400">
+                                  <p className="mt-2 text-xs font-semibold text-amber-400/70">
                                     Final match pending
                                   </p>
                                 </div>
                               ) : (
-                                <div className="my-auto py-6 w-full flex items-center justify-center gap-4 sm:gap-6">
+                                <div className="my-auto py-2.5 w-full flex items-center justify-center gap-3 sm:gap-4">
                                   {championPlayers.map((player, idx) => (
                                     <React.Fragment key={player.id || idx}>
                                       {idx > 0 && (
-                                        <span className="text-amber-500/70 font-bold text-sm self-center select-none pb-5">
+                                        <span className="text-amber-400/80 font-bold text-xs self-center select-none pb-3">
                                           &amp;
                                         </span>
                                       )}
                                       {player.id ? (
                                         <Link
                                           to={`/profile/${player.id}`}
-                                          className="group flex flex-col items-center gap-2.5 min-w-0 max-w-[130px]"
+                                          className="group flex flex-col items-center gap-1.5 min-w-0 max-w-[120px]"
                                           title={player.name}
                                         >
                                           <div className="transition-transform group-hover:scale-105">
@@ -2881,28 +2942,28 @@ const TournamentDetails: React.FC<TournamentDetailsProps> = ({
                                               image={player.image}
                                               name={player.name}
                                               initials={player.initials}
-                                              sizeClass="w-20 h-20 sm:w-24 sm:h-24"
-                                              bgClass="bg-[#FFFBEB]"
-                                              textClass="text-[#92400E] text-xl sm:text-2xl"
-                                              borderClass="border-[#FDE68A]"
+                                              sizeClass="w-14 h-14 sm:w-16 sm:h-16"
+                                              bgClass="bg-amber-400/20"
+                                              textClass="text-amber-300 text-base sm:text-lg font-black"
+                                              borderClass="border-amber-400 ring-3 ring-amber-400/25 shadow-[0_0_18px_rgba(245,158,11,0.45)]"
                                             />
                                           </div>
-                                          <p className="text-sm sm:text-base font-bold text-slate-900 group-hover:text-amber-600 group-hover:underline transition-colors leading-tight text-center break-words">
+                                          <p className="text-sm sm:text-base font-extrabold text-white group-hover:text-amber-300 group-hover:underline transition-colors leading-tight text-center break-words line-clamp-1 drop-shadow-sm">
                                             {player.name}
                                           </p>
                                         </Link>
                                       ) : (
-                                        <div className="flex flex-col items-center gap-2.5 min-w-0 max-w-[130px]">
+                                        <div className="flex flex-col items-center gap-1.5 min-w-0 max-w-[120px]">
                                           <WinnerAvatar
                                             image={player.image}
                                             name={player.name}
                                             initials={player.initials}
-                                            sizeClass="w-20 h-20 sm:w-24 sm:h-24"
-                                            bgClass="bg-[#FFFBEB]"
-                                            textClass="text-[#92400E] text-xl sm:text-2xl"
-                                            borderClass="border-[#FDE68A]"
+                                            sizeClass="w-14 h-14 sm:w-16 sm:h-16"
+                                            bgClass="bg-amber-400/20"
+                                            textClass="text-amber-300 text-base sm:text-lg font-black"
+                                            borderClass="border-amber-400 ring-3 ring-amber-400/25 shadow-[0_0_18px_rgba(245,158,11,0.45)]"
                                           />
-                                          <p className="text-sm sm:text-base font-bold text-slate-900 leading-tight text-center break-words">
+                                          <p className="text-sm sm:text-base font-extrabold text-white leading-tight text-center break-words line-clamp-1 drop-shadow-sm">
                                             {player.name}
                                           </p>
                                         </div>
@@ -2912,10 +2973,13 @@ const TournamentDetails: React.FC<TournamentDetailsProps> = ({
                                 </div>
                               )}
 
-                              {/* Bottom: Subtle Divider + 1st place label */}
-                              <div className="w-full border-t border-slate-100 pt-3 text-center">
-                                <span className="text-xs text-slate-400 font-medium">
+                              {/* Bottom: Divider + 1st place label */}
+                              <div className="w-full border-t border-amber-400/25 pt-2 flex items-center justify-between">
+                                <span className="text-[11px] text-amber-400/80 font-bold uppercase tracking-wider">
                                   1st place
+                                </span>
+                                <span className="px-2.5 py-0.5 rounded-full bg-amber-400/20 border border-amber-400/50 text-amber-300 font-black text-[10px] shadow-[0_0_8px_rgba(245,158,11,0.3)]">
+                                  GOLD
                                 </span>
                               </div>
                             </div>
@@ -2924,14 +2988,17 @@ const TournamentDetails: React.FC<TournamentDetailsProps> = ({
                           {/* Right Card: Third-place or Semifinalists (order-3 on mobile and desktop) */}
                           <div className="order-3 md:order-3 flex flex-col h-full">
                             <div
-                              className={`w-full flex-1 flex flex-col justify-between bg-white rounded-2xl p-6 sm:p-7 shadow-sm border border-slate-100 min-h-[380px] ${
+                              className={`w-full flex-1 flex flex-col justify-between bg-[#061D23]/70 backdrop-blur-xl rounded-2xl p-4 sm:p-4.5 border border-amber-700/35 shadow-[0_15px_35px_-10px_rgba(0,0,0,0.5)] min-h-[220px] sm:min-h-[240px] relative overflow-hidden ${
                                 shouldAnimate ? "animate-showcase-third" : ""
                               }`}
                             >
+                              {/* Bronze accent along top */}
+                              <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-amber-700 via-amber-500 to-amber-800 shadow-[0_0_8px_rgba(180,83,9,0.35)]" />
+
                               {/* Top: Bronze Medal Icon + Label */}
                               <div className="flex flex-col items-center">
-                                <BronzeMedalIcon className="w-8 h-8 sm:w-9 sm:h-9" />
-                                <span className="text-xs font-bold tracking-wider text-[#B45309] uppercase mt-2.5">
+                                <BronzeMedalIcon className="w-6 h-6 sm:w-7 sm:h-7 text-amber-600 drop-shadow-[0_0_6px_rgba(180,83,9,0.4)]" />
+                                <span className="text-[10px] sm:text-[11px] font-bold tracking-wider text-amber-500 uppercase mt-1">
                                   {hasOfficialThird
                                     ? "3RD PLACE"
                                     : "SEMI-FINALISTS"}
@@ -2940,18 +3007,18 @@ const TournamentDetails: React.FC<TournamentDetailsProps> = ({
 
                               {/* Middle: Either 3rd place winner OR 2 Semifinalists */}
                               {hasOfficialThird ? (
-                                <div className="my-auto py-6 w-full flex items-center justify-center gap-4 sm:gap-6">
+                                <div className="my-auto py-2.5 w-full flex items-center justify-center gap-3 sm:gap-4">
                                   {thirdPlacePlayers.map((player, idx) => (
                                     <React.Fragment key={player.id || idx}>
                                       {idx > 0 && (
-                                        <span className="text-slate-400 font-bold text-sm self-center select-none pb-5">
+                                        <span className="text-slate-400 font-bold text-xs self-center select-none pb-3">
                                           &amp;
                                         </span>
                                       )}
                                       {player.id ? (
                                         <Link
                                           to={`/profile/${player.id}`}
-                                          className="group flex flex-col items-center gap-2.5 min-w-0 max-w-[120px]"
+                                          className="group flex flex-col items-center gap-1.5 min-w-0 max-w-[110px]"
                                           title={player.name}
                                         >
                                           <div className="transition-transform group-hover:scale-105">
@@ -2959,28 +3026,28 @@ const TournamentDetails: React.FC<TournamentDetailsProps> = ({
                                               image={player.image}
                                               name={player.name}
                                               initials={player.initials}
-                                              sizeClass="w-16 h-16 sm:w-20 sm:h-20"
-                                              bgClass="bg-[#FFF7ED]"
-                                              textClass="text-[#9A3412] text-lg sm:text-xl"
-                                              borderClass="border-[#FED7AA]"
+                                              sizeClass="w-12 h-12 sm:w-14 sm:h-14"
+                                              bgClass="bg-amber-950/50"
+                                              textClass="text-amber-400 text-sm sm:text-base font-bold"
+                                              borderClass="border-amber-600/60 ring-2 ring-amber-600/20 shadow-[0_0_12px_rgba(180,83,9,0.25)]"
                                             />
                                           </div>
-                                          <p className="text-xs sm:text-sm font-bold text-slate-900 group-hover:text-amber-700 group-hover:underline transition-colors leading-tight text-center break-words">
+                                          <p className="text-xs sm:text-sm font-bold text-white group-hover:text-amber-400 group-hover:underline transition-colors leading-tight text-center break-words line-clamp-1">
                                             {player.name}
                                           </p>
                                         </Link>
                                       ) : (
-                                        <div className="flex flex-col items-center gap-2.5 min-w-0 max-w-[120px]">
+                                        <div className="flex flex-col items-center gap-1.5 min-w-0 max-w-[110px]">
                                           <WinnerAvatar
                                             image={player.image}
                                             name={player.name}
                                             initials={player.initials}
-                                            sizeClass="w-16 h-16 sm:w-20 sm:h-20"
-                                            bgClass="bg-[#FFF7ED]"
-                                            textClass="text-[#9A3412] text-lg sm:text-xl"
-                                            borderClass="border-[#FED7AA]"
+                                            sizeClass="w-12 h-12 sm:w-14 sm:h-14"
+                                            bgClass="bg-amber-950/50"
+                                            textClass="text-amber-400 text-sm sm:text-base font-bold"
+                                            borderClass="border-amber-600/60 ring-2 ring-amber-600/20 shadow-[0_0_12px_rgba(180,83,9,0.25)]"
                                           />
-                                          <p className="text-xs sm:text-sm font-bold text-slate-900 leading-tight text-center break-words">
+                                          <p className="text-xs sm:text-sm font-bold text-white leading-tight text-center break-words line-clamp-1">
                                             {player.name}
                                           </p>
                                         </div>
@@ -2989,24 +3056,24 @@ const TournamentDetails: React.FC<TournamentDetailsProps> = ({
                                   ))}
                                 </div>
                               ) : semifinalTeams.length > 0 ? (
-                                <div className="my-auto py-4 w-full flex flex-col justify-center gap-3.5">
+                                <div className="my-auto py-2 w-full flex flex-col justify-center gap-2">
                                   {semifinalTeams.map((team, idx) => (
                                     <React.Fragment key={idx}>
                                       {idx > 0 && (
-                                        <div className="border-t border-slate-100 w-full" />
+                                        <div className="border-t border-white/10 w-full" />
                                       )}
-                                      <div className="flex items-center gap-3 w-full px-1">
-                                        <div className="flex items-center -space-x-2 shrink-0">
+                                      <div className="flex items-center gap-2.5 w-full px-1">
+                                        <div className="flex items-center -space-x-1.5 shrink-0">
                                           {team.players.map((p, pIdx) => {
                                             const av = (
                                               <WinnerAvatar
                                                 image={p.image}
                                                 name={p.name}
                                                 initials={p.initials}
-                                                sizeClass="w-9 h-9 sm:w-10 sm:h-10"
-                                                bgClass="bg-[#FFF7ED]"
-                                                textClass="text-[#9A3412] text-xs font-bold"
-                                                borderClass="border-[#FED7AA] ring-2 ring-white"
+                                                sizeClass="w-7 h-7 sm:w-8 sm:h-8"
+                                                bgClass="bg-amber-950/60"
+                                                textClass="text-amber-400 text-[10px] font-bold"
+                                                borderClass="border-amber-600/60 ring-1 ring-white/10"
                                               />
                                             );
                                             return p.id ? (
@@ -3030,25 +3097,25 @@ const TournamentDetails: React.FC<TournamentDetailsProps> = ({
                                             );
                                           })}
                                         </div>
-                                        <div className="min-w-0 flex items-center flex-wrap gap-x-1.5 leading-snug">
+                                        <div className="min-w-0 flex items-center flex-wrap gap-x-1 leading-snug">
                                           {team.players.map((p, pIdx) => (
                                             <React.Fragment key={p.id || pIdx}>
                                               {pIdx > 0 && (
-                                                <span className="text-slate-400 font-bold text-xs select-none">
+                                                <span className="text-white/40 font-bold text-[10px] select-none">
                                                   &amp;
                                                 </span>
                                               )}
                                               {p.id ? (
                                                 <Link
                                                   to={`/profile/${p.id}`}
-                                                  className="text-xs sm:text-sm font-bold text-slate-900 hover:text-amber-700 hover:underline transition-colors truncate max-w-[120px] inline-block"
+                                                  className="text-xs font-bold text-white hover:text-amber-400 hover:underline transition-colors truncate max-w-[100px] inline-block"
                                                   title={p.name}
                                                 >
                                                   {p.name}
                                                 </Link>
                                               ) : (
                                                 <span
-                                                  className="text-xs sm:text-sm font-bold text-slate-900 truncate max-w-[120px] inline-block"
+                                                  className="text-xs font-bold text-white truncate max-w-[100px] inline-block"
                                                   title={p.name}
                                                 >
                                                   {p.name}
@@ -3062,22 +3129,25 @@ const TournamentDetails: React.FC<TournamentDetailsProps> = ({
                                   ))}
                                 </div>
                               ) : (
-                                <div className="my-auto py-8 flex flex-col items-center">
-                                  <div className="w-16 h-16 rounded-full border-2 border-dashed border-slate-200 bg-slate-50 flex items-center justify-center text-slate-400 font-bold text-xs">
+                                <div className="my-auto py-3 flex flex-col items-center">
+                                  <div className="w-12 h-12 rounded-full border-2 border-dashed border-amber-700/40 bg-amber-950/40 flex items-center justify-center text-amber-500 font-bold text-xs">
                                     3RD
                                   </div>
-                                  <p className="mt-3 text-sm font-semibold text-slate-400">
+                                  <p className="mt-2 text-xs font-semibold text-amber-600/70">
                                     Semifinals pending
                                   </p>
                                 </div>
                               )}
 
-                              {/* Bottom: Subtle Divider + Label */}
-                              <div className="w-full border-t border-slate-100 pt-3 text-center">
-                                <span className="text-xs text-slate-400 font-medium">
+                              {/* Bottom: Divider + Label */}
+                              <div className="w-full border-t border-white/10 pt-2 flex items-center justify-between">
+                                <span className="text-[11px] text-amber-600/80 font-semibold uppercase tracking-wider">
                                   {hasOfficialThird
                                     ? "3rd place"
                                     : "Semi-finalists"}
+                                </span>
+                                <span className="px-2 py-0.5 rounded-full bg-amber-600/15 border border-amber-600/30 text-amber-400 font-black text-[9px] tracking-wider">
+                                  BRONZE
                                 </span>
                               </div>
                             </div>
@@ -3102,26 +3172,50 @@ const TournamentDetails: React.FC<TournamentDetailsProps> = ({
       )}
 
       {registrationOnly && (
-        <div className="mb-6">
-          <button
-            type="button"
-            onClick={() => navigate(`/app/tournaments/${id}`)}
-            className="mb-5 text-sm font-semibold text-[#4AEEFF] hover:text-white"
-          >
-            ← Back to Tournament Details
-          </button>
+        <div className="rounded-2xl border border-white/20 bg-[#061D23]/25 p-5 sm:p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl mb-6">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            <div>
+              <button
+                type="button"
+                onClick={() => navigate(`/app/tournaments/${id}`)}
+                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-white/5 border border-white/10 text-xs font-bold text-[#4AEEFF] hover:bg-white/10 hover:text-white transition-all mb-3"
+              >
+                ← Back to Tournament Details
+              </button>
+              <h1 className="text-2xl sm:text-3xl font-heading font-bold text-white tracking-tight">
+                Tournament Registration
+              </h1>
+              <p className="mt-1 text-xs sm:text-sm text-cyan-200/80">
+                {tournament.name} · Official division enrollment & athlete check-in
+              </p>
+            </div>
 
-          <h1 className="text-2xl font-black text-white">
-            Tournament Registration
-          </h1>
-
-          <p className="mt-2 text-sm text-white/60">{tournament.name}</p>
-
-          <p className="mt-1 text-sm text-white/50">
-            Select your eligible divisions and complete registration.
-          </p>
+            {/* Meta chips */}
+            <div className="flex flex-wrap items-center gap-2 text-xs">
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-white/70">
+                <MapPinIcon className="w-3.5 h-3.5 text-[#4AEEFF]" />
+                <span>{tournament.venue}</span>
+              </div>
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-white/70">
+                <CalendarIcon className="w-3.5 h-3.5 text-[#4AEEFF]" />
+                <span>
+                  {formatTournamentDateRange(
+                    tournament.startDate,
+                    tournament.endDate,
+                  )}
+                </span>
+              </div>
+              <span
+                className={`px-2.5 py-1 text-[10px] font-black uppercase tracking-wider rounded-lg border ${getStatusColor(effectiveStatus)}`}
+              >
+                {effectiveStatus}
+              </span>
+            </div>
+          </div>
         </div>
       )}
+
+
 
       {/* Professional Tournament Division Entry Section */}
       {registrationOnly && canRegister && tournament.categories.length > 0 && (
@@ -3458,21 +3552,7 @@ const TournamentDetails: React.FC<TournamentDetailsProps> = ({
         </div>
       )}
 
-      {registrationOnly && hasRegistration && (
-        <div className="rounded-[16px] border border-white/20 bg-[#061D23]/25 p-5 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl mb-6 flex items-center flex-wrap gap-2">
-          <p className="text-xs uppercase tracking-wider font-bold text-[#4AEEFF]">
-            Your registration status:
-          </p>
-          {userRegistrations.map((reg) => (
-            <span
-              key={reg.id}
-              className={`px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-md border ${getRegistrationStatusColor(reg.status)}`}
-            >
-              {reg.status}
-            </span>
-          ))}
-        </div>
-      )}
+
       {/* Payment Proof Verification */}
       {registrationOnly &&
         isPlayer &&

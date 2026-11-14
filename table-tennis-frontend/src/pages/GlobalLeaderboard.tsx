@@ -10,6 +10,7 @@ interface Player {
   profileImage?: string | null;
   teamId?: string | null;
   participantType?: "PLAYER" | "TEAM";
+  isClubMember?: boolean;
   members?: {
     playerId: string;
     playerName: string;
@@ -307,9 +308,35 @@ const GlobalLeaderboard: React.FC = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>("");
   const [standings, setStandings] = useState<Player[]>([]);
+  const [filterMode, setFilterMode] = useState<"ALL" | "MEMBERS">("ALL");
   const [loading, setLoading] = useState(false);
   const [loadingCategories, setLoadingCategories] = useState(true);
   const [avatarMap, setAvatarMap] = useState<Map<string, string>>(new Map());
+
+  const displayedPlayers =
+    filterMode === "MEMBERS"
+      ? standings.filter((p) => p.isClubMember === true)
+      : standings;
+
+  const renderAffiliationSubtext = (player: Player, defaultLabel?: string) => {
+    const isClub = player.isClubMember === true;
+    return (
+      <div className="flex items-center gap-1.5 mt-0.5">
+        <span
+          className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+            isClub ? "bg-[#4AEEFF]" : "bg-white/40"
+          }`}
+        />
+        <span
+          className={`text-[11px] truncate ${
+            isClub ? "text-[#4AEEFF] font-semibold" : "text-white/60"
+          }`}
+        >
+          {isClub ? "Sam's College Member" : defaultLabel || "Guest Competitor"}
+        </span>
+      </div>
+    );
+  };
 
   useEffect(() => {
     const loadAvatars = async () => {
@@ -458,15 +485,57 @@ const GlobalLeaderboard: React.FC = () => {
               </div>
             ) : (
               <>
+                {/* ─── FILTER CAPSULE (All Competitors vs Club Members Only) ─── */}
+                {standings.length > 0 && (
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs px-2.5 py-1 rounded-full bg-white/10 text-white/90 border border-white/15 font-semibold">
+                        {displayedPlayers.length} {displayedPlayers.length === 1 ? "Ranked Competitor" : "Ranked Competitors"}
+                      </span>
+                      {filterMode === "MEMBERS" && (
+                        <span className="text-xs px-2.5 py-1 rounded-full bg-[#4AEEFF]/15 text-[#4AEEFF] border border-[#4AEEFF]/30 font-bold">
+                          Showing: Club Members
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Filter Toggle */}
+                    <div className="flex items-center gap-1.5 bg-white/5 p-1 rounded-xl border border-white/10 backdrop-blur-md self-start sm:self-auto">
+                      <button
+                        type="button"
+                        onClick={() => setFilterMode("ALL")}
+                        className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                          filterMode === "ALL"
+                            ? "bg-[#4AEEFF]/15 text-[#4AEEFF] border border-[#4AEEFF]/40 shadow-sm"
+                            : "text-white/60 hover:text-white"
+                        }`}
+                      >
+                        All Competitors ({standings.length})
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setFilterMode("MEMBERS")}
+                        className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                          filterMode === "MEMBERS"
+                            ? "bg-[#4AEEFF]/15 text-[#4AEEFF] border border-[#4AEEFF]/40 shadow-sm"
+                            : "text-white/60 hover:text-white"
+                        }`}
+                      >
+                        Club Members Only ({standings.filter((p) => p.isClubMember).length})
+                      </button>
+                    </div>
+                  </div>
+                )}
+
                 {/* ─── TOP 3 PODIUM HERO SHOWCASE (Frosted Glass Cards) ─── */}
-                {standings.length > 0 && (() => {
-                  const top1 = standings[0];
-                  const top2 = standings[1];
-                  const top3 = standings[2];
+                {displayedPlayers.length > 0 && (() => {
+                  const top1 = displayedPlayers[0];
+                  const top2 = displayedPlayers[1];
+                  const top3 = displayedPlayers[2];
 
                   return (
                     <div
-                      key={`podium-${selectedCategory}`}
+                      key={`podium-${selectedCategory}-${filterMode}`}
                       className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 pt-2 pb-4 items-end"
                     >
                       {/* #2 SILVER (Left) */}
@@ -485,7 +554,7 @@ const GlobalLeaderboard: React.FC = () => {
                               player={top2}
                               avatarMap={avatarMap}
                               variant="podium-2"
-                              subtext={<p className="text-xs text-white/60 truncate">Sam&apos;s College TT</p>}
+                              subtext={renderAffiliationSubtext(top2)}
                             />
                           </div>
                           <div className="pt-2.5 border-t border-white/10 flex items-center justify-between">
@@ -513,7 +582,7 @@ const GlobalLeaderboard: React.FC = () => {
                               player={top1}
                               avatarMap={avatarMap}
                               variant="podium-1"
-                              subtext={<p className="text-xs text-amber-300 font-bold truncate">Category Leader</p>}
+                              subtext={renderAffiliationSubtext(top1, "Category Leader")}
                             />
                           </div>
                           <div className="pt-2.5 border-t border-amber-400/20 flex items-center justify-between">
@@ -541,7 +610,7 @@ const GlobalLeaderboard: React.FC = () => {
                               player={top3}
                               avatarMap={avatarMap}
                               variant="podium-3"
-                              subtext={<p className="text-xs text-white/60 truncate">Sam&apos;s College TT</p>}
+                              subtext={renderAffiliationSubtext(top3)}
                             />
                           </div>
                           <div className="pt-2.5 border-t border-white/10 flex items-center justify-between">
@@ -557,151 +626,160 @@ const GlobalLeaderboard: React.FC = () => {
                 })()}
 
                 {/* ─── FROSTED GLASS CARD CONTAINER (Table + Mobile Cards) ─── */}
-                <div className="rounded-2xl border border-white/20 bg-[#061D23]/20 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl overflow-hidden text-white">
-                  {/* DESKTOP TABLE */}
-                  <div className="hidden sm:block overflow-x-auto">
-                    <table className="w-full text-left border-collapse">
-                      <thead>
-                        <tr className="border-b border-white/15 bg-white/5 text-[11px] font-bold uppercase tracking-wider text-[#4AEEFF]">
-                          <th className="px-5 py-3.5 text-center w-20">Rank</th>
-                          <th className="px-5 py-3.5">Player / Participant</th>
-                          <th className="px-5 py-3.5 text-center">Matches</th>
-                          <th className="px-5 py-3.5 text-center">Wins</th>
-                          <th className="px-5 py-3.5 text-center">Losses</th>
-                          <th className="px-5 py-3.5 text-center">Games (W - L)</th>
-                          <th className="px-5 py-3.5 text-right w-28">Points</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-white/10 text-sm">
-                        {standings.map((player, index) => {
-                          const rankNumber = index + 1;
-                          const isTop1 = rankNumber === 1;
-                          const isTop2 = rankNumber === 2;
-                          const isTop3 = rankNumber === 3;
+                {displayedPlayers.length === 0 ? (
+                  <div className="text-center py-12 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl">
+                    <p className="text-white/60 text-sm">
+                      {filterMode === "MEMBERS"
+                        ? "No registered club members found in this category rankings yet."
+                        : "No ranked players found for this category."}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="rounded-2xl border border-white/20 bg-[#061D23]/20 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl overflow-hidden text-white">
+                    {/* DESKTOP TABLE */}
+                    <div className="hidden sm:block overflow-x-auto">
+                      <table className="w-full text-left border-collapse">
+                        <thead>
+                          <tr className="border-b border-white/15 bg-white/5 text-[11px] font-bold uppercase tracking-wider text-[#4AEEFF]">
+                            <th className="px-5 py-3.5 text-center w-20">Rank</th>
+                            <th className="px-5 py-3.5">Player / Participant</th>
+                            <th className="px-5 py-3.5 text-center">Matches</th>
+                            <th className="px-5 py-3.5 text-center">Wins</th>
+                            <th className="px-5 py-3.5 text-center">Losses</th>
+                            <th className="px-5 py-3.5 text-center">Games (W - L)</th>
+                            <th className="px-5 py-3.5 text-right w-28">Points</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-white/10 text-sm">
+                          {displayedPlayers.map((player, index) => {
+                            const rankNumber = index + 1;
+                            const isTop1 = rankNumber === 1;
+                            const isTop2 = rankNumber === 2;
+                            const isTop3 = rankNumber === 3;
 
-                          return (
-                            <tr
-                              key={player.playerId}
-                              className={`group transition-colors ${
-                                isTop1
-                                  ? "bg-amber-400/10 hover:bg-amber-400/15"
-                                  : "hover:bg-white/5"
-                              }`}
-                            >
-                              {/* Rank Badge */}
-                              <td className="px-5 py-4 text-center">
-                                {isTop1 ? (
-                                  <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-amber-400 text-slate-950 font-black text-sm shadow-sm ring-2 ring-amber-300/50">
-                                    #1
-                                  </span>
-                                ) : isTop2 ? (
-                                  <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-slate-200 text-slate-800 font-bold text-sm ring-1 ring-slate-300">
-                                    #2
-                                  </span>
-                                ) : isTop3 ? (
-                                  <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-amber-100 text-amber-800 font-bold text-sm ring-1 ring-amber-300/60">
-                                    #3
-                                  </span>
-                                ) : (
-                                  <span className="text-white/60 font-bold text-sm">
-                                    #{rankNumber}
-                                  </span>
-                                )}
-                              </td>
+                            return (
+                              <tr
+                                key={player.playerId}
+                                className={`group transition-colors ${
+                                  isTop1
+                                    ? "bg-amber-400/10 hover:bg-amber-400/15"
+                                    : "hover:bg-white/5"
+                                }`}
+                              >
+                                {/* Rank Badge */}
+                                <td className="px-5 py-4 text-center">
+                                  {isTop1 ? (
+                                    <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-amber-400 text-slate-950 font-black text-sm shadow-sm ring-2 ring-amber-300/50">
+                                      #1
+                                    </span>
+                                  ) : isTop2 ? (
+                                    <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-slate-200 text-slate-800 font-bold text-sm ring-1 ring-slate-300">
+                                      #2
+                                    </span>
+                                  ) : isTop3 ? (
+                                    <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-amber-100 text-amber-800 font-bold text-sm ring-1 ring-amber-300/60">
+                                      #3
+                                    </span>
+                                  ) : (
+                                    <span className="text-white/60 font-bold text-sm">
+                                      #{rankNumber}
+                                    </span>
+                                  )}
+                                </td>
 
-                              {/* Player / Team Name & Avatar */}
-                              <td className="px-5 py-4">
+                                {/* Player / Team Name & Avatar */}
+                                <td className="px-5 py-4">
+                                  <ParticipantDisplay
+                                    player={player}
+                                    avatarMap={avatarMap}
+                                    variant="table"
+                                    subtext={renderAffiliationSubtext(player)}
+                                  />
+                                </td>
+
+                                {/* Matches */}
+                                <td className="px-5 py-4 text-center font-semibold text-white/80">
+                                  {player.matchesPlayed}
+                                </td>
+
+                                {/* Wins */}
+                                <td className="px-5 py-4 text-center font-bold text-emerald-400">
+                                  {player.wins}
+                                </td>
+
+                                {/* Losses */}
+                                <td className="px-5 py-4 text-center font-medium text-white/50">
+                                  {player.losses}
+                                </td>
+
+                                {/* Games Won - Lost */}
+                                <td className="px-5 py-4 text-center font-semibold text-white/80">
+                                  <span className="text-white">{player.gamesWon}</span>
+                                  <span className="text-white/40 mx-1">–</span>
+                                  <span className="text-white/70">{player.gamesLost}</span>
+                                </td>
+
+                                {/* Points Badge */}
+                                <td className="px-5 py-4 text-right">
+                                  <span className="inline-flex items-center gap-1 px-3 py-1 rounded-lg bg-[#061D23] text-[#4AEEFF] font-bold text-sm border border-[#4AEEFF]/30 shadow-sm">
+                                    <span>{player.points}</span>
+                                    <span className="text-[10px] text-[#4AEEFF]/70 font-normal">pts</span>
+                                  </span>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {/* ─── MOBILE CARDS ─── */}
+                    <div className="space-y-3 sm:hidden p-4">
+                      {displayedPlayers.map((player, index) => {
+                        const rankNumber = index + 1;
+                        const isTop1 = rankNumber === 1;
+
+                        return (
+                          <div
+                            key={player.playerId}
+                            className={`rounded-xl border p-4 shadow-sm transition-all ${
+                              isTop1
+                                ? "bg-amber-400/10 border-amber-400/40"
+                                : "bg-white/5 border-white/10"
+                            }`}
+                          >
+                            <div className="flex items-center justify-between gap-3">
+                              <div className="flex items-center gap-3 min-w-0">
+                                <span className="w-7 h-7 rounded-full bg-white/10 text-white flex items-center justify-center text-xs font-bold shrink-0">
+                                  #{rankNumber}
+                                </span>
                                 <ParticipantDisplay
                                   player={player}
                                   avatarMap={avatarMap}
-                                  variant="table"
+                                  variant="mobile"
                                   subtext={
-                                    <div className="text-[11px] text-white/50 truncate">
-                                      Sam&apos;s College TT Club
+                                    <div>
+                                      {renderAffiliationSubtext(player)}
+                                      <span className="text-[10px] text-white/50 block truncate mt-0.5">
+                                        {player.matchesPlayed} matches · {player.wins}W - {player.losses}L
+                                      </span>
                                     </div>
                                   }
                                 />
-                              </td>
+                              </div>
 
-                              {/* Matches */}
-                              <td className="px-5 py-4 text-center font-semibold text-white/80">
-                                {player.matchesPlayed}
-                              </td>
-
-                              {/* Wins */}
-                              <td className="px-5 py-4 text-center font-bold text-emerald-400">
-                                {player.wins}
-                              </td>
-
-                              {/* Losses */}
-                              <td className="px-5 py-4 text-center font-medium text-white/50">
-                                {player.losses}
-                              </td>
-
-                              {/* Games Won - Lost */}
-                              <td className="px-5 py-4 text-center font-semibold text-white/80">
-                                <span className="text-white">{player.gamesWon}</span>
-                                <span className="text-white/40 mx-1">–</span>
-                                <span className="text-white/70">{player.gamesLost}</span>
-                              </td>
-
-                              {/* Points Badge */}
-                              <td className="px-5 py-4 text-right">
-                                <span className="inline-flex items-center gap-1 px-3 py-1 rounded-lg bg-[#061D23] text-[#4AEEFF] font-bold text-sm border border-[#4AEEFF]/30 shadow-sm">
-                                  <span>{player.points}</span>
-                                  <span className="text-[10px] text-[#4AEEFF]/70 font-normal">pts</span>
+                              <div className="shrink-0 text-right">
+                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#061D23] text-[#4AEEFF] font-black text-xs border border-[#4AEEFF]/30">
+                                  {player.points} <span className="text-[8px] text-[#4AEEFF]/70">pts</span>
                                 </span>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-
-                  {/* ─── MOBILE CARDS ─── */}
-                  <div className="space-y-3 sm:hidden p-4">
-                    {standings.map((player, index) => {
-                      const rankNumber = index + 1;
-                      const isTop1 = rankNumber === 1;
-
-                      return (
-                        <div
-                          key={player.playerId}
-                          className={`rounded-xl border p-4 shadow-sm transition-all ${
-                            isTop1
-                              ? "bg-amber-400/10 border-amber-400/40"
-                              : "bg-white/5 border-white/10"
-                          }`}
-                        >
-                          <div className="flex items-center justify-between gap-3">
-                            <div className="flex items-center gap-3 min-w-0">
-                              <span className="w-7 h-7 rounded-full bg-white/10 text-white flex items-center justify-center text-xs font-bold shrink-0">
-                                #{rankNumber}
-                              </span>
-                              <ParticipantDisplay
-                                player={player}
-                                avatarMap={avatarMap}
-                                variant="mobile"
-                                subtext={
-                                  <span className="text-[10px] text-white/50 block truncate">
-                                    {player.matchesPlayed} matches · {player.wins}W - {player.losses}L
-                                  </span>
-                                }
-                              />
-                            </div>
-
-                            <div className="shrink-0 text-right">
-                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#061D23] text-[#4AEEFF] font-black text-xs border border-[#4AEEFF]/30">
-                                {player.points} <span className="text-[8px] text-[#4AEEFF]/70">pts</span>
-                              </span>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      );
-                    })}
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
+                )}
               </>
             )}
           </div>
