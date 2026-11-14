@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Outlet, Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import NotificationBell from "./NotificationBell";
@@ -18,6 +18,8 @@ import {
   XMarkIcon,
   ShieldCheckIcon,
   ChevronRightIcon,
+  ClockIcon,
+  BookOpenIcon,
 } from "@heroicons/react/24/outline";
 
 const Layout: React.FC = () => {
@@ -26,6 +28,7 @@ const Layout: React.FC = () => {
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [showRulesModal, setShowRulesModal] = useState(false);
 
   const handleLogout = () => {
     logout();
@@ -35,31 +38,47 @@ const Layout: React.FC = () => {
   const isReferee = user?.role === "REFEREE";
   const isSuperAdmin = user?.role === "SUPER_ADMIN" || user?.isSuperAdmin;
 
+  const [currentTime, setCurrentTime] = useState(() =>
+    new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+  );
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(
+        new Date().toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+      );
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
   // Desktop navigation items (Profile accessed via top-right pill)
-  const desktopNavigation = [
-    ...(isReferee
-      ? [
-          {
-            name: "Referee Dashboard",
-            href: "/app/referee/matches",
-            icon: HomeIcon,
-          },
-        ]
-      : [
-          {
-            name: "Dashboard",
-            href: "/app/dashboard",
-            icon: HomeIcon,
-          },
-        ]),
-    { name: "Tournaments", href: "/app/tournaments", icon: TrophyIcon },
-    { name: "Leaderboard", href: "/app/leaderboard", icon: ChartBarIcon },
-    {
-      name: "Global Rankings",
-      href: "/app/global-leaderboard",
-      icon: ChartBarIcon,
-    },
-  ];
+  const desktopNavigation = isReferee
+    ? [
+        {
+          name: "My Matches",
+          href: "/app/referee/matches",
+          icon: HomeIcon,
+        },
+        { name: "Tournaments", href: "/app/tournaments", icon: TrophyIcon },
+        { name: "Players", href: "/app/players", icon: UserGroupIcon },
+      ]
+    : [
+        {
+          name: "Dashboard",
+          href: "/app/dashboard",
+          icon: HomeIcon,
+        },
+        { name: "Tournaments", href: "/app/tournaments", icon: TrophyIcon },
+        { name: "Leaderboard", href: "/app/leaderboard", icon: ChartBarIcon },
+        {
+          name: "Global Rankings",
+          href: "/app/global-leaderboard",
+          icon: ChartBarIcon,
+        },
+      ];
 
   if (isSuperAdmin || hasPermission("MANAGE_USERS")) {
     desktopNavigation.push({ name: "Users", href: "/app/users", icon: UserGroupIcon });
@@ -70,31 +89,32 @@ const Layout: React.FC = () => {
   }
 
   // Mobile navigation items (Explicitly includes Profile for quick access)
-  const mobileNavigation = [
-    ...(isReferee
-      ? [
-          {
-            name: "Referee Dashboard",
-            href: "/app/referee/matches",
-            icon: HomeIcon,
-          },
-        ]
-      : [
-          {
-            name: "Dashboard",
-            href: "/app/dashboard",
-            icon: HomeIcon,
-          },
-        ]),
-    { name: "Tournaments", href: "/app/tournaments", icon: TrophyIcon },
-    { name: "Leaderboard", href: "/app/leaderboard", icon: ChartBarIcon },
-    {
-      name: "Global Rankings",
-      href: "/app/global-leaderboard",
-      icon: ChartBarIcon,
-    },
-    { name: "My Profile", href: "/app/profile", icon: UserCircleIcon },
-  ];
+  const mobileNavigation = isReferee
+    ? [
+        {
+          name: "My Matches",
+          href: "/app/referee/matches",
+          icon: HomeIcon,
+        },
+        { name: "Tournaments", href: "/app/tournaments", icon: TrophyIcon },
+        { name: "Players", href: "/app/players", icon: UserGroupIcon },
+        { name: "My Profile", href: "/app/profile", icon: UserCircleIcon },
+      ]
+    : [
+        {
+          name: "Dashboard",
+          href: "/app/dashboard",
+          icon: HomeIcon,
+        },
+        { name: "Tournaments", href: "/app/tournaments", icon: TrophyIcon },
+        { name: "Leaderboard", href: "/app/leaderboard", icon: ChartBarIcon },
+        {
+          name: "Global Rankings",
+          href: "/app/global-leaderboard",
+          icon: ChartBarIcon,
+        },
+        { name: "My Profile", href: "/app/profile", icon: UserCircleIcon },
+      ];
 
   if (isSuperAdmin || hasPermission("MANAGE_USERS")) {
     mobileNavigation.push({ name: "Users Directory", href: "/app/users", icon: UserGroupIcon });
@@ -133,9 +153,9 @@ const Layout: React.FC = () => {
       : "Player";
 
   return (
-    <div className="min-h-screen bg-[#061D23] text-white flex flex-col w-full overflow-x-hidden max-w-full">
+    <div className="min-h-screen bg-[#061D23] text-white flex flex-col w-full overflow-x-hidden max-w-full print:bg-white print:min-h-0 print:p-0 print:m-0 print:overflow-visible">
       {/* Modern Responsive Navbar */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-[#0D3843] border-b border-white/10 shadow-md transition-all duration-300 w-full">
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-[#0D3843] border-b border-white/10 shadow-md transition-all duration-300 w-full no-print print:hidden">
         <div className="w-full px-4 sm:px-6 lg:px-10 xl:px-14 2xl:px-16">
           <div className="flex justify-between items-center h-16 sm:h-20">
             {/* Logo */}
@@ -176,6 +196,27 @@ const Layout: React.FC = () => {
             <div className="flex items-center gap-2 sm:gap-3 shrink-0">
               {user && (
                 <>
+                  {isReferee && (
+                    <div className="hidden md:flex items-center gap-2">
+                      <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-black/40 border border-white/10 text-xs font-mono text-cyan-200">
+                        <ClockIcon className="w-3.5 h-3.5 text-[#4AEEFF]" />
+                        <span>{currentTime}</span>
+                      </div>
+                      <span className="flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider rounded-lg bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                        On Duty
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setShowRulesModal(true)}
+                        className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 border border-white/15 hover:border-[#4AEEFF]/40 text-xs font-bold text-white hover:text-[#4AEEFF] transition-all cursor-pointer shadow-sm active:scale-95"
+                        title="ITTF Official Table Tennis Rules"
+                      >
+                        <BookOpenIcon className="w-3.5 h-3.5 text-[#4AEEFF]" />
+                        <span className="hidden xl:inline">ITTF Rules</span>
+                      </button>
+                    </div>
+                  )}
                   <NotificationBell />
                   <div className="hidden lg:block">
                     <UserNavProfile />
@@ -309,6 +350,23 @@ const Layout: React.FC = () => {
                 })}
               </div>
 
+              {/* Referee Quick Rules (Mobile) */}
+              {isReferee && (
+                <div className="pt-2 border-t border-white/10">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      setShowRulesModal(true);
+                    }}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2 text-xs font-bold text-[#4AEEFF] bg-[#4AEEFF]/10 hover:bg-[#4AEEFF]/20 rounded-xl border border-[#4AEEFF]/30 transition-all active:scale-95"
+                  >
+                    <BookOpenIcon className="w-4 h-4 text-[#4AEEFF]" />
+                    ITTF Official Rules
+                  </button>
+                </div>
+              )}
+
               {/* Bottom Sign Out Button */}
               <div className="pt-2 border-t border-white/10">
                 <button
@@ -329,11 +387,11 @@ const Layout: React.FC = () => {
       )}
 
       {/* Main content with proper top navbar offset */}
-      <main className="flex-1 w-full overflow-x-hidden">
+      <main className="flex-1 w-full overflow-x-hidden print:overflow-visible print:p-0 print:m-0">
         {!user && location.pathname === "/" ? (
           <Hero />
         ) : (
-          <div className="pt-16 sm:pt-20 w-full">
+          <div className="pt-16 sm:pt-20 w-full print:pt-0 print:p-0">
             <Outlet />
           </div>
         )}
@@ -348,6 +406,85 @@ const Layout: React.FC = () => {
           userName={`${user.firstName} ${user.lastName || ""}`}
           userRole={user.role}
         />
+      )}
+
+      {/* ITTF Official Rules Quick Modal (Global for Referees) */}
+      {showRulesModal && (
+        <div className="fixed inset-0 z-50 overflow-y-auto p-4 sm:p-6 flex justify-center items-start pt-20 sm:pt-24 pb-8 bg-black/80 backdrop-blur-md animate-in fade-in duration-200 no-print print:hidden">
+          <div className="bg-[#061D23]/95 border border-[#4AEEFF]/40 rounded-2xl max-w-2xl w-full p-6 text-white shadow-2xl space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-white/10">
+              <div className="flex items-center gap-2">
+                <BookOpenIcon className="w-5 h-5 text-[#4AEEFF]" />
+                <h3 className="text-base font-black uppercase tracking-wider text-white">
+                  ITTF Quick Officiating Reference
+                </h3>
+              </div>
+              <button
+                onClick={() => setShowRulesModal(false)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-white/10 transition"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-3.5 text-xs leading-relaxed text-slate-300">
+              <div className="p-3.5 rounded-xl border border-white/10 bg-white/5 space-y-1">
+                <p className="font-bold uppercase text-[11px] text-[#4AEEFF]">
+                  1. The Service (ITTF Law 2.6)
+                </p>
+                <p>
+                  The ball must rest freely on the palm of the free hand (above
+                  table level and behind the end line). It must be thrown near
+                  vertically upwards at least 16 cm without adding spin, and
+                  struck as it descends.
+                </p>
+              </div>
+
+              <div className="p-3.5 rounded-xl border border-white/10 bg-white/5 space-y-1">
+                <p className="font-bold uppercase text-[11px] text-[#4AEEFF]">
+                  2. Scoring & Deuce (ITTF Law 2.11)
+                </p>
+                <p>
+                  A game is won by the first player scoring 11 points, unless
+                  both players score 10 points (deuce). At 10-10, the server
+                  alternates after every single point, and a player must achieve
+                  a 2-point lead to win.
+                </p>
+              </div>
+
+              <div className="p-3.5 rounded-xl border border-white/10 bg-white/5 space-y-1">
+                <p className="font-bold uppercase text-[11px] text-[#4AEEFF]">
+                  3. Change of Ends (ITTF Law 2.13)
+                </p>
+                <p>
+                  Players swap sides after each game. In the deciding final game
+                  (Game 3 in best of 3, or Game 5 in best of 5), players must
+                  change ends immediately when either player reaches 5 points.
+                </p>
+              </div>
+
+              <div className="p-3.5 rounded-xl border border-white/10 bg-white/5 space-y-1">
+                <p className="font-bold uppercase text-[11px] text-[#4AEEFF]">
+                  4. Timeouts & Towelling
+                </p>
+                <p>
+                  Each player is entitled to ONE 1-minute timeout per match.
+                  Towelling is permitted only every 6 points from the start of
+                  each game, and at the change of ends in the final game.
+                </p>
+              </div>
+            </div>
+
+            <div className="pt-2 flex justify-end">
+              <button
+                onClick={() => setShowRulesModal(false)}
+                className="rounded-xl bg-[#4AEEFF] px-5 py-2 text-xs font-black uppercase tracking-wider text-[#061D23] hover:bg-white transition-all shadow-md active:scale-95"
+              >
+                Close Reference
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

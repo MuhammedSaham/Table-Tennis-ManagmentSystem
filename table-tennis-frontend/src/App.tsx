@@ -214,6 +214,7 @@ function AppRoutes() {
         <Route path="my-registrations" element={<MyRegistrations />} />
         <Route path="my-matches" element={<MyMatches />} />
         <Route path="referee/matches" element={<RefereeMatches />} />
+        <Route path="players" element={<Players />} />
         <Route path="profile" element={<Profile />} />
         <Route
           path="users"

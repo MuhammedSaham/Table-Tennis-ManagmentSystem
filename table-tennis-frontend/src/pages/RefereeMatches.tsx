@@ -2,9 +2,25 @@ import React, { useEffect, useState } from "react";
 import api from "../services/api";
 import toast from "react-hot-toast";
 import BackButton from "../components/BackButton";
+import GlassSelect from "../components/GlassSelect";
 import { UmpireSheet } from "../components/GroupStandings";
 import type { GroupMatch, GameScore } from "../components/GroupStandings";
 import { UmpireSheet as KnockoutUmpireSheet } from "../components/KnockoutBracket";
+import {
+  TrophyIcon,
+  ClockIcon,
+  CheckCircleIcon,
+  ChartBarIcon,
+  MagnifyingGlassIcon,
+  Squares2X2Icon,
+  ListBulletIcon,
+  ArrowPathIcon,
+  DocumentTextIcon,
+  PrinterIcon,
+} from "@heroicons/react/24/outline";
+import { useAuth } from "../context/AuthContext";
+import invertedLogo from "../assets/Logo  with Name inverted.png";
+import darkLogo from "../assets/Logo  with Name.png";
 
 interface Player {
   id: string;
@@ -104,6 +120,7 @@ const formatDuration = (minutes: number): string => {
 };
 
 const RefereeMatches: React.FC = () => {
+  const { user } = useAuth();
   const [matches, setMatches] = useState<Match[]>([]);
   const [refereeStats, setRefereeStats] = useState<RefereeStatistics | null>(
     null,
@@ -114,7 +131,368 @@ const RefereeMatches: React.FC = () => {
     "pending",
   );
   const [matchType, setMatchType] = useState<"knockout" | "group">("knockout");
-  const [showRulesModal, setShowRulesModal] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedTournamentId, setSelectedTournamentId] = useState("ALL");
+  const [selectedCategoryName, setSelectedCategoryName] = useState("ALL");
+  const [viewMode, setViewMode] = useState<"cards" | "table">("cards");
+  const [showPaymentVoucherModal, setShowPaymentVoucherModal] = useState(false);
+
+  const handlePrintDutyLog = () => {
+    const iframe = document.createElement("iframe");
+    iframe.style.position = "fixed";
+    iframe.style.top = "-9999px";
+    iframe.style.left = "-9999px";
+    iframe.style.width = "794px";
+    iframe.style.height = "1123px";
+    iframe.style.border = "0";
+    iframe.style.opacity = "0.01";
+    iframe.style.pointerEvents = "none";
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentWindow?.document;
+    if (!doc) return;
+
+    const completedMatches = matches.filter((m) => m.status === "COMPLETED");
+    const refereeName = user ? `${user.firstName} ${user.lastName || ""}`.trim() : "Official Match Referee";
+    const refereeEmail = user?.email || "referee@samscollege.com";
+    const dateStr = new Date().toLocaleDateString(undefined, { dateStyle: "long" });
+    const timeStr = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    const durationStr = refereeStats
+      ? formatDuration(refereeStats.totalWorkingMinutes)
+      : formatDuration(totalOfficiatingMinutes);
+    const koCount = matches.filter((m) => !m.isGroupMatch).length;
+    const grpCount = matches.filter((m) => m.isGroupMatch).length;
+
+    const rowsHtml = completedMatches.length === 0
+      ? `<tr><td colspan="5" style="padding: 12px; text-align: center; color: #64748b; font-style: italic;">No completed matches recorded for this duty period yet.</td></tr>`
+      : completedMatches.map((m, idx) => {
+          const p1 = getParticipantName(m.player1, m.team1);
+          const p2 = getParticipantName(m.player2, m.team2);
+          const dur = getMatchDurationMinutes(m);
+          return `
+            <tr style="border-bottom: 1px solid #e2e8f0; page-break-inside: avoid; break-inside: avoid;">
+              <td style="padding: 5px 8px; font-weight: bold; color: #0284c7; text-align: center;">#${idx + 1}</td>
+              <td style="padding: 5px 8px;">
+                <div style="font-weight: 700; color: #0f172a; font-size: 10.5px;">${m.tournament?.name || "Tournament"}</div>
+                <div style="color: #64748b; font-size: 9px;">${m.round || "Round"} · Match #${m.matchNumber}</div>
+              </td>
+              <td style="padding: 5px 8px; font-weight: 600; color: #0f172a; font-size: 10.5px;">
+                ${p1} <span style="color: #0284c7; font-weight: 800;">vs</span> ${p2}
+              </td>
+              <td style="padding: 5px 8px; text-align: center; font-weight: 800; color: #0f172a; font-family: monospace; font-size: 10.5px;">
+                ${m.score || "—"}
+              </td>
+              <td style="padding: 5px 8px; text-align: right; color: #475569; font-family: monospace; font-size: 10px;">
+                ${dur !== null ? `${dur} min` : "—"}
+              </td>
+            </tr>
+          `;
+        }).join("");
+
+    doc.open();
+    doc.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <base href="${window.location.origin}/" />
+          <title>Official Referee Officiating Log - Sam's College</title>
+          <style>
+            @page {
+              size: A4 portrait;
+              margin: 8mm 10mm;
+            }
+            * {
+              box-sizing: border-box;
+              margin: 0;
+              padding: 0;
+              font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+            }
+            html, body {
+              background: #ffffff !important;
+              color: #0f172a !important;
+              padding: 0;
+              margin: 0;
+              width: 100%;
+              font-size: 11px;
+              line-height: 1.35;
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
+            }
+            .page-container {
+              width: 100%;
+              max-width: 100%;
+              border: 1.5px solid #0f172a;
+              border-radius: 6px;
+              padding: 12px 16px;
+              background: #ffffff;
+              box-sizing: border-box;
+            }
+            .header {
+              display: flex;
+              align-items: center;
+              justify-content: space-between;
+              padding-bottom: 8px;
+              border-bottom: 1.5px solid #0f172a;
+              margin-bottom: 8px;
+            }
+            .logo-box {
+              display: flex;
+              align-items: center;
+              gap: 12px;
+            }
+            .logo-img {
+              height: 36px;
+              width: auto;
+              object-fit: contain;
+            }
+            .title-box h1 {
+              font-size: 15px;
+              font-weight: 900;
+              text-transform: uppercase;
+              letter-spacing: 0.05em;
+              color: #0f172a;
+            }
+            .title-box p {
+              font-size: 9.5px;
+              font-weight: 600;
+              color: #0284c7;
+              font-family: monospace;
+            }
+            .meta-grid {
+              display: grid;
+              grid-template-columns: repeat(4, 1fr);
+              gap: 8px;
+              padding: 6px 10px;
+              background: #f8fafc;
+              border: 1px solid #cbd5e1;
+              border-radius: 6px;
+              margin-bottom: 8px;
+            }
+            .meta-label {
+              font-size: 8px;
+              font-weight: 800;
+              text-transform: uppercase;
+              letter-spacing: 0.05em;
+              color: #64748b;
+            }
+            .meta-value {
+              font-size: 10px;
+              font-weight: 700;
+              color: #0f172a;
+              margin-top: 1px;
+              white-space: nowrap;
+              overflow: hidden;
+              text-overflow: ellipsis;
+            }
+            .meta-sub {
+              font-size: 8px;
+              color: #64748b;
+              white-space: nowrap;
+              overflow: hidden;
+              text-overflow: ellipsis;
+            }
+            .summary-strip {
+              display: grid;
+              grid-template-columns: repeat(4, 1fr);
+              gap: 8px;
+              padding: 6px 10px;
+              background: #f1f5f9;
+              border: 1px solid #cbd5e1;
+              border-radius: 6px;
+              margin-bottom: 8px;
+            }
+            .summary-val {
+              font-size: 11.5px;
+              font-weight: 900;
+              color: #0f172a;
+              margin-top: 1px;
+            }
+            .section-title {
+              font-size: 10px;
+              font-weight: 900;
+              text-transform: uppercase;
+              letter-spacing: 0.05em;
+              color: #0f172a;
+              margin-bottom: 4px;
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+            }
+            table {
+              width: 100%;
+              border-collapse: collapse;
+              border: 1px solid #cbd5e1;
+              border-radius: 4px;
+              overflow: hidden;
+              margin-bottom: 8px;
+            }
+            thead {
+              display: table-header-group;
+            }
+            tr {
+              page-break-inside: avoid;
+              break-inside: avoid;
+            }
+            th {
+              background: #f1f5f9;
+              color: #0f172a;
+              font-size: 8.5px;
+              font-weight: 800;
+              text-transform: uppercase;
+              letter-spacing: 0.05em;
+              padding: 4px 8px;
+              border-bottom: 1.5px solid #94a3b8;
+            }
+            .signatures {
+              display: grid;
+              grid-template-columns: 1fr 1fr;
+              gap: 20px;
+              padding-top: 6px;
+              border-top: 1.5px solid #0f172a;
+              margin-top: 6px;
+              page-break-inside: avoid;
+              break-inside: avoid;
+            }
+            .sig-line {
+              border-bottom: 1px solid #475569;
+              padding-bottom: 2px;
+              margin-top: 12px;
+              font-style: italic;
+              font-size: 10px;
+              color: #0f172a;
+              font-weight: 600;
+            }
+            .sig-title {
+              font-size: 8px;
+              font-weight: 800;
+              text-transform: uppercase;
+              color: #64748b;
+            }
+            .sig-desc {
+              font-size: 8px;
+              color: #64748b;
+              margin-top: 1px;
+            }
+            .footer-note {
+              margin-top: 6px;
+              font-size: 7.5px;
+              color: #94a3b8;
+              text-align: center;
+              font-style: italic;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="page-container">
+            <div class="header">
+              <div class="logo-box">
+                <img src="${darkLogo}" alt="Sam's College" class="logo-img" />
+                <div style="height: 26px; width: 1px; background: #cbd5e1;"></div>
+                <div class="title-box">
+                  <h1>Official Referee Officiating Log</h1>
+                  <p>Tournament Officiating Timesheet & Verified Match Record</p>
+                </div>
+              </div>
+              <div style="text-align: right; font-size: 8.5px; color: #64748b; font-family: monospace;">
+                <div>OFFICIAL RECORD</div>
+                <div style="font-weight: bold; color: #0284c7;">ITTF CERTIFIED</div>
+              </div>
+            </div>
+
+            <div class="meta-grid">
+              <div>
+                <div class="meta-label">Officiating Referee</div>
+                <div class="meta-value">${refereeName}</div>
+                <div class="meta-sub">${refereeEmail}</div>
+              </div>
+              <div>
+                <div class="meta-label">Date of Log</div>
+                <div class="meta-value">${dateStr}</div>
+                <div class="meta-sub">${timeStr}</div>
+              </div>
+              <div>
+                <div class="meta-label">Duty Status</div>
+                <div class="meta-value" style="color: #047857;">● Certified Active Duty</div>
+                <div class="meta-sub">Official Record Verified</div>
+              </div>
+              <div>
+                <div class="meta-label">Officiating Time</div>
+                <div class="meta-value" style="color: #0284c7;">${durationStr}</div>
+                <div class="meta-sub">Total Active Officiating</div>
+              </div>
+            </div>
+
+            <div class="summary-strip">
+              <div>
+                <div class="meta-label">Total Assigned</div>
+                <div class="summary-val">${matches.length} Fixtures</div>
+              </div>
+              <div>
+                <div class="meta-label">Pending / Live</div>
+                <div class="summary-val" style="color: #b45309;">${pendingCount} Fixtures</div>
+              </div>
+              <div>
+                <div class="meta-label">Completed</div>
+                <div class="summary-val" style="color: #047857;">${completedCount} Verified</div>
+              </div>
+              <div>
+                <div class="meta-label">Stage Split</div>
+                <div class="summary-val" style="font-size: 11px; font-family: monospace;">KO: ${koCount} | Grp: ${grpCount}</div>
+              </div>
+            </div>
+
+            <div class="section-title">
+              <span>Itemized Completed Matches (${completedMatches.length})</span>
+              <span style="font-size: 8.5px; font-weight: normal; color: #64748b; font-family: monospace;">All Scores Official & Verified</span>
+            </div>
+
+            <table>
+              <thead>
+                <tr>
+                  <th style="width: 30px; text-align: center;">#</th>
+                  <th style="text-align: left;">Tournament & Round</th>
+                  <th style="text-align: left;">Competitors</th>
+                  <th style="text-align: center; width: 90px;">Score</th>
+                  <th style="text-align: right; width: 75px;">Duration</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${rowsHtml}
+              </tbody>
+            </table>
+
+            <div class="signatures">
+              <div>
+                <div class="sig-title">Officiating Referee</div>
+                <div class="sig-line">${refereeName}</div>
+                <div class="sig-desc">Signed & Submitted by Officiating Referee</div>
+              </div>
+              <div>
+                <div class="sig-title">Tournament Director / Head Official</div>
+                <div class="sig-line">[ Verified Official Match Record ]</div>
+                <div class="sig-desc">Authorized Signature & Club Seal</div>
+              </div>
+            </div>
+
+            <div class="footer-note">
+              Official Sam's College Table Tennis Management System · Certified Match Officiating Timesheet
+            </div>
+          </div>
+        </body>
+      </html>
+    `);
+    doc.close();
+
+    setTimeout(() => {
+      iframe.contentWindow?.focus();
+      iframe.contentWindow?.print();
+      setTimeout(() => {
+        if (document.body.contains(iframe)) {
+          document.body.removeChild(iframe);
+        }
+      }, 3000);
+    }, 250);
+  };
 
   useEffect(() => {
     fetchAssignedMatches();
@@ -308,6 +686,18 @@ const RefereeMatches: React.FC = () => {
     }
   };
 
+  const uniqueTournaments = Array.from(
+    new Map(
+      matches
+        .filter((m) => m.tournament?.id)
+        .map((m) => [m.tournament.id, m.tournament]),
+    ).values(),
+  );
+
+  const uniqueCategories = Array.from(
+    new Set(matches.map((m) => m.category?.name).filter(Boolean)),
+  ) as string[];
+
   const filteredMatches = matches.filter((m) => {
     if (
       filter === "pending" &&
@@ -320,21 +710,57 @@ const RefereeMatches: React.FC = () => {
     if (matchType === "knockout" && m.isGroupMatch) return false;
     if (matchType === "group" && !m.isGroupMatch) return false;
 
+    if (
+      selectedTournamentId !== "ALL" &&
+      m.tournament?.id !== selectedTournamentId
+    ) {
+      return false;
+    }
+
+    if (
+      selectedCategoryName !== "ALL" &&
+      m.category?.name !== selectedCategoryName
+    ) {
+      return false;
+    }
+
+    if (searchTerm.trim()) {
+      const q = searchTerm.trim().toLowerCase();
+      const p1 = getParticipantName(m.player1, m.team1).toLowerCase();
+      const p2 = getParticipantName(m.player2, m.team2).toLowerCase();
+      const round = (m.round || "").toLowerCase();
+      const matchNum = `match #${m.matchNumber}`.toLowerCase();
+      const tourney = (m.tournament?.name || "").toLowerCase();
+      const cat = (m.category?.name || "").toLowerCase();
+
+      if (
+        !p1.includes(q) &&
+        !p2.includes(q) &&
+        !round.includes(q) &&
+        !matchNum.includes(q) &&
+        !String(m.matchNumber).includes(q) &&
+        !tourney.includes(q) &&
+        !cat.includes(q)
+      ) {
+        return false;
+      }
+    }
+
     return true;
   });
 
   const wrapInBaseLayout = (children: React.ReactNode) => (
-    <div className="relative min-h-screen w-full overflow-hidden bg-[#061D23] text-white">
+    <div className="relative min-h-screen w-full overflow-hidden bg-[#061D23] text-white print:bg-white print:min-h-0 print:p-0 print:m-0 print:overflow-visible">
       {/* ─── BG.PNG FIXED FULL-BLEED BACKGROUND ─── */}
       <div
-        className="fixed inset-0 bg-cover bg-center bg-no-repeat"
+        className="fixed inset-0 bg-cover bg-center bg-no-repeat no-print print:hidden"
         style={{ backgroundImage: "url('/bg1.png')" }}
       />
       {/* Light overlay for text legibility over the paper-texture artwork */}
-      <div className="fixed inset-0 bg-[#061D23]/25" />
-      <div className="fixed inset-0 bg-gradient-to-b from-[#061D23]/20 via-transparent to-[#061D23]/35" />
+      <div className="fixed inset-0 bg-[#061D23]/25 no-print print:hidden" />
+      <div className="fixed inset-0 bg-gradient-to-b from-[#061D23]/20 via-transparent to-[#061D23]/35 no-print print:hidden" />
 
-      <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-[1600px] flex-col space-y-6 px-4 sm:px-6 lg:px-10 xl:px-14 py-4 sm:py-6 lg:py-8">
+      <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-[1600px] flex-col space-y-5 px-4 sm:px-6 lg:px-10 xl:px-14 pt-1 sm:pt-2 pb-8 sm:pb-12 print:min-h-0 print:max-w-full print:p-0 print:m-0 print:space-y-0">
         {children}
       </div>
     </div>
@@ -389,95 +815,127 @@ const RefereeMatches: React.FC = () => {
 
   return wrapInBaseLayout(
     <>
-      {/* HEADER MODULE */}
-      <div className="pt-6 sm:pt-8">
-        <header className="flex flex-col gap-3 rounded-[20px] border border-white/20 bg-[#061D23]/35 p-4 sm:p-5 lg:p-5 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.6)] backdrop-blur-xl">
-          <div>
-            <BackButton to="/" label="Back to Home" className="mb-3" />
-            <div className="flex items-center gap-2 mb-2 flex-wrap">
-              <span className="w-2 h-5 bg-[#4AEEFF] rounded-full shadow-[0_0_10px_#4AEEFF]"></span>
-              <span className="px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-md bg-[#4AEEFF]/15 text-[#4AEEFF] border border-[#4AEEFF]/30">
-                Official Match Portal
-              </span>
-              <span className="flex items-center gap-1 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-md bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                On Duty
-              </span>
+      <div className="no-print space-y-5">
+        {/* ─── ADMIN HEADER MODULE ─── */}
+      <header className="rounded-2xl border border-white/20 bg-[#061D23]/25 p-5 sm:p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <BackButton to="/" label="Back to Home" className="mb-3" />
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#4AEEFF]/10 border border-[#4AEEFF]/30 text-[#4AEEFF] text-[11px] font-bold uppercase tracking-wider mb-2.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#4AEEFF] animate-pulse"></span>
+            <span>Administration · Match Officiating Hub</span>
+          </div>
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-heading font-extrabold text-white tracking-tight">
+            Referee Dashboard
+          </h1>
+          <p className="mt-1 text-xs sm:text-sm text-cyan-200/80 max-w-xl">
+            Inspect your assigned fixtures, record official set scores, and track your officiating duty.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2.5 self-start md:self-center shrink-0">
+          <button
+            onClick={() => setShowPaymentVoucherModal(true)}
+            className="rounded-xl border border-[#4AEEFF]/40 bg-[#4AEEFF]/15 hover:bg-[#4AEEFF] hover:text-[#061D23] px-4 py-2.5 text-xs font-black uppercase tracking-wider text-[#4AEEFF] transition-all flex items-center gap-2 shadow-sm active:scale-95"
+            title="Official Referee Duty Log & Match Officiating Timesheet"
+          >
+            <DocumentTextIcon className="w-4 h-4" />
+            <span>My Duty Log</span>
+          </button>
+          <button
+            onClick={fetchAssignedMatches}
+            className="rounded-xl border border-white/20 bg-white/5 hover:bg-white/10 hover:border-white/40 p-2.5 text-xs font-bold text-slate-300 hover:text-white transition-all shadow-sm active:scale-95"
+            title="Refresh Assigned Matches"
+          >
+            <ArrowPathIcon className="w-4 h-4" />
+          </button>
+        </div>
+      </header>
+
+      {/* ─── METRIC STATS CARDS (Admin Standard Grid) ─── */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
+        {/* Total Matches */}
+        <div className="rounded-2xl border border-white/20 bg-[#061D23]/30 p-4 sm:p-5 shadow-[0_20px_50px_-15px_rgba(6,29,35,0.6)] backdrop-blur-xl flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-white/60">
+              Total Assigned
+            </span>
+            <div className="p-2 rounded-xl bg-[#4AEEFF]/10 border border-[#4AEEFF]/30 text-[#4AEEFF]">
+              <TrophyIcon className="w-4 h-4" />
             </div>
-            <h1 className="text-xl sm:text-3xl lg:text-4xl font-black uppercase tracking-[0.08em] sm:tracking-[0.12em] text-white break-words">
-              Referee Dashboard
-            </h1>
-            <p className="mt-1.5 text-xs text-slate-300 max-w-xl">
-              Inspect your assigned matches, manage court schedules, and enter
-              official set scores.
+          </div>
+          <div className="mt-3">
+            <p className="text-2xl sm:text-3xl font-black text-white">
+              {matches.length}
+            </p>
+            <p className="text-[11px] text-[#4AEEFF] font-medium mt-0.5">
+              Official Fixtures
             </p>
           </div>
+        </div>
 
-          <div className="flex flex-col gap-3">
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => setShowRulesModal(true)}
-                className="rounded-xl border border-white/20 bg-white/5 px-3.5 py-3 text-xs font-bold text-white hover:bg-white/10 hover:border-[#4AEEFF]/40 transition-all flex items-center gap-2 shadow-sm"
-                title="ITTF Official Rules Quick Reference"
-              >
-                <span>📖</span>
-                <span className="hidden sm:inline">ITTF Rules</span>
-              </button>
-              <button
-                onClick={fetchAssignedMatches}
-                className="rounded-xl border border-white/20 bg-white/5 p-3 text-xs font-bold text-slate-300 hover:text-white hover:bg-white/10 transition-all shadow-sm"
-                title="Refresh Assigned Matches"
-              >
-                🔄
-              </button>
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 w-full">
-              <div className="rounded-xl border border-white/10 bg-black/30 px-3.5 py-2.5 text-center min-w-0">
-                <p className="text-lg sm:text-xl font-black text-[#4AEEFF]">
-                  {matches.length}
-                </p>
-                <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">
-                  Total
-                </p>
-              </div>
-              <div className="rounded-xl border border-amber-400/20 bg-amber-400/5 px-3.5 py-2.5 text-center min-w-0">
-                <p className="text-lg sm:text-xl font-black text-amber-400">
-                  {pendingCount}
-                </p>
-                <p className="text-[9px] font-bold uppercase tracking-wider text-amber-300/70">
-                  Pending
-                </p>
-              </div>
-              <div className="rounded-xl border border-emerald-400/20 bg-emerald-400/5 px-3.5 py-2.5 text-center min-w-0">
-                <p className="text-lg sm:text-xl font-black text-emerald-400">
-                  {completedCount}
-                </p>
-                <p className="text-[9px] font-bold uppercase tracking-wider text-emerald-300/70">
-                  Completed
-                </p>
-              </div>
-
-              <div className="rounded-xl border border-[#4AEEFF]/30 bg-[#4AEEFF]/10 px-3.5 py-2.5 text-center min-w-0">
-                <p className="text-lg sm:text-xl font-black text-[#4AEEFF]">
-                  {refereeStats
-                    ? formatDuration(refereeStats.totalWorkingMinutes)
-                    : formatDuration(totalOfficiatingMinutes)}
-                </p>
-                <p className="text-[9px] font-bold uppercase tracking-wider text-[#4AEEFF]/80">
-                  Officiating Time
-                </p>
-                {refereeStats && (
-                  <p className="mt-1 text-[9px] text-[#4AEEFF]/70">
-                    Group: {formatDuration(refereeStats.groupStageMinutes)}
-                    {" | "}
-                    Knockout:{" "}
-                    {formatDuration(refereeStats.knockoutStageMinutes)}
-                  </p>
-                )}
-              </div>
+        {/* Pending */}
+        <div className="rounded-2xl border border-amber-400/30 bg-[#061D23]/30 p-4 sm:p-5 shadow-[0_20px_50px_-15px_rgba(6,29,35,0.6)] backdrop-blur-xl flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-amber-300/80">
+              Pending / Live
+            </span>
+            <div className="p-2 rounded-xl bg-amber-400/10 border border-amber-400/30 text-amber-400">
+              <ClockIcon className="w-4 h-4" />
             </div>
           </div>
-        </header>
+          <div className="mt-3">
+            <p className="text-2xl sm:text-3xl font-black text-amber-400">
+              {pendingCount}
+            </p>
+            <p className="text-[11px] text-amber-300/70 font-medium mt-0.5">
+              Awaiting Completion
+            </p>
+          </div>
+        </div>
+
+        {/* Completed */}
+        <div className="rounded-2xl border border-emerald-400/30 bg-[#061D23]/30 p-4 sm:p-5 shadow-[0_20px_50px_-15px_rgba(6,29,35,0.6)] backdrop-blur-xl flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-300/80">
+              Completed
+            </span>
+            <div className="p-2 rounded-xl bg-emerald-400/10 border border-emerald-400/30 text-emerald-400">
+              <CheckCircleIcon className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <p className="text-2xl sm:text-3xl font-black text-emerald-400">
+              {completedCount}
+            </p>
+            <p className="text-[11px] text-emerald-300/70 font-medium mt-0.5">
+              Recorded & Verified
+            </p>
+          </div>
+        </div>
+
+        {/* Officiating Time */}
+        <div className="rounded-2xl border border-[#4AEEFF]/40 bg-[#061D23]/30 p-4 sm:p-5 shadow-[0_20px_50px_-15px_rgba(6,29,35,0.6)] backdrop-blur-xl flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-[#4AEEFF]">
+              Officiating Time
+            </span>
+            <div className="p-2 rounded-xl bg-[#4AEEFF]/15 border border-[#4AEEFF]/40 text-[#4AEEFF]">
+              <ChartBarIcon className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <p className="text-xl sm:text-2xl font-black text-[#4AEEFF] truncate">
+              {refereeStats
+                ? formatDuration(refereeStats.totalWorkingMinutes)
+                : formatDuration(totalOfficiatingMinutes)}
+            </p>
+            <p className="text-[10px] text-white/60 font-medium mt-0.5 truncate">
+              {refereeStats
+                ? `Group: ${formatDuration(refereeStats.groupStageMinutes)} | KO: ${formatDuration(refereeStats.knockoutStageMinutes)}`
+                : "Active Officiating Duration"}
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* ─── NEXT MATCH ON COURT SPOTLIGHT HERO ─── */}
@@ -527,7 +985,7 @@ const RefereeMatches: React.FC = () => {
 
               <div className="flex items-center gap-4 text-xs text-slate-300 font-mono flex-wrap">
                 <span>
-                  📍 {nextPendingMatch.tournament?.venue || "Main Court"}
+                  📍 {nextPendingMatch.tournament?.venue || "Tournament Venue"}
                 </span>
                 {nextPendingMatch.category && (
                   <>
@@ -568,68 +1026,136 @@ const RefereeMatches: React.FC = () => {
         </section>
       )}
 
-      {/* FILTER & STAGE CONTROLS */}
-      <section className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 rounded-[16px] border border-white/20 bg-[#061D23]/25 p-4 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl">
-        {/* Stage selection */}
-        <div className="flex gap-2">
-          <button
-            onClick={() => setMatchType("knockout")}
-            className={`rounded-xl px-4 py-2 text-xs font-bold uppercase tracking-wider transition-all duration-200 ${
-              matchType === "knockout"
-                ? "bg-[#4AEEFF]/15 text-[#4AEEFF] border border-[#4AEEFF]/45 shadow-[0_0_14px_rgba(74,238,255,0.18)] backdrop-blur-md"
-                : "border border-white/10 bg-white/5 text-white/70 hover:bg-white/10 hover:text-white"
-            }`}
-          >
-            Knockout Stage
-          </button>
-          <button
-            onClick={() => setMatchType("group")}
-            className={`rounded-xl px-4 py-2 text-xs font-bold uppercase tracking-wider transition-all duration-200 ${
-              matchType === "group"
-                ? "bg-[#4AEEFF]/15 text-[#4AEEFF] border border-[#4AEEFF]/45 shadow-[0_0_14px_rgba(74,238,255,0.18)] backdrop-blur-md"
-                : "border border-white/10 bg-white/5 text-white/70 hover:bg-white/10 hover:text-white"
-            }`}
-          >
-            Group Stage
-          </button>
+      {/* ─── FILTER & SEARCH CONTROLS ─── */}
+      <section className="rounded-2xl border border-white/20 bg-[#061D23]/30 p-4 sm:p-5 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl space-y-4">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+          {/* Stage selection */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setMatchType("knockout")}
+              className={`rounded-xl px-4 py-2 text-xs font-bold uppercase tracking-wider transition-all duration-200 ${
+                matchType === "knockout"
+                  ? "bg-[#4AEEFF]/15 text-[#4AEEFF] border border-[#4AEEFF]/45 shadow-[0_0_14px_rgba(74,238,255,0.18)]"
+                  : "border border-white/10 bg-white/5 text-white/70 hover:bg-white/10 hover:text-white"
+              }`}
+            >
+              Knockout Stage
+            </button>
+            <button
+              onClick={() => setMatchType("group")}
+              className={`rounded-xl px-4 py-2 text-xs font-bold uppercase tracking-wider transition-all duration-200 ${
+                matchType === "group"
+                  ? "bg-[#4AEEFF]/15 text-[#4AEEFF] border border-[#4AEEFF]/45 shadow-[0_0_14px_rgba(74,238,255,0.18)]"
+                  : "border border-white/10 bg-white/5 text-white/70 hover:bg-white/10 hover:text-white"
+              }`}
+            >
+              Group Stage
+            </button>
+          </div>
+
+          {/* Status filters */}
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {(["all", "pending", "completed"] as const).map((st) => (
+              <button
+                key={st}
+                onClick={() => setFilter(st)}
+                className={`rounded-xl px-3.5 py-1.5 text-xs font-bold uppercase tracking-wider transition-all duration-200 ${
+                  filter === st
+                    ? "bg-[#4AEEFF]/15 text-[#4AEEFF] border border-[#4AEEFF]/45 shadow-[0_0_14px_rgba(74,238,255,0.18)]"
+                    : "border border-white/10 bg-white/5 text-white/70 hover:bg-white/10 hover:text-white"
+                }`}
+              >
+                {st}
+              </button>
+            ))}
+          </div>
+
+          {/* View toggle (Cards vs Table) */}
+          <div className="hidden sm:flex items-center gap-1 bg-white/5 border border-white/10 p-1 rounded-xl">
+            <button
+              onClick={() => setViewMode("cards")}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${
+                viewMode === "cards"
+                  ? "bg-[#4AEEFF]/20 text-[#4AEEFF] border border-[#4AEEFF]/40 shadow-sm"
+                  : "text-white/60 hover:text-white"
+              }`}
+              title="Card View"
+            >
+              <Squares2X2Icon className="w-3.5 h-3.5" />
+              <span>Cards</span>
+            </button>
+            <button
+              onClick={() => setViewMode("table")}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${
+                viewMode === "table"
+                  ? "bg-[#4AEEFF]/20 text-[#4AEEFF] border border-[#4AEEFF]/40 shadow-sm"
+                  : "text-white/60 hover:text-white"
+              }`}
+              title="Table View"
+            >
+              <ListBulletIcon className="w-3.5 h-3.5" />
+              <span>Table</span>
+            </button>
+          </div>
         </div>
 
-        {/* Status filters */}
-        <div className="flex gap-2 border-t lg:border-t-0 lg:border-l border-white/10 pt-3 lg:pt-0 lg:pl-3 flex-wrap">
-          <button
-            onClick={() => setFilter("all")}
-            className={`rounded-xl px-3.5 py-1.5 text-xs font-bold uppercase tracking-wider transition-all duration-200 ${
-              filter === "all"
-                ? "bg-[#4AEEFF]/15 text-[#4AEEFF] border border-[#4AEEFF]/45 shadow-[0_0_14px_rgba(74,238,255,0.18)] backdrop-blur-md"
-                : "border border-white/10 bg-white/5 text-white/70 hover:bg-white/10 hover:text-white"
-            }`}
+        {/* Search & Dropdowns Row */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-3 border-t border-white/10">
+          {/* Search bar */}
+          <div className="relative">
+            <MagnifyingGlassIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
+            <input
+              type="text"
+              placeholder="Search player, round, or match #..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-8 py-2 rounded-xl bg-white/5 border border-white/15 text-xs text-white placeholder-white/40 focus:outline-none focus:border-[#4AEEFF] focus:ring-1 focus:ring-[#4AEEFF] transition-all"
+            />
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm("")}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white text-xs"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+
+          {/* Tournament Dropdown */}
+          <GlassSelect
+            value={selectedTournamentId}
+            onChange={(e) => setSelectedTournamentId(e.target.value)}
+            className="w-full text-xs"
           >
-            All
-          </button>
-          <button
-            onClick={() => setFilter("pending")}
-            className={`rounded-xl px-3.5 py-1.5 text-xs font-bold uppercase tracking-wider transition-all duration-200 ${
-              filter === "pending"
-                ? "bg-[#4AEEFF]/15 text-[#4AEEFF] border border-[#4AEEFF]/45 shadow-[0_0_14px_rgba(74,238,255,0.18)] backdrop-blur-md"
-                : "border border-white/10 bg-white/5 text-white/70 hover:bg-white/10 hover:text-white"
-            }`}
+            <option value="ALL" className="bg-[#061D23] text-white">
+              All Tournaments ({uniqueTournaments.length})
+            </option>
+            {uniqueTournaments.map((t) => (
+              <option key={t.id} value={t.id} className="bg-[#061D23] text-white">
+                {t.name}
+              </option>
+            ))}
+          </GlassSelect>
+
+          {/* Category Dropdown */}
+          <GlassSelect
+            value={selectedCategoryName}
+            onChange={(e) => setSelectedCategoryName(e.target.value)}
+            className="w-full text-xs"
           >
-            Pending
-          </button>
-          <button
-            onClick={() => setFilter("completed")}
-            className={`rounded-xl px-3.5 py-1.5 text-xs font-bold uppercase tracking-wider transition-all duration-200 ${
-              filter === "completed"
-                ? "bg-[#4AEEFF]/15 text-[#4AEEFF] border border-[#4AEEFF]/45 shadow-[0_0_14px_rgba(74,238,255,0.18)] backdrop-blur-md"
-                : "border border-white/10 bg-white/5 text-white/70 hover:bg-white/10 hover:text-white"
-            }`}
-          >
-            Completed
-          </button>
+            <option value="ALL" className="bg-[#061D23] text-white">
+              All Categories ({uniqueCategories.length})
+            </option>
+            {uniqueCategories.map((c) => (
+              <option key={c} value={c} className="bg-[#061D23] text-white">
+                {c}
+              </option>
+            ))}
+          </GlassSelect>
         </div>
       </section>
 
-      {/* MATCHES LIST */}
+      {/* ─── MATCHES LIST OR TABLE ─── */}
       <div className="space-y-4">
         {filteredMatches.length === 0 ? (
           <section className="rounded-[20px] border border-white/15 bg-[#061D23]/30 p-6 sm:p-8 lg:p-10 text-center shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl">
@@ -640,22 +1166,27 @@ const RefereeMatches: React.FC = () => {
               ● Official Standby
             </span>
             <h3 className="text-lg sm:text-xl font-black uppercase tracking-wider text-white">
-              No Matches in this Category
+              No Matches Found
             </h3>
             <p className="mt-2 text-xs text-slate-300 max-w-md mx-auto leading-relaxed">
               {matches.length === 0
                 ? "You do not have any matches assigned to your referee account yet. Once the tournament administrator assigns you a fixture, it will appear here instantly."
-                : `You have no ${filter !== "all" ? filter : ""} matches for ${matchType === "knockout" ? "Knockout" : "Group"} stage right now.`}
+                : `No fixtures match your current filter settings for ${matchType === "knockout" ? "Knockout" : "Group"} stage.`}
             </p>
 
             {matches.length > 0 && (
               <div className="mt-5 flex flex-wrap justify-center gap-3">
-                {filter !== "all" && (
+                {(filter !== "all" || searchTerm || selectedTournamentId !== "ALL" || selectedCategoryName !== "ALL") && (
                   <button
-                    onClick={() => setFilter("all")}
+                    onClick={() => {
+                      setFilter("all");
+                      setSearchTerm("");
+                      setSelectedTournamentId("ALL");
+                      setSelectedCategoryName("ALL");
+                    }}
                     className="rounded-xl border border-white/20 bg-white/5 px-4 py-2 text-xs font-bold text-white hover:bg-white/10 transition-all"
                   >
-                    View All Stages
+                    Reset All Filters
                   </button>
                 )}
                 <button
@@ -672,7 +1203,140 @@ const RefereeMatches: React.FC = () => {
               </div>
             )}
           </section>
+        ) : viewMode === "table" ? (
+          /* ─── DESKTOP TABLE VIEW ─── */
+          <div className="rounded-2xl border border-white/20 bg-[#061D23]/30 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl overflow-hidden text-white">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-white/15 bg-white/5 text-[11px] font-bold uppercase tracking-wider text-[#4AEEFF]">
+                    <th className="px-5 py-3.5 text-center w-24">Match #</th>
+                    <th className="px-5 py-3.5">Tournament & Category</th>
+                    <th className="px-5 py-3.5">Competitors</th>
+                    <th className="px-5 py-3.5 text-center">Score / Sets</th>
+                    <th className="px-5 py-3.5 text-center">Status</th>
+                    <th className="px-5 py-3.5 text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/10 text-sm">
+                  {filteredMatches.map((match) => {
+                    const p1Name = getParticipantName(match.player1, match.team1);
+                    const p2Name = getParticipantName(match.player2, match.team2);
+                    const isP1Winner =
+                      match.status === "COMPLETED" &&
+                      (match.winnerId === match.player1?.id ||
+                        match.winnerId === match.team1?.id);
+                    const isP2Winner =
+                      match.status === "COMPLETED" &&
+                      (match.winnerId === match.player2?.id ||
+                        match.winnerId === match.team2?.id);
+                    const scoreParts = match.score
+                      ? match.score.split(",").map((s) => s.trim())
+                      : [];
+
+                    return (
+                      <tr
+                        key={match.id}
+                        className="group transition-colors hover:bg-white/5"
+                      >
+                        {/* Match Number & Round */}
+                        <td className="px-5 py-4 text-center">
+                          <span className="inline-flex flex-col items-center">
+                            <span className="text-[#4AEEFF] font-mono font-bold text-xs">
+                              #{match.matchNumber}
+                            </span>
+                            <span className="text-[10px] text-white/50 font-mono">
+                              {match.round}
+                            </span>
+                          </span>
+                        </td>
+
+                        {/* Tournament & Category */}
+                        <td className="px-5 py-4">
+                          <p className="font-bold text-white text-xs truncate max-w-[200px]">
+                            {match.tournament?.name}
+                          </p>
+                          <p className="text-[11px] text-white/60 truncate mt-0.5">
+                            {match.category?.name} ({match.category?.type})
+                          </p>
+                        </td>
+
+                        {/* Competitors */}
+                        <td className="px-5 py-4">
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={`font-bold text-xs truncate max-w-[130px] ${
+                                isP1Winner ? "text-emerald-300 font-black" : "text-white"
+                              }`}
+                            >
+                              {p1Name}
+                            </span>
+                            {isP1Winner && <span className="text-xs">👑</span>}
+                            <span className="text-[10px] text-[#4AEEFF] font-black px-1.5 py-0.5 rounded bg-white/10">
+                              VS
+                            </span>
+                            <span
+                              className={`font-bold text-xs truncate max-w-[130px] ${
+                                isP2Winner ? "text-emerald-300 font-black" : "text-white"
+                              }`}
+                            >
+                              {p2Name}
+                            </span>
+                            {isP2Winner && <span className="text-xs">👑</span>}
+                          </div>
+                        </td>
+
+                        {/* Score / Sets */}
+                        <td className="px-5 py-4 text-center">
+                          {scoreParts.length > 0 ? (
+                            <div className="flex items-center justify-center gap-1 flex-wrap">
+                              {scoreParts.map((setStr, idx) => (
+                                <span
+                                  key={idx}
+                                  className="px-2 py-0.5 rounded bg-black/40 border border-[#4AEEFF]/30 text-xs font-mono font-bold text-[#4AEEFF]"
+                                >
+                                  {setStr}
+                                </span>
+                              ))}
+                            </div>
+                          ) : (
+                            <span className="text-xs text-white/40 font-mono">—</span>
+                          )}
+                        </td>
+
+                        {/* Status */}
+                        <td className="px-5 py-4 text-center">
+                          <span
+                            className={`rounded-md px-2.5 py-1 text-[10px] font-black uppercase tracking-wider inline-block ${getStatusBadgeClass(
+                              match.status,
+                            )}`}
+                          >
+                            {match.status}
+                          </span>
+                        </td>
+
+                        {/* Action */}
+                        <td className="px-5 py-4 text-right">
+                          <button
+                            onClick={() => setSelectedMatch(match)}
+                            className={`rounded-xl px-4 py-2 text-xs font-bold uppercase tracking-wider transition-all duration-200 active:scale-95 shadow-sm ${
+                              match.status === "COMPLETED"
+                                ? "border border-white/20 bg-white/5 hover:bg-white/10 text-white"
+                                : "bg-[#4AEEFF] hover:bg-white text-[#061D23] font-black shadow-md shadow-[#4AEEFF]/20"
+                            }`}
+                          >
+                            {match.status === "COMPLETED" ? "View Score" : "Manage Score →"}
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
         ) : (
+          /* ─── CARD VIEW ─── */
           filteredMatches.map((match) => {
             const p1Name = getParticipantName(match.player1, match.team1);
             const p2Name = getParticipantName(match.player2, match.team2);
@@ -834,81 +1498,194 @@ const RefereeMatches: React.FC = () => {
           })
         )}
       </div>
-
-      {/* ─── OFFICIAL ITTF RULES MODAL ─── */}
-      {showRulesModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="bg-[#061D23]/95 border border-[#4AEEFF]/30 rounded-2xl max-w-2xl w-full p-6 sm:p-7 text-white shadow-2xl space-y-5 custom-scrollbar max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between pb-3 border-b border-white/10">
-              <div className="flex items-center gap-2.5">
-                <span className="w-2 h-5 bg-[#4AEEFF] rounded-full shadow-[0_0_10px_#4AEEFF]"></span>
-                <h3 className="text-lg font-black uppercase tracking-wider">
-                  ITTF Table Tennis Umpire Regulations
-                </h3>
+      </div>{/* ─── OFFICIAL REFEREE OFFICIATING DUTY LOG MODAL (PRINT-OPTIMIZED) ─── */}
+      {showPaymentVoucherModal && (
+        <div className="printable-document-wrapper fixed inset-0 z-50 overflow-y-auto p-4 sm:p-6 flex justify-center items-start pt-16 sm:pt-20 pb-8 bg-black/80 backdrop-blur-md animate-in fade-in duration-200 print:bg-white print:p-0 print:m-0 print:static print:w-full print:max-w-full">
+          <div className="printable-document-card bg-[#061D23]/95 border border-[#4AEEFF]/40 rounded-2xl max-w-3xl w-full p-6 sm:p-8 text-white shadow-2xl space-y-4 my-auto custom-scrollbar print:bg-white print:text-slate-900 print:border-slate-800 print:shadow-none print:p-4 print:space-y-3 print:max-w-full print:w-full">
+            {/* Log Header */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-white/15 print:border-slate-300">
+              <div className="flex items-center gap-3">
+                <img
+                  src={invertedLogo}
+                  alt="Sam's College"
+                  className="h-10 w-auto object-contain block shrink-0 print:hidden"
+                />
+                <img
+                  src={darkLogo}
+                  alt="Sam's College"
+                  className="h-10 w-auto object-contain hidden print:block shrink-0"
+                />
+                <div className="h-7 w-[1px] bg-white/20 print:bg-slate-300" />
+                <div>
+                  <h3 className="text-base sm:text-lg font-black uppercase tracking-wider text-white print:text-slate-900">
+                    Official Referee Officiating Log
+                  </h3>
+                  <p className="text-[11px] text-[#4AEEFF] print:text-sky-800 font-medium font-mono">
+                    Tournament Officiating Timesheet & Verified Match Record
+                  </p>
+                </div>
               </div>
               <button
-                onClick={() => setShowRulesModal(false)}
-                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-white/10 transition"
+                onClick={() => setShowPaymentVoucherModal(false)}
+                className="no-print print:hidden text-slate-400 hover:text-white p-1.5 rounded-lg hover:bg-white/10 transition self-end sm:self-auto"
               >
                 ✕
               </button>
             </div>
 
-            <div className="space-y-4 text-xs leading-relaxed text-slate-300">
-              <div className="p-3.5 rounded-xl border border-white/10 bg-white/5 space-y-1">
-                <p className="font-bold text-white uppercase text-[11px] text-[#4AEEFF]">
-                  1. The Service (ITTF Law 2.6)
+            {/* Referee & Officiating Meta Summary */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-3.5 rounded-xl bg-white/5 border border-white/10 text-xs print:bg-slate-50 print:border-slate-300">
+              <div>
+                <p className="text-white/50 print:text-slate-600 text-[10px] font-bold uppercase tracking-wider">Officiating Referee</p>
+                <p className="text-white print:text-slate-900 font-bold mt-0.5 text-xs truncate">
+                  {user ? `${user.firstName} ${user.lastName || ""}` : "Official Referee"}
                 </p>
-                <p>
-                  The ball must rest freely on the palm of the free hand (above
-                  table level and behind the end line). It must be thrown near
-                  vertically upwards at least 16 cm without adding spin, and
-                  struck as it descends.
-                </p>
+                <p className="text-white/40 print:text-slate-500 text-[10px] truncate">{user?.email || "Certified Official"}</p>
               </div>
-
-              <div className="p-3.5 rounded-xl border border-white/10 bg-white/5 space-y-1">
-                <p className="font-bold text-white uppercase text-[11px] text-[#4AEEFF]">
-                  2. Scoring & Deuce (ITTF Law 2.11)
-                </p>
-                <p>
-                  A game is won by the first player scoring 11 points, unless
-                  both players score 10 points (deuce). At 10-10, the server
-                  alternates after every single point, and a player must achieve
-                  a 2-point lead to win.
-                </p>
+              <div>
+                <p className="text-white/50 print:text-slate-600 text-[10px] font-bold uppercase tracking-wider">Date of Log</p>
+                <p className="text-white print:text-slate-900 font-mono font-bold mt-0.5">{new Date().toLocaleDateString(undefined, { dateStyle: "long" })}</p>
+                <p className="text-white/40 print:text-slate-500 text-[10px]">{new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</p>
               </div>
-
-              <div className="p-3.5 rounded-xl border border-white/10 bg-white/5 space-y-1">
-                <p className="font-bold text-white uppercase text-[11px] text-[#4AEEFF]">
-                  3. Change of Ends (ITTF Law 2.13)
-                </p>
-                <p>
-                  Players swap sides after each game. In the deciding final game
-                  (Game 3 in best of 3, or Game 5 in best of 5), players must
-                  change ends immediately when either player reaches 5 points.
-                </p>
+              <div>
+                <p className="text-white/50 print:text-slate-600 text-[10px] font-bold uppercase tracking-wider">Duty Status</p>
+                <p className="text-emerald-400 print:text-emerald-700 font-bold mt-0.5 font-mono">● Certified Active Duty</p>
+                <p className="text-white/40 print:text-slate-500 text-[10px]">Official Record Verified</p>
               </div>
-
-              <div className="p-3.5 rounded-xl border border-white/10 bg-white/5 space-y-1">
-                <p className="font-bold text-white uppercase text-[11px] text-[#4AEEFF]">
-                  4. Timeouts & Towelling
+              <div>
+                <p className="text-white/50 print:text-slate-600 text-[10px] font-bold uppercase tracking-wider">Officiating Time</p>
+                <p className="text-[#4AEEFF] print:text-sky-800 font-mono font-black mt-0.5">
+                  {refereeStats
+                    ? formatDuration(refereeStats.totalWorkingMinutes)
+                    : formatDuration(totalOfficiatingMinutes)}
                 </p>
-                <p>
-                  Each player is entitled to ONE 1-minute timeout per match.
-                  Towelling is permitted only every 6 points from the start of
-                  each game, and at the change of ends in the final game.
-                </p>
+                <p className="text-white/40 print:text-slate-500 text-[10px]">Total Active Officiating</p>
               </div>
             </div>
 
-            <div className="pt-2 flex justify-end">
-              <button
-                onClick={() => setShowRulesModal(false)}
-                className="rounded-xl bg-[#4AEEFF] px-5 py-2 text-xs font-black uppercase tracking-wider text-[#061D23] hover:bg-white transition-all shadow-md"
-              >
-                Close Reference
-              </button>
+            {/* Officiating Activity Summary Strip */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 p-3 rounded-xl bg-white/5 border border-white/10 text-xs print:bg-slate-50 print:border-slate-300">
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-white/50 print:text-slate-600 block">Total Assigned</span>
+                <span className="text-sm sm:text-base font-black text-white print:text-slate-900 mt-0.5 block">{matches.length} Fixtures</span>
+              </div>
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-amber-300/80 print:text-amber-700 block">Pending / Live</span>
+                <span className="text-sm sm:text-base font-black text-amber-400 print:text-amber-800 mt-0.5 block">{pendingCount} Fixtures</span>
+              </div>
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-300/80 print:text-emerald-700 block">Completed</span>
+                <span className="text-sm sm:text-base font-black text-emerald-400 print:text-emerald-800 mt-0.5 block">{completedCount} Verified</span>
+              </div>
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#4AEEFF] print:text-sky-800 block">Stage Split</span>
+                <span className="text-[11px] font-mono text-cyan-200 print:text-slate-700 mt-1 block">
+                  KO: {matches.filter((m) => !m.isGroupMatch).length} | Grp: {matches.filter((m) => m.isGroupMatch).length}
+                </span>
+              </div>
+            </div>
+
+            {/* Completed Matches Itemized Table */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="text-xs font-black uppercase tracking-wider text-white print:text-slate-900">
+                  Itemized Completed Matches ({matches.filter((m) => m.status === "COMPLETED").length})
+                </h4>
+                <span className="text-[10px] text-white/50 print:text-slate-500 font-mono">
+                  All Scores Official & ITTF Verified
+                </span>
+              </div>
+              <div className="rounded-xl border border-white/10 print:border-slate-300 overflow-hidden">
+                <div className="max-h-56 overflow-y-auto printable-table-scroll">
+                  <table className="w-full text-left border-collapse text-xs print:text-[10px]">
+                    <thead>
+                      <tr className="border-b border-white/10 bg-white/5 text-[10px] font-bold uppercase tracking-wider text-white/60 font-mono print:bg-slate-100 print:text-slate-800 print:border-slate-300">
+                        <th className="px-3 py-2 text-center w-10">#</th>
+                        <th className="px-3 py-2">Tournament & Round</th>
+                        <th className="px-3 py-2">Competitors</th>
+                        <th className="px-3 py-2 text-center">Score</th>
+                        <th className="px-3 py-2 text-right">Duration</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-white/5 font-mono text-[11px] print:divide-slate-200 print:text-[10px]">
+                      {matches.filter((m) => m.status === "COMPLETED").length === 0 ? (
+                        <tr>
+                          <td colSpan={5} className="px-3.5 py-6 text-center text-white/40 print:text-slate-500 italic">
+                            No completed matches recorded for this duty period yet.
+                          </td>
+                        </tr>
+                      ) : (
+                        matches
+                          .filter((m) => m.status === "COMPLETED")
+                          .map((m, idx) => {
+                            const p1 = getParticipantName(m.player1, m.team1);
+                            const p2 = getParticipantName(m.player2, m.team2);
+                            const dur = getMatchDurationMinutes(m);
+
+                            return (
+                              <tr key={m.id} className="hover:bg-white/5 print:hover:bg-transparent">
+                                <td className="px-3 py-2 text-[#4AEEFF] print:text-slate-900 font-bold text-center">#{idx + 1}</td>
+                                <td className="px-3 py-2">
+                                  <span className="text-white print:text-slate-900 font-sans font-bold block">{m.tournament?.name}</span>
+                                  <span className="text-white/50 print:text-slate-600 text-[10px]">{m.round} · Match #{m.matchNumber}</span>
+                                </td>
+                                <td className="px-3 py-2 text-white/90 print:text-slate-900 font-sans font-semibold">
+                                  {p1} <span className="text-[#4AEEFF] print:text-sky-700 font-bold">vs</span> {p2}
+                                </td>
+                                <td className="px-3 py-2 text-center text-[#4AEEFF] print:text-slate-900 font-bold font-mono">{m.score || "—"}</td>
+                                <td className="px-3 py-2 text-right text-white/70 print:text-slate-700 font-mono">
+                                  {dur !== null ? `${dur} min` : "—"}
+                                </td>
+                              </tr>
+                            );
+                          })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            {/* Official Signatures Verification Block */}
+            <div className="grid grid-cols-2 gap-8 pt-3 border-t border-white/10 print:border-slate-300 text-xs">
+              <div className="space-y-4">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-white/50 print:text-slate-600">Officiating Referee</p>
+                <div className="border-b border-white/30 print:border-slate-400 pb-1">
+                  <span className="text-white/30 print:text-slate-800 italic text-[11px] font-semibold">
+                    {user ? `${user.firstName} ${user.lastName || ""}` : "Referee Digital Signature"}
+                  </span>
+                </div>
+                <p className="text-[10px] text-white/60 print:text-slate-600">Signed & Submitted by Officiating Referee</p>
+              </div>
+              <div className="space-y-4">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-white/50 print:text-slate-600">Tournament Director / Head Official</p>
+                <div className="border-b border-white/30 print:border-slate-400 pb-1">
+                  <span className="text-white/30 print:text-slate-800 italic text-[11px] font-semibold">[ Verified Official Match Record ]</span>
+                </div>
+                <p className="text-[10px] text-white/60 print:text-slate-600">Authorized Signature & Club Seal</p>
+              </div>
+            </div>
+
+            {/* Modal Actions */}
+            <div className="pt-2 flex items-center justify-between flex-wrap gap-3 no-print print:hidden">
+              <span className="text-[10px] text-white/40 italic">
+                Official Sam&apos;s College Table Tennis Management System
+              </span>
+              <div className="flex items-center gap-2.5">
+                <button
+                  onClick={handlePrintDutyLog}
+                  className="rounded-xl border border-white/20 bg-white/5 hover:bg-white/10 px-4 py-2 text-xs font-bold text-white transition-all flex items-center gap-2 shadow-sm active:scale-95"
+                >
+                  <PrinterIcon className="w-4 h-4 text-[#4AEEFF]" />
+                  <span>Print / Export PDF</span>
+                </button>
+                <button
+                  onClick={() => setShowPaymentVoucherModal(false)}
+                  className="rounded-xl bg-[#4AEEFF] px-5 py-2 text-xs font-black uppercase tracking-wider text-[#061D23] hover:bg-white transition-all shadow-md active:scale-95"
+                >
+                  Close
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -931,7 +1708,7 @@ const RefereeMatches: React.FC = () => {
             isAdminOrReferee={selectedMatch.status !== "COMPLETED"}
           />
         ))}
-    </>,
+    </>
   );
 };
 
