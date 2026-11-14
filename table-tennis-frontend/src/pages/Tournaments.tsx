@@ -336,7 +336,7 @@ const Tournaments: React.FC = () => {
               >
                 <div>
                   <div className="flex justify-between items-start mb-3 gap-2">
-                    <h3 className="text-lg sm:text-xl font-bold uppercase text-white group-hover:text-[#4AEEFF] transition-colors line-clamp-2 leading-snug">
+                    <h3 className="text-xl sm:text-2xl font-black tracking-wider text-white group-hover:text-[#4AEEFF] transition-colors line-clamp-2 leading-snug">
                       {formatTitle(tournament.name)}
                     </h3>
                     <div className="flex flex-col items-end gap-1.5 shrink-0">
