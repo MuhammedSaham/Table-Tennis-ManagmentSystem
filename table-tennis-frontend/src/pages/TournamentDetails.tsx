@@ -1730,7 +1730,7 @@ const TournamentDetails: React.FC<TournamentDetailsProps> = ({
               {/* LEFT SIDE: Back Link + Title + Tournament Details Info Strip */}
               <div className="space-y-2.5 min-w-0">
                 <BackButton
-                  to="/tournaments"
+                  to="/app/tournaments"
                   label="Back to Tournaments"
                   className="mb-1"
                 />

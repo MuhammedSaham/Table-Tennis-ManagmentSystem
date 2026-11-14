@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import api from "../services/api";
 import toast from "react-hot-toast";
-import BackButton from "../components/BackButton";
+import { useAuth } from "../context/AuthContext";
 import { UmpireSheet } from "../components/GroupStandings";
 import type { GroupMatch, GameScore } from "../components/GroupStandings";
 import { UmpireSheet as KnockoutUmpireSheet } from "../components/KnockoutBracket";
@@ -104,6 +104,7 @@ const formatDuration = (minutes: number): string => {
 };
 
 const RefereeMatches: React.FC = () => {
+  const { user } = useAuth();
   const [matches, setMatches] = useState<Match[]>([]);
   const [refereeStats, setRefereeStats] = useState<RefereeStatistics | null>(
     null,
@@ -393,7 +394,6 @@ const RefereeMatches: React.FC = () => {
       <div className="pt-6 sm:pt-8">
         <header className="flex flex-col gap-3 rounded-[20px] border border-white/20 bg-[#061D23]/35 p-4 sm:p-5 lg:p-5 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.6)] backdrop-blur-xl">
           <div>
-            <BackButton to="/" label="Back to Home" className="mb-3" />
             <div className="flex items-center gap-2 mb-2 flex-wrap">
               <span className="w-2 h-5 bg-[#4AEEFF] rounded-full shadow-[0_0_10px_#4AEEFF]"></span>
               <span className="px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-md bg-[#4AEEFF]/15 text-[#4AEEFF] border border-[#4AEEFF]/30">
@@ -404,8 +404,8 @@ const RefereeMatches: React.FC = () => {
                 On Duty
               </span>
             </div>
-            <h1 className="text-xl sm:text-3xl lg:text-4xl font-black uppercase tracking-[0.08em] sm:tracking-[0.12em] text-white break-words">
-              Referee Dashboard
+            <h1 className="text-xl sm:text-2xl font-black uppercase tracking-wider text-white break-words">
+              Welcome back, {user?.firstName}!
             </h1>
             <p className="mt-1.5 text-xs text-slate-300 max-w-xl">
               Inspect your assigned matches, manage court schedules, and enter

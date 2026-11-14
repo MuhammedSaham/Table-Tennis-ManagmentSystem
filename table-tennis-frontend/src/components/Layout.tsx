@@ -40,7 +40,7 @@ const Layout: React.FC = () => {
     ...(isReferee
       ? [
           {
-            name: "Referee Dashboard",
+            name: "Dashboard",
             href: "/app/referee/matches",
             icon: HomeIcon,
           },
@@ -74,7 +74,7 @@ const Layout: React.FC = () => {
     ...(isReferee
       ? [
           {
-            name: "Referee Dashboard",
+            name: "Dashboard",
             href: "/app/referee/matches",
             icon: HomeIcon,
           },

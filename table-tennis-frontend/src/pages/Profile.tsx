@@ -493,12 +493,9 @@ const Profile: React.FC = () => {
       {/* ─── COMPACT PROFILE HEADER ─── */}
       <header className="rounded-2xl border border-white/15 bg-[#061D23]/25 p-4 shadow-lg backdrop-blur-xl sm:p-5">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <BackButton
-            to={isViewingOtherProfile ? "/app/users" : "/app/dashboard"}
-            label={
-              isViewingOtherProfile ? "Back to Users" : "Back to Dashboard"
-            }
-          />
+          {isViewingOtherProfile && (
+            <BackButton to="/app/users" label="Back to Users" />
+          )}
 
           {!editing && !isViewingOtherProfile && (
             <button
