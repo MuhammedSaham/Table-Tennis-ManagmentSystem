@@ -30,6 +30,7 @@ import GlobalLeaderboard from "./pages/GlobalLeaderboard";
 import Players from "./pages/Players";
 import RefereeMatches from "./pages/RefereeMatches";
 import About from "./pages/About";
+import ManageAbout from "./pages/ManageAbout";
 import ErrorBoundary from "./components/ErrorBoundary";
 import ScrollToTop from "./components/ScrollToTop";
 import VerifyEmail from "./pages/VerifyEmail";
@@ -127,6 +128,18 @@ const AdminRequestsRoute: React.FC<{ children: React.ReactNode }> = ({
     user?.isSuperAdmin ||
     hasPermission("MANAGE_CLUB_MEMBERSHIPS") ||
     hasPermission("MANAGE_REGISTRATIONS")
+  ) {
+    return <>{children}</>;
+  }
+  return <Navigate to="/app/dashboard" replace />;
+};
+
+const AdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user } = useAuth();
+  if (
+    user?.role === "SUPER_ADMIN" ||
+    user?.isSuperAdmin ||
+    user?.role === "ADMIN"
   ) {
     return <>{children}</>;
   }
@@ -238,6 +251,14 @@ function AppRoutes() {
             <AdminRequestsRoute>
               <AdminRequests />
             </AdminRequestsRoute>
+          }
+        />
+        <Route
+          path="admin/about"
+          element={
+            <AdminRoute>
+              <ManageAbout />
+            </AdminRoute>
           }
         />
       </Route>

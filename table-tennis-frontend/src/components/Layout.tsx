@@ -20,6 +20,7 @@ import {
   ShieldCheckIcon,
   ChevronRightIcon,
   BookOpenIcon,
+  PencilSquareIcon,
 } from "@heroicons/react/24/outline";
 
 const Layout: React.FC = () => {
@@ -106,6 +107,10 @@ const Layout: React.FC = () => {
 
   if (isSuperAdmin || hasPermission("MANAGE_CLUB_MEMBERSHIPS") || hasPermission("MANAGE_REGISTRATIONS")) {
     mobileNavigation.push({ name: "Admin Requests", href: "/app/admin-requests", icon: UserGroupIcon });
+  }
+
+  if (isSuperAdmin || user?.role === "ADMIN") {
+    mobileNavigation.push({ name: "Manage About Page", href: "/app/admin/about", icon: PencilSquareIcon });
   }
 
   // Pages that should NOT show the navbar
