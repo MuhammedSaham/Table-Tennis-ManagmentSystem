@@ -16,10 +16,7 @@ import ConfirmModal from "../components/ConfirmModal";
 import CreateKnockoutModal from "../components/CreateKnockoutModal";
 import DoublesPartnerModal from "../components/DoublesPartnerModal";
 import { getEffectiveTournamentStatus } from "../utils/tournamentStatus";
-import {
-  CalendarIcon,
-  MapPinIcon,
-} from "@heroicons/react/24/outline";
+import { CalendarIcon, MapPinIcon } from "@heroicons/react/24/outline";
 
 const capitalizeWords = (str: string): string => {
   if (!str) return "";
@@ -418,10 +415,14 @@ const TournamentDetails: React.FC<TournamentDetailsProps> = ({
     const effectiveGender =
       category.gender && category.gender !== "MIXED"
         ? category.gender
-        : /\b(women|womens|woman|female|females|girl|girls|ladies|lady)\b/i.test(category.name)
+        : /\b(women|womens|woman|female|females|girl|girls|ladies|lady)\b/i.test(
+              category.name,
+            )
           ? "FEMALE"
           : /\b(men|mens|man|male|males|boy|boys)\b/i.test(category.name) &&
-            !/\b(women|womens|woman|female|females|girl|girls|ladies|lady)\b/i.test(category.name)
+              !/\b(women|womens|woman|female|females|girl|girls|ladies|lady)\b/i.test(
+                category.name,
+              )
             ? "MALE"
             : null;
 
@@ -1745,7 +1746,7 @@ const TournamentDetails: React.FC<TournamentDetailsProps> = ({
               {/* LEFT SIDE: Back Link + Title + Tournament Details Info Strip */}
               <div className="space-y-2.5 min-w-0">
                 <BackButton
-                  to="/app/tournaments"
+                  to={user ? "/app/tournaments" : "/tournaments"}
                   label="Back to Tournaments"
                   className="mb-1"
                 />
@@ -2037,500 +2038,500 @@ const TournamentDetails: React.FC<TournamentDetailsProps> = ({
               <div className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-black/80 p-4 backdrop-blur-md animate-in fade-in duration-200">
                 <div className="w-full max-w-4xl max-h-[92vh] overflow-y-auto custom-scrollbar rounded-2xl border border-[#4AEEFF]/40 bg-[#061D23]/95 p-6 text-white shadow-[0_25px_60px_-15px_rgba(0,0,0,0.8)] backdrop-blur-2xl sm:p-8 my-auto">
                   <div className="mb-6 flex items-center justify-between border-b border-white/10 pb-4">
-                  <div className="flex items-center gap-3">
-                    <span className="h-6 w-2.5 rounded-full bg-[#4AEEFF] shadow-[0_0_10px_#4AEEFF]" />
-                    <h2 className="text-xl font-black uppercase tracking-widest text-white sm:text-2xl">
-                      Edit Tournament
-                    </h2>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setShowEditModal(false)}
-                    className="rounded-lg p-2 text-white/50 transition hover:bg-white/10 hover:text-white"
-                  >
-                    ✕
-                  </button>
-                </div>
-
-                <div className="space-y-5">
-                  {/* Basic Info */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="mb-1.5 block text-xs font-black uppercase tracking-wider text-white/70">
-                        Tournament Name
-                      </label>
-                      <input
-                        type="text"
-                        value={editFormData.name}
-                        onChange={(e) =>
-                          setEditFormData({
-                            ...editFormData,
-                            name: e.target.value,
-                          })
-                        }
-                        className="w-full rounded-lg border border-white/10 bg-[#061D23]/60 p-2.5 text-sm text-white placeholder-white/20 transition focus:border-[#4AEEFF] focus:outline-none"
-                      />
+                    <div className="flex items-center gap-3">
+                      <span className="h-6 w-2.5 rounded-full bg-[#4AEEFF] shadow-[0_0_10px_#4AEEFF]" />
+                      <h2 className="text-xl font-black uppercase tracking-widest text-white sm:text-2xl">
+                        Edit Tournament
+                      </h2>
                     </div>
-                    <div>
-                      <label className="mb-1.5 block text-xs font-black uppercase tracking-wider text-white/70">
-                        Venue
-                      </label>
-                      <input
-                        type="text"
-                        value={editFormData.venue}
-                        onChange={(e) =>
-                          setEditFormData({
-                            ...editFormData,
-                            venue: e.target.value,
-                          })
-                        }
-                        className="w-full rounded-lg border border-white/10 bg-[#061D23]/60 p-2.5 text-sm text-white placeholder-white/20 transition focus:border-[#4AEEFF] focus:outline-none"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="mb-1.5 block text-xs font-black uppercase tracking-wider text-white/70">
-                      Description
-                    </label>
-                    <textarea
-                      value={editFormData.description}
-                      onChange={(e) =>
-                        setEditFormData({
-                          ...editFormData,
-                          description: e.target.value,
-                        })
-                      }
-                      rows={2}
-                      className="w-full rounded-lg border border-white/10 bg-[#061D23]/60 p-2.5 text-sm text-white placeholder-white/20 transition focus:border-[#4AEEFF] focus:outline-none"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                      <label className="mb-1.5 block text-xs font-black uppercase tracking-wider text-white/70">
-                        Start Date
-                      </label>
-                      <input
-                        type="datetime-local"
-                        value={editFormData.startDate}
-                        onChange={(e) =>
-                          setEditFormData({
-                            ...editFormData,
-                            startDate: e.target.value,
-                          })
-                        }
-                        className="w-full rounded-lg border border-white/10 bg-[#061D23]/60 p-2.5 text-sm text-white placeholder-white/20 [color-scheme:dark] transition focus:border-[#4AEEFF] focus:outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="mb-1.5 block text-xs font-black uppercase tracking-wider text-white/70">
-                        End Date
-                      </label>
-                      <input
-                        type="datetime-local"
-                        value={editFormData.endDate}
-                        onChange={(e) =>
-                          setEditFormData({
-                            ...editFormData,
-                            endDate: e.target.value,
-                          })
-                        }
-                        className="w-full rounded-lg border border-white/10 bg-[#061D23]/60 p-2.5 text-sm text-white placeholder-white/20 [color-scheme:dark] transition focus:border-[#4AEEFF] focus:outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="mb-1.5 block text-xs font-black uppercase tracking-wider text-white/70">
-                        Registration Deadline
-                      </label>
-                      <input
-                        type="datetime-local"
-                        value={editFormData.registrationDeadline}
-                        onChange={(e) =>
-                          setEditFormData({
-                            ...editFormData,
-                            registrationDeadline: e.target.value,
-                          })
-                        }
-                        className="w-full rounded-lg border border-white/10 bg-[#061D23]/60 p-2.5 text-sm text-white placeholder-white/20 [color-scheme:dark] transition focus:border-[#4AEEFF] focus:outline-none"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="mb-1.5 block text-xs font-black uppercase tracking-wider text-white/70">
-                      Max Players (Optional)
-                    </label>
-                    <input
-                      type="number"
-                      value={editFormData.maxPlayers}
-                      onChange={(e) =>
-                        setEditFormData({
-                          ...editFormData,
-                          maxPlayers: e.target.value,
-                        })
-                      }
-                      className="w-full rounded-lg border border-white/10 bg-[#061D23]/60 p-2.5 text-sm text-white placeholder-white/20 transition focus:border-[#4AEEFF] focus:outline-none"
-                      min="2"
-                    />
-                  </div>
-
-                  <div className="mt-4 border-t border-white/10 pt-5">
-                    <h3 className="text-base font-black uppercase tracking-wider text-white">
-                      Payment & Registration
-                    </h3>
-                    <p className="mt-1 text-xs text-white/50">
-                      Configure registration fees and payment proof
-                      requirements.
-                    </p>
-
-                    <div className="mt-4 space-y-4">
-                      <div>
-                        <label className="mb-1.5 block text-xs font-black uppercase tracking-wider text-white/70">
-                          Registration Fee (LKR)
-                        </label>
-                        <input
-                          type="number"
-                          value={editFormData.registrationFee}
-                          onChange={(e) =>
-                            setEditFormData({
-                              ...editFormData,
-                              registrationFee: e.target.value,
-                            })
-                          }
-                          min="0"
-                          step="0.01"
-                          className="w-full rounded-lg border border-white/10 bg-[#061D23]/60 p-2.5 text-sm text-white placeholder-white/20 transition focus:border-[#4AEEFF] focus:outline-none"
-                          placeholder="Leave empty if no payment is required"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="mb-1.5 block text-xs font-black uppercase tracking-wider text-white/70">
-                          Require Payment Proof From
-                        </label>
-                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                          <label className="flex cursor-pointer items-center gap-3 rounded-lg border border-white/10 bg-[#061D23]/40 p-4 transition-colors hover:border-[#4AEEFF]/40">
-                            <input
-                              type="checkbox"
-                              checked={editFormData.requirePaymentProofClub}
-                              onChange={(e) =>
-                                setEditFormData({
-                                  ...editFormData,
-                                  requirePaymentProofClub: e.target.checked,
-                                })
-                              }
-                              className="h-4 w-4 accent-[#4AEEFF]"
-                            />
-                            <div>
-                              <p className="text-sm font-bold text-white">
-                                Club Players
-                              </p>
-                              <p className="text-xs text-white/50">
-                                Club members must upload payment proof
-                              </p>
-                            </div>
-                          </label>
-
-                          <label className="flex cursor-pointer items-center gap-3 rounded-lg border border-white/10 bg-[#061D23]/40 p-4 transition-colors hover:border-[#4AEEFF]/40">
-                            <input
-                              type="checkbox"
-                              checked={editFormData.requirePaymentProofGuest}
-                              onChange={(e) =>
-                                setEditFormData({
-                                  ...editFormData,
-                                  requirePaymentProofGuest: e.target.checked,
-                                })
-                              }
-                              className="h-4 w-4 accent-[#4AEEFF]"
-                            />
-                            <div>
-                              <p className="text-sm font-bold text-white">
-                                Guest Players
-                              </p>
-                              <p className="text-xs text-white/50">
-                                Guest players must upload payment proof
-                              </p>
-                            </div>
-                          </label>
-                        </div>
-                      </div>
-
-                      {(editFormData.requirePaymentProofClub ||
-                        editFormData.requirePaymentProofGuest) && (
-                        <div>
-                          <label className="mb-1.5 block text-xs font-black uppercase tracking-wider text-white/70">
-                            Payment Instructions
-                          </label>
-                          <textarea
-                            value={editFormData.paymentInstructions}
-                            onChange={(e) =>
-                              setEditFormData({
-                                ...editFormData,
-                                paymentInstructions: e.target.value,
-                              })
-                            }
-                            rows={4}
-                            className="w-full rounded-lg border border-white/10 bg-[#061D23]/60 p-2.5 text-sm text-white placeholder-white/20 transition focus:border-[#4AEEFF] focus:outline-none"
-                            placeholder="Explain how players should pay and upload their receipt."
-                          />
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Categories Section */}
-                  <div className="mt-4 border-t border-white/10 pt-5">
-                    <div className="mb-4 flex items-center justify-between">
-                      <div>
-                        <h3 className="text-base font-black uppercase tracking-wider text-white">
-                          Tournament Categories
-                        </h3>
-                        <p className="mt-1 text-xs text-white/50">
-                          Configure divisions and participant limits
-                        </p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={addEditCategory}
-                        className="flex items-center gap-1.5 rounded-lg border border-[#4AEEFF]/40 bg-[#4AEEFF]/15 px-3.5 py-1.5 text-xs font-black uppercase tracking-wider text-[#4AEEFF] shadow-sm transition hover:bg-[#4AEEFF]/25"
-                      >
-                        <span>+</span> Add Category
-                      </button>
-                    </div>
-
-                    <div className="space-y-3.5 max-h-80 overflow-y-auto custom-scrollbar pr-1">
-                      {editCategories.map((category, index) => (
-                        <div
-                          key={category.id}
-                          className="space-y-3 rounded-xl border border-white/10 bg-[#061D23]/60 p-4 backdrop-blur-sm"
-                        >
-                          <div className="flex justify-between items-center">
-                            <span className="text-xs font-black uppercase tracking-wider text-[#4AEEFF]">
-                              Category {index + 1}
-                            </span>
-                            {editCategories.length > 1 && (
-                              <button
-                                type="button"
-                                onClick={() => removeEditCategory(index)}
-                                className="flex items-center gap-1 text-xs font-bold text-red-400 transition hover:text-red-300"
-                              >
-                                Remove
-                              </button>
-                            )}
-                          </div>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            <div>
-                              <label className="mb-1 block text-[10px] font-black uppercase tracking-wider text-white/60">
-                                Category Name
-                              </label>
-                              <input
-                                type="text"
-                                placeholder="Category Name"
-                                value={category.name}
-                                onChange={(e) =>
-                                  updateEditCategory(
-                                    index,
-                                    "name",
-                                    e.target.value,
-                                  )
-                                }
-                                className="w-full rounded-lg border border-white/10 bg-[#061D23]/60 px-3 py-2 text-xs text-white placeholder-white/20 focus:border-[#4AEEFF] focus:outline-none"
-                              />
-                            </div>
-                            <div>
-                              <label className="mb-1 block text-[10px] font-black uppercase tracking-wider text-white/60">
-                                Match Type
-                              </label>
-                              <GlassSelect
-                                value={category.type}
-                                onChange={(e) =>
-                                  updateEditCategory(
-                                    index,
-                                    "type",
-                                    e.target.value,
-                                  )
-                                }
-                                className="w-full"
-                              >
-                                <option
-                                  value="SINGLES"
-                                  className="bg-[#061D23] text-white"
-                                >
-                                  Singles
-                                </option>
-                                <option
-                                  value="DOUBLES"
-                                  className="bg-[#061D23] text-white"
-                                >
-                                  Doubles
-                                </option>
-                                <option
-                                  value="TEAM"
-                                  className="bg-[#061D23] text-white"
-                                >
-                                  Team
-                                </option>
-                              </GlassSelect>
-                            </div>
-                            <div>
-                              <label className="mb-1 block text-[10px] font-black uppercase tracking-wider text-white/60">
-                                Draw Format
-                              </label>
-                              <GlassSelect
-                                value={category.stageFormat || "KNOCKOUT"}
-                                onChange={(e) =>
-                                  updateEditCategory(
-                                    index,
-                                    "stageFormat",
-                                    e.target.value as
-                                      | "KNOCKOUT"
-                                      | "GROUP_KNOCKOUT",
-                                  )
-                                }
-                                className="w-full"
-                              >
-                                <option
-                                  value="KNOCKOUT"
-                                  className="bg-[#061D23] text-white"
-                                >
-                                  Knockout
-                                </option>
-                                <option
-                                  value="GROUP_KNOCKOUT"
-                                  className="bg-[#061D23] text-white"
-                                >
-                                  Group + Knockout
-                                </option>
-                              </GlassSelect>
-                            </div>
-                            <div>
-                              <label className="mb-1 block text-[10px] font-black uppercase tracking-wider text-white/60">
-                                Gender Division
-                              </label>
-                              <GlassSelect
-                                value={category.gender || ""}
-                                onChange={(e) =>
-                                  updateEditCategory(
-                                    index,
-                                    "gender",
-                                    (e.target.value as
-                                      | "MALE"
-                                      | "FEMALE"
-                                      | "MIXED") || undefined,
-                                  )
-                                }
-                                className="w-full"
-                              >
-                                <option
-                                  value=""
-                                  className="bg-[#061D23] text-white"
-                                >
-                                  Mixed / Open
-                                </option>
-                                <option
-                                  value="MALE"
-                                  className="bg-[#061D23] text-white"
-                                >
-                                  Men's Only
-                                </option>
-                                <option
-                                  value="FEMALE"
-                                  className="bg-[#061D23] text-white"
-                                >
-                                  Women's Only
-                                </option>
-                              </GlassSelect>
-                            </div>
-                            <div>
-                              <label className="mb-1 block text-[10px] font-black uppercase tracking-wider text-white/60">
-                                Max Participants
-                              </label>
-                              <input
-                                type="number"
-                                placeholder="Max Participants"
-                                value={category.maxParticipants}
-                                onChange={(e) =>
-                                  updateEditCategory(
-                                    index,
-                                    "maxParticipants",
-                                    parseInt(e.target.value) || 2,
-                                  )
-                                }
-                                min="2"
-                                max="256"
-                                className="w-full rounded-lg border border-white/10 bg-[#061D23]/60 px-3 py-2 text-xs text-white placeholder-white/20 focus:border-[#4AEEFF] focus:outline-none"
-                              />
-                            </div>
-                            <div className="sm:col-span-2">
-                              <label className="mb-1 block text-[10px] font-black uppercase tracking-wider text-white/60">
-                                Age Restrictions (Optional)
-                              </label>
-                              <div className="flex gap-2">
-                                <input
-                                  type="number"
-                                  placeholder="Min Age (e.g. 15)"
-                                  value={category.minAge || ""}
-                                  onChange={(e) =>
-                                    updateEditCategory(
-                                      index,
-                                      "minAge",
-                                      e.target.value
-                                        ? parseInt(e.target.value)
-                                        : undefined,
-                                    )
-                                  }
-                                  className="w-1/2 rounded-lg border border-white/10 bg-[#061D23]/60 px-3 py-2 text-xs text-white placeholder-white/20 focus:border-[#4AEEFF] focus:outline-none"
-                                />
-                                <input
-                                  type="number"
-                                  placeholder="Max Age (e.g. 18)"
-                                  value={category.maxAge || ""}
-                                  onChange={(e) =>
-                                    updateEditCategory(
-                                      index,
-                                      "maxAge",
-                                      e.target.value
-                                        ? parseInt(e.target.value)
-                                        : undefined,
-                                    )
-                                  }
-                                  className="w-1/2 rounded-lg border border-white/10 bg-[#061D23]/60 px-3 py-2 text-xs text-white placeholder-white/20 focus:border-[#4AEEFF] focus:outline-none"
-                                />
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                    {editCategories.length === 0 && (
-                      <p className="py-4 text-center text-xs text-white/50">
-                        No categories. Click "+ Add Category" to create one.
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="flex gap-3 border-t border-white/10 pt-4">
-                    <button
-                      type="button"
-                      onClick={handleUpdateTournament}
-                      className="flex-1 rounded-lg bg-[#4AEEFF] py-3 text-sm font-black uppercase tracking-wider text-[#061D23] shadow-lg shadow-[#4AEEFF]/20 transition hover:bg-white"
-                    >
-                      Save Changes
-                    </button>
                     <button
                       type="button"
                       onClick={() => setShowEditModal(false)}
-                      className="flex-1 rounded-lg border border-white/20 py-3 text-sm font-black uppercase tracking-wider text-white transition hover:bg-white/10"
+                      className="rounded-lg p-2 text-white/50 transition hover:bg-white/10 hover:text-white"
                     >
-                      Cancel
+                      ✕
                     </button>
                   </div>
+
+                  <div className="space-y-5">
+                    {/* Basic Info */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="mb-1.5 block text-xs font-black uppercase tracking-wider text-white/70">
+                          Tournament Name
+                        </label>
+                        <input
+                          type="text"
+                          value={editFormData.name}
+                          onChange={(e) =>
+                            setEditFormData({
+                              ...editFormData,
+                              name: e.target.value,
+                            })
+                          }
+                          className="w-full rounded-lg border border-white/10 bg-[#061D23]/60 p-2.5 text-sm text-white placeholder-white/20 transition focus:border-[#4AEEFF] focus:outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-1.5 block text-xs font-black uppercase tracking-wider text-white/70">
+                          Venue
+                        </label>
+                        <input
+                          type="text"
+                          value={editFormData.venue}
+                          onChange={(e) =>
+                            setEditFormData({
+                              ...editFormData,
+                              venue: e.target.value,
+                            })
+                          }
+                          className="w-full rounded-lg border border-white/10 bg-[#061D23]/60 p-2.5 text-sm text-white placeholder-white/20 transition focus:border-[#4AEEFF] focus:outline-none"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="mb-1.5 block text-xs font-black uppercase tracking-wider text-white/70">
+                        Description
+                      </label>
+                      <textarea
+                        value={editFormData.description}
+                        onChange={(e) =>
+                          setEditFormData({
+                            ...editFormData,
+                            description: e.target.value,
+                          })
+                        }
+                        rows={2}
+                        className="w-full rounded-lg border border-white/10 bg-[#061D23]/60 p-2.5 text-sm text-white placeholder-white/20 transition focus:border-[#4AEEFF] focus:outline-none"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div>
+                        <label className="mb-1.5 block text-xs font-black uppercase tracking-wider text-white/70">
+                          Start Date
+                        </label>
+                        <input
+                          type="datetime-local"
+                          value={editFormData.startDate}
+                          onChange={(e) =>
+                            setEditFormData({
+                              ...editFormData,
+                              startDate: e.target.value,
+                            })
+                          }
+                          className="w-full rounded-lg border border-white/10 bg-[#061D23]/60 p-2.5 text-sm text-white placeholder-white/20 [color-scheme:dark] transition focus:border-[#4AEEFF] focus:outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-1.5 block text-xs font-black uppercase tracking-wider text-white/70">
+                          End Date
+                        </label>
+                        <input
+                          type="datetime-local"
+                          value={editFormData.endDate}
+                          onChange={(e) =>
+                            setEditFormData({
+                              ...editFormData,
+                              endDate: e.target.value,
+                            })
+                          }
+                          className="w-full rounded-lg border border-white/10 bg-[#061D23]/60 p-2.5 text-sm text-white placeholder-white/20 [color-scheme:dark] transition focus:border-[#4AEEFF] focus:outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-1.5 block text-xs font-black uppercase tracking-wider text-white/70">
+                          Registration Deadline
+                        </label>
+                        <input
+                          type="datetime-local"
+                          value={editFormData.registrationDeadline}
+                          onChange={(e) =>
+                            setEditFormData({
+                              ...editFormData,
+                              registrationDeadline: e.target.value,
+                            })
+                          }
+                          className="w-full rounded-lg border border-white/10 bg-[#061D23]/60 p-2.5 text-sm text-white placeholder-white/20 [color-scheme:dark] transition focus:border-[#4AEEFF] focus:outline-none"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="mb-1.5 block text-xs font-black uppercase tracking-wider text-white/70">
+                        Max Players (Optional)
+                      </label>
+                      <input
+                        type="number"
+                        value={editFormData.maxPlayers}
+                        onChange={(e) =>
+                          setEditFormData({
+                            ...editFormData,
+                            maxPlayers: e.target.value,
+                          })
+                        }
+                        className="w-full rounded-lg border border-white/10 bg-[#061D23]/60 p-2.5 text-sm text-white placeholder-white/20 transition focus:border-[#4AEEFF] focus:outline-none"
+                        min="2"
+                      />
+                    </div>
+
+                    <div className="mt-4 border-t border-white/10 pt-5">
+                      <h3 className="text-base font-black uppercase tracking-wider text-white">
+                        Payment & Registration
+                      </h3>
+                      <p className="mt-1 text-xs text-white/50">
+                        Configure registration fees and payment proof
+                        requirements.
+                      </p>
+
+                      <div className="mt-4 space-y-4">
+                        <div>
+                          <label className="mb-1.5 block text-xs font-black uppercase tracking-wider text-white/70">
+                            Registration Fee (LKR)
+                          </label>
+                          <input
+                            type="number"
+                            value={editFormData.registrationFee}
+                            onChange={(e) =>
+                              setEditFormData({
+                                ...editFormData,
+                                registrationFee: e.target.value,
+                              })
+                            }
+                            min="0"
+                            step="0.01"
+                            className="w-full rounded-lg border border-white/10 bg-[#061D23]/60 p-2.5 text-sm text-white placeholder-white/20 transition focus:border-[#4AEEFF] focus:outline-none"
+                            placeholder="Leave empty if no payment is required"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="mb-1.5 block text-xs font-black uppercase tracking-wider text-white/70">
+                            Require Payment Proof From
+                          </label>
+                          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                            <label className="flex cursor-pointer items-center gap-3 rounded-lg border border-white/10 bg-[#061D23]/40 p-4 transition-colors hover:border-[#4AEEFF]/40">
+                              <input
+                                type="checkbox"
+                                checked={editFormData.requirePaymentProofClub}
+                                onChange={(e) =>
+                                  setEditFormData({
+                                    ...editFormData,
+                                    requirePaymentProofClub: e.target.checked,
+                                  })
+                                }
+                                className="h-4 w-4 accent-[#4AEEFF]"
+                              />
+                              <div>
+                                <p className="text-sm font-bold text-white">
+                                  Club Players
+                                </p>
+                                <p className="text-xs text-white/50">
+                                  Club members must upload payment proof
+                                </p>
+                              </div>
+                            </label>
+
+                            <label className="flex cursor-pointer items-center gap-3 rounded-lg border border-white/10 bg-[#061D23]/40 p-4 transition-colors hover:border-[#4AEEFF]/40">
+                              <input
+                                type="checkbox"
+                                checked={editFormData.requirePaymentProofGuest}
+                                onChange={(e) =>
+                                  setEditFormData({
+                                    ...editFormData,
+                                    requirePaymentProofGuest: e.target.checked,
+                                  })
+                                }
+                                className="h-4 w-4 accent-[#4AEEFF]"
+                              />
+                              <div>
+                                <p className="text-sm font-bold text-white">
+                                  Guest Players
+                                </p>
+                                <p className="text-xs text-white/50">
+                                  Guest players must upload payment proof
+                                </p>
+                              </div>
+                            </label>
+                          </div>
+                        </div>
+
+                        {(editFormData.requirePaymentProofClub ||
+                          editFormData.requirePaymentProofGuest) && (
+                          <div>
+                            <label className="mb-1.5 block text-xs font-black uppercase tracking-wider text-white/70">
+                              Payment Instructions
+                            </label>
+                            <textarea
+                              value={editFormData.paymentInstructions}
+                              onChange={(e) =>
+                                setEditFormData({
+                                  ...editFormData,
+                                  paymentInstructions: e.target.value,
+                                })
+                              }
+                              rows={4}
+                              className="w-full rounded-lg border border-white/10 bg-[#061D23]/60 p-2.5 text-sm text-white placeholder-white/20 transition focus:border-[#4AEEFF] focus:outline-none"
+                              placeholder="Explain how players should pay and upload their receipt."
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Categories Section */}
+                    <div className="mt-4 border-t border-white/10 pt-5">
+                      <div className="mb-4 flex items-center justify-between">
+                        <div>
+                          <h3 className="text-base font-black uppercase tracking-wider text-white">
+                            Tournament Categories
+                          </h3>
+                          <p className="mt-1 text-xs text-white/50">
+                            Configure divisions and participant limits
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={addEditCategory}
+                          className="flex items-center gap-1.5 rounded-lg border border-[#4AEEFF]/40 bg-[#4AEEFF]/15 px-3.5 py-1.5 text-xs font-black uppercase tracking-wider text-[#4AEEFF] shadow-sm transition hover:bg-[#4AEEFF]/25"
+                        >
+                          <span>+</span> Add Category
+                        </button>
+                      </div>
+
+                      <div className="space-y-3.5 max-h-80 overflow-y-auto custom-scrollbar pr-1">
+                        {editCategories.map((category, index) => (
+                          <div
+                            key={category.id}
+                            className="space-y-3 rounded-xl border border-white/10 bg-[#061D23]/60 p-4 backdrop-blur-sm"
+                          >
+                            <div className="flex justify-between items-center">
+                              <span className="text-xs font-black uppercase tracking-wider text-[#4AEEFF]">
+                                Category {index + 1}
+                              </span>
+                              {editCategories.length > 1 && (
+                                <button
+                                  type="button"
+                                  onClick={() => removeEditCategory(index)}
+                                  className="flex items-center gap-1 text-xs font-bold text-red-400 transition hover:text-red-300"
+                                >
+                                  Remove
+                                </button>
+                              )}
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                              <div>
+                                <label className="mb-1 block text-[10px] font-black uppercase tracking-wider text-white/60">
+                                  Category Name
+                                </label>
+                                <input
+                                  type="text"
+                                  placeholder="Category Name"
+                                  value={category.name}
+                                  onChange={(e) =>
+                                    updateEditCategory(
+                                      index,
+                                      "name",
+                                      e.target.value,
+                                    )
+                                  }
+                                  className="w-full rounded-lg border border-white/10 bg-[#061D23]/60 px-3 py-2 text-xs text-white placeholder-white/20 focus:border-[#4AEEFF] focus:outline-none"
+                                />
+                              </div>
+                              <div>
+                                <label className="mb-1 block text-[10px] font-black uppercase tracking-wider text-white/60">
+                                  Match Type
+                                </label>
+                                <GlassSelect
+                                  value={category.type}
+                                  onChange={(e) =>
+                                    updateEditCategory(
+                                      index,
+                                      "type",
+                                      e.target.value,
+                                    )
+                                  }
+                                  className="w-full"
+                                >
+                                  <option
+                                    value="SINGLES"
+                                    className="bg-[#061D23] text-white"
+                                  >
+                                    Singles
+                                  </option>
+                                  <option
+                                    value="DOUBLES"
+                                    className="bg-[#061D23] text-white"
+                                  >
+                                    Doubles
+                                  </option>
+                                  <option
+                                    value="TEAM"
+                                    className="bg-[#061D23] text-white"
+                                  >
+                                    Team
+                                  </option>
+                                </GlassSelect>
+                              </div>
+                              <div>
+                                <label className="mb-1 block text-[10px] font-black uppercase tracking-wider text-white/60">
+                                  Draw Format
+                                </label>
+                                <GlassSelect
+                                  value={category.stageFormat || "KNOCKOUT"}
+                                  onChange={(e) =>
+                                    updateEditCategory(
+                                      index,
+                                      "stageFormat",
+                                      e.target.value as
+                                        | "KNOCKOUT"
+                                        | "GROUP_KNOCKOUT",
+                                    )
+                                  }
+                                  className="w-full"
+                                >
+                                  <option
+                                    value="KNOCKOUT"
+                                    className="bg-[#061D23] text-white"
+                                  >
+                                    Knockout
+                                  </option>
+                                  <option
+                                    value="GROUP_KNOCKOUT"
+                                    className="bg-[#061D23] text-white"
+                                  >
+                                    Group + Knockout
+                                  </option>
+                                </GlassSelect>
+                              </div>
+                              <div>
+                                <label className="mb-1 block text-[10px] font-black uppercase tracking-wider text-white/60">
+                                  Gender Division
+                                </label>
+                                <GlassSelect
+                                  value={category.gender || ""}
+                                  onChange={(e) =>
+                                    updateEditCategory(
+                                      index,
+                                      "gender",
+                                      (e.target.value as
+                                        | "MALE"
+                                        | "FEMALE"
+                                        | "MIXED") || undefined,
+                                    )
+                                  }
+                                  className="w-full"
+                                >
+                                  <option
+                                    value=""
+                                    className="bg-[#061D23] text-white"
+                                  >
+                                    Mixed / Open
+                                  </option>
+                                  <option
+                                    value="MALE"
+                                    className="bg-[#061D23] text-white"
+                                  >
+                                    Men's Only
+                                  </option>
+                                  <option
+                                    value="FEMALE"
+                                    className="bg-[#061D23] text-white"
+                                  >
+                                    Women's Only
+                                  </option>
+                                </GlassSelect>
+                              </div>
+                              <div>
+                                <label className="mb-1 block text-[10px] font-black uppercase tracking-wider text-white/60">
+                                  Max Participants
+                                </label>
+                                <input
+                                  type="number"
+                                  placeholder="Max Participants"
+                                  value={category.maxParticipants}
+                                  onChange={(e) =>
+                                    updateEditCategory(
+                                      index,
+                                      "maxParticipants",
+                                      parseInt(e.target.value) || 2,
+                                    )
+                                  }
+                                  min="2"
+                                  max="256"
+                                  className="w-full rounded-lg border border-white/10 bg-[#061D23]/60 px-3 py-2 text-xs text-white placeholder-white/20 focus:border-[#4AEEFF] focus:outline-none"
+                                />
+                              </div>
+                              <div className="sm:col-span-2">
+                                <label className="mb-1 block text-[10px] font-black uppercase tracking-wider text-white/60">
+                                  Age Restrictions (Optional)
+                                </label>
+                                <div className="flex gap-2">
+                                  <input
+                                    type="number"
+                                    placeholder="Min Age (e.g. 15)"
+                                    value={category.minAge || ""}
+                                    onChange={(e) =>
+                                      updateEditCategory(
+                                        index,
+                                        "minAge",
+                                        e.target.value
+                                          ? parseInt(e.target.value)
+                                          : undefined,
+                                      )
+                                    }
+                                    className="w-1/2 rounded-lg border border-white/10 bg-[#061D23]/60 px-3 py-2 text-xs text-white placeholder-white/20 focus:border-[#4AEEFF] focus:outline-none"
+                                  />
+                                  <input
+                                    type="number"
+                                    placeholder="Max Age (e.g. 18)"
+                                    value={category.maxAge || ""}
+                                    onChange={(e) =>
+                                      updateEditCategory(
+                                        index,
+                                        "maxAge",
+                                        e.target.value
+                                          ? parseInt(e.target.value)
+                                          : undefined,
+                                      )
+                                    }
+                                    className="w-1/2 rounded-lg border border-white/10 bg-[#061D23]/60 px-3 py-2 text-xs text-white placeholder-white/20 focus:border-[#4AEEFF] focus:outline-none"
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      {editCategories.length === 0 && (
+                        <p className="py-4 text-center text-xs text-white/50">
+                          No categories. Click "+ Add Category" to create one.
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="flex gap-3 border-t border-white/10 pt-4">
+                      <button
+                        type="button"
+                        onClick={handleUpdateTournament}
+                        className="flex-1 rounded-lg bg-[#4AEEFF] py-3 text-sm font-black uppercase tracking-wider text-[#061D23] shadow-lg shadow-[#4AEEFF]/20 transition hover:bg-white"
+                      >
+                        Save Changes
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setShowEditModal(false)}
+                        className="flex-1 rounded-lg border border-white/20 py-3 text-sm font-black uppercase tracking-wider text-white transition hover:bg-white/10"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>,
-            document.body,
-          )}
+              </div>,
+              document.body,
+            )}
 
           {/* ─── TOURNAMENT COMPETITION SECTION (Bracket, Champions, Groups) ─── */}
           {tournament.categories.length === 0 ? (
@@ -3189,7 +3190,8 @@ const TournamentDetails: React.FC<TournamentDetailsProps> = ({
                 Tournament Registration
               </h1>
               <p className="mt-1 text-xs sm:text-sm text-cyan-200/80">
-                {tournament.name} · Official division enrollment & athlete check-in
+                {tournament.name} · Official division enrollment & athlete
+                check-in
               </p>
             </div>
 
@@ -3217,8 +3219,6 @@ const TournamentDetails: React.FC<TournamentDetailsProps> = ({
           </div>
         </div>
       )}
-
-
 
       {/* Professional Tournament Division Entry Section */}
       {registrationOnly && canRegister && tournament.categories.length > 0 && (
@@ -3554,7 +3554,6 @@ const TournamentDetails: React.FC<TournamentDetailsProps> = ({
           </div>
         </div>
       )}
-
 
       {/* Payment Proof Verification */}
       {registrationOnly &&
