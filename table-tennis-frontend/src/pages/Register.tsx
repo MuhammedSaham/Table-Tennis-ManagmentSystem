@@ -403,7 +403,7 @@ const Register: React.FC = () => {
       >
         {/* ── Logo + heading ── */}
 
-        <div className="mb-6 flex flex-col items-start text-left">
+        <div className="mb-6 flex flex-col items-center text-center">
           <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-[0.2em] text-white">
             Create Account
           </h1>
@@ -772,7 +772,7 @@ const Register: React.FC = () => {
           <button
             type="submit"
             disabled={isLoading || (!!formData.password && !isPasswordValid)}
-            className="w-full cursor-pointer rounded-lg border border-[#12679E]/50 bg-white/30 px-5 py-3.5 text-base font-black uppercase tracking-[0.25em] text-[#061D23] transition hover:bg-[#0a3f63] hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+            className="w-full cursor-pointer rounded-lg border border-[#12679E]/40 bg-white/90 px-4 py-3 text-base font-semibold normal-case tracking-normal text-[#061D23] transition-all duration-200 hover:bg-[#4AEEFF] disabled:cursor-not-allowed disabled:opacity-50"
           >
             {isLoading ? "Creating your account..." : "Create Free Account"}
           </button>
@@ -790,17 +790,15 @@ const Register: React.FC = () => {
           </Link>
         </p>
 
-        {/* Back to Home matching Login */}
+        {/* Back to Home */}
 
-        <Link to="/" style={{ textDecoration: "none" }} className="mt-3 block">
-          <button
-            type="button"
-            className="w-full py-2.5 sm:py-3 px-4 bg-[#061D23]/30 hover:bg-[#061D23]/50 text-white font-bold text-xs uppercase tracking-wider border border-white/30 rounded transition-all"
-          >
-            Back to Home
-          </button>
+        <Link
+          to="/"
+          className="mt-5 flex items-center justify-center gap-1 text-sm font-semibold text-[#4AEEFF] transition-colors duration-200 hover:text-white"
+        >
+          <span>←</span>
+          <span>Back to Home</span>
         </Link>
-
         {/* Footer */}
 
         <div className="mt-5 border-t border-white/15 pt-4">
