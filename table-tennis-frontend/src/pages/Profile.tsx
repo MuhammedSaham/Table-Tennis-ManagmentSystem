@@ -570,12 +570,54 @@ const Profile: React.FC = () => {
     <>
       {/* ─── COMPACT PROFILE HEADER ─── */}
       <header className="rounded-2xl border border-white/15 bg-[#061D23]/25 p-4 shadow-lg backdrop-blur-xl sm:p-5">
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          {isViewingOtherProfile && (
+        {isViewingOtherProfile && (
+          <div className="mb-4">
             <BackButton to="/app/users" label="Back to Users" />
-          )}
+          </div>
+        )}
 
-          <div className="flex items-center gap-2">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center min-w-0">
+            <div className="flex shrink-0 items-center justify-center">
+              {profile.profileImage ? (
+                <img
+                  src={getProfileImageUrl(profile.profileImage)}
+                  alt="Profile"
+                  className="h-16 w-16 rounded-full border-2 border-[#4AEEFF]/60 object-cover sm:h-20 sm:w-20"
+                />
+              ) : (
+                <div className="flex h-16 w-16 items-center justify-center rounded-full border-2 border-[#4AEEFF]/50 bg-[#061D23]/60 text-lg font-bold text-[#4AEEFF] sm:h-20 sm:w-20 sm:text-xl">
+                  {(profile.firstName?.[0] || "").toUpperCase()}
+                  {(profile.lastName?.[0] || "").toUpperCase()}
+                </div>
+              )}
+            </div>
+
+            <div className="min-w-0 flex-1">
+              <h1 className="text-xl font-black uppercase tracking-wide text-white sm:text-2xl">
+                {profile.firstName} {profile.lastName}
+              </h1>
+
+              <span className="mt-1 inline-block rounded-md border border-[#4AEEFF]/30 bg-[#4AEEFF]/15 px-2 py-1 text-[10px] font-bold uppercase text-[#4AEEFF]">
+                {profile.role === "SUPER_ADMIN" ? "SUPER ADMIN" : profile.role}
+              </span>
+
+              <div className="mt-3 flex flex-col gap-2 text-xs text-white/75 sm:flex-row sm:flex-wrap sm:gap-x-6">
+                <span className="flex items-center gap-2 break-all">
+                  <EnvelopeIcon className="h-4 w-4 shrink-0 text-[#4AEEFF]" />
+                  {profile.email}
+                </span>
+
+                <span className="flex items-center gap-2">
+                  <PhoneIcon className="h-4 w-4 shrink-0 text-[#4AEEFF]" />
+                  {profile.phone || "Not provided"}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Right-most Action Buttons */}
+          <div className="flex items-center gap-2 self-start sm:self-center shrink-0 sm:ml-auto">
             {profile.role === "PLAYER" && (
               <button
                 type="button"
@@ -591,50 +633,11 @@ const Profile: React.FC = () => {
             {!editing && !isViewingOtherProfile && (
               <button
                 onClick={() => setEditing(true)}
-                className="rounded-lg bg-[#4AEEFF] px-4 py-2 text-xs font-bold uppercase text-[#061D23] transition-colors hover:bg-white active:scale-95"
+                className="rounded-lg bg-[#4AEEFF] px-4 py-2 text-xs font-bold uppercase text-[#061D23] transition-colors hover:bg-white active:scale-95 shadow-sm"
               >
                 Edit Profile
               </button>
             )}
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-          <div className="flex shrink-0 items-center justify-center">
-            {profile.profileImage ? (
-              <img
-                src={getProfileImageUrl(profile.profileImage)}
-                alt="Profile"
-                className="h-16 w-16 rounded-full border-2 border-[#4AEEFF]/60 object-cover sm:h-20 sm:w-20"
-              />
-            ) : (
-              <div className="flex h-16 w-16 items-center justify-center rounded-full border-2 border-[#4AEEFF]/50 bg-[#061D23]/60 text-lg font-bold text-[#4AEEFF] sm:h-20 sm:w-20 sm:text-xl">
-                {(profile.firstName?.[0] || "").toUpperCase()}
-                {(profile.lastName?.[0] || "").toUpperCase()}
-              </div>
-            )}
-          </div>
-
-          <div className="min-w-0 flex-1">
-            <h1 className="text-xl font-black uppercase tracking-wide text-white sm:text-2xl">
-              {profile.firstName} {profile.lastName}
-            </h1>
-
-            <span className="mt-1 inline-block rounded-md border border-[#4AEEFF]/30 bg-[#4AEEFF]/15 px-2 py-1 text-[10px] font-bold uppercase text-[#4AEEFF]">
-              {profile.role === "SUPER_ADMIN" ? "SUPER ADMIN" : profile.role}
-            </span>
-
-            <div className="mt-3 flex flex-col gap-2 text-xs text-white/75 sm:flex-row sm:flex-wrap sm:gap-x-6">
-              <span className="flex items-center gap-2 break-all">
-                <EnvelopeIcon className="h-4 w-4 shrink-0 text-[#4AEEFF]" />
-                {profile.email}
-              </span>
-
-              <span className="flex items-center gap-2">
-                <PhoneIcon className="h-4 w-4 shrink-0 text-[#4AEEFF]" />
-                {profile.phone || "Not provided"}
-              </span>
-            </div>
           </div>
         </div>
       </header>
