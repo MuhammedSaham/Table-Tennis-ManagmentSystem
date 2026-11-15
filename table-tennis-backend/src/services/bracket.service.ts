@@ -283,7 +283,7 @@ export class BracketService {
 
 
   // ==============================
-  // BRACKET BUILDER (COMPLETELY REWRITTEN)
+  // BRACKET BUILDER (DIRECT KNOCKOUT - CHOICE B)
   // ==============================
   private buildBracket(
     tournamentId: string,
@@ -297,52 +297,63 @@ export class BracketService {
     const byes = bracketSize - totalPlayers;
     const firstRoundMatchCount = bracketSize / 2;
 
-    // Randomize all players so BYE distribution and matchups are completely fair and random
-    const randomizedPlayers = [...seededPlayers];
-    for (let i = randomizedPlayers.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [randomizedPlayers[i], randomizedPlayers[j]] = [randomizedPlayers[j], randomizedPlayers[i]];
-    }
+    // 1. Separate protected seeds (club ranked players) from the unseeded pool
+    const rankedSeeds = seededPlayers.filter(p => p.seed > 0);
+    const activeSeeds = rankedSeeds.slice(0, firstRoundMatchCount);
+    const unseededPool = [
+      ...rankedSeeds.slice(firstRoundMatchCount),
+      ...seededPlayers.filter(p => p.seed === 0),
+    ];
 
-    const byePlayers = randomizedPlayers.slice(0, byes);
-    const playingPlayers = randomizedPlayers.slice(byes);
-
-    const getRoundName = (numMatches: number) => {
-      if (numMatches === 1) return 'Final';
-      if (numMatches === 2) return 'Semi-Finals';
-      if (numMatches === 4) return 'Quarter-Finals';
-      if (numMatches === 8) return 'Round of 16';
-      if (numMatches === 16) return 'Round of 32';
-      return `Round of ${numMatches * 2}`;
-    };
-
-    const getSeededMatchOrder = (numMatches: number) => {
-      if (numMatches === 1) return [0];
-      if (numMatches === 2) return [0, 1];
-      if (numMatches === 4) return [0, 3, 1, 2];
-      if (numMatches === 8) return [0, 7, 3, 4, 1, 6, 2, 5];
-      if (numMatches === 16) return [0, 15, 7, 8, 3, 12, 4, 11, 1, 14, 6, 9, 2, 13, 5, 10];
-      return Array.from({ length: numMatches }, (_, i) => i);
-    };
-
-    const matchOrder = getSeededMatchOrder(firstRoundMatchCount);
+    // 2. Initialize first round match pairs
     const firstRoundPairs = Array.from({ length: firstRoundMatchCount }, () => ({
       p1: null as string | null,
       p2: null as string | null,
       isBye: false,
     }));
 
-    for (let i = 0; i < byes; i++) {
+    // 3. Anchor active seeds into their respective matches (preventing top seeds from meeting in Round 1)
+    const matchOrder = this.getSeededMatchOrder(firstRoundMatchCount);
+    for (let i = 0; i < activeSeeds.length; i++) {
       const matchIndex = matchOrder[i];
-      firstRoundPairs[matchIndex].isBye = true;
-      firstRoundPairs[matchIndex].p1 = byePlayers[i].id;
+      firstRoundPairs[matchIndex].p1 = activeSeeds[i].id;
     }
 
-    let playingIndex = 0;
+    // 4. Choice B: 100% Random Lottery for BYE Matches
+    if (byes > 0) {
+      const allMatchIndices = Array.from({ length: firstRoundMatchCount }, (_, i) => i);
+      for (let i = allMatchIndices.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [allMatchIndices[i], allMatchIndices[j]] = [allMatchIndices[j], allMatchIndices[i]];
+      }
+      const byeMatchIndices = new Set(allMatchIndices.slice(0, byes));
+      for (const matchIndex of byeMatchIndices) {
+        firstRoundPairs[matchIndex].isBye = true;
+      }
+    }
+
+    // 5. Shuffle the unseeded pool randomly
+    for (let i = unseededPool.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [unseededPool[i], unseededPool[j]] = [unseededPool[j], unseededPool[i]];
+    }
+
+    // 6. Ensure every BYE match has a player in p1 (so the BYE winner is known)
+    for (let i = 0; i < firstRoundMatchCount; i++) {
+      if (firstRoundPairs[i].isBye && !firstRoundPairs[i].p1) {
+        firstRoundPairs[i].p1 = unseededPool.pop()?.id || null;
+      }
+    }
+
+    // 7. Fill all non-BYE matches with players from the unseeded pool
     for (let i = 0; i < firstRoundMatchCount; i++) {
       if (!firstRoundPairs[i].isBye) {
-        firstRoundPairs[i].p1 = playingPlayers[playingIndex++]?.id || null;
-        firstRoundPairs[i].p2 = playingPlayers[playingIndex++]?.id || null;
+        if (!firstRoundPairs[i].p1) {
+          firstRoundPairs[i].p1 = unseededPool.pop()?.id || null;
+        }
+        if (!firstRoundPairs[i].p2) {
+          firstRoundPairs[i].p2 = unseededPool.pop()?.id || null;
+        }
       }
     }
 
@@ -353,7 +364,7 @@ export class BracketService {
     let currentRoundMatches: any[] = [];
 
     // Create Round 1
-    const round1Name = getRoundName(firstRoundMatchCount);
+    const round1Name = this.getRoundName(firstRoundMatchCount);
     
     for (let i = 0; i < firstRoundMatchCount; i++) {
       const pair = firstRoundPairs[i];
@@ -379,7 +390,7 @@ export class BracketService {
     // Create subsequent rounds
     let matchesInNextRound = firstRoundMatchCount / 2;
     while (matchesInNextRound >= 1) {
-      const nextRoundName = getRoundName(matchesInNextRound);
+      const nextRoundName = this.getRoundName(matchesInNextRound);
       
       const nextRoundMatches: any[] = [];
       for (let i = 0; i < matchesInNextRound; i++) {
@@ -474,38 +485,54 @@ export class BracketService {
   }
 
   // ==============================
-  // SEED PLAYERS
+  // SEED PLAYERS (PURE CLUB RANKING)
   // ==============================
   private async seedPlayers(players: any[]): Promise<SeededPlayer[]> {
+    const playerWithRanks = await Promise.all(
+      players.map(async p => {
+        const profile = await prisma.playerProfile.findUnique({
+          where: { userId: p.id },
+          select: { ranking: true },
+        });
 
-    const stats = await Promise.all(players.map(async p => {
+        const hasClubRank = profile?.ranking != null && profile.ranking > 0;
 
-      const profile = await prisma.playerProfile.findUnique({
-        where: { userId: p.id },
-        select: { ranking: true, skillLevel: true },
-      });
+        return {
+          id: p.id,
+          firstName: p.firstName,
+          lastName: p.lastName,
+          clubRank: hasClubRank ? profile!.ranking! : null,
+        };
+      })
+    );
 
-      const base =
-        profile?.skillLevel === 'PROFESSIONAL' ? 1 :
-        profile?.skillLevel === 'ADVANCED' ? 0.75 :
-        profile?.skillLevel === 'INTERMEDIATE' ? 0.5 : 0.25;
+    // Filter players who have an active club rank and sort ascending (Rank 1, 2, 3...)
+    const rankedPlayers = playerWithRanks
+      .filter(p => p.clubRank !== null)
+      .sort((a, b) => a.clubRank! - b.clubRank!);
 
-      const score = profile?.ranking
-        ? 10000 - profile.ranking
-        : base * 100 + Math.random() * 5;
+    // Unranked players (guests or club members without a rank)
+    const unrankedPlayers = playerWithRanks.filter(p => p.clubRank === null);
 
-      return {
-        id: p.id,
-        firstName: p.firstName,
-        lastName: p.lastName,
-        skillScore: Math.round(score),
-        seed: 0,
-      };
+    // Assign seed numbers: Rank 1 -> Seed 1, Rank 2 -> Seed 2...
+    const seededList: SeededPlayer[] = rankedPlayers.map((p, i) => ({
+      id: p.id,
+      firstName: p.firstName,
+      lastName: p.lastName,
+      seed: i + 1,
+      skillScore: 10000 - p.clubRank!,
     }));
 
-    stats.sort((a, b) => b.skillScore - a.skillScore);
+    // Append unranked players with seed: 0
+    const unseededList: SeededPlayer[] = unrankedPlayers.map(p => ({
+      id: p.id,
+      firstName: p.firstName,
+      lastName: p.lastName,
+      seed: 0,
+      skillScore: 0,
+    }));
 
-    return stats.map((p, i) => ({ ...p, seed: i + 1 }));
+    return [...seededList, ...unseededList];
   }
 
   // ==============================
