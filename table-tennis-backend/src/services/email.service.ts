@@ -1,5 +1,4 @@
 import nodemailer from 'nodemailer';
-import { config } from '../config/env';
 import { AppError } from '../utils/AppError';
 
 // Check if a string is a placeholder or empty
@@ -9,67 +8,54 @@ const isPlaceholder = (val?: string) => {
   return (
     lower === '' ||
     lower.includes('your-email') ||
-    lower.includes('your-gmail') ||
-    lower.includes('your-16-character') ||
+
     lower.includes('example.com')
   );
 };
 
-// Check if email is configured with real non-placeholder credentials
 export const isEmailConfigured = () => {
   return Boolean(
-    process.env.EMAIL_HOST && 
-    process.env.EMAIL_USER && 
-    process.env.EMAIL_PASS && 
-    !isPlaceholder(process.env.EMAIL_USER) &&
-    !isPlaceholder(process.env.EMAIL_PASS)
+    process.env.BREVO_SMTP_USER &&
+    process.env.BREVO_SMTP_KEY &&
+    process.env.EMAIL_FROM &&
+    !isPlaceholder(process.env.BREVO_SMTP_USER) &&
+    !isPlaceholder(process.env.BREVO_SMTP_KEY) &&
+    !isPlaceholder(process.env.EMAIL_FROM)
   );
 };
 
 // Create transporter only if email is configured
 let transporter: nodemailer.Transporter | null = null;
-let isSmtpVerified = false;
 
 if (isEmailConfigured()) {
-  const isSslPort = Number(process.env.EMAIL_PORT) === 465;
   transporter = nodemailer.createTransport({
-    host: process.env.EMAIL_HOST,
-    port: Number(process.env.EMAIL_PORT) || 587,
-    secure: isSslPort,
-    auth: {
-      user: process.env.EMAIL_USER,
-      // Strip any whitespace from copy-pasting the 16-character Google App Password
-      pass: process.env.EMAIL_PASS ? process.env.EMAIL_PASS.replace(/\s+/g, '') : '',
-    },
-    
-  });
+  host: "smtp-relay.brevo.com",
+  port: 587,
+  secure: false,
+  auth: {
+    user: process.env.BREVO_SMTP_USER,
+    pass: process.env.BREVO_SMTP_KEY,
+  },
+});
 
   // Verify connection on startup
-  transporter.verify((error) => {
-    if (error) {
-      isSmtpVerified = false;
-      console.error('\n' + '='.repeat(70));
-      console.error('❌ EMAIL SERVICE SMTP ERROR:');
-      console.error(`Reason: ${error.message}`);
-      console.error('\n💡 Why this happens with Gmail (Error 535):');
-      console.error('   Google does NOT allow your regular Gmail password for SMTP.');
-      console.error('   You must use a 16-character Google App Password:');
-      console.error('   1. Go to https://myaccount.google.com/security');
-      console.error('   2. Ensure "2-Step Verification" is ON');
-      console.error('   3. Go to https://myaccount.google.com/apppasswords');
-      console.error('   4. Generate an app password (e.g. name it "TableTennis")');
-      console.error('   5. Paste the 16 letters into EMAIL_PASS in table-tennis-backend/.env');
-      console.error('\n⚠️ App will continue running: verification & reset links are logged to console.');
-      console.error('='.repeat(70) + '\n');
-    } else {
-      isSmtpVerified = true;
-      console.log('✅ Email service ready — using', process.env.EMAIL_USER);
-    }
-  });
+  // Verify Brevo SMTP connection on startup
+transporter.verify((error) => {
+  if (error) {
+
+    console.error("❌ Brevo SMTP connection failed:");
+    console.error(error.message);
+    console.error(
+      "Check BREVO_SMTP_USER, BREVO_SMTP_KEY and Brevo SMTP activation."
+    );
+  } else {
+    console.log("✅ Brevo email service ready");
+  }
+});
 } else {
-  console.log('\nℹ️ Email service in Development Mode (placeholder credentials in .env).');
-  console.log('💡 Verification and password reset links will be printed to the terminal console.');
-  console.log('💡 To send real Gmail emails, set EMAIL_USER and a 16-char App Password in .env\n');
+  console.log(
+    "⚠️ Brevo email service is not configured. Check backend .env."
+  );
 }
 
 export const sendPasswordResetEmail = async (email: string, resetToken: string) => {
@@ -80,13 +66,18 @@ export const sendPasswordResetEmail = async (email: string, resetToken: string) 
   console.log('🔑 PASSWORD RESET REQUEST');
   console.log('='.repeat(70));
   console.log(`To: ${email}`);
+  if (process.env.NODE_ENV === 'development') {
   console.log(`Reset Link: ${resetUrl}`);
+}
   console.log('='.repeat(70) + '\n');
 
   if (transporter && isEmailConfigured()) {
     try {
       await transporter.sendMail({
-        from: process.env.EMAIL_FROM || process.env.EMAIL_USER || 'noreply@tabletennis.com',
+        from: {
+  name: "SAMS College Table Tennis",
+  address: process.env.EMAIL_FROM!,
+},
         to: email,
         subject: 'Password Reset Request - Table Tennis Tournament System',
         html: `
@@ -119,13 +110,18 @@ export const sendVerificationEmail = async (email: string, token: string, firstN
   console.log('📧 EMAIL VERIFICATION');
   console.log('='.repeat(70));
   console.log(`To: ${email}`);
+  if (process.env.NODE_ENV === 'development') {
   console.log(`Verify Link: ${verifyUrl}`);
+}
   console.log('='.repeat(70) + '\n');
 
   if (transporter && isEmailConfigured()) {
     try {
       await transporter.sendMail({
-        from: process.env.EMAIL_FROM || process.env.EMAIL_USER || 'noreply@tabletennis.com',
+        from: {
+          name: "SAMS College Table Tennis",
+          address: process.env.EMAIL_FROM!,
+        },
         to: email,
         subject: 'Verify your email — Table Tennis Tournament',
         html: `
