@@ -184,12 +184,22 @@ await sendVerificationEmail(
         }
 
         // Require email verification before login
-if (!user.isEmailVerified) {
-    throw new AppError(
-        'Please verify your email address before logging in.',
-        403
-    );
-}
+        if (!user.isEmailVerified) {
+            // BACKWARD COMPATIBILITY: Existing legacy accounts (no pending verification token) or Super Admins
+            // are automatically verified so existing accounts are never locked out:
+            if (user.role === 'SUPER_ADMIN' || user.isSuperAdmin || !user.emailVerificationToken) {
+                await prisma.user.update({
+                    where: { id: user.id },
+                    data: { isEmailVerified: true },
+                });
+                user.isEmailVerified = true;
+            } else {
+                throw new AppError(
+                    'Please verify your email address before logging in.',
+                    403
+                );
+            }
+        }
 
         // Generate token
         const token = this.generateToken(user.id);
@@ -265,6 +275,7 @@ if (!user.isEmailVerified) {
                     adminRequestStatus: true,
                     isSuperAdmin: true,
                     isEmailVerified: true,
+                    emailVerificationToken: true,
                     profileImage: true,
                     adminPermissions: {
                         select: {
@@ -278,12 +289,20 @@ if (!user.isEmailVerified) {
                 throw new AppError('User not found', 401);
             }
             // Prevent unverified users from accessing protected routes
-if (!user.isEmailVerified) {
-    throw new AppError(
-        'Please verify your email address before accessing your account.',
-        403
-    );
-}
+            if (!user.isEmailVerified) {
+                if (user.role === 'SUPER_ADMIN' || user.isSuperAdmin || !user.emailVerificationToken) {
+                    await prisma.user.update({
+                        where: { id: user.id },
+                        data: { isEmailVerified: true },
+                    });
+                    user.isEmailVerified = true;
+                } else {
+                    throw new AppError(
+                        'Please verify your email address before accessing your account.',
+                        403
+                    );
+                }
+            }
 
             let permissions: string[] = [];
             if (user.role === 'SUPER_ADMIN' || user.isSuperAdmin) {

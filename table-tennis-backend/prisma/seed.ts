@@ -19,6 +19,7 @@ async function main() {
       password: adminPassword,
       role: 'SUPER_ADMIN',
       isSuperAdmin: true,
+      isEmailVerified: true,
     },
     create: {
       email: 'admin@tabletennis.com',
@@ -28,6 +29,7 @@ async function main() {
       phone: '+94771234567',
       role: 'SUPER_ADMIN',
       isSuperAdmin: true,
+      isEmailVerified: true,
 
       adminProfile: {
         create: {
@@ -66,6 +68,7 @@ async function main() {
     update: {
       password: refereePassword,
       role: 'REFEREE',
+      isEmailVerified: true,
     },
     create: {
       email: 'referee@tabletennis.com',
@@ -74,6 +77,7 @@ async function main() {
       lastName: 'User',
       phone: '+94771234568',
       role: 'REFEREE',
+      isEmailVerified: true,
 
       refereeProfile: {
         create: {
