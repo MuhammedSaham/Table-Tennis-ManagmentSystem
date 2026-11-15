@@ -865,8 +865,8 @@ const RefereeMatches: React.FC = () => {
         {/* ─── REFEREE HEADER MODULE ─── */}
         <header className="rounded-2xl border border-white/20 bg-[#061D23]/25 p-5 sm:p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-heading font-extrabold text-white tracking-tight">
-              Referee Dashboard
+            <h1 className="text-xl sm:text-2xl font-black uppercase tracking-wider text-white break-words">
+              Welcome back, {user?.firstName}!
             </h1>
             <p className="mt-1 text-xs sm:text-sm text-cyan-200/80 max-w-xl">
               Inspect your assigned fixtures, record official set scores, and track your officiating duty.

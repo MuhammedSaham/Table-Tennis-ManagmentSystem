@@ -21,7 +21,6 @@ import {
   ClipboardDocumentIcon,
   CheckCircleIcon,
   ExclamationTriangleIcon,
-  UserGroupIcon,
   ShieldCheckIcon,
   DocumentTextIcon,
 } from "@heroicons/react/24/outline";
@@ -101,10 +100,15 @@ const Users: React.FC = () => {
     }
   };
 
-  // Split players and roles for tabs
-  const clubMembers = users.filter(
-    (u) => u.role === "PLAYER" && u.isClubMember === true,
-  );
+  // Split players and roles for tabs (sort club members by rank: #1, #2... with unranked at bottom)
+  const clubMembers = users
+    .filter((u) => u.role === "PLAYER" && u.isClubMember === true)
+    .sort((a, b) => {
+      if (a.ranking && b.ranking) return a.ranking - b.ranking;
+      if (a.ranking && !b.ranking) return -1;
+      if (!a.ranking && b.ranking) return 1;
+      return (a.firstName || "").localeCompare(b.firstName || "");
+    });
   const guestPlayers = users.filter(
     (u) => u.role === "PLAYER" && !u.isClubMember,
   );
@@ -368,16 +372,7 @@ const Users: React.FC = () => {
       {/* COLLEGIATE HEADER CONTROLS */}
       <header className="rounded-2xl border border-white/20 bg-[#061D23]/20 p-5 sm:p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <BackButton
-            to="/app/dashboard"
-            label="Back to Dashboard"
-            className="mb-3"
-          />
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#4AEEFF]/10 border border-[#4AEEFF]/30 text-[#4AEEFF] text-[11px] font-bold uppercase tracking-wider mb-2.5">
-            <UserGroupIcon className="w-3.5 h-3.5" />
-            <span>Administration · User Directory</span>
-          </div>
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-heading font-extrabold text-white tracking-tight">
+          <h1 className="text-xl sm:text-2xl font-black uppercase tracking-wider text-white">
             User Directory
           </h1>
           <p className="text-xs sm:text-sm text-cyan-200/80 mt-1">
@@ -571,7 +566,7 @@ const Users: React.FC = () => {
                 <th className="px-6 py-4">Email</th>
                 <th className="px-6 py-4">Role</th>
                 {activeTab === "CLUB" && (
-                  <th className="px-6 py-4">Leaderboard Rank</th>
+                  <th className="px-6 py-4">Club Rank</th>
                 )}
                 <th className="px-6 py-4">Joined Date</th>
                 <th className="px-6 py-4 text-right">Actions</th>
@@ -944,7 +939,7 @@ const Users: React.FC = () => {
 
                   {userItem.role === "PLAYER" && (
                     <div className="flex items-center justify-between pt-2 border-t border-white/5">
-                      <span className="text-gray-400 font-medium">Rank:</span>
+                      <span className="text-gray-400 font-medium">Club Rank:</span>
                       {userItem.ranking ? (
                         <div className="flex items-center gap-1.5">
                           <span className="font-black text-[#4AEEFF]">

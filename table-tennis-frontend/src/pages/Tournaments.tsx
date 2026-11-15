@@ -260,10 +260,15 @@ const Tournaments: React.FC = () => {
       <header className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 rounded-2xl border border-white/20 bg-[#061D23]/20 p-4 sm:p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl">
         {/* Left: Title + Status Filter Tabs */}
         <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-6 min-w-0">
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl sm:text-3xl font-heading font-bold text-white tracking-tight leading-none">
-              Tournaments
-            </h1>
+          <div className="flex items-start gap-3">
+            <div>
+              <h1 className="text-xl sm:text-2xl font-black uppercase tracking-wider text-white">
+                Tournaments
+              </h1>
+              <p className="mt-1 text-xs uppercase tracking-widest text-[#4AEEFF]">
+                Explore Tournaments
+              </p>
+            </div>
             <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-white/10 text-white/80 border border-white/15">
               {statusFilter === "ALL"
                 ? tournaments.length
@@ -358,7 +363,7 @@ const Tournaments: React.FC = () => {
               >
                 <div>
                   <div className="flex justify-between items-start mb-3 gap-2">
-                    <h3 className="text-lg sm:text-xl font-bold text-white group-hover:text-[#4AEEFF] transition-colors line-clamp-2 leading-snug">
+                    <h3 className="text-xl sm:text-2xl font-black tracking-wider text-white group-hover:text-[#4AEEFF] transition-colors line-clamp-2 leading-snug">
                       {formatTitle(tournament.name)}
                     </h3>
                     <div className="flex flex-col items-end gap-1.5 shrink-0">

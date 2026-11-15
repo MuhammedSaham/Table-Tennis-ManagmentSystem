@@ -21,6 +21,7 @@ import groupRoutes from './routes/group.routes';
 import clubMembershipRoutes from './routes/clubMembership.routes';
 import paymentProofRoutes from './routes/paymentProof.routes';
 import aboutRoutes from './routes/about.routes';
+import auditLogRoutes from './routes/auditLog.routes';
 
 
 const app: Application = express();
@@ -68,6 +69,7 @@ app.use(
   paymentProofRoutes
 );
 app.use('/api/v1/about', aboutRoutes);
+app.use('/api/v1/audit-logs', auditLogRoutes);
 // 404 handler
 app.all('*', (req: Request, res: Response, next: NextFunction) => {
     next(new AppError(`Can't find ${req.originalUrl} on this server!`, 404));
