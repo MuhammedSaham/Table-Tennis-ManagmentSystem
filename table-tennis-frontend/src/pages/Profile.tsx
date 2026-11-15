@@ -191,7 +191,7 @@ const Profile: React.FC = () => {
   const [playerStats, setPlayerStats] = useState<PlayerStats | null>(null);
   const [_statsLoading, setStatsLoading] = useState(false);
   const [_isFavorited, setIsFavorited] = useState(false);
-  const [_totalFavorites, setTotalFavorites] = useState(0);
+  const [totalFavorites, setTotalFavorites] = useState(0);
   const [_favoriteLoading, _setFavoriteLoading] = useState(false);
 
   const [membershipStatus, setMembershipStatus] = useState<any>(null);
@@ -339,10 +339,14 @@ const Profile: React.FC = () => {
       );
       const profileData = response.data.data;
       setProfile(profileData);
-      if (isViewingOtherProfile && profileData.role === "PLAYER") {
-        const publicProfile = await api.get(`/users/public/${profileData.id}`);
-        setIsFavorited(Boolean(publicProfile.data.data.isFavorited));
-        setTotalFavorites(Number(publicProfile.data.data.totalFavorites) || 0);
+      if (profileData.role === "PLAYER") {
+        try {
+          const publicProfile = await api.get(`/users/public/${profileData.id}`);
+          setIsFavorited(Boolean(publicProfile.data.data.isFavorited));
+          setTotalFavorites(Number(publicProfile.data.data.totalFavorites) || 0);
+        } catch {
+          // Ignore public profile fetch error on fallback
+        }
       }
       setFormData({
         firstName: profileData.firstName || "",
@@ -598,9 +602,23 @@ const Profile: React.FC = () => {
                 {profile.firstName} {profile.lastName}
               </h1>
 
-              <span className="mt-1 inline-block rounded-md border border-[#4AEEFF]/30 bg-[#4AEEFF]/15 px-2 py-1 text-[10px] font-bold uppercase text-[#4AEEFF]">
-                {profile.role === "SUPER_ADMIN" ? "SUPER ADMIN" : profile.role}
-              </span>
+              <div className="mt-1 flex items-center gap-2 flex-wrap">
+                <span className="inline-block rounded-md border border-[#4AEEFF]/30 bg-[#4AEEFF]/15 px-2 py-1 text-[10px] font-bold uppercase text-[#4AEEFF]">
+                  {profile.role === "SUPER_ADMIN" ? "SUPER ADMIN" : profile.role}
+                </span>
+
+                {profile.role === "PLAYER" && (
+                  <span
+                    className="inline-flex items-center gap-1 rounded-md border border-rose-500/30 bg-rose-500/15 px-2 py-1 text-[10px] font-bold uppercase text-rose-300"
+                    title="Total likes received from fans and club members"
+                  >
+                    <span>❤️</span>
+                    <span>
+                      {totalFavorites} {totalFavorites === 1 ? "Fan Like" : "Fan Likes"}
+                    </span>
+                  </span>
+                )}
+              </div>
 
               <div className="mt-3 flex flex-col gap-2 text-xs text-white/75 sm:flex-row sm:flex-wrap sm:gap-x-6">
                 <span className="flex items-center gap-2 break-all">
