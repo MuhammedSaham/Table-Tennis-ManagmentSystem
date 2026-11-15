@@ -6,7 +6,6 @@ import toast from "react-hot-toast";
 import {
   TrophyIcon,
   CalendarIcon,
-  ChartBarIcon,
   ClipboardDocumentCheckIcon,
   UserGroupIcon,
   InboxStackIcon,
@@ -60,7 +59,6 @@ const Dashboard: React.FC = () => {
     useState<number>(0);
   const [pendingPaymentCount, setPendingPaymentCount] = useState<number>(0);
   const [pendingAdminCount, setPendingAdminCount] = useState<number>(0);
-  const [topRankedPlayers, setTopRankedPlayers] = useState<any[]>([]);
   const [userDirectoryStats, setUserDirectoryStats] = useState<{
     members: number;
     guests: number;
@@ -101,24 +99,6 @@ const Dashboard: React.FC = () => {
     ) {
       fetchPendingRequestsCount();
     }
-
-    // Fetch top ranked players preview
-    api
-      .get("/users/public/players")
-      .then((res) => {
-        const players = res.data?.data || [];
-        const ranked = players
-          .filter(
-            (p: any) => p.playerProfile?.ranking && p.playerProfile.ranking > 0,
-          )
-          .sort(
-            (a: any, b: any) =>
-              (a.playerProfile.ranking || 999) -
-              (b.playerProfile.ranking || 999),
-          );
-        setTopRankedPlayers(ranked.slice(0, 3));
-      })
-      .catch(() => {});
 
     // Fetch user directory stats if permitted
     if (isSuperAdmin || (isAdmin && hasPermission("MANAGE_USERS"))) {
@@ -445,75 +425,7 @@ const Dashboard: React.FC = () => {
               </Link>
             )}
 
-            {/* Card 2: Player Rankings (with Live Top 3 Preview) */}
-            {(isSuperAdmin || hasPermission("MANAGE_RANKINGS")) && (
-              <Link
-                to="/app/global-leaderboard"
-                className="group relative flex flex-col justify-between rounded-2xl border border-white/20 bg-[#061D23]/20 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl transition-all duration-300 hover:border-[#4AEEFF]/60 hover:-translate-y-1"
-              >
-                <div>
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="p-3 rounded-xl bg-[#4AEEFF]/10 border border-[#4AEEFF]/30 text-[#4AEEFF]">
-                      <ChartBarIcon className="h-6 w-6" />
-                    </div>
-                    <span className="px-3 py-1 rounded-full bg-[#4AEEFF]/15 text-[#4AEEFF] border border-[#4AEEFF]/30 text-xs font-semibold">
-                      Global Standings
-                    </span>
-                  </div>
-
-                  <h3 className="text-base font-bold text-white transition-colors group-hover:text-[#4AEEFF]">
-                    Player Rankings
-                  </h3>
-                  <p className="text-xs text-white/70 mt-1 leading-relaxed">
-                    Club rankings, match statistics, and global tournament
-                    leaderboards.
-                  </p>
-
-                  {/* Live Top 3 Podium Preview */}
-                  <div className="mt-4 space-y-1.5">
-                    {topRankedPlayers.length > 0 ? (
-                      topRankedPlayers.map((player: any, idx: number) => (
-                        <div
-                          key={player.id || idx}
-                          className="flex items-center justify-between p-2 rounded-lg bg-white/5 border border-white/10 text-xs"
-                        >
-                          <div className="flex items-center gap-2 min-w-0">
-                            <span
-                              className={`w-5 h-5 rounded-full flex items-center justify-center font-black text-[10px] shrink-0 ${
-                                idx === 0
-                                  ? "bg-amber-400 text-slate-950"
-                                  : idx === 1
-                                    ? "bg-slate-300 text-slate-900"
-                                    : "bg-amber-700 text-white"
-                              }`}
-                            >
-                              {idx + 1}
-                            </span>
-                            <span className="font-semibold text-white truncate">
-                              {player.firstName} {player.lastName}
-                            </span>
-                          </div>
-                          <span className="text-[#4AEEFF] font-bold text-[11px] shrink-0">
-                            #{player.playerProfile?.ranking || idx + 1}
-                          </span>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="p-3 rounded-xl border border-white/10 bg-white/5 text-center text-xs text-white/60">
-                        View official club ranking tables
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="mt-5 pt-3.5 border-t border-white/10 flex items-center justify-between text-xs font-bold text-[#4AEEFF]">
-                  <span>View Leaderboards</span>
-                  <ChevronRightIcon className="h-4 w-4 transform group-hover:translate-x-1 transition-transform" />
-                </div>
-              </Link>
-            )}
-
-            {/* Card 3: User Management (with Live User Directory Breakdown) */}
+            {/* Card 2: User Management & Club Rankings */}
             {(isSuperAdmin || hasPermission("MANAGE_USERS")) && (
               <Link
                 to="/app/users"
@@ -525,16 +437,15 @@ const Dashboard: React.FC = () => {
                       <UserGroupIcon className="h-6 w-6" />
                     </div>
                     <span className="px-3 py-1 rounded-full bg-[#4AEEFF]/15 text-[#4AEEFF] border border-[#4AEEFF]/30 text-xs font-semibold">
-                      User Accounts
+                      Roster & Seeding
                     </span>
                   </div>
 
                   <h3 className="text-base font-bold text-white transition-colors group-hover:text-[#4AEEFF]">
-                    User Directory
+                    User Directory & Club Ranks
                   </h3>
                   <p className="text-xs text-white/70 mt-1 leading-relaxed">
-                    Manage club members, guest players, referees, and
-                    permissions.
+                    Manage club athletes, assign club ranks for tournament seeding, and configure user permissions.
                   </p>
 
                   {/* Live Breakdown Stats */}
@@ -567,7 +478,59 @@ const Dashboard: React.FC = () => {
                 </div>
 
                 <div className="mt-5 pt-3.5 border-t border-white/10 flex items-center justify-between text-xs font-bold text-[#4AEEFF]">
-                  <span>Manage Directory</span>
+                  <span>Manage Users & Club Ranks</span>
+                  <ChevronRightIcon className="h-4 w-4 transform group-hover:translate-x-1 transition-transform" />
+                </div>
+              </Link>
+            )}
+
+            {/* Card 3: Super Admin Audit & Activity Logs */}
+            {isSuperAdmin && (
+              <Link
+                to="/app/admin/audit-logs"
+                className="group relative flex flex-col justify-between rounded-2xl border border-white/20 bg-[#061D23]/20 p-6 shadow-[0_25px_60px_-15px_rgba(6,29,35,0.5)] backdrop-blur-xl transition-all duration-300 hover:border-[#4AEEFF]/60 hover:-translate-y-1"
+              >
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="p-3 rounded-xl bg-[#4AEEFF]/10 border border-[#4AEEFF]/30 text-[#4AEEFF]">
+                      <ShieldCheckIcon className="h-6 w-6" />
+                    </div>
+                    <span className="px-3 py-1 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30 text-xs font-semibold">
+                      Security & Trail
+                    </span>
+                  </div>
+
+                  <h3 className="text-base font-bold text-white transition-colors group-hover:text-[#4AEEFF]">
+                    System Audit Logs
+                  </h3>
+                  <p className="text-xs text-white/70 mt-1 leading-relaxed">
+                    Track live referee scorecards, payment verifications, membership reviews, and security events.
+                  </p>
+
+                  {/* Audit Trail Status Box */}
+                  <div className="mt-4 grid grid-cols-2 gap-2">
+                    <div className="rounded-xl border border-white/10 bg-white/5 p-2.5 text-center">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-white/60">
+                        Activity Trail
+                      </p>
+                      <p className="mt-0.5 text-xs font-black uppercase tracking-wider text-emerald-400 flex items-center justify-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                        Active
+                      </p>
+                    </div>
+                    <div className="rounded-xl border border-white/10 bg-white/5 p-2.5 text-center">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-white/60">
+                        Audit Scope
+                      </p>
+                      <p className="mt-0.5 text-base font-black text-[#4AEEFF]">
+                        All Roles
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-5 pt-3.5 border-t border-white/10 flex items-center justify-between text-xs font-bold text-[#4AEEFF]">
+                  <span>View Audit Trail</span>
                   <ChevronRightIcon className="h-4 w-4 transform group-hover:translate-x-1 transition-transform" />
                 </div>
               </Link>

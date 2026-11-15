@@ -221,6 +221,26 @@ export const UserNavProfile: React.FC = () => {
                   </div>
                 </Link>
               )}
+
+              {isSuperAdmin && (
+                <Link
+                  to="/app/admin/audit-logs"
+                  onClick={() => setMenuOpen(false)}
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold text-white/80 hover:bg-white/10 hover:text-white transition-all group"
+                >
+                  <div className="w-7 h-7 rounded-lg bg-amber-500/15 group-hover:bg-amber-500/25 flex items-center justify-center text-amber-400 transition-colors">
+                    <ShieldCheckIcon className="w-4 h-4" />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="font-bold text-white group-hover:text-[#4AEEFF] transition-colors">
+                      System Audit Trail
+                    </span>
+                    <span className="text-[10px] text-white/40 font-normal">
+                      Security & activity logs
+                    </span>
+                  </div>
+                </Link>
+              )}
             </div>
 
             {/* Logout Action */}

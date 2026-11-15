@@ -113,6 +113,10 @@ const Layout: React.FC = () => {
     mobileNavigation.push({ name: "Manage About Page", href: "/app/admin/about", icon: PencilSquareIcon });
   }
 
+  if (isSuperAdmin) {
+    mobileNavigation.push({ name: "Audit Logs", href: "/app/admin/audit-logs", icon: ShieldCheckIcon });
+  }
+
   // Pages that should NOT show the navbar
   const isAuthPage = ["/login", "/register", "/reset-password"].includes(
     location.pathname,
