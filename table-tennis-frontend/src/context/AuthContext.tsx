@@ -69,7 +69,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         setUser(null);
       }
       // Sync fresh profile data including profileImage
-      api.get("/users/profile")
+      api
+        .get("/users/profile")
         .then((res) => {
           if (res.data?.data) {
             localStorage.setItem("user", JSON.stringify(res.data.data));
@@ -92,16 +93,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     setUser(user);
     return user;
   };
-
   const register = async (userData: any) => {
-    const response = await api.post("/auth/register", userData);
-    const { token, user } = response.data.data;
+    await api.post("/auth/register", userData);
 
-    localStorage.setItem("token", token);
-    localStorage.setItem("user", JSON.stringify(user));
-
-    setToken(token);
-    setUser(user);
+    // Do not automatically log in after registration.
+    // The user must verify their email before logging in.
   };
 
   const logout = () => {
@@ -135,7 +131,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
   return (
     <AuthContext.Provider
-      value={{ user, token, login, register, logout, isLoading, hasPermission, refetchUser }}
+      value={{
+        user,
+        token,
+        login,
+        register,
+        logout,
+        isLoading,
+        hasPermission,
+        refetchUser,
+      }}
     >
       {children}
     </AuthContext.Provider>
