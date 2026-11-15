@@ -1,16 +1,22 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import api from "../services/api";
 
 const VerifyEmail: React.FC = () => {
   const [params] = useSearchParams();
+  const verificationStarted = useRef(false);
+  const token = params.get("token");
   const [status, setStatus] = useState<"loading" | "success" | "error">(
     "loading",
   );
   const [message, setMessage] = useState("");
 
   useEffect(() => {
-    const token = params.get("token");
+    // Prevent duplicate verification requests
+    if (verificationStarted.current) return;
+
+    verificationStarted.current = true;
+
     if (!token) {
       setStatus("error");
       setMessage("Invalid verification link.");
@@ -18,16 +24,20 @@ const VerifyEmail: React.FC = () => {
     }
 
     api
-      .get(`/auth/verify-email?token=${token}`)
+      .get("/auth/verify-email", {
+        params: { token },
+      })
       .then((res) => {
         setStatus("success");
         setMessage(res.data?.message || "Email verified! You can now log in.");
       })
       .catch((err) => {
         setStatus("error");
-        setMessage(err.response?.data?.message || "This link is invalid or has expired.");
+        setMessage(
+          err.response?.data?.message || "This link is invalid or has expired.",
+        );
       });
-  }, [params]);
+  }, [token]);
 
   return (
     <div
@@ -71,16 +81,27 @@ const VerifyEmail: React.FC = () => {
               }}
             />
             <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
-            <p style={{ color: "#ffffff", fontSize: "16px" }}>Verifying your email…</p>
+            <p style={{ color: "#ffffff", fontSize: "16px" }}>
+              Verifying your email…
+            </p>
           </>
         )}
         {status === "success" && (
           <>
             <div style={{ fontSize: 56, marginBottom: 16 }}>✅</div>
-            <h2 style={{ color: "#4AEEFF", fontWeight: 800, marginBottom: 8, fontSize: "24px" }}>
+            <h2
+              style={{
+                color: "#4AEEFF",
+                fontWeight: 800,
+                marginBottom: 8,
+                fontSize: "24px",
+              }}
+            >
               Email Verified!
             </h2>
-            <p style={{ color: "#e2e8f0", marginBottom: 28, fontSize: "15px" }}>{message}</p>
+            <p style={{ color: "#e2e8f0", marginBottom: 28, fontSize: "15px" }}>
+              {message}
+            </p>
             <Link
               to="/login"
               style={{
@@ -102,10 +123,19 @@ const VerifyEmail: React.FC = () => {
         {status === "error" && (
           <>
             <div style={{ fontSize: 56, marginBottom: 16 }}>❌</div>
-            <h2 style={{ color: "#f87171", fontWeight: 800, marginBottom: 8, fontSize: "24px" }}>
+            <h2
+              style={{
+                color: "#f87171",
+                fontWeight: 800,
+                marginBottom: 8,
+                fontSize: "24px",
+              }}
+            >
               Verification Failed
             </h2>
-            <p style={{ color: "#e2e8f0", marginBottom: 28, fontSize: "15px" }}>{message}</p>
+            <p style={{ color: "#e2e8f0", marginBottom: 28, fontSize: "15px" }}>
+              {message}
+            </p>
             <Link
               to="/login"
               style={{

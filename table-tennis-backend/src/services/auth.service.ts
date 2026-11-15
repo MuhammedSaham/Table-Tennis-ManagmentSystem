@@ -49,6 +49,12 @@ export class AuthService {
         // Hash password
         const hashedPassword = await bcrypt.hash(userData.password, config.BCRYPT_SALT_ROUNDS);
 
+        // Generate secure email verification token
+const verificationToken = crypto.randomBytes(32).toString('hex');
+const verificationExpiry = new Date(
+    Date.now() + 24 * 60 * 60 * 1000
+);
+
         // Create user with role-specific profile in a transaction
         const user = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
             // Set admin request status if registering as ADMIN
@@ -73,7 +79,9 @@ export class AuthService {
                     role: finalRole as any,
                     adminRequestStatus,
                     adminRequestedAt,
-                    isEmailVerified: true,
+                    isEmailVerified: false,
+emailVerificationToken: verificationToken,
+emailVerificationExpiry: verificationExpiry,
                 },
             });
 
@@ -127,24 +135,28 @@ export class AuthService {
             }
         }
 
-        // Generate JWT token
-        const token = this.generateToken(user.id);
+        // Send verification email after successful registration
+await sendVerificationEmail(
+    user.email,
+    verificationToken,
+    user.firstName
+);
 
+        // Generate JWT token
         return {
-            user: {
-                id: user.id,
-                email: user.email,
-                firstName: user.firstName,
-                lastName: user.lastName,
-                role: userData.role === 'ADMIN' ? 'PENDING_ADMIN' : user.role,
-                adminRequestStatus: user.adminRequestStatus,
-                profileImage: user.profileImage,
-                permissions: [],
-                isEmailVerified: true,
-            } as any,
-            token,
-            message: 'Registration successful! You can now log in.',
-        };
+    user: {
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        role: userData.role === 'ADMIN' ? 'PENDING_ADMIN' : user.role,
+        adminRequestStatus: user.adminRequestStatus,
+        profileImage: user.profileImage,
+        permissions: [],
+        isEmailVerified: false,
+    } as any,
+    message: 'Registration successful! Please check your email to verify your account.',
+};
     }
 
     // Login user
@@ -170,6 +182,14 @@ export class AuthService {
         if (!isPasswordValid) {
             throw new AppError('Invalid email or password', 401);
         }
+
+        // Require email verification before login
+if (!user.isEmailVerified) {
+    throw new AppError(
+        'Please verify your email address before logging in.',
+        403
+    );
+}
 
         // Generate token
         const token = this.generateToken(user.id);
@@ -244,6 +264,7 @@ export class AuthService {
                     role: true,
                     adminRequestStatus: true,
                     isSuperAdmin: true,
+                    isEmailVerified: true,
                     profileImage: true,
                     adminPermissions: {
                         select: {
@@ -256,6 +277,13 @@ export class AuthService {
             if (!user) {
                 throw new AppError('User not found', 401);
             }
+            // Prevent unverified users from accessing protected routes
+if (!user.isEmailVerified) {
+    throw new AppError(
+        'Please verify your email address before accessing your account.',
+        403
+    );
+}
 
             let permissions: string[] = [];
             if (user.role === 'SUPER_ADMIN' || user.isSuperAdmin) {

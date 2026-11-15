@@ -7,12 +7,14 @@ const authService = new AuthService();
 
 // Register new user
 export const register = catchAsync(async (req: Request, res: Response) => {
-    const { user, token } = await authService.register(req.body);
+    const result = await authService.register(req.body);
 
-    sendResponse(res, 201, 'User registered successfully', {
-        user,
-        token,
-    });
+    sendResponse(
+        res,
+        201,
+        result.message,
+        { user: result.user }
+    );
 });
 
 // Login user
