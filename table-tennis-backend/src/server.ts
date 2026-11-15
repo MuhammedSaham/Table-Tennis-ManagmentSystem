@@ -1,11 +1,32 @@
 import app from './app';
 import { config } from './config/env';
+import prisma from './config/database';
 
 const PORT = config.PORT || 3000;
 
 const server = app.listen(PORT, () => {
     console.log(`Server running on port ${PORT} in ${config.NODE_ENV} mode`);
     console.log(`Health check: http://localhost:${PORT}/health`);
+
+    // Auto-verify existing legacy accounts created before email verification was introduced
+    prisma.user
+        .updateMany({
+            where: {
+                isEmailVerified: false,
+                emailVerificationToken: null,
+            },
+            data: {
+                isEmailVerified: true,
+            },
+        })
+        .then((result) => {
+            if (result.count > 0) {
+                console.log(`✅ Auto-verified ${result.count} existing legacy accounts.`);
+            }
+        })
+        .catch((err) => {
+            console.error('Legacy account auto-verification notice:', err?.message || err);
+        });
 });
 
 // Handle server errors
