@@ -70,7 +70,7 @@ const Layout: React.FC = () => {
   }
 
   if (isSuperAdmin || hasPermission("MANAGE_CLUB_MEMBERSHIPS") || hasPermission("MANAGE_REGISTRATIONS")) {
-    desktopNavigation.push({ name: "Admin Requests", href: "/app/admin-requests", icon: UserGroupIcon });
+    desktopNavigation.push({ name: "Requests", href: "/app/admin-requests", icon: UserGroupIcon });
   }
 
   // Mobile navigation items (Explicitly includes Profile for quick access)
@@ -106,7 +106,7 @@ const Layout: React.FC = () => {
   }
 
   if (isSuperAdmin || hasPermission("MANAGE_CLUB_MEMBERSHIPS") || hasPermission("MANAGE_REGISTRATIONS")) {
-    mobileNavigation.push({ name: "Admin Requests", href: "/app/admin-requests", icon: UserGroupIcon });
+    mobileNavigation.push({ name: "Requests", href: "/app/admin-requests", icon: UserGroupIcon });
   }
 
   if (isSuperAdmin || user?.role === "ADMIN") {

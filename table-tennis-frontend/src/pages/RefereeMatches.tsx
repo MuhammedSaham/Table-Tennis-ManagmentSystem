@@ -974,7 +974,7 @@ const RefereeMatches: React.FC = () => {
 
       {/* ─── NEXT MATCH ON COURT SPOTLIGHT HERO ─── */}
       {nextPendingMatch && (
-        <section className="relative overflow-hidden rounded-[20px] border border-[#4AEEFF]/40 bg-gradient-to-r from-[#061D23]/95 via-[#0A2E36]/85 to-[#061D23]/95 p-6 shadow-[0_20px_50px_-10px_rgba(74,238,255,0.2)] backdrop-blur-xl">
+        <section className="relative -mt-3 overflow-hidden rounded-[20px] border border-[#4AEEFF]/40 bg-gradient-to-r from-[#061D23]/95 via-[#0A2E36]/85 to-[#061D23]/95 p-6 shadow-[0_20px_50px_-10px_rgba(74,238,255,0.2)] backdrop-blur-xl">
           <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-[#4AEEFF] to-transparent shadow-[0_0_10px_#4AEEFF]" />
 
           <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
