@@ -354,8 +354,7 @@ const PublicLayout: React.FC = () => {
             </div>
           </div>
           <div className="border-t border-white/20 mt-8 pt-8 text-center text-sm text-white/70">
-            © 2026 Table Tennis Tournament Management System. All rights
-            reserved.
+            © 2026 Sam's College Table Tennis Management System. All rights reserved.
           </div>
         </div>
       </footer>

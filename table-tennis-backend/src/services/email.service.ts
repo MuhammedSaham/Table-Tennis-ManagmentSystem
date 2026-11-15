@@ -41,9 +41,7 @@ if (isEmailConfigured()) {
       // Strip any whitespace from copy-pasting the 16-character Google App Password
       pass: process.env.EMAIL_PASS ? process.env.EMAIL_PASS.replace(/\s+/g, '') : '',
     },
-    tls: {
-      rejectUnauthorized: false,
-    },
+    
   });
 
   // Verify connection on startup
@@ -155,7 +153,12 @@ export const sendVerificationEmail = async (email: string, token: string, firstN
       });
       console.log(`✅ Verification email sent to ${email}`);
     } catch (error) {
-      console.error('❌ Failed to dispatch verification email via SMTP, link printed above:', error);
-    }
+  console.error('❌ Failed to send verification email:', error);
+
+  throw new AppError(
+    'Account created, but verification email could not be sent. Please try resending the verification email.',
+    503
+  );
+}
   }
 };
