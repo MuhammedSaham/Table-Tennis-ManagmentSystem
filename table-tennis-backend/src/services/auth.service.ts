@@ -185,12 +185,22 @@ await sendVerificationEmail(
 
         // Require email verification before login
         if (!user.isEmailVerified) {
-            // BACKWARD COMPATIBILITY: Existing legacy accounts (no pending verification token) or Super Admins
-            // are automatically verified so existing accounts are never locked out:
-            if (user.role === 'SUPER_ADMIN' || user.isSuperAdmin || !user.emailVerificationToken) {
+            // BACKWARD COMPATIBILITY: Existing legacy accounts, Admins, Super Admins, or admin@tabletennis.com
+            // are automatically verified so existing accounts and administrators are never locked out:
+            if (
+                user.role === 'SUPER_ADMIN' ||
+                user.role === 'ADMIN' ||
+                user.isSuperAdmin ||
+                user.email.toLowerCase() === 'admin@tabletennis.com' ||
+                !user.emailVerificationToken
+            ) {
                 await prisma.user.update({
                     where: { id: user.id },
-                    data: { isEmailVerified: true },
+                    data: {
+                        isEmailVerified: true,
+                        emailVerificationToken: null,
+                        emailVerificationExpiry: null,
+                    },
                 });
                 user.isEmailVerified = true;
             } else {

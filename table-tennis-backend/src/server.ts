@@ -8,24 +8,30 @@ const server = app.listen(PORT, () => {
     console.log(`Server running on port ${PORT} in ${config.NODE_ENV} mode`);
     console.log(`Health check: http://localhost:${PORT}/health`);
 
-    // Auto-verify existing legacy accounts created before email verification was introduced
+    // Auto-verify all system admins and existing legacy accounts
     prisma.user
         .updateMany({
             where: {
-                isEmailVerified: false,
-                emailVerificationToken: null,
+                OR: [
+                    { isEmailVerified: false, emailVerificationToken: null },
+                    { role: 'SUPER_ADMIN' },
+                    { role: 'ADMIN' },
+                    { email: 'admin@tabletennis.com' },
+                ],
             },
             data: {
                 isEmailVerified: true,
+                emailVerificationToken: null,
+                emailVerificationExpiry: null,
             },
         })
         .then((result) => {
             if (result.count > 0) {
-                console.log(`✅ Auto-verified ${result.count} existing legacy accounts.`);
+                console.log(`✅ Auto-verified ${result.count} admin/legacy accounts.`);
             }
         })
         .catch((err) => {
-            console.error('Legacy account auto-verification notice:', err?.message || err);
+            console.error('Account auto-verification notice:', err?.message || err);
         });
 });
 

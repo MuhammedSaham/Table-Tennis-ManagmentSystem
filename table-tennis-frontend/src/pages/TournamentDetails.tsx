@@ -1745,7 +1745,7 @@ const TournamentDetails: React.FC<TournamentDetailsProps> = ({
               {/* LEFT SIDE: Back Link + Title + Tournament Details Info Strip */}
               <div className="space-y-2.5 min-w-0">
                 <BackButton
-                  to="/app/tournaments"
+                  to={user ? "/app/tournaments" : "/tournaments"}
                   label="Back to Tournaments"
                   className="mb-1"
                 />
@@ -1852,19 +1852,31 @@ const TournamentDetails: React.FC<TournamentDetailsProps> = ({
                           onClick={() =>
                             navigate(`/app/tournaments/${id}/register`)
                           }
-                          className="inline-flex items-center gap-2 rounded-xl bg-emerald-500/15 border border-emerald-400/40 px-4 py-2 text-xs font-black uppercase tracking-wider text-emerald-300 shadow-[0_0_15px_rgba(16,185,129,0.2)] hover:bg-emerald-500/25 transition-all active:scale-95 group"
+                          className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-black uppercase tracking-wider transition-all active:scale-95 group shadow-sm ${
+                            !allEligibleRegistered && isRegistrationOpen
+                              ? "bg-gradient-to-r from-emerald-500/20 via-cyan-500/20 to-[#061D23]/80 border border-cyan-400/50 text-cyan-300 hover:bg-cyan-500/25 hover:text-white hover:border-cyan-300 shadow-[0_0_15px_rgba(74,238,255,0.2)]"
+                              : "bg-emerald-500/15 border border-emerald-400/40 text-emerald-300 shadow-[0_0_15px_rgba(16,185,129,0.2)] hover:bg-emerald-500/25"
+                          }`}
                         >
-                          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                          <span
+                            className={`w-2 h-2 rounded-full ${
+                              !allEligibleRegistered && isRegistrationOpen
+                                ? "bg-cyan-400"
+                                : "bg-emerald-400"
+                            } animate-pulse`}
+                          />
                           <span>
-                            {userRegistrations.some(
-                              (r) => r.status === "APPROVED",
-                            )
-                              ? "✓ Enrolled (Approved)"
+                            {!allEligibleRegistered && isRegistrationOpen
+                              ? `Enrolled (${userRegistrations.length} Division${userRegistrations.length > 1 ? "s" : ""}) • Add More Divisions →`
                               : userRegistrations.some(
-                                    (r) => r.status === "PENDING",
-                                  )
-                                ? "⏳ Entry Pending"
-                                : "✓ View Entry Pass"}
+                                  (r) => r.status === "APPROVED",
+                                )
+                                ? "✓ Enrolled (Approved)"
+                                : userRegistrations.some(
+                                      (r) => r.status === "PENDING",
+                                    )
+                                  ? "⏳ Entry Pending"
+                                  : "✓ View Entry Pass"}
                           </span>
                         </button>
                       ) : isRegistrationOpen ? (
@@ -3180,7 +3192,7 @@ const TournamentDetails: React.FC<TournamentDetailsProps> = ({
             <div>
               <button
                 type="button"
-                onClick={() => navigate(`/app/tournaments/${id}`)}
+                onClick={() => navigate(user ? `/app/tournaments/${id}` : `/tournaments/${id}`)}
                 className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-white/5 border border-white/10 text-xs font-bold text-[#4AEEFF] hover:bg-white/10 hover:text-white transition-all mb-3"
               >
                 ← Back to Tournament Details

@@ -826,18 +826,6 @@ const Users: React.FC = () => {
                             </span>
                           )}
 
-                          {/* Manage Permissions for Admin Users */}
-                          {isSuperAdmin && userItem.role === "ADMIN" && (
-                            <button
-                              onClick={() => setUserForPermissions(userItem)}
-                              className="rounded-lg px-2.5 py-1.5 text-xs font-semibold text-[#4AEEFF] border border-[#4AEEFF]/30 bg-[#4AEEFF]/10 hover:bg-[#4AEEFF]/20 transition-all flex items-center gap-1.5"
-                              title="Manage Permissions"
-                            >
-                              <KeyIcon className="w-3.5 h-3.5" />
-                              <span>Permissions</span>
-                            </button>
-                          )}
-
                           {/* Remove Club Membership */}
                           {activeTab === "CLUB" &&
                             userItem.role === "PLAYER" &&
