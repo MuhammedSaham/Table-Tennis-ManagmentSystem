@@ -401,17 +401,19 @@ const Users: React.FC = () => {
                 setActiveTab("CLUB");
                 setClubGenderTab("ALL");
               }}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all duration-200 focus:outline-none ${activeTab === "CLUB"
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all duration-200 focus:outline-none ${
+                activeTab === "CLUB"
                   ? "bg-[#4AEEFF]/15 text-[#4AEEFF] border border-[#4AEEFF]/45 shadow-[0_0_14px_rgba(74,238,255,0.18)] font-bold backdrop-blur-md"
                   : "bg-white/5 text-white/70 border border-white/10 hover:bg-white/10 hover:text-white"
-                }`}
+              }`}
             >
               <span>Club Members</span>
               <span
-                className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${activeTab === "CLUB"
+                className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
+                  activeTab === "CLUB"
                     ? "bg-[#4AEEFF]/25 text-[#4AEEFF]"
                     : "bg-white/10 text-white/60"
-                  }`}
+                }`}
               >
                 {clubMembers.length}
               </span>
@@ -423,17 +425,19 @@ const Users: React.FC = () => {
                 setActiveTab("GUEST");
                 setClubGenderTab("ALL");
               }}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all duration-200 focus:outline-none ${activeTab === "GUEST"
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all duration-200 focus:outline-none ${
+                activeTab === "GUEST"
                   ? "bg-[#4AEEFF]/15 text-[#4AEEFF] border border-[#4AEEFF]/45 shadow-[0_0_14px_rgba(74,238,255,0.18)] font-bold backdrop-blur-md"
                   : "bg-white/5 text-white/70 border border-white/10 hover:bg-white/10 hover:text-white"
-                }`}
+              }`}
             >
               <span>Guest Players</span>
               <span
-                className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${activeTab === "GUEST"
+                className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
+                  activeTab === "GUEST"
                     ? "bg-[#4AEEFF]/25 text-[#4AEEFF]"
                     : "bg-white/10 text-white/60"
-                  }`}
+                }`}
               >
                 {guestPlayers.length}
               </span>
@@ -444,17 +448,19 @@ const Users: React.FC = () => {
               <button
                 id="tab-referees-admin"
                 onClick={() => setActiveTab("REFEREE")}
-                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all duration-200 focus:outline-none ${activeTab === "REFEREE"
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all duration-200 focus:outline-none ${
+                  activeTab === "REFEREE"
                     ? "bg-[#4AEEFF]/15 text-[#4AEEFF] border border-[#4AEEFF]/45 shadow-[0_0_14px_rgba(74,238,255,0.18)] font-bold backdrop-blur-md"
                     : "bg-white/5 text-white/70 border border-white/10 hover:bg-white/10 hover:text-white"
-                  }`}
+                }`}
               >
                 <span>Referees</span>
                 <span
-                  className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${activeTab === "REFEREE"
+                  className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
+                    activeTab === "REFEREE"
                       ? "bg-[#4AEEFF]/25 text-[#4AEEFF]"
                       : "bg-white/10 text-white/60"
-                    }`}
+                  }`}
                 >
                   {referees.length}
                 </span>
@@ -466,17 +472,19 @@ const Users: React.FC = () => {
               <button
                 id="tab-admins-admin"
                 onClick={() => setActiveTab("ADMIN")}
-                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all duration-200 focus:outline-none ${activeTab === "ADMIN"
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all duration-200 focus:outline-none ${
+                  activeTab === "ADMIN"
                     ? "bg-[#4AEEFF]/15 text-[#4AEEFF] border border-[#4AEEFF]/45 shadow-[0_0_14px_rgba(74,238,255,0.18)] font-bold backdrop-blur-md"
                     : "bg-white/5 text-white/70 border border-white/10 hover:bg-white/10 hover:text-white"
-                  }`}
+                }`}
               >
                 <span>Admins</span>
                 <span
-                  className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${activeTab === "ADMIN"
+                  className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
+                    activeTab === "ADMIN"
                       ? "bg-[#4AEEFF]/25 text-[#4AEEFF]"
                       : "bg-white/10 text-white/60"
-                    }`}
+                  }`}
                 >
                   {admins.length}
                 </span>
@@ -493,10 +501,11 @@ const Users: React.FC = () => {
               <div className="flex items-center gap-1 bg-white/5 p-1 rounded-xl border border-white/10 backdrop-blur-md">
                 <button
                   onClick={() => setClubGenderTab("ALL")}
-                  className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${clubGenderTab === "ALL"
+                  className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                    clubGenderTab === "ALL"
                       ? "bg-[#4AEEFF]/15 text-[#4AEEFF] border border-[#4AEEFF]/45 shadow-[0_0_14px_rgba(74,238,255,0.18)] backdrop-blur-md"
                       : "text-white/70 hover:text-white hover:bg-white/5 border border-transparent"
-                    }`}
+                  }`}
                 >
                   All ({displayedUsers.length})
                 </button>
@@ -510,17 +519,19 @@ const Users: React.FC = () => {
                     <button
                       key={gender}
                       onClick={() => setClubGenderTab(gender)}
-                      className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold transition-all ${isActive
+                      className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                        isActive
                           ? "bg-[#4AEEFF]/15 text-[#4AEEFF] border border-[#4AEEFF]/45 shadow-[0_0_14px_rgba(74,238,255,0.18)] backdrop-blur-md"
                           : "text-white/70 hover:text-white hover:bg-white/5 border border-transparent"
-                        }`}
+                      }`}
                     >
                       <span>{gender === "MALE" ? "Men" : "Women"}</span>
                       <span
-                        className={`rounded-full px-1.5 py-0.2 text-[10px] font-bold ${isActive
+                        className={`rounded-full px-1.5 py-0.2 text-[10px] font-bold ${
+                          isActive
                             ? "bg-[#4AEEFF]/25 text-[#4AEEFF]"
                             : "bg-white/10 text-white/50"
-                          }`}
+                        }`}
                       >
                         {genderCount}
                       </span>
@@ -826,18 +837,6 @@ const Users: React.FC = () => {
                             </span>
                           )}
 
-                          {/* Manage Permissions for Admin Users */}
-                          {isSuperAdmin && userItem.role === "ADMIN" && (
-                            <button
-                              onClick={() => setUserForPermissions(userItem)}
-                              className="rounded-lg px-2.5 py-1.5 text-xs font-semibold text-[#4AEEFF] border border-[#4AEEFF]/30 bg-[#4AEEFF]/10 hover:bg-[#4AEEFF]/20 transition-all flex items-center gap-1.5"
-                              title="Manage Permissions"
-                            >
-                              <KeyIcon className="w-3.5 h-3.5" />
-                              <span>Permissions</span>
-                            </button>
-                          )}
-
                           {/* Remove Club Membership */}
                           {activeTab === "CLUB" &&
                             userItem.role === "PLAYER" &&
@@ -938,7 +937,9 @@ const Users: React.FC = () => {
 
                   {userItem.role === "PLAYER" && (
                     <div className="flex items-center justify-between pt-2 border-t border-white/5">
-                      <span className="text-gray-400 font-medium">Club Rank:</span>
+                      <span className="text-gray-400 font-medium">
+                        Club Rank:
+                      </span>
                       {userItem.ranking ? (
                         <div className="flex items-center gap-1.5">
                           <span className="font-black text-[#4AEEFF]">
@@ -1236,7 +1237,7 @@ const Users: React.FC = () => {
                               ...newPlayer,
                               role:
                                 e.target.value === "CLUB_PLAYER" ||
-                                  e.target.value === "GUEST_PLAYER"
+                                e.target.value === "GUEST_PLAYER"
                                   ? "PLAYER"
                                   : (e.target.value as "REFEREE" | "ADMIN"),
                               isClubMember: e.target.value === "CLUB_PLAYER",
@@ -1369,7 +1370,10 @@ const Users: React.FC = () => {
                           type="tel"
                           value={newPlayer.phone}
                           onChange={(e) =>
-                            setNewPlayer({ ...newPlayer, phone: e.target.value })
+                            setNewPlayer({
+                              ...newPlayer,
+                              phone: e.target.value,
+                            })
                           }
                           className="w-full rounded-lg border border-white/10 bg-[#061D23]/60 p-2.5 text-sm text-white placeholder-white/20 focus:border-[#4AEEFF] focus:outline-none"
                           placeholder="e.g., 071-1234567"
@@ -1395,7 +1399,10 @@ const Users: React.FC = () => {
                             required={newPlayer.role === "PLAYER"}
                             className="w-full"
                           >
-                            <option value="" className="bg-[#061D23] text-white">
+                            <option
+                              value=""
+                              className="bg-[#061D23] text-white"
+                            >
                               Select Gender
                             </option>
                             <option
@@ -1581,8 +1588,9 @@ const Users: React.FC = () => {
                 </p>
 
                 <p className="mt-3 text-xs leading-relaxed text-amber-300">
-                  The player will become a guest player. Their account, rankings,
-                  tournament records and match history will not be deleted.
+                  The player will become a guest player. Their account,
+                  rankings, tournament records and match history will not be
+                  deleted.
                 </p>
               </div>
 
@@ -1800,15 +1808,16 @@ const ManagePermissionsModal: React.FC<ManagePermissionsModalProps> = ({
                   <div
                     key={perm.id}
                     onClick={() => togglePermission(perm.id)}
-                    className={`flex cursor-pointer items-start gap-3 rounded-xl border p-4 transition-all ${isChecked
+                    className={`flex cursor-pointer items-start gap-3 rounded-xl border p-4 transition-all ${
+                      isChecked
                         ? "border-[#4AEEFF] bg-[#4AEEFF]/10 text-white"
                         : "border-white/10 bg-[#061D23]/60 text-white/60 hover:border-[#4AEEFF]/40 hover:bg-[#061D23]/80"
-                      }`}
+                    }`}
                   >
                     <input
                       type="checkbox"
                       checked={isChecked}
-                      onChange={() => { }}
+                      onChange={() => {}}
                       className="mt-0.5 h-4 w-4 rounded border-white/20 bg-transparent text-[#4AEEFF] focus:ring-0 focus:ring-offset-0 cursor-pointer"
                     />
                     <div>
