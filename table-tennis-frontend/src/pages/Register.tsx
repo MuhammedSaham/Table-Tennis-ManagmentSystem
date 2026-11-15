@@ -6,8 +6,6 @@ import { useAuth } from "../context/AuthContext";
 
 import { handleApiError, showSuccess } from "../utils/errorHandler";
 
-import api from "../services/api";
-
 import toast from "react-hot-toast";
 
 /* Palette: #061D23 | #4AEEFF | #FFFFFF | #12679E */
@@ -22,8 +20,6 @@ interface FormErrors {
   lastName?: string;
 
   phone?: string;
-
-  profileImage?: string;
 }
 
 const styles: Record<string, React.CSSProperties> = {
@@ -181,10 +177,6 @@ const Register: React.FC = () => {
 
   const navigate = useNavigate();
 
-  const [profileImage, setProfileImage] = useState<File | null>(null);
-
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
-
   const [passwordValid, setPasswordValid] = useState({
     length: false,
 
@@ -244,33 +236,9 @@ const Register: React.FC = () => {
     )
       newErrors.password = "Please meet all password requirements below";
 
-    if (!profileImage) newErrors.profileImage = "Profile picture is required";
-
     setErrors(newErrors);
 
     return Object.keys(newErrors).length === 0;
-  };
-
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-
-    if (file) {
-      if (!file.type.startsWith("image/")) {
-        toast.error("Please select an image file");
-
-        return;
-      }
-
-      if (file.size > 5 * 1024 * 1024) {
-        toast.error("Image must be less than 5MB");
-
-        return;
-      }
-
-      setProfileImage(file);
-
-      setImagePreview(URL.createObjectURL(file));
-    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -323,23 +291,16 @@ const Register: React.FC = () => {
 
       await register(registerData);
 
-      if (profileImage) {
-        try {
-          const formDataUpload = new FormData();
+      showSuccess(
+        "Account created successfully! Please check your email to verify your account.",
+      );
 
-          formDataUpload.append("profileImage", profileImage);
-
-          await api.post("/users/upload-profile-image", formDataUpload, {
-            headers: { "Content-Type": "multipart/form-data" },
-          });
-        } catch (imgErr) {
-          console.error("Profile image upload failed:", imgErr);
-        }
-      }
-
-      showSuccess("Welcome! Your account has been created successfully.");
-
-      navigate("/app/dashboard");
+      navigate("/login", {
+        state: {
+          message: "Please verify your email before logging in.",
+          email: formData.email,
+        },
+      });
     } catch (error) {
       handleApiError(error as any);
     } finally {
@@ -718,52 +679,6 @@ const Register: React.FC = () => {
                   />
                 </div>
               )}
-
-              {/* Profile Photo */}
-              <div className="min-w-0">
-                <label className="mb-2 block text-xs font-black uppercase tracking-[0.08em] text-[#4AEEFF]">
-                  Profile Photo *
-                </label>
-                <div className="flex flex-col gap-3 rounded-lg border border-dashed border-[#4AEEFF]/50 p-3 sm:flex-row sm:items-center">
-                  {imagePreview && (
-                    <div className="relative flex-shrink-0">
-                      <img
-                        src={imagePreview}
-                        alt="Profile preview"
-                        className="h-16 w-16 rounded-full border-2 border-[#4AEEFF] object-cover"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setProfileImage(null);
-                          setImagePreview(null);
-                        }}
-                        className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-[#4AEEFF] text-xs font-bold text-[#061D23] hover:bg-white"
-                      >
-                        ×
-                      </button>
-                    </div>
-                  )}
-                  <label className="cursor-pointer rounded-lg border border-[#12679E]/50 bg-white/30 px-4 py-2.5 text-sm font-semibold !text-white transition hover:bg-[#3ab5c3] hover:!text-white">
-                    {imagePreview ? "Change Photo" : "Choose Photo"}
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleImageChange}
-                      className="hidden"
-                      required={!imagePreview}
-                    />
-                  </label>
-                  <p className="text-xs font-semibold text-white/70">
-                    JPG, PNG or GIF. Max 5MB.
-                  </p>
-                </div>
-                {errors.profileImage && (
-                  <p className="mt-2 text-xs text-red-400">
-                    {errors.profileImage}
-                  </p>
-                )}
-              </div>
             </div>
           </section>
 
