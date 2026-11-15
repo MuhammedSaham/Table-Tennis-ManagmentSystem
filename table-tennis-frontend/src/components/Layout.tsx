@@ -113,6 +113,10 @@ const Layout: React.FC = () => {
     mobileNavigation.push({ name: "Manage About Page", href: "/app/admin/about", icon: PencilSquareIcon });
   }
 
+  if (isSuperAdmin) {
+    mobileNavigation.push({ name: "Audit Logs", href: "/app/admin/audit-logs", icon: ShieldCheckIcon });
+  }
+
   // Pages that should NOT show the navbar
   const isAuthPage = ["/login", "/register", "/reset-password"].includes(
     location.pathname,
@@ -149,9 +153,8 @@ const Layout: React.FC = () => {
           <div className="flex justify-between items-center h-16 sm:h-20">
             {/* Logo */}
             <Link
-              to="/"
-              className="flex items-center group shrink-0 transition-transform duration-200 active:scale-95"
-              aria-label="Sam's College Home"
+              to={isReferee ? "/app/referee/matches" : "/app/dashboard"}
+              className="flex items-center gap-2 group shrink-0"
             >
               <img
                 src={invertedLogo}

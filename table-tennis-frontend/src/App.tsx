@@ -33,6 +33,7 @@ import Players from "./pages/Players";
 import RefereeMatches from "./pages/RefereeMatches";
 import About from "./pages/About";
 import ManageAbout from "./pages/ManageAbout";
+import AuditLogs from "./pages/AuditLogs";
 import ErrorBoundary from "./components/ErrorBoundary";
 import ScrollToTop from "./components/ScrollToTop";
 import VerifyEmail from "./pages/VerifyEmail";
@@ -143,6 +144,16 @@ const AdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     user?.isSuperAdmin ||
     user?.role === "ADMIN"
   ) {
+    return <>{children}</>;
+  }
+  return <Navigate to="/app/dashboard" replace />;
+};
+
+const SuperAdminRoute: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
+  const { user } = useAuth();
+  if (user?.role === "SUPER_ADMIN" || user?.isSuperAdmin) {
     return <>{children}</>;
   }
   return <Navigate to="/app/dashboard" replace />;
@@ -299,6 +310,14 @@ function AppRoutes() {
             <AdminRoute>
               <ManageAbout />
             </AdminRoute>
+          }
+        />
+        <Route
+          path="admin/audit-logs"
+          element={
+            <SuperAdminRoute>
+              <AuditLogs />
+            </SuperAdminRoute>
           }
         />
       </Route>
