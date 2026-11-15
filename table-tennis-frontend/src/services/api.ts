@@ -53,7 +53,10 @@ api.interceptors.response.use(
         window.location.href = '/login';
       }
     } else if (error.response?.status === 403) {
-      toast.error("You don't have permission to do that.");
+      const isAuthPage = ['/login', '/register', '/reset-password', '/verify-email'].includes(window.location.pathname);
+      if (!isAuthPage) {
+        toast.error(error.response?.data?.message || "You don't have permission to do that.");
+      }
     } else if (error.response?.status === 404) {
       toast.error('The requested resource was not found.');
     } else if (error.response?.status === 409) {
